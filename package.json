@@ -28,8 +28,14 @@
     "vite-plugin-singlefile": "^2.3.0"
   },
   "dependencies": {
-    "@babylonjs/core": "8.52.1",
-    "@babylonjs/loaders": "8.52.1",
-    "brotli-dec-wasm": "^2.3.2"
+    "@babylonjs/core": "^9.0.0"
+  },
+  "devDependencies": {
+    "@babylonjs/inspector": "^9.0.0",
+    "@fps-games/vite-plugins": "file:./vendor/fps-games-vite-plugins-0.1.1.tgz",
+    "terser": "^5.44.1",
+    "typescript": "^5.4.0",
+    "vite": "^5.4.0",
+    "vite-plugin-singlefile": "^2.0.0"
   }
 }

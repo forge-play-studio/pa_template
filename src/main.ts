@@ -145,3 +145,13 @@ declare global {
 }
 
 export { game };
+
+// 暴露给 inspector bridge / 调试
+(window as any).gameInstance = game;
+
+// 开发模式：暴露 BABYLON 供 inspector bridge 使用
+if (import.meta.env.DEV) {
+  import('@babylonjs/core').then((BABYLON) => {
+    (window as any).BABYLON = BABYLON;
+  });
+}

@@ -29,79 +29,40 @@ const allowedThirdPartyPackages = [
   '@babylonjs/loaders',
   'brotli-dec-wasm',
 ];
+import {
+  scriptInjectPlugin,
+  inspectorBridgePlugin,
+} from '@fps-games/vite-plugins';
+import {
+  stripBabylonPlugin,
+  babylonInspectorPlugin,
+} from '@fps-games/vite-plugins/babylon';
+
+const isProduction = process.env.NODE_ENV === 'production';
 
 export default defineConfig({
-  define: {
-    __LITE_BUILD__: JSON.stringify(liteBuild),
-    // 在生产构建时完全移除开发功能
-    __PROD_BUILD__: JSON.stringify(isProduction),
-    __LOCALE__: JSON.stringify(locale),
-    __CHANNEL__: JSON.stringify(channel),
-    __RTL__: JSON.stringify(localeMeta.isRTL),
-    __MULTI_LOCALE__: JSON.stringify(isMultiLocale),
-    __BUNDLED_LOCALES__: JSON.stringify(bundledLocales),
-  },
   plugins: [
-    // 平台 bridge 自动注入（仅开发模式）
-    bridgePlugin({
-      port: 8080,
+    // Inspector 命令拦截 + 内置通用 handler (handler.iife.js)
+    inspectorBridgePlugin({
+      enabled: true,
+      builtinHandler: true,
+    }),
+    // Game Bridge 自动注入（仅开发模式）
+    scriptInjectPlugin({
+      src: 'http://localhost:8080/script/bridge.js',
       delay: 2000,
+      errorMessage: '[GameBridge] MCP Server not available',
+      urlRewrite: `
+        var e2b = location.href.match(/https?:\\/\\/\\d+-([a-z0-9]+)\\.e2b\\.(app|dev)/);
+        return e2b ? 'https://8080-' + e2b[1] + '.e2b.app/script/bridge.js' : defaultSrc;
+      `,
     }),
     // Inspector 暴露到 globalThis（仅开发模式）
-    inspectorPlugin(),
-    // 开发模式模型强缓存 + URL 版本化（mtime）
-    modelCachePlugin({
-      extensions: ['.glb', '.gltf', '.png', '.jpg', '.jpeg', '.mp3'],
-      roots: ['src'],
-      cacheMaxAgeSeconds: 31536000,
-    }),
-    thirdPartyWhitelistPlugin({
-      allowedPackages: allowedThirdPartyPackages,
-      projectRoot: __dirname,
-    }),
-    // GLB 预压缩（只在生产构建时启用）
-    glbGzipPlugin({
-      enabled: isProduction,
-      minSize: 10 * 1024, // 只压缩 > 10KB 的文件
-      verbose: true,
-    }),
+    babylonInspectorPlugin(),
     // Strip unused Babylon.js code (WGSL shaders, submodules, OpenPBR, texture loaders)
     stripBabylonPlugin(),
-    localePlugin({
-      locale,
-      htmlLang: localeMeta.htmlLang,
-      isRTL: localeMeta.isRTL,
-      imgRoot: resolve(__dirname, 'src/assets/ui'),
-    }),
     viteSingleFile(),
-    // 构建后图片压缩：PNG → WebP (cwebp) 或 optipng 无损重压，取最小值
-    // 需要: brew install webp optipng
-    optimizePngPlugin({ enabled: isProduction, optipngLevel: 2, webpQuality: 80 }),
-    visualizer({
-      filename: 'dist/stats.html',
-      open: false,
-      gzipSize: true,
-      brotliSize: true,
-    }),
   ],
-  resolve: {
-    alias: {
-      '@': resolve(__dirname, 'src'),
-    },
-    dedupe: [
-      '@babylonjs/core',
-      '@babylonjs/loaders',
-      '@babylonjs/inspector',
-    ],
-  },
-  optimizeDeps: {
-    include: [
-      '@babylonjs/core',
-      '@babylonjs/core/Layers/effectLayerSceneComponent',
-      '@babylonjs/inspector',
-    ],
-  },
-  assetsInclude: ['**/*.env'],
   build: {
     target: 'esnext',
     outDir: 'dist',
@@ -136,9 +97,70 @@ export default defineConfig({
         comments: false,
       },
     },
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_debugger: true,
+        pure_funcs: ['console.log', 'console.info', 'console.debug'],
+        passes: 3,
+        sequences: true,
+        dead_code: true,
+        conditionals: true,
+        booleans: true,
+        unused: true,
+        if_return: true,
+        join_vars: true,
+        global_defs: isProduction ? {
+          'import.meta.env.PROD': true
+        } : {},
+      },
+      mangle: {
+        toplevel: true, // 单文件 playable ad，可混淆顶层变量
+      },
+      format: {
+        comments: false,
+      },
+    },
     rollupOptions: {
       output: {
         inlineDynamicImports: true,
+      },
+      // 标记 Babylon.js 的副作用模块，帮助 tree-shaking
+      treeshake: {
+        moduleSideEffects: (id) => {
+          if (id.includes('/node_modules/@babylonjs/core/ShadersWGSL/')) {
+            return false;
+          }
+          if (id.includes('@babylonjs/core')) {
+            const excludePatterns = [
+              '/XR/',
+              '/Physics/',
+              '/Debug/',
+              '/Offline/',
+              '/LibDecoder/',
+              '/LensFlare/',
+              '/Layer/',
+              '/Sprites/',
+              '/Morph/',
+              '/Navigation/',
+              '/Audio/',
+              '/GUI/',
+              '/FluidRenderer/',
+              '/GreasedLine/',
+              '/ComputeEffect/',
+              '/Materials/Node/',
+              '/Materials/Textures/Procedurals/',
+              '/Culling/Octrees/',
+              '/BakedVertexAnimation/',
+              '/Gamepads/',
+              '/Misc/basis/',
+            ];
+            if (excludePatterns.some(pattern => id.includes(pattern))) {
+              return false;
+            }
+          }
+          return true;
+        },
       },
       // 标记 Babylon.js 的副作用模块，帮助 tree-shaking
       treeshake: {
