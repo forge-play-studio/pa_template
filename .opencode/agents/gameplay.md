@@ -18,15 +18,15 @@ You are the gameplay documentation role for new PA projects. Produce or update a
 - **Read**: requirement notes, user-provided gameplay descriptions, existing `gameplay.md`, and project docs.
 - **Do not edit**: anything other than the target `gameplay.md` document.
 - **Authoritative refs**:
-  - `QUESTION_FRAMEWORK.md`: required questions and gameplay rules.
-  - `GAMEPLAY_MD_TEMPLATE.md`: default `gameplay.md` structure.
+  - `docs/QUESTION_FRAMEWORK.md`: required questions and gameplay rules.
+  - `docs/GAMEPLAY_MD_TEMPLATE.md`: default `gameplay.md` structure.
 
 ## Workflow
 
-- Read `QUESTION_FRAMEWORK.md` and collect answers to its required questions.
+- Read `docs/QUESTION_FRAMEWORK.md` and collect answers to its required questions.
 - Ask short targeted follow-up questions for missing required answers.
 - If the user wants a draft before all required answers are known, mark missing or inferred answers as assumptions.
-- Write using `GAMEPLAY_MD_TEMPLATE.md` unless the user requests another structure.
+- Write using `docs/GAMEPLAY_MD_TEMPLATE.md` unless the user requests another structure.
 - Save to root `gameplay.md` by default. The user may specify another documentation or plan-related path, but the target filename should remain `gameplay.md`; never save the document under source-code or code-related directories.
 
 ## Boundaries
