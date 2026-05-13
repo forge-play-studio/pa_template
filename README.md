@@ -1,6 +1,9 @@
-# scaffold
+# pa_template
 
-这是 `pa_maker` 提供的新项目 base。
+这是从 `pa_maker/scaffold` 独立出来的新项目模板仓库。
+
+当前模板内容直接位于仓库根目录，不再需要进入 `scaffold/` 子目录。
+如果后续要从这里起新 playable ad 项目，可以直接复制整个 `pa_template` 仓库作为项目起点。
 
 ## 目标
 
@@ -34,8 +37,20 @@
 1. platform workspace 页面上的最终验收结果
 2. 所有项目零改造即可直接跑通的最终 inspector 适配
 
-换句话说，`scaffold` 当前提供的是“带本地 inspector 注入链的完整编辑器框架模板”，不是“所有项目复制后零改造即可直接跑通”的成品接入。
+换句话说，`pa_template` 当前提供的是“带本地 inspector 注入链的完整编辑器框架模板”，不是“所有项目复制后零改造即可直接跑通”的成品接入。
 新项目复制后，仍需要按自己的 runtime 和平台环境补齐适配层。
+
+## 目录结构
+
+模板根目录就是 Vite/Babylon 项目根：
+
+1. `index.html`
+2. `package.json`
+3. `vite.config.ts`
+4. `vite-plugins/`
+5. `src/`
+
+其中 `src/` 放项目 runtime 与项目侧编辑器接入代码，`vite-plugins/` 放平台桥接、inspector 注入、模型缓存、单文件构建等构建插件。
 
 ## `src/` 目录说明
 
@@ -65,7 +80,7 @@
 3. 配置类型定义
 4. `ConfigService`
 
-这层保留 scaffold 默认需要的基础配置。当前默认包含：
+这层保留模板默认需要的基础配置。当前默认包含：
 
 1. 场景配置
 2. 基础游戏配置
@@ -135,7 +150,7 @@ zone、ground UI 等可选能力配置不默认内置，后续按 ability 接入
 
 这层更接近 Babylon/runtime 侧。
 
-如果某个服务只服务于特定玩法或表现能力，例如轨迹动画、资源计数等，优先沉淀到仓库根的 `abilities/`，而不是默认留在 scaffold。
+如果某个服务只服务于特定玩法或表现能力，例如轨迹动画、资源计数等，优先参考 `pa_maker` 内的 ability 形态沉淀，而不是默认留在模板基础层。
 
 ### `systems/`
 
@@ -149,7 +164,7 @@ zone、ground UI 等可选能力配置不默认内置，后续按 ability 接入
 
 这层偏 `System`，不负责单体对象生命周期。
 
-scaffold 当前只保留 `BaseSystem` 类型壳层，不默认初始化任何玩法 system。具体玩法系统优先通过 ability 或项目自身扩展接入。
+模板当前只保留 `BaseSystem` 类型壳层，不默认初始化任何玩法 system。具体玩法系统优先通过 ability 或项目自身扩展接入。
 
 ### `ui/`
 
@@ -177,7 +192,6 @@ scaffold 当前只保留 `BaseSystem` 类型壳层，不默认初始化任何玩
 ## Quick Start
 
 ```bash
-cd scaffold
 pnpm install
 pnpm dev
 ```
@@ -185,7 +199,6 @@ pnpm dev
 常用命令：
 
 ```bash
-cd scaffold
 pnpm typecheck
 pnpm build
 ```
@@ -222,13 +235,15 @@ brew install webp optipng
 
 如果项目需要额外能力：
 
-1. 先看 [../abilities](../abilities)
+1. 先看 [`../pa_maker/abilities`](../pa_maker/abilities)
 2. 读取目标 ability 的 `README.md`
 3. 结合项目结构决定如何接入
 
 ## 相关规范
 
-1. [../docs/standards/GAME_ARCHITECTURE_STANDARD.md](../docs/standards/GAME_ARCHITECTURE_STANDARD.md)
-2. [../docs/standards/EDITOR_PACKAGE_INTEGRATION.md](../docs/standards/EDITOR_PACKAGE_INTEGRATION.md)
-3. [../docs/standards/ABILITY_CREATION_STANDARD.md](../docs/standards/ABILITY_CREATION_STANDARD.md)
-4. [../docs/guides/ABILITY_USAGE_GUIDE.md](../docs/guides/ABILITY_USAGE_GUIDE.md)
+这些规范仍维护在 `pa_maker` 仓库内：
+
+1. [`../pa_maker/docs/standards/GAME_ARCHITECTURE_STANDARD.md`](../pa_maker/docs/standards/GAME_ARCHITECTURE_STANDARD.md)
+2. [`../pa_maker/docs/standards/EDITOR_PACKAGE_INTEGRATION.md`](../pa_maker/docs/standards/EDITOR_PACKAGE_INTEGRATION.md)
+3. [`../pa_maker/docs/standards/ABILITY_CREATION_STANDARD.md`](../pa_maker/docs/standards/ABILITY_CREATION_STANDARD.md)
+4. [`../pa_maker/docs/guides/ABILITY_USAGE_GUIDE.md`](../pa_maker/docs/guides/ABILITY_USAGE_GUIDE.md)
