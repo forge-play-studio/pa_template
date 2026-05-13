@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 2,
+  "meta": {
+    "playableAdInfo": {
+      "ctaUrl": "",
+      "notes": "Scaffold scene json: 填写你的 CTA 链接或 endcard 信息"
+    }
+  },
+  "gameplay": {
+    "worldBounds": {
+      "minX": -6,
+      "maxX": 6,
+      "minZ": -6,
+      "maxZ": 6
+    },
+    "tuning": {
+      "sceneVfx": {
+        "effects": {}
+      }
+    }
+  },
+  "scene": {
+    "rootId": "root",
+    "assets": [],
+    "nodes": [],
+    "materials": [],
+    "textures": []
+  },
+  "render": {}
+}

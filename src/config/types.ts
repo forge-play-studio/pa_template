@@ -1,0 +1,264 @@
+/**
+ * 配置类型定义 (Scaffold)
+ *
+ * 说明：
+ * - 这是“通用脚手架”版本的最小配置类型集合
+ * - 仅包含核心服务 (ConfigService / SceneBuilder / ModelPool 等) 需要的类型
+ * - 具体游戏可在不破坏目录结构的前提下逐步扩展
+ */
+
+// ============================================================
+// 基础类型
+// ============================================================
+
+export interface Position3D {
+  x: number;
+  y: number;
+  z: number;
+}
+
+export interface Scale3D {
+  x: number;
+  y: number;
+  z: number;
+}
+
+export interface ColorRGB {
+  r: number;
+  g: number;
+  b: number;
+}
+
+export interface ColorRGBA extends ColorRGB {
+  a: number;
+}
+
+/**
+ * TransformConfig
+ *
+ * 统一的变换配置：
+ * - rotationDeg 用角度便于策划配置
+ * - rotation 用弧度（如果你更偏好在配置里写弧度，可以使用该字段）
+ */
+export interface TransformConfig {
+  position?: Position3D;
+  rotationDeg?: Position3D;
+  rotation?: Position3D;
+  /** 统一缩放（number）或三维缩放（Scale3D） */
+  scale?: number | Scale3D;
+}
+
+export type TransformType = 'plain' | 'light' | 'camera' | 'groundDecal';
+
+// ============================================================
+// World Bounds
+// ============================================================
+
+export interface WorldBoundsConfig {
+  minX: number;
+  maxX: number;
+  minZ: number;
+  maxZ: number;
+}
+
+// ============================================================
+// Scene VFX (可选)
+// ============================================================
+
+export interface SceneVfxConfig {
+  /** effectId -> effect */
+  effects: Record<string, SceneVfxEffectConfig>;
+}
+
+export interface SceneVfxEffectConfig {
+  enabled?: boolean;
+  position: Position3D;
+  rotationDeg?: Position3D;
+  systems: Record<string, SceneVfxParticleSystemConfig>;
+}
+
+export interface SceneVfxParticleSystemConfig {
+  enabled?: boolean;
+  capacity?: number;
+  textureId?: string;
+}
+
+// ============================================================
+// Scene JSON
+// ============================================================
+
+export interface SceneAssetDefaults {
+  transform?: TransformConfig;
+  outline?: OutlineOverrideConfig;
+  childOutlines?: Record<string, OutlineOverrideConfig>;
+}
+
+export type SceneAssetMaterialMode = 'shared' | 'instance';
+
+export interface SceneAssetConfig {
+  id: string;
+  type: 'glb';
+  sourceId: string;
+  displayName?: string;
+  warmupCount?: number;
+  singleton?: boolean;
+  materialMode?: SceneAssetMaterialMode;
+  defaults?: SceneAssetDefaults;
+}
+
+export interface SceneNodeBase {
+  id: string;
+  name?: string;
+  kind: 'group' | 'instance' | 'transform';
+  parentId?: string;
+  enabled?: boolean;
+  transform?: TransformConfig;
+}
+
+export interface SceneGroupNode extends SceneNodeBase {
+  kind: 'group';
+}
+
+export interface MaterialTextureOverrideConfig {
+  url?: string;
+}
+
+export interface PbrMaterialLightingOverrideConfig {
+  albedoColor?: ColorRGB;
+  baseWeight?: number;
+  reflectivityColor?: ColorRGB;
+  microSurface?: number;
+  emissiveColor?: ColorRGB;
+  ambientColor?: ColorRGB;
+  lightFalloff?: number;
+}
+
+export interface StandardMaterialLightingOverrideConfig {
+  diffuseColor?: ColorRGB;
+  specularColor?: ColorRGB;
+  specularPower?: number;
+  emissiveColor?: ColorRGB;
+  ambientColor?: ColorRGB;
+  useSpecularOverAlpha?: boolean;
+}
+
+export interface MaterialOverrideConfig {
+  albedoColor?: ColorRGB;
+  diffuseColor?: ColorRGB;
+  emissiveColor?: ColorRGB;
+  metallic?: number;
+  roughness?: number;
+  alpha?: number;
+  backFaceCulling?: boolean;
+  albedoTexture?: MaterialTextureOverrideConfig;
+  normalTexture?: MaterialTextureOverrideConfig;
+  metallicTexture?: MaterialTextureOverrideConfig;
+  pbr?: PbrMaterialLightingOverrideConfig;
+  standard?: StandardMaterialLightingOverrideConfig;
+}
+
+export type SceneMaterialScope = 'sharedAsset' | 'nodeMaterial';
+
+export interface SceneSharedMaterialConfig {
+  id: string;
+  scope?: SceneMaterialScope;
+  assetId?: string;
+  nodeId?: string;
+  materialName: string;
+  ownerNodePath?: string;
+  type?: string;
+  properties: MaterialOverrideConfig;
+}
+
+export interface OutlineOverrideConfig {
+  renderOutline?: boolean;
+  outlineWidth?: number;
+  outlineColor?: ColorRGB;
+}
+
+export interface SceneNodeVisualOverrides {
+  material?: MaterialOverrideConfig;
+  childMaterials?: Record<string, MaterialOverrideConfig>;
+  childTransforms?: Record<string, TransformConfig>;
+  outline?: OutlineOverrideConfig;
+  childOutlines?: Record<string, OutlineOverrideConfig>;
+}
+
+export interface SceneInstanceNode extends SceneNodeBase {
+  kind: 'instance';
+  instance: {
+    assetId: string;
+  };
+  overrides?: SceneNodeVisualOverrides;
+}
+
+export interface SceneTransformNode extends SceneNodeBase {
+  kind: 'transform';
+  transformType?: TransformType;
+  overrides?: SceneNodeVisualOverrides;
+  groundDecal?: {
+    size: {
+      width: number;
+      depth: number;
+    };
+    textureId?: string;
+    color?: ColorRGB;
+  };
+}
+
+export type SceneNodeConfig = SceneGroupNode | SceneInstanceNode | SceneTransformNode;
+
+export interface SceneDocumentScene {
+  rootId: string;
+  assets: SceneAssetConfig[];
+  nodes: SceneNodeConfig[];
+  materials: SceneSharedMaterialConfig[];
+  textures: Record<string, unknown>[];
+}
+
+export interface LayoutPlaceholderSurfaceConfig {
+  id: string;
+  position: { x: number; z: number };
+  size: { width: number; depth: number };
+  color: ColorRGB;
+  textureId?: string;
+}
+
+export interface GroundOverlayPlaneConfig {
+  id: string;
+  position: { x: number; y?: number; z: number };
+  size: { width: number; depth: number };
+  scaling?: { x: number; y: number; z: number };
+  color: ColorRGB;
+  textureId?: string;
+}
+
+export interface SceneGameplayConfig {
+  worldBounds?: WorldBoundsConfig;
+  tuning?: {
+    sceneVfx?: SceneVfxConfig;
+  };
+  layoutPlaceholderSurfaces?: LayoutPlaceholderSurfaceConfig[];
+  groundOverlayPlanes?: GroundOverlayPlaneConfig[];
+  [key: string]: unknown;
+}
+
+export interface SceneRenderConfig {
+  [key: string]: unknown;
+}
+
+// ============================================================
+// Root Config Files
+// ============================================================
+
+export interface SceneConfig {
+  schemaVersion?: number;
+  meta?: Record<string, unknown>;
+  gameplay?: SceneGameplayConfig;
+  scene?: SceneDocumentScene;
+  render?: SceneRenderConfig;
+}
+
+export interface GameConfig {
+  meta?: Record<string, unknown>;
+}

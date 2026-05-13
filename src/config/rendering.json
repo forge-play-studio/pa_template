@@ -1,0 +1,95 @@
+{
+  "globalVolume": {
+    "imageProcessing": {
+      "exposure": 1.0,
+      "contrast": 1.0
+    },
+    "environment": {
+      "intensity": 1.0,
+      "iblIntensity": 1.0,
+      "useCocosIBL": false
+    },
+    "lights": {
+      "hemispheric": {
+        "intensity": 0.8,
+        "skyLightColor": { "r": 1, "g": 1, "b": 1, "a": 1 }
+      },
+      "directional": {
+        "intensity": 1.2,
+        "direction": { "x": -0.3, "y": -1.0, "z": -0.2 }
+      }
+    },
+    "rendering": {
+      "maxDpr": 2,
+      "hardwareScalingLevel": null
+    },
+    "textures": {
+      "anisotropicFilteringLevel": 4,
+      "samplingMode": "TRILINEAR"
+    },
+    "postProcessing": {
+      "bloom": {
+        "enabled": false,
+        "threshold": 0.9,
+        "weight": 0.2,
+        "kernel": 64,
+        "scale": 0.5
+      }
+    },
+    "camera": {
+      "fov": 0.85,
+      "radius": null,
+      "target": { "x": 0, "y": 0, "z": 0 }
+    }
+  },
+
+  "shadows": {
+    "enabled": false,
+    "useCsm": false,
+    "useBlobShadow": false,
+    "settings": {
+      "mapSize": 1024,
+      "darkness": 0.3,
+      "blurKernel": 16,
+      "bias": 0.00005,
+      "normalBias": 0.02,
+      "useBlurExponentialShadowMap": true,
+      "shadowMinZ": 1,
+      "shadowMaxZ": 60,
+      "shadowColor": { "r": 0, "g": 0, "b": 0 }
+    },
+    "blobSettings": {
+      "opacity": 0.2,
+      "yOffset": 0.02,
+      "sizeMultiplier": 1.0,
+      "minSize": 0.25
+    },
+    "shadowRange": {
+      "minZ": 1,
+      "maxZ": 60
+    },
+    "shadowOrtho": {
+      "left": -20,
+      "right": 20,
+      "top": 20,
+      "bottom": -20
+    },
+    "csm": {
+      "numCascades": 2,
+      "lambda": 0.5,
+      "cascadeBlendPercentage": 0.1,
+      "stabilizeCascades": true
+    }
+  },
+
+  "shadowMeshes": {
+    "shadowReceivers": [],
+    "shadowCasters": [],
+    "excludeFromShadow": []
+  },
+
+  "materials": {
+    "sceneMaterials": {},
+    "plantMaterials": {}
+  }
+}
