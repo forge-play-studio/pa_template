@@ -1,0 +1,34 @@
+# pa_template Docs
+
+本文档是 `pa_template` 的模板文档入口。
+
+`pa_template` 负责新 playable ad 项目的 runtime / editor / scene authoring 基础模板。可选玩法、UI、交互等能力库由 [`pa_abilities`](https://github.com/forge-play-studio/pa_abilities) 维护。
+
+## 新项目起盘
+
+1. [NEW_PROJECT_QUICKSTART_GUIDE.md](./guides/NEW_PROJECT_QUICKSTART_GUIDE.md)
+2. [PROJECT_DIRECTORY_STANDARD.md](./standards/PROJECT_DIRECTORY_STANDARD.md)
+3. [GAME_ARCHITECTURE_STANDARD.md](./standards/GAME_ARCHITECTURE_STANDARD.md)
+4. [SCENE_JSON_STANDARD.md](./standards/SCENE_JSON_STANDARD.md)
+5. [TEMPLATE_IMPLEMENTATION_STATUS.md](./notes/TEMPLATE_IMPLEMENTATION_STATUS.md)
+
+## Runtime / Editor 标准
+
+1. [GAME_ARCHITECTURE_STANDARD.md](./standards/GAME_ARCHITECTURE_STANDARD.md)
+2. [PROJECT_DIRECTORY_STANDARD.md](./standards/PROJECT_DIRECTORY_STANDARD.md)
+3. [SCENE_JSON_STANDARD.md](./standards/SCENE_JSON_STANDARD.md)
+4. [EDITOR_PACKAGE_INTEGRATION.md](./standards/EDITOR_PACKAGE_INTEGRATION.md)
+5. [SCENE_EDITING_INTEGRATION.md](./standards/SCENE_EDITING_INTEGRATION.md)
+6. [CAMERA_RESIZE_STANDARD.md](./standards/CAMERA_RESIZE_STANDARD.md)
+
+## Guides
+
+1. [gameplay](./guides/gameplay/README.md)
+2. [RUNTIME_AUDIO_STRATEGY.md](./guides/RUNTIME_AUDIO_STRATEGY.md)
+3. [SCREEN_UI_RESPONSIVE_STRATEGY.md](./guides/SCREEN_UI_RESPONSIVE_STRATEGY.md)
+4. [MULTI_LANGUAGE_STRATEGY.md](./guides/MULTI_LANGUAGE_STRATEGY.md)
+5. [MULTI_CHANNEL_STRATEGY.md](./guides/MULTI_CHANNEL_STRATEGY.md)
+
+## Notes
+
+1. [TEMPLATE_IMPLEMENTATION_STATUS.md](./notes/TEMPLATE_IMPLEMENTATION_STATUS.md)

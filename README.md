@@ -1,8 +1,8 @@
 # pa_template
 
-这是从 `pa_maker/scaffold` 独立出来的新项目模板仓库。
+这是 PA 项目的独立模板仓库。
 
-当前模板内容直接位于仓库根目录，不再需要进入 `scaffold/` 子目录。
+当前模板内容直接位于仓库根目录。
 如果后续要从这里起新 playable ad 项目，可以直接复制整个 `pa_template` 仓库作为项目起点。
 
 ## 目标
@@ -150,7 +150,7 @@ zone、ground UI 等可选能力配置不默认内置，后续按 ability 接入
 
 这层更接近 Babylon/runtime 侧。
 
-如果某个服务只服务于特定玩法或表现能力，例如轨迹动画、资源计数等，优先参考 `pa_maker` 内的 ability 形态沉淀，而不是默认留在模板基础层。
+如果某个服务只服务于特定玩法或表现能力，例如轨迹动画、资源计数等，优先参考 [`pa_abilities`](https://github.com/forge-play-studio/pa_abilities) 的形态沉淀，而不是默认留在模板基础层。
 
 ### `systems/`
 
@@ -175,7 +175,7 @@ zone、ground UI 等可选能力配置不默认内置，后续按 ability 接入
 1. 加载页
 2. 其他默认内置 UI
 
-可选 UI 能力优先放仓库根的 `abilities/`。
+可选 UI 能力优先沉淀到 [`pa_abilities`](https://github.com/forge-play-studio/pa_abilities)。
 
 ### `utils/`
 
@@ -235,15 +235,17 @@ brew install webp optipng
 
 如果项目需要额外能力：
 
-1. 先看 [`../pa_maker/abilities`](../pa_maker/abilities)
+1. 先看 [`pa_abilities`](https://github.com/forge-play-studio/pa_abilities)
 2. 读取目标 ability 的 `README.md`
 3. 结合项目结构决定如何接入
 
 ## 相关规范
 
-这些规范仍维护在 `pa_maker` 仓库内：
+模板规范维护在本仓 [`docs`](./docs)：
 
-1. [`../pa_maker/docs/standards/GAME_ARCHITECTURE_STANDARD.md`](../pa_maker/docs/standards/GAME_ARCHITECTURE_STANDARD.md)
-2. [`../pa_maker/docs/standards/EDITOR_PACKAGE_INTEGRATION.md`](../pa_maker/docs/standards/EDITOR_PACKAGE_INTEGRATION.md)
-3. [`../pa_maker/docs/standards/ABILITY_CREATION_STANDARD.md`](../pa_maker/docs/standards/ABILITY_CREATION_STANDARD.md)
-4. [`../pa_maker/docs/guides/ABILITY_USAGE_GUIDE.md`](../pa_maker/docs/guides/ABILITY_USAGE_GUIDE.md)
+1. [GAME_ARCHITECTURE_STANDARD.md](./docs/standards/GAME_ARCHITECTURE_STANDARD.md)
+2. [EDITOR_PACKAGE_INTEGRATION.md](./docs/standards/EDITOR_PACKAGE_INTEGRATION.md)
+3. [SCENE_EDITING_INTEGRATION.md](./docs/standards/SCENE_EDITING_INTEGRATION.md)
+4. [SCENE_JSON_STANDARD.md](./docs/standards/SCENE_JSON_STANDARD.md)
+
+可选 ability 的通用规则维护在 [`pa_abilities`](https://github.com/forge-play-studio/pa_abilities) 根 README。
