@@ -22,15 +22,16 @@
 1. Babylon/Vite 项目骨架
 2. Vite 应用壳层（`index.html`）
 3. 最小 `scene.json` 与 `ConfigService`
-4. 项目侧 `editor-package`
-5. project editor runtime / edit session / selection / inspector host 骨架
-6. document/history/export/commit 主链
-7. `sceneNode` adapter 与 duplicate 主链
-8. 新项目尽早验证编辑器闭环所需的基础结构
-9. dev-only 本地 inspector 注入链
-10. `showInspector()` / `loadV2()` 前的 inspector preload patch
-11. 默认 Vite plugin 初始化链：`bridge / inspector / glb / modelCache / stripBabylon / viteSingleFile`
-12. 可直接启用的构建增强插件：`thirdPartyWhitelist / locale / optimizePng / visualizer`
+4. Gameplay Binding contract 类型、默认入口、查询服务和基础校验
+5. 项目侧 `editor-package`
+6. project editor runtime / edit session / selection / inspector host 骨架
+7. document/history/export/commit 主链
+8. `sceneNode` adapter 与 duplicate 主链
+9. 新项目尽早验证编辑器闭环所需的基础结构
+10. dev-only 本地 inspector 注入链
+11. `showInspector()` / `loadV2()` 前的 inspector preload patch
+12. 默认 Vite plugin 初始化链：`bridge / inspector / glb / modelCache / stripBabylon / viteSingleFile`
+13. 可直接启用的构建增强插件：`thirdPartyWhitelist / locale / optimizePng / visualizer`
 
 当前不应默认假设已经完整包含：
 
@@ -51,6 +52,18 @@
 5. `src/`
 
 其中 `src/` 放项目 runtime 与项目侧编辑器接入代码，`vite-plugins/` 放平台桥接、inspector 注入、模型缓存、单文件构建等构建插件。
+
+## 团队级文档
+
+`pa_template` 不再保留 `docs/` 目录。团队级 First Playable Workflow、Gameplay Object / Binding / Naming 标准、Readiness 和 Acceptance 模板统一维护在 `pa_maker/docs`：
+
+1. [First Playable Workflow](https://github.com/forge-play-studio/pa_maker/blob/main/docs/guides/gameplay/FIRST_PLAYABLE_WORKFLOW.md)
+2. [Gameplay docs index](https://github.com/forge-play-studio/pa_maker/blob/main/docs/guides/gameplay/README.md)
+3. [Gameplay Object Standard](https://github.com/forge-play-studio/pa_maker/blob/main/docs/standards/GAMEPLAY_OBJECT_STANDARD.md)
+4. [Gameplay Binding Standard](https://github.com/forge-play-studio/pa_maker/blob/main/docs/standards/GAMEPLAY_BINDING_STANDARD.md)
+5. [pa_template docs archive](https://github.com/forge-play-studio/pa_maker/tree/main/docs/templates/pa_template)
+
+流程 0 完成后，新项目才能进入流程 1。模板只承载 gameplay contract layer，不默认实现 Backpack、Upgrade、Queue、Worker 等具体 gameplay 系统。
 
 ## `src/` 目录说明
 
@@ -84,6 +97,7 @@
 
 1. 场景配置
 2. 基础游戏配置
+3. `gameplay.gameplayBindings` contract 入口
 
 zone、ground UI 等可选能力配置不默认内置，后续按 ability 接入。
 
@@ -147,6 +161,7 @@ zone、ground UI 等可选能力配置不默认内置，后续按 ability 接入
 4. 渲染/阴影/材质
 5. 音频/VFX/动画等通用能力
 6. 输入服务与输入抽象
+7. Gameplay Binding 查询和 runtime node 映射
 
 这层更接近 Babylon/runtime 侧。
 

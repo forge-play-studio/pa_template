@@ -233,8 +233,69 @@ export interface GroundOverlayPlaneConfig {
   textureId?: string;
 }
 
+// ============================================================
+// Gameplay Contract
+// ============================================================
+
+export type GameplayObjectType =
+  | 'PlayerSpawn'
+  | 'ResourceSource'
+  | 'InputContainer'
+  | 'OutputContainer'
+  | 'Processor'
+  | 'PayArea'
+  | 'UpgradeArea'
+  | 'CustomerQueue'
+  | 'WorkerSpawn'
+  | 'WorkerWorkPoint'
+  | 'PathPoint'
+  | 'RuntimeSpawnRoot'
+  | 'UnlockableArea'
+  | 'Decoration';
+
+export type GameplayInteractionShape = 'none' | 'circle' | 'box' | 'sphere' | 'capsule' | 'polygon';
+
+export interface GameplayInteractionConfig {
+  shape: GameplayInteractionShape;
+  radius?: number;
+  size?: { width: number; height?: number; depth: number };
+}
+
+export interface GameplayCostConfig {
+  resourceType: string;
+  amount: number;
+}
+
+export interface GameplayBindingConfig {
+  id: string;
+  scenePath?: string;
+  entityId?: string;
+  entityName?: string;
+  logicType: GameplayObjectType;
+  initialEnabled?: boolean;
+  assetRef?: string;
+  resourceType?: string;
+  acceptsResourceTypes?: string[];
+  producesResourceTypes?: string[];
+  interactionShape?: GameplayInteractionShape;
+  interactionRadius?: number;
+  interaction?: GameplayInteractionConfig;
+  capacity?: number;
+  processTimeSec?: number;
+  cost?: GameplayCostConfig[];
+  dependsOn?: string[];
+  unlocks?: string[];
+  runtimeParent?: string;
+  spawnRootId?: string;
+  pathPointIds?: string[];
+  workerRole?: string;
+  tags?: string[];
+  notes?: string;
+}
+
 export interface SceneGameplayConfig {
   worldBounds?: WorldBoundsConfig;
+  gameplayBindings?: GameplayBindingConfig[];
   tuning?: {
     sceneVfx?: SceneVfxConfig;
   };

@@ -13,6 +13,7 @@
       "minZ": -6,
       "maxZ": 6
     },
+    "gameplayBindings": [],
     "tuning": {
       "sceneVfx": {
         "effects": {}

@@ -1,5 +1,7 @@
 # 0. Gameplay Question Framework
 
+权威问题框架维护在 `pa_maker/docs/guides/gameplay/QUESTION_FRAMEWORK.md`。本文件只是 `.opencode` 兼容副本。
+
 ## 1. 文档目标
 
 本文档定义 `gameplay knowledge base` 的最终问题清单。

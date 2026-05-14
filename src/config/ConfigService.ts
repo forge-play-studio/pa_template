@@ -26,6 +26,7 @@ import type {
   SceneVfxConfig,
   LayoutPlaceholderSurfaceConfig,
   GroundOverlayPlaneConfig,
+  GameplayBindingConfig,
   TransformConfig,
 } from './types';
 
@@ -441,6 +442,11 @@ export class ConfigService {
 
   getGameplayConfig(): Record<string, unknown> {
     return (this.sceneConfig.gameplay ?? {}) as Record<string, unknown>;
+  }
+
+  getGameplayBindings(): GameplayBindingConfig[] {
+    const bindings = this.sceneConfig.gameplay?.gameplayBindings;
+    return Array.isArray(bindings) ? bindings : [];
   }
 
   getWorldBounds(): WorldBoundsConfig {

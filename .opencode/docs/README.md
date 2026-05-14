@@ -2,6 +2,14 @@
 
 本目录收纳 `gameplay` 模式相关文档，用于帮助新项目先产出可执行的 `gameplay.md`，再交给后续实现流程。
 
+权威流程和标准已经迁移到 `pa_maker/docs`：
+
+1. First Playable Workflow: https://github.com/forge-play-studio/pa_maker/blob/main/docs/guides/gameplay/FIRST_PLAYABLE_WORKFLOW.md
+2. Gameplay docs index: https://github.com/forge-play-studio/pa_maker/blob/main/docs/guides/gameplay/README.md
+3. Gameplay Object / Binding / Naming standards: https://github.com/forge-play-studio/pa_maker/tree/main/docs/standards
+
+本目录只保留 `.opencode` 兼容入口，不作为新的权威标准来源。
+
 ## 文档列表
 
 1. [QUESTION_FRAMEWORK.md](./QUESTION_FRAMEWORK.md)：定义生成 `gameplay.md` 前必须回答的问题、可选问题和 gameplay 模式约束。
@@ -10,6 +18,7 @@
 
 ## 使用顺序
 
-1. 先用 `QUESTION_FRAMEWORK.md` 收集并确认必答问题。
-2. 再按 `GAMEPLAY_MD_TEMPLATE.md` 组织项目级 `gameplay.md`。
-3. 最后用 `AGENT_PROMPT.md` 约束平台里的 `gameplay` 模式，只生成或编辑目标 `gameplay.md`。
+1. 先确认 `pa_maker/docs/guides/gameplay/FIRST_PLAYABLE_WORKFLOW.md` 的流程 0 已完成。
+2. 再用 `QUESTION_FRAMEWORK.md` 收集并确认必答问题。
+3. 按 `GAMEPLAY_MD_TEMPLATE.md` 组织项目级 `gameplay.md`。
+4. 地编和 binding 完成后，按 `pa_maker/docs/guides/gameplay/templates/READINESS_CHECK_TEMPLATE.md` 做开发前 Gate。

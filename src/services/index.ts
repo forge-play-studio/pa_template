@@ -24,6 +24,8 @@ export { RenderingService } from './RenderingService';
 export { ShadowService } from './ShadowService';
 export { MaterialConfigService } from './MaterialConfigService';
 export { SceneVfxService } from './SceneVfxService';
+export { gameplayBindingService } from './GameplayBindingService';
+export type { GameplayBindingRuntimeRef } from './GameplayBindingService';
 
 // 配置服务（便于服务层直接引用）
 export { configService, ConfigService } from '../config';
