@@ -14,11 +14,13 @@
 
 1. [QUESTION_FRAMEWORK.md](./QUESTION_FRAMEWORK.md)：定义生成 `gameplay.md` 前必须回答的问题、可选问题和 gameplay 模式约束。
 2. [GAMEPLAY_MD_TEMPLATE.md](./GAMEPLAY_MD_TEMPLATE.md)：定义项目级 `gameplay.md` 的默认输出结构。
-3. [AGENT_PROMPT.md](./AGENT_PROMPT.md)：定义 `gameplay` agent 的职责、边界和输出契约。
+3. [ARTIST_GAMEPLAY_MD_GUIDE.md](./ARTIST_GAMEPLAY_MD_GUIDE.md)：定义美术如何配合 agent 描述目标流程、资产关系、地编意图和遗漏流程修正。
+4. [../agents/gameplay.md](../agents/gameplay.md)：定义 `gameplay` agent 的职责、边界和输出契约。
 
 ## 使用顺序
 
 1. 先确认 `pa_maker/docs/guides/gameplay/FIRST_PLAYABLE_WORKFLOW.md` 的流程 0 已完成。
 2. 再用 `QUESTION_FRAMEWORK.md` 收集并确认必答问题。
-3. 按 `GAMEPLAY_MD_TEMPLATE.md` 组织项目级 `gameplay.md`。
-4. 地编和 binding 完成后，按 `pa_maker/docs/guides/gameplay/templates/READINESS_CHECK_TEMPLATE.md` 做开发前 Gate。
+3. 当美术提供场景、资产、地编或遗漏修正信息时，按 `ARTIST_GAMEPLAY_MD_GUIDE.md` 整理。
+4. 按 `GAMEPLAY_MD_TEMPLATE.md` 组织项目级 `gameplay.md`。
+5. 地编和 binding 完成后，按 `pa_maker/docs/guides/gameplay/templates/READINESS_CHECK_TEMPLATE.md` 做开发前 Gate。
