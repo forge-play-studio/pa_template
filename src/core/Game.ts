@@ -161,35 +161,38 @@ export class Game {
     this.materialConfigService.logMissingMaterials();
     this.modelPool.setMaterialConfigService(this.materialConfigService);
 
-    // 7) Refresh shadows after scene loaded
+    // 7) Warm up pooled model instances declared in scene.assets
+    this.warmupModelsFromConfig();
+
+    // 8) Refresh shadows after scene loaded
     this.shadowService.refreshShadowMeshes();
 
-    // 8) Input
+    // 9) Input
     this.initInput();
 
-    // 9) Entities
+    // 10) Entities
     this.createPlayer();
 
-    // 10) Zone interactions
+    // 11) Zone interactions
     this.initZoneSystem();
 
-    // 11) Scene VFX (optional)
+    // 12) Scene VFX (optional)
     this.sceneVfxService = new SceneVfxService(this.scene);
     this.sceneVfxService.initFromConfig();
 
-    // 12) Config validation (DEV)
+    // 13) Config validation (DEV)
     if (import.meta.env.DEV) {
       configValidator.validate();
     }
 
-    // 13) Audio (optional)
+    // 14) Audio (optional)
     if (this.enableAudio) {
       this.audioService = new AudioService(this.scene);
       await this.audioService.preload();
       this.audioService.setupUnlockListener();
     }
 
-    // 14) Project gameplay modules
+    // 15) Project gameplay modules
     await this.initGameplayModules();
 
   }
@@ -207,10 +210,11 @@ export class Game {
 
     // AssetLoader 需要先创建灯光（已在 buildSceneEnvironment 完成）
     await this.assetLoader.preload(modelIds);
+  }
 
-    // NOTE:
-    // 原项目可能会做对象池预热（warmupCount）。
-    // 该行为在不同团队/项目中实现差异较大，因此脚手架默认不强制执行。
+  private warmupModelsFromConfig(): void {
+    if (!this.modelPool) return;
+    this.modelPool.warmupFromSceneAssets(configService.getSceneAssets());
   }
 
   private initInput(): void {

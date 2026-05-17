@@ -6,7 +6,7 @@ export { AssetLoader } from './AssetLoader';
 export type { LoadProgress } from './AssetLoader';
 
 export { ModelPool } from './ModelPool';
-export type { PooledInstance, ModelConfig } from './ModelPool';
+export type { PooledInstance, ModelConfig, ModelWarmupAssetConfig, ModelWarmupResult } from './ModelPool';
 
 export { AnimationService } from './AnimationService';
 export type { PlayOptions } from './AnimationService';

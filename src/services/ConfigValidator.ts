@@ -68,6 +68,14 @@ class ConfigValidator {
           `scene.assets[${asset.id}] 引用了未注册的 sourceId "${asset.sourceId}"（请在 src/assets/index.ts 的 MODEL_URL_MAP 中注册）`
         );
       }
+
+      if (asset.warmupCount != null) {
+        if (!Number.isInteger(asset.warmupCount) || asset.warmupCount < 0) {
+          result.errors.push(`scene.assets[${asset.id}].warmupCount 必须是非负整数`);
+        } else if (asset.singleton && asset.warmupCount > 0) {
+          result.warnings.push(`scene.assets[${asset.id}] 是 singleton，warmupCount 会被忽略`);
+        }
+      }
     }
 
     // 3) scene.nodes[*] 基础校验
