@@ -23,16 +23,17 @@
 2. Vite 应用壳层（`index.html`）
 3. 最小 `scene.json` 与 `ConfigService`
 4. Gameplay Binding contract 类型、默认入口、查询服务和基础校验
-5. 项目侧 `editor-package`
-6. project editor runtime / edit session / selection / inspector host 骨架
-7. document/history/export/commit 主链
-8. `sceneNode` adapter 与 duplicate 主链
-9. 新项目尽早验证编辑器闭环所需的基础结构
-10. dev-only 本地 inspector 注入链
-11. `showInspector()` / `loadV2()` 前的 inspector preload patch
-12. 默认 Vite plugin 初始化链：`bridge / inspector / glb / modelCache / stripBabylon / viteSingleFile`
-13. 可直接启用的构建增强插件：`thirdPartyWhitelist / locale / optimizePng / visualizer`
-14. `ZoneSystem`：消费当前 `SceneConfig` 中的 `gameplay.zones`，并维护 enter/tick/leave 区域状态
+5. Project gameplay composition hook：`src/gameplay/createProjectGameplay.ts`
+6. 项目侧 `editor-package`
+7. project editor runtime / edit session / selection / inspector host 骨架
+8. document/history/export/commit 主链
+9. `sceneNode` adapter 与 duplicate 主链
+10. 新项目尽早验证编辑器闭环所需的基础结构
+11. dev-only 本地 inspector 注入链
+12. `showInspector()` / `loadV2()` 前的 inspector preload patch
+13. 默认 Vite plugin 初始化链：`bridge / inspector / glb / modelCache / stripBabylon / viteSingleFile`
+14. 可直接启用的构建增强插件：`thirdPartyWhitelist / locale / optimizePng / visualizer`
+15. `ZoneSystem`：消费当前 `SceneConfig` 中的 `gameplay.zones`，并维护 enter/tick/leave 区域状态
 
 当前不应默认假设已经完整包含：
 
@@ -178,6 +179,28 @@ zone 检测能力默认内置，但只负责矩形区域几何检测和 `enter/t
 3. 其他单对象 runtime 封装
 
 这里偏 `Entity`，不负责全局规则推进。
+
+### `gameplay/`
+
+放项目 gameplay 的 composition 入口和模板级 gameplay module 类型。
+
+当前默认包含：
+
+1. `types.ts`：`GameplayModule` 和 `GameplayRuntimeContext`
+2. `createProjectGameplay.ts`：项目 gameplay module 创建入口，默认返回空数组
+3. `index.ts`：导出入口
+
+这层只负责“把项目侧 gameplay 模块接起来”，不负责承载具体玩法规则。
+
+具体项目开发 first playable 时，推荐做法是：
+
+1. 在 `src/systems/` 新增资源、背包、采集、加工、售卖、升级、解锁、队列、阶段等规则模块。
+2. 在 `src/entities/` 新增玩家、NPC、工人、顾客、车辆、机器 actor 等单体行为。
+3. 在 `src/services/` 新增 runtime node 查询封装、binding helper、飞物品、表现 helper 等可复用能力。
+4. 在 `src/ui/` 新增 HUD、摇杆、引导、进度、CTA、Endcard 等界面。
+5. 在 `src/gameplay/createProjectGameplay.ts` 中创建这些模块并返回 `GameplayModule[]`。
+
+不要把完整 first playable 写成一个宽泛的 `src/gameplay/<Project>Gameplay.ts` 大文件。
 
 ### `services/`
 

@@ -46,7 +46,90 @@ UI 层：HUD、引导、进度、结算、CTA。
 
 这些是职责归属，不代表必须新增同名文件或目录。已有模块能清楚承载职责时，应复用已有模块。
 
-## 4. Gameplay 结构落地原则
+`_cocos` 旧项目可以作为“责任拆分粒度”的参考，例如背包、采集、区域解锁、队列、工人、HUD、引导、VFX 往往是不同文件或组件。但 `gameplay-builder` 属于 `pa_template` 范围，不能把 Cocos 的 Component / Inspector / 目录约定直接迁入 `pa_template`。最终落地必须使用 `pa_template` 的 TypeScript/Babylon 分层。
+
+## 4. pa_template 文件拆分规则
+
+`pa_template` 的默认 gameplay 接线入口是：
+
+```text
+src/gameplay/createProjectGameplay.ts
+```
+
+这个文件只负责创建和组合项目 gameplay modules。它不得承载具体玩法规则、UI 逻辑、资源结算、节点动画细节或大量场景节点查询。
+
+项目 gameplay 代码按下面边界拆分：
+
+```text
+src/core/
+  Game.ts：模板 runtime 总控，只做初始化、依赖接线、update、dispose。
+
+src/gameplay/
+  createProjectGameplay.ts：项目 gameplay composition root，只创建和连接模块。
+  types.ts：模板级 GameplayModule / GameplayRuntimeContext 类型。
+
+src/systems/
+  规则推进和 runtime 状态，例如 inventory、resource collection、container transfer、
+  processor、sell/order、pay area、upgrade、unlock、worker、stage、end condition。
+
+src/entities/
+  单体对象行为，例如 player、worker、customer、vehicle、machine actor。
+  Entity 不拥有全局经济、阶段推进或跨对象规则。
+
+src/services/
+  可复用 runtime 能力，例如 scene node 查询封装、binding 查询封装、model pooling、
+  flying item、animation/audio/vfx helper、object lifecycle helper。
+  Service 不主动推进项目 gameplay 规则。
+
+src/ui/
+  HUD、joystick、guide、progress、floating text、CTA、endcard。
+  UI 读取状态或订阅事件，不作为 gameplay 状态真源。
+
+src/config/
+  authored data、tuning constants、id mapping、类型声明。
+  运行时可变状态不放在 config。
+```
+
+文件必须拆分的条件：
+
+```text
+一个文件拥有多个主要 gameplay 责任。
+一个文件同时包含规则状态和 UI/DOM/canvas 表现。
+一个文件同时包含 scene node/binding 查询和 gameplay 规则推进。
+一个文件同时管理 inventory、collection、processing、selling、payment、unlock、guide、HUD 等独立状态。
+一个 first playable 文件预计超过约 250-300 行，且可以按责任自然拆分。
+```
+
+禁止模式：
+
+```text
+src/gameplay/LumberOrderGameplay.ts 同时负责玩家移动、背包、采集、加工、卡车订单、
+支付、解锁、HUD、摇杆、引导、飞物品和节点动画。
+```
+
+推荐模式：
+
+```text
+src/gameplay/createProjectGameplay.ts
+src/config/projectGameplayConfig.ts
+src/entities/ProjectPlayer.ts
+src/systems/InventorySystem.ts
+src/systems/ResourceCollectionSystem.ts
+src/systems/ContainerTransferSystem.ts
+src/systems/ProcessorSystem.ts
+src/systems/SellOrderSystem.ts
+src/systems/PayAreaSystem.ts
+src/systems/UnlockSystem.ts
+src/services/RuntimeNodeService.ts
+src/services/FlyingItemService.ts
+src/ui/ProjectHud.ts
+src/ui/JoystickControl.ts
+src/ui/GuideArrowView.ts
+```
+
+以上是默认拆分形态，不是固定文件清单。只创建 `gameplay.md` 闭环需要的文件，但不能把无关责任合并成一个大文件。
+
+## 5. Gameplay 结构落地原则
 
 实现时要能从代码追溯回 `gameplay.md` 的核心结构：
 
@@ -62,7 +145,7 @@ NPC/自动化：单体行为和全局工作分配要区分。
 
 这不是要求固定拆出这些系统，而是要求实现后能解释这些 gameplay 责任分别由哪些代码承担。
 
-## 5. 资源链规则
+## 6. 资源链规则
 
 资源链是 first playable gameplay 的主干，实现时必须保证：
 
@@ -76,7 +159,7 @@ NPC/自动化：单体行为和全局工作分配要区分。
 
 飞物品、堆叠、弹跳、粒子和音效属于表现，不能替代资源数量和状态结算。
 
-## 6. Binding / Config 优先
+## 7. Binding / Config 优先
 
 如果项目存在 gameplay binding 或等价场景绑定，必须优先使用。
 
@@ -88,7 +171,7 @@ NPC/自动化：单体行为和全局工作分配要区分。
 
 如果 binding 缺失，应报告 Binding Gap。允许临时 fallback，但必须在最终说明里标记。
 
-## 7. 规则与表现分离
+## 8. 规则与表现分离
 
 先保证规则成立，再接表现。
 
@@ -99,7 +182,7 @@ NPC/自动化：单体行为和全局工作分配要区分。
 
 表现失败时，不应导致核心状态不可恢复或资源链断掉。
 
-## 8. 通信和状态边界
+## 9. 通信和状态边界
 
 系统之间应通过明确 API、事件或共享状态服务连接。
 
@@ -107,7 +190,7 @@ NPC/自动化：单体行为和全局工作分配要区分。
 
 避免多个模块互相深度查找节点并直接修改内部字段。跨模块状态变化应有清楚的入口和所有权。
 
-## 9. Coverage 对应
+## 10. Coverage 对应
 
 每个主要实现都应能对应回 `gameplay.md` 的具体内容。
 
@@ -123,7 +206,7 @@ NPC/自动化：单体行为和全局工作分配要区分。
 
 如果代码实现了 `gameplay.md` 中没有的功能，应说明原因。默认不保留范围外功能。
 
-## 10. Gap 处理
+## 11. Gap 处理
 
 遇到缺口时按类型报告：
 
@@ -136,7 +219,7 @@ NPC/自动化：单体行为和全局工作分配要区分。
 
 不要把 AI 推测直接写成确定实现。可以使用临时 fallback，但必须说明。
 
-## 11. 验证要求
+## 12. 验证要求
 
 每次完成主要实现后，应尽量运行项目已有检查：
 
@@ -149,7 +232,7 @@ build
 
 如果无法运行检查，必须说明原因。
 
-## 12. 默认改动范围
+## 13. 默认改动范围
 
 默认允许修改 gameplay 实现相关文件，例如：
 

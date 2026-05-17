@@ -60,6 +60,8 @@ import { SimplePlayer } from '../entities';
 
 import { configService } from '../config';
 import type { SceneConfig } from '../config';
+import { createProjectGameplayModules } from '../gameplay';
+import type { GameplayModule } from '../gameplay';
 
 export interface GameOptions {
   canvasId: string;
@@ -92,6 +94,9 @@ export class Game {
 
   // Entities
   private player: SimplePlayer | null = null;
+
+  // Project gameplay modules
+  private gameplayModules: GameplayModule[] = [];
 
   // Loop state
   private isRunning = false;
@@ -184,6 +189,9 @@ export class Game {
       this.audioService.setupUnlockListener();
     }
 
+    // 14) Project gameplay modules
+    await this.initGameplayModules();
+
   }
 
   private async preloadModelsFromConfig(): Promise<void> {
@@ -228,6 +236,45 @@ export class Game {
       sceneConfig: configService.getSceneConfig(),
       getPlayer: () => this.player,
     });
+  }
+
+  private async initGameplayModules(): Promise<void> {
+    if (
+      !this.assetLoader ||
+      !this.animationService ||
+      !this.inputService ||
+      !this.materialConfigService ||
+      !this.modelPool ||
+      !this.renderingService ||
+      !this.sceneBuilder ||
+      !this.sceneVfxService ||
+      !this.shadowService ||
+      !this.player ||
+      !this.zoneSystem
+    ) {
+      return;
+    }
+
+    this.gameplayModules = createProjectGameplayModules({
+      scene: this.scene,
+      camera: this.camera,
+      assetLoader: this.assetLoader,
+      animationService: this.animationService,
+      audioService: this.audioService,
+      inputService: this.inputService,
+      materialConfigService: this.materialConfigService,
+      modelPool: this.modelPool,
+      renderingService: this.renderingService,
+      sceneBuilder: this.sceneBuilder,
+      sceneVfxService: this.sceneVfxService,
+      shadowService: this.shadowService,
+      player: this.player,
+      zoneSystem: this.zoneSystem,
+    });
+
+    for (const module of this.gameplayModules) {
+      await module.init?.();
+    }
   }
 
   // ============================================================
@@ -278,6 +325,9 @@ export class Game {
     // Entities
     this.player?.update(deltaTime);
     this.zoneSystem?.update(deltaTime);
+    for (const module of this.gameplayModules) {
+      module.update?.(deltaTime);
+    }
   }
 
   // ============================================================
@@ -353,6 +403,11 @@ export class Game {
 
   dispose(): void {
     this.stop();
+
+    for (let i = this.gameplayModules.length - 1; i >= 0; i--) {
+      this.gameplayModules[i].dispose?.();
+    }
+    this.gameplayModules = [];
 
     this.player?.dispose();
     this.player = null;

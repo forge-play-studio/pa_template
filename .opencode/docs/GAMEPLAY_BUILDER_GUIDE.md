@@ -67,6 +67,7 @@ Game / SceneBuilder / AssetLoader / ModelPool / InputService
 BaseSystem / BaseEntity / SimplePlayer
 GameplayBindingService / ConfigValidator
 editor-package / scene document / runtime node 查询链路
+src/gameplay/createProjectGameplay.ts / GameplayModule composition hook
 ```
 
 builder 的职责是接入和补齐项目 gameplay 系统。只有当 `gameplay.md` 需要且模板没有现成实现时，才新增项目侧 system / service / entity。
@@ -87,6 +88,27 @@ builder 的职责是接入和补齐项目 gameplay 系统。只有当 `gameplay.
 ```
 
 不得在不了解现有结构的情况下直接新增一套平行架构。
+
+## 4.1 Module Breakdown Plan
+
+实现前必须先输出 Module Breakdown Plan。该计划用于防止把 first playable 全部塞进一个大文件。
+
+格式：
+
+```md
+| gameplay responsibility | target file | layer | reason | depends on |
+| --- | --- | --- | --- | --- |
+```
+
+要求：
+
+```text
+每个 gameplay responsibility 必须有明确目标文件。
+每个目标文件只能有一个主要责任。
+src/gameplay/createProjectGameplay.ts 只能组合模块，不写业务规则。
+src/core/Game.ts 只能接入 composition hook，不写项目 gameplay 规则。
+如果某个目标文件会混合 UI、规则、节点查询、表现动画或多个系统，必须在计划阶段拆分。
+```
 
 ## 5. Gameplay Coverage Checklist
 
@@ -140,6 +162,30 @@ Asset gap
 ```
 
 模块顺序必须服从 `gameplay.md` 的最小完整路径。不要为了套模板强行实现文档里没有的系统。
+
+如果是 `pa_template` 项目，默认落地形态通常类似：
+
+```text
+src/gameplay/createProjectGameplay.ts：创建并连接项目 gameplay modules。
+src/config/projectGameplayConfig.ts：项目 tuning、成本、容量、资源类型、稳定 id 映射。
+src/entities/ProjectPlayer.ts：玩家主体、移动、形态或角色表现。
+src/systems/InventorySystem.ts：背包/携带资源/容量。
+src/systems/ResourceCollectionSystem.ts：ResourceSource 采集、刷新、掉落规则。
+src/systems/ContainerTransferSystem.ts：InputContainer / OutputContainer 转移规则。
+src/systems/ProcessorSystem.ts：Processor 输入、加工计时、输出。
+src/systems/SellOrderSystem.ts：售卖、订单、顾客或车辆提交。
+src/systems/PayAreaSystem.ts：PayArea 支付、进度、完成回调。
+src/systems/UnlockSystem.ts：UnlockableArea、阶段状态、能力解锁。
+src/systems/GuideSystem.ts：引导目标选择和流程推进。
+src/systems/EndConditionSystem.ts：结束条件、CTA / Endcard 触发。
+src/services/RuntimeNodeService.ts：scene node / binding 查询封装。
+src/services/FlyingItemService.ts：飞物品、金币、资源表现。
+src/ui/ProjectHud.ts：HUD / resource counters / progress。
+src/ui/JoystickControl.ts：项目侧摇杆，如未复用 InputService。
+src/ui/GuideArrowView.ts：引导箭头表现。
+```
+
+这不是固定清单。只创建 `gameplay.md` 需要的文件。参考 `_cocos` 项目时，只吸收“责任拆分粒度”，不要迁移 Cocos Component/Inspector 形态。
 
 ## 7. 模块完成规则
 
@@ -235,4 +281,15 @@ Asset gap
 有哪些 Gameplay Doc Gap / Binding Gap / Asset Gap。
 运行了哪些检查或测试。
 是否达到 first playable 闭环。
+```
+
+还必须输出 Module Split Audit：
+
+```text
+每个新增/修改 gameplay 文件的单一责任。
+src/core/Game.ts 是否只做接线。
+src/gameplay/createProjectGameplay.ts 是否只做 composition。
+是否存在把多个独立系统塞进同一个文件的情况。
+是否存在 UI、配置解析、节点查询、规则推进混在一起的情况。
+如果存在临时合并，说明原因和后续拆分点。
 ```
