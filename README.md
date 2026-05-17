@@ -32,6 +32,7 @@
 11. `showInspector()` / `loadV2()` 前的 inspector preload patch
 12. 默认 Vite plugin 初始化链：`bridge / inspector / glb / modelCache / stripBabylon / viteSingleFile`
 13. 可直接启用的构建增强插件：`thirdPartyWhitelist / locale / optimizePng / visualizer`
+14. `ZoneSystem`：直接读取 `scene.json` 中的 `gameplay.zones`，并维护 enter/tick/leave 区域状态
 
 当前不应默认假设已经完整包含：
 
@@ -98,8 +99,37 @@
 1. 场景配置
 2. 基础游戏配置
 3. `gameplay.gameplayBindings` contract 入口
+4. 基于 `gameplay.zones` 的 zone runtime 配置
 
-zone、ground UI 等可选能力配置不默认内置，后续按 ability 接入。
+zone 检测能力默认内置，但只负责矩形区域几何检测和 `enter/tick/leave` 事件分发，不内置付款、升级、背包、经济、解锁等具体业务逻辑。ground UI 等表现能力仍按 ability 接入。
+
+#### Zone 存储结构
+
+每个 zone 默认存储在 `gameplay.zones`。ZoneSystem 直接读取 `scene.json`，不通过 `ConfigService` 派生区域。
+
+```json
+{
+  "gameplay": {
+    "zones": [
+      {
+        "id": "pay_area_unlock_forest",
+        "location": { "x": 2, "z": 1 },
+        "size": { "width": 2, "depth": 1.5 },
+        "rotationDeg": 0,
+        "meta": "玩家站在这里时，由项目业务系统处理解锁森林的资源提交。"
+      }
+    ]
+  }
+}
+```
+
+字段分工：
+
+1. `id` 是 zone runtime id。
+2. `location.x/z` 是矩形中心点。
+3. `size.width/depth` 是矩形区域尺寸。
+4. `rotationDeg` 是区域绕 Y 轴的旋转角度，单位为度。
+5. `meta` 只放说明性文字，方便 AI 和开发者理解区域用途；ZoneSystem 不解释它。
 
 ### `core/`
 

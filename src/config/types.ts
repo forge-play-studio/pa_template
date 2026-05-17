@@ -17,6 +17,11 @@ export interface Position3D {
   z: number;
 }
 
+export interface PositionXZ {
+  x: number;
+  z: number;
+}
+
 export interface Scale3D {
   x: number;
   y: number;
@@ -237,29 +242,7 @@ export interface GroundOverlayPlaneConfig {
 // Gameplay Contract
 // ============================================================
 
-export type GameplayObjectType =
-  | 'PlayerSpawn'
-  | 'ResourceSource'
-  | 'InputContainer'
-  | 'OutputContainer'
-  | 'Processor'
-  | 'PayArea'
-  | 'UpgradeArea'
-  | 'CustomerQueue'
-  | 'WorkerSpawn'
-  | 'WorkerWorkPoint'
-  | 'PathPoint'
-  | 'RuntimeSpawnRoot'
-  | 'UnlockableArea'
-  | 'Decoration';
-
-export type GameplayInteractionShape = 'none' | 'circle' | 'box' | 'sphere' | 'capsule' | 'polygon';
-
-export interface GameplayInteractionConfig {
-  shape: GameplayInteractionShape;
-  radius?: number;
-  size?: { width: number; height?: number; depth: number };
-}
+export type GameplayObjectType = string;
 
 export interface GameplayCostConfig {
   resourceType: string;
@@ -271,15 +254,12 @@ export interface GameplayBindingConfig {
   scenePath?: string;
   entityId?: string;
   entityName?: string;
-  logicType: GameplayObjectType;
+  logicType?: GameplayObjectType;
   initialEnabled?: boolean;
   assetRef?: string;
   resourceType?: string;
   acceptsResourceTypes?: string[];
   producesResourceTypes?: string[];
-  interactionShape?: GameplayInteractionShape;
-  interactionRadius?: number;
-  interaction?: GameplayInteractionConfig;
   capacity?: number;
   processTimeSec?: number;
   cost?: GameplayCostConfig[];
@@ -293,9 +273,18 @@ export interface GameplayBindingConfig {
   notes?: string;
 }
 
+export interface SceneZoneConfig {
+  id: string;
+  location: PositionXZ;
+  size?: { width: number; depth: number };
+  rotationDeg?: number;
+  meta?: string;
+}
+
 export interface SceneGameplayConfig {
   worldBounds?: WorldBoundsConfig;
   gameplayBindings?: GameplayBindingConfig[];
+  zones?: SceneZoneConfig[];
   tuning?: {
     sceneVfx?: SceneVfxConfig;
   };

@@ -53,6 +53,7 @@ import {
   SceneVfxService,
   configValidator,
 } from '../services';
+import { ZoneSystem } from '../systems';
 
 // 实体 / UI（脚手架）
 import { SimplePlayer } from '../entities';
@@ -84,6 +85,7 @@ export class Game {
   private materialConfigService: MaterialConfigService | null = null;
   private shadowService: ShadowService | null = null;
   private sceneVfxService: SceneVfxService | null = null;
+  private zoneSystem: ZoneSystem | null = null;
 
   // Input
   private inputService: InputService | null = null;
@@ -163,16 +165,19 @@ export class Game {
     // 9) Entities
     this.createPlayer();
 
-    // 10) Scene VFX (optional)
+    // 10) Zone interactions
+    this.initZoneSystem();
+
+    // 11) Scene VFX (optional)
     this.sceneVfxService = new SceneVfxService(this.scene);
     this.sceneVfxService.initFromConfig();
 
-    // 11) Config validation (DEV)
+    // 12) Config validation (DEV)
     if (import.meta.env.DEV) {
       configValidator.validate();
     }
 
-    // 12) Audio (optional)
+    // 13) Audio (optional)
     if (this.enableAudio) {
       this.audioService = new AudioService(this.scene);
       await this.audioService.preload();
@@ -216,6 +221,12 @@ export class Game {
     if (this.camera) {
       this.camera.target = this.player.position;
     }
+  }
+
+  private initZoneSystem(): void {
+    this.zoneSystem = new ZoneSystem({
+      getPlayer: () => this.player,
+    });
   }
 
   // ============================================================
@@ -265,6 +276,7 @@ export class Game {
   private update(deltaTime: number): void {
     // Entities
     this.player?.update(deltaTime);
+    this.zoneSystem?.update(deltaTime);
   }
 
   // ============================================================
@@ -314,6 +326,10 @@ export class Game {
     return this.inputService;
   }
 
+  getZoneSystem(): ZoneSystem | null {
+    return this.zoneSystem;
+  }
+
   getSceneNodeRuntime(id: string): any | null {
     return this.sceneBuilder?.getSceneNodeRuntime(id) ?? null;
   }
@@ -327,6 +343,7 @@ export class Game {
 
   onEditorDocumentCommitted(sceneConfig: SceneConfig): void {
     configService.replaceSceneConfig(sceneConfig);
+    this.zoneSystem?.reloadFromSceneConfig(sceneConfig);
   }
 
   // ============================================================
@@ -347,6 +364,9 @@ export class Game {
 
     this.sceneVfxService?.dispose();
     this.sceneVfxService = null;
+
+    this.zoneSystem?.dispose();
+    this.zoneSystem = null;
 
     this.renderingService?.dispose();
     this.renderingService = null;

@@ -11,7 +11,7 @@
  * - 资源存在性检查
  */
 
-import { configService, type GameplayBindingConfig } from '../config';
+import { configService } from '../config';
 import { isModelRegistered } from '../assets';
 
 interface ValidationResult {
@@ -19,25 +19,12 @@ interface ValidationResult {
   errors: string[];
 }
 
-const GAMEPLAY_OBJECT_TYPES = new Set([
-  'PlayerSpawn',
-  'ResourceSource',
-  'InputContainer',
-  'OutputContainer',
-  'Processor',
-  'PayArea',
-  'UpgradeArea',
-  'CustomerQueue',
-  'WorkerSpawn',
-  'WorkerWorkPoint',
-  'PathPoint',
-  'RuntimeSpawnRoot',
-  'UnlockableArea',
-  'Decoration',
-]);
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
 
-function hasNonEmptyArray(value: unknown): boolean {
-  return Array.isArray(value) && value.length > 0;
+function isPositiveNumber(value: unknown): value is number {
+  return isFiniteNumber(value) && value > 0;
 }
 
 class ConfigValidator {
@@ -84,7 +71,8 @@ class ConfigValidator {
     }
 
     // 3) scene.nodes[*] 基础校验
-    for (const node of configService.getSceneNodes()) {
+    const sceneNodes = configService.getSceneNodes();
+    for (const node of sceneNodes) {
       if (!node.id) {
         result.errors.push('scene.nodes[*].id 不能为空');
         continue;
@@ -122,7 +110,7 @@ class ConfigValidator {
       result.errors.push(`scene.rootId "${rootId}" 不能与 scene.nodes[*].id 冲突`);
     }
 
-    for (const node of configService.getSceneNodes()) {
+    for (const node of sceneNodes) {
       if (!node.parentId) continue;
       if (node.parentId === node.id) {
         result.errors.push(`scene.nodes[${node.id}] 不能将自己作为 parentId`);
@@ -139,8 +127,6 @@ class ConfigValidator {
       result.errors.push('gameplay.gameplayBindings 必须是数组');
     } else if (Array.isArray(gameplayBindings)) {
       const bindingIds = new Set<string>();
-      let playerSpawnCount = 0;
-      let runtimeSpawnRootCount = 0;
       for (const binding of gameplayBindings) {
         if (!binding || typeof binding !== 'object') {
           result.errors.push('gameplay.gameplayBindings[*] 必须是对象');
@@ -157,12 +143,6 @@ class ConfigValidator {
         }
         bindingIds.add(id);
 
-        if (!GAMEPLAY_OBJECT_TYPES.has(binding.logicType)) {
-          result.errors.push(`gameplay.gameplayBindings[${id}] logicType "${String(binding.logicType)}" 非法`);
-        }
-        if (binding.logicType === 'PlayerSpawn') playerSpawnCount += 1;
-        if (binding.logicType === 'RuntimeSpawnRoot') runtimeSpawnRootCount += 1;
-
         if (binding.entityId && !nodeIds.has(binding.entityId)) {
           result.warnings.push(`gameplay.gameplayBindings[${id}] entityId "${binding.entityId}" 未在 scene.nodes 中找到`);
         }
@@ -174,9 +154,6 @@ class ConfigValidator {
         }
         if (binding.capacity != null && (!Number.isFinite(binding.capacity) || binding.capacity < 0)) {
           result.errors.push(`gameplay.gameplayBindings[${id}] capacity 必须是 >= 0 的数字`);
-        }
-        if (binding.interactionRadius != null && (!Number.isFinite(binding.interactionRadius) || binding.interactionRadius < 0)) {
-          result.errors.push(`gameplay.gameplayBindings[${id}] interactionRadius 必须是 >= 0 的数字`);
         }
         if (binding.processTimeSec != null && (!Number.isFinite(binding.processTimeSec) || binding.processTimeSec < 0)) {
           result.errors.push(`gameplay.gameplayBindings[${id}] processTimeSec 必须是 >= 0 的数字`);
@@ -190,21 +167,11 @@ class ConfigValidator {
           }
         }
 
-        this.validateGameplayBindingReadiness(binding, id, result);
-      }
-
-      if (gameplayBindings.length > 0) {
-        if (playerSpawnCount === 0) {
-          result.warnings.push('gameplay.gameplayBindings 缺少 PlayerSpawn，Readiness Check 通常需要明确玩家出生点');
-        }
-        if (playerSpawnCount > 1) {
-          result.warnings.push('gameplay.gameplayBindings 存在多个 PlayerSpawn，请确认 first playable 使用哪个出生点');
-        }
-        if (runtimeSpawnRootCount === 0 && gameplayBindings.some((binding) => binding.spawnRootId || binding.runtimeParent)) {
-          result.warnings.push('gameplay.gameplayBindings 使用了 spawnRootId/runtimeParent，但未声明 RuntimeSpawnRoot');
-        }
       }
     }
+
+    // 6) gameplay.zones 基础校验
+    this.validateZones(result);
 
     // 输出
     if (result.errors.length > 0) {
@@ -220,88 +187,49 @@ class ConfigValidator {
     return result;
   }
 
-  private validateGameplayBindingReadiness(
-    binding: GameplayBindingConfig,
-    id: string,
-    result: ValidationResult,
-  ): void {
-    switch (binding.logicType) {
-      case 'ResourceSource':
-        if (!binding.resourceType) {
-          result.warnings.push(`gameplay.gameplayBindings[${id}] ResourceSource 建议声明 resourceType`);
-        }
-        if (!binding.interactionShape && !binding.interaction && !binding.spawnRootId) {
-          result.warnings.push(`gameplay.gameplayBindings[${id}] ResourceSource 建议声明 interaction 或 spawnRootId`);
-        }
-        break;
-      case 'InputContainer':
-        if (!binding.resourceType && !hasNonEmptyArray(binding.acceptsResourceTypes)) {
-          result.warnings.push(`gameplay.gameplayBindings[${id}] InputContainer 建议声明 resourceType 或 acceptsResourceTypes`);
-        }
-        if (binding.capacity == null) {
-          result.warnings.push(`gameplay.gameplayBindings[${id}] InputContainer 建议声明 capacity`);
-        }
-        break;
-      case 'OutputContainer':
-        if (!binding.resourceType && !hasNonEmptyArray(binding.producesResourceTypes)) {
-          result.warnings.push(`gameplay.gameplayBindings[${id}] OutputContainer 建议声明 resourceType 或 producesResourceTypes`);
-        }
-        if (binding.capacity == null) {
-          result.warnings.push(`gameplay.gameplayBindings[${id}] OutputContainer 建议声明 capacity`);
-        }
-        break;
-      case 'Processor':
-        if (!hasNonEmptyArray(binding.acceptsResourceTypes)) {
-          result.warnings.push(`gameplay.gameplayBindings[${id}] Processor 建议声明 acceptsResourceTypes`);
-        }
-        if (!hasNonEmptyArray(binding.producesResourceTypes)) {
-          result.warnings.push(`gameplay.gameplayBindings[${id}] Processor 建议声明 producesResourceTypes`);
-        }
-        if (binding.processTimeSec == null) {
-          result.warnings.push(`gameplay.gameplayBindings[${id}] Processor 建议声明 processTimeSec`);
-        }
-        break;
-      case 'PayArea':
-      case 'UpgradeArea':
-        if (!hasNonEmptyArray(binding.cost)) {
-          result.warnings.push(`gameplay.gameplayBindings[${id}] ${binding.logicType} 建议声明 cost`);
-        }
-        if (!hasNonEmptyArray(binding.unlocks) && !binding.notes) {
-          result.warnings.push(`gameplay.gameplayBindings[${id}] ${binding.logicType} 建议声明 unlocks 或在 notes 中说明完成效果`);
-        }
-        break;
-      case 'CustomerQueue':
-        if (!binding.spawnRootId) {
-          result.warnings.push(`gameplay.gameplayBindings[${id}] CustomerQueue 建议声明 spawnRootId`);
-        }
-        if (!hasNonEmptyArray(binding.pathPointIds)) {
-          result.warnings.push(`gameplay.gameplayBindings[${id}] CustomerQueue 建议声明 pathPointIds`);
-        }
-        if (binding.capacity == null) {
-          result.warnings.push(`gameplay.gameplayBindings[${id}] CustomerQueue 建议声明 capacity`);
-        }
-        break;
-      case 'WorkerSpawn':
-      case 'WorkerWorkPoint':
-        if (!binding.workerRole) {
-          result.warnings.push(`gameplay.gameplayBindings[${id}] ${binding.logicType} 建议声明 workerRole`);
-        }
-        break;
-      case 'RuntimeSpawnRoot':
-        if (!binding.entityId && !binding.scenePath) {
-          result.warnings.push(`gameplay.gameplayBindings[${id}] RuntimeSpawnRoot 建议声明 entityId 或 scenePath`);
-        }
-        break;
-      case 'UnlockableArea':
-        if (binding.initialEnabled == null) {
-          result.warnings.push(`gameplay.gameplayBindings[${id}] UnlockableArea 建议声明 initialEnabled`);
-        }
-        if (!hasNonEmptyArray(binding.dependsOn) && !hasNonEmptyArray(binding.unlocks) && !binding.notes) {
-          result.warnings.push(`gameplay.gameplayBindings[${id}] UnlockableArea 建议声明 dependsOn/unlocks 或在 notes 中说明解锁规则`);
-        }
-        break;
+  private validateZones(result: ValidationResult): void {
+    const zones = configService.getSceneConfig().gameplay?.zones;
+    if (zones == null) return;
+    if (!Array.isArray(zones)) {
+      result.errors.push('gameplay.zones 必须是数组');
+      return;
+    }
+
+    const zoneIds = new Set<string>();
+    for (const zone of zones) {
+      if (!zone || typeof zone !== 'object') {
+        result.errors.push('gameplay.zones[*] 必须是对象');
+        continue;
+      }
+
+      const id = typeof zone.id === 'string' ? zone.id.trim() : '';
+      if (!id) {
+        result.errors.push('gameplay.zones[*].id 不能为空');
+        continue;
+      }
+      if (zoneIds.has(id)) {
+        result.errors.push(`gameplay.zones[${id}] 存在重复 id`);
+      }
+      zoneIds.add(id);
+
+      if (!zone.location || !isFiniteNumber(zone.location.x) || !isFiniteNumber(zone.location.z)) {
+        result.errors.push(`gameplay.zones[${id}] location 必须包含有限数字 x/z`);
+      }
+
+      if (zone.rotationDeg != null && !isFiniteNumber(zone.rotationDeg)) {
+        result.errors.push(`gameplay.zones[${id}] rotationDeg 必须是有限数字`);
+      }
+
+      if (!isPositiveNumber(zone.size?.width) || !isPositiveNumber(zone.size?.depth)) {
+        result.errors.push(`gameplay.zones[${id}] size 必须包含 > 0 的 width/depth`);
+      }
+
+      if (zone.meta != null && typeof zone.meta !== 'string') {
+        result.errors.push(`gameplay.zones[${id}] meta 必须是字符串`);
+      }
     }
   }
+
 }
 
 export const configValidator = new ConfigValidator();
