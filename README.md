@@ -197,6 +197,19 @@ zone 检测能力默认内置，但只负责矩形区域几何检测和 `enter/t
 
 如果某个服务只服务于特定玩法或表现能力，例如轨迹动画、资源计数等，优先参考 [`pa_abilities`](https://github.com/forge-play-studio/pa_abilities) 的形态沉淀，而不是默认留在模板基础层。
 
+#### `services/` 与 `systems/` 的判断标准
+
+`Service` 是能力提供者：通常提供接口、资源、查询、适配或基础设施能力，被 `Game`、`System`、`Entity` 调用，但不主动推进玩法规则。
+
+`System` 是规则推进者：负责持有并推进一段游戏世界状态，通常参与 `Game.update(deltaTime)`，也可以响应事件推进状态。
+
+常见判断：
+
+1. 如果模块主要被别人调用，例如 `load`、`acquire`、`getInput`、`getSceneNodes`，优先放在 `services/`。
+2. 如果模块主要推进规则状态，例如 zone enter/tick/leave、worker 队列、资源生产、解锁流程，优先放在 `systems/`。
+3. `services/` 可以监听 Babylon/runtime 事件来维护自身能力，但不应承载玩法规则。
+4. `systems/` 可以依赖 `services/`，但 `services/` 不应依赖具体 `systems/`。
+
 ### `systems/`
 
 放全局规则和状态推进逻辑。
@@ -209,7 +222,7 @@ zone 检测能力默认内置，但只负责矩形区域几何检测和 `enter/t
 
 这层偏 `System`，不负责单体对象生命周期。
 
-模板当前默认内置最小 `ZoneSystem`，只负责矩形区域生命周期检测。其他玩法 system 仍优先通过 ability 或项目自身扩展接入。
+模板当前默认内置最小 `ZoneSystem`，只负责矩形区域生命周期检测和 `enter/tick/leave` 状态推进。其他玩法 system 仍优先通过 ability 或项目自身扩展接入。
 
 ### `ui/`
 
