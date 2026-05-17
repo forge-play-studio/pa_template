@@ -225,6 +225,7 @@ export class Game {
 
   private initZoneSystem(): void {
     this.zoneSystem = new ZoneSystem({
+      sceneConfig: configService.getSceneConfig(),
       getPlayer: () => this.player,
     });
   }

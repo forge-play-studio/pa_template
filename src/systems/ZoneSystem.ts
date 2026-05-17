@@ -1,4 +1,3 @@
-import sceneConfigJson from '../config/scene.json';
 import type { SceneConfig, SceneZoneConfig } from '../config';
 import type { BaseSystem } from './BaseSystem';
 
@@ -44,6 +43,7 @@ export interface ZonePlayerLike {
 }
 
 export interface ZoneSystemOptions {
+  sceneConfig?: SceneConfig;
   getPlayer?: () => ZonePlayerLike | null;
   getActors?: () => ZoneActor[];
 }
@@ -76,12 +76,14 @@ export class ZoneSystem implements BaseSystem {
   constructor(options: ZoneSystemOptions = {}) {
     this.getPlayer = options.getPlayer ?? (() => null);
     this.actorProvider = options.getActors ?? null;
-    this.reloadFromSceneConfig();
+    if (options.sceneConfig) {
+      this.reloadFromSceneConfig(options.sceneConfig);
+    }
   }
 
-  reloadFromSceneConfig(sceneConfig: SceneConfig = sceneConfigJson as SceneConfig): void {
-    this.zones = this.resolveRuntimeZones(sceneConfig);
+  reloadFromSceneConfig(sceneConfig: SceneConfig): void {
     this.reset();
+    this.zones = this.resolveRuntimeZones(sceneConfig);
   }
 
   update(deltaTime: number): void {

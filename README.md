@@ -32,7 +32,7 @@
 11. `showInspector()` / `loadV2()` 前的 inspector preload patch
 12. 默认 Vite plugin 初始化链：`bridge / inspector / glb / modelCache / stripBabylon / viteSingleFile`
 13. 可直接启用的构建增强插件：`thirdPartyWhitelist / locale / optimizePng / visualizer`
-14. `ZoneSystem`：直接读取 `scene.json` 中的 `gameplay.zones`，并维护 enter/tick/leave 区域状态
+14. `ZoneSystem`：消费当前 `SceneConfig` 中的 `gameplay.zones`，并维护 enter/tick/leave 区域状态
 
 当前不应默认假设已经完整包含：
 
@@ -105,7 +105,7 @@ zone 检测能力默认内置，但只负责矩形区域几何检测和 `enter/t
 
 #### Zone 存储结构
 
-每个 zone 默认存储在 `gameplay.zones`。ZoneSystem 直接读取 `scene.json`，不通过 `ConfigService` 派生区域。
+每个 zone 默认存储在 `gameplay.zones`。模板初始化时由 `Game` 把当前 `SceneConfig` 显式传给 `ZoneSystem`；ZoneSystem 不从 `gameplayBindings` 派生区域。
 
 ```json
 {
@@ -209,7 +209,7 @@ zone 检测能力默认内置，但只负责矩形区域几何检测和 `enter/t
 
 这层偏 `System`，不负责单体对象生命周期。
 
-模板当前只保留 `BaseSystem` 类型壳层，不默认初始化任何玩法 system。具体玩法系统优先通过 ability 或项目自身扩展接入。
+模板当前默认内置最小 `ZoneSystem`，只负责矩形区域生命周期检测。其他玩法 system 仍优先通过 ability 或项目自身扩展接入。
 
 ### `ui/`
 

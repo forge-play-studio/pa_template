@@ -276,7 +276,7 @@ export interface GameplayBindingConfig {
 export interface SceneZoneConfig {
   id: string;
   location: PositionXZ;
-  size?: { width: number; depth: number };
+  size: { width: number; depth: number };
   rotationDeg?: number;
   meta?: string;
 }
