@@ -185,7 +185,58 @@ src/ui/JoystickControl.ts：项目侧摇杆，如未复用 InputService。
 src/ui/GuideArrowView.ts：引导箭头表现。
 ```
 
-这不是固定清单。只创建 `gameplay.md` 需要的文件。参考 `_cocos` 项目时，只吸收“责任拆分粒度”，不要迁移 Cocos Component/Inspector 形态。
+这不是固定清单。只创建 `gameplay.md` 需要的文件。实现必须落在 `pa_template` 的 TypeScript/Babylon 分层里，不要迁移其他引擎或旧项目的运行时形态。
+
+## 6.1 Babylon Gameplay Architecture Reference
+
+实现时优先使用下面的 Babylon 项目责任映射。该映射是代码架构规则，不是固定文件清单。
+
+```text
+玩法组合入口
+  -> src/gameplay/createProjectGameplay.ts
+  -> 只创建模块、注入依赖、返回 GameplayModule[]
+
+规则状态和流程推进
+  -> src/systems/
+  -> inventory、collection、transfer、processor、sell/order、pay area、unlock、guide、end condition
+
+单体对象行为
+  -> src/entities/
+  -> player、worker、customer、vehicle、machine actor、enemy
+
+可复用运行时能力
+  -> src/services/
+  -> runtime node lookup、binding lookup、model pooling、flying item、animation/audio/vfx helpers、event bus
+
+界面和屏幕表现
+  -> src/ui/
+  -> HUD、joystick、guide arrow、progress、floating text、CTA、endcard
+
+配置和稳定 id
+  -> src/config/
+  -> resource types、costs、capacity、stage definitions、authored ids、binding ids、tuning constants
+```
+
+默认责任拆分建议：
+
+```text
+Game flow / state composition -> createProjectGameplay.ts + Stage/EndCondition systems
+Player movement and actor behavior -> entities/ProjectPlayer.ts or existing SimplePlayer extension
+Inventory and capacity -> systems/InventorySystem.ts
+Resource source collection -> systems/ResourceCollectionSystem.ts
+Container input/output transfer -> systems/ContainerTransferSystem.ts
+Machine processing -> systems/ProcessorSystem.ts
+Selling, order, customer queue -> systems/SellOrderSystem.ts
+Standing payment / progress area -> systems/PayAreaSystem.ts
+Area unlock and stage changes -> systems/UnlockSystem.ts
+Guide target selection -> systems/GuideSystem.ts
+Resource flight / pickup / delivery visuals -> services/FlyingItemService.ts
+Scene node and binding access -> services/RuntimeNodeService.ts
+HUD counters and progress views -> ui/ProjectHud.ts
+CTA and endcard -> ui/EndcardView.ts or project-specific CTA UI
+```
+
+Use existing files when they already provide the responsibility clearly. Create a new file only when the gameplay needs that responsibility and no existing module owns it.
 
 ## 7. 模块完成规则
 
@@ -221,11 +272,14 @@ src/ui/GuideArrowView.ts：引导箭头表现。
 ```text
 开局
 -> 引导
+-> 首次移动
 -> 首次采集
+-> 首次背包/资源计数变化
 -> 首次交付
 -> 首次收益
 -> 首次升级 / 解锁
--> 自动化 / 队列 / 新区域
+-> 新区域 / 新机器 / 新敌人 / 新效率出现
+-> 自动化 / 队列 / 新阶段
 -> 结束条件
 -> CTA / Endcard
 ```

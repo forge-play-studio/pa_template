@@ -46,7 +46,7 @@ UI 层：HUD、引导、进度、结算、CTA。
 
 这些是职责归属，不代表必须新增同名文件或目录。已有模块能清楚承载职责时，应复用已有模块。
 
-`_cocos` 旧项目可以作为“责任拆分粒度”的参考，例如背包、采集、区域解锁、队列、工人、HUD、引导、VFX 往往是不同文件或组件。但 `gameplay-builder` 属于 `pa_template` 范围，不能把 Cocos 的 Component / Inspector / 目录约定直接迁入 `pa_template`。最终落地必须使用 `pa_template` 的 TypeScript/Babylon 分层。
+`gameplay-builder` 必须按 `pa_template` 的 TypeScript/Babylon 分层实现 gameplay。背包、采集、区域解锁、队列、工人、HUD、引导、VFX 等责任应尽量保持独立，不要把多个 gameplay 责任塞进一个大文件。
 
 ## 4. pa_template 文件拆分规则
 
@@ -159,6 +159,22 @@ NPC/自动化：单体行为和全局工作分配要区分。
 
 飞物品、堆叠、弹跳、粒子和音效属于表现，不能替代资源数量和状态结算。
 
+默认状态所有权：
+
+```text
+InventorySystem 是玩家携带资源、容量、增减扣除的状态真源。
+ResourceCollectionSystem 只负责资源来源、采集条件、刷新和产出。
+ContainerTransferSystem 只负责从背包到容器、从容器到容器的转移规则。
+ProcessorSystem 只负责输入消耗、加工计时、输出产物。
+SellOrderSystem 只负责出售、订单、顾客/车辆提交和收益。
+PayAreaSystem 只负责站立支付、支付进度和支付完成事件。
+UnlockSystem 只负责区域/能力/阶段解锁后的状态变化。
+FlyingItemService 只负责表现动画，不作为资源状态真源。
+HUD 只展示状态，不结算资源。
+```
+
+禁止把资源链写成单个巨大 manager。即使 first playable 很小，也必须至少区分“规则状态”和“表现动画”。
+
 ## 7. Binding / Config 优先
 
 如果项目存在 gameplay binding 或等价场景绑定，必须优先使用。
@@ -182,13 +198,66 @@ NPC/自动化：单体行为和全局工作分配要区分。
 
 表现失败时，不应导致核心状态不可恢复或资源链断掉。
 
+实现要求：
+
+```text
+资源扣除、容量判断、升级完成、阶段推进必须先在 system 中完成。
+飞物品、节点弹跳、粒子、音效、飘字只能订阅或响应规则结果。
+如果表现目标节点缺失，应报告 Binding Gap 或使用可说明的 fallback，不能阻塞资源结算。
+如果音频/VFX 服务不可用，核心玩法仍必须可运行。
+```
+
+## 8.1 Zone / Area 交互规则
+
+`ZoneSystem` 只负责几何检测和 `enter/tick/leave` 分发。它不拥有支付、升级、售卖、加工、解锁、引导或 UI 状态。
+
+区域类 gameplay 应按下面边界实现：
+
+```text
+ZoneSystem
+  -> 检测 player / actor 是否进入区域，维护 stayTimeSec。
+
+PayAreaSystem
+  -> 监听 zone tick，按时间间隔扣资源，推进支付进度。
+
+UnlockSystem
+  -> 接收支付完成事件，激活区域、能力、机器、敌人、阶段或路线。
+
+SellOrderSystem / ProcessorSystem
+  -> 监听对应 zone 或 container 状态，处理出售、提交、加工。
+
+Progress / Guide / HUD UI
+  -> 展示区域高亮、进度、数量、箭头和提示。
+```
+
+如果 `gameplay.md` 描述“玩家站在某处持续交付资源”，默认不要新增一套碰撞检测；优先使用 `gameplay.zones` 和 `ZoneSystem`，再由项目 system 承接领域规则。
+
 ## 9. 通信和状态边界
 
 系统之间应通过明确 API、事件或共享状态服务连接。
 
-成熟 Cocos 项目常见 `EventBus / GameEvents` 模式；其他引擎可以使用等价机制。
+对于跨系统广播，可以使用项目内明确的 event bus、typed callbacks 或 system API。事件名和 payload 应集中定义，避免字符串散落。
 
 避免多个模块互相深度查找节点并直接修改内部字段。跨模块状态变化应有清楚的入口和所有权。
+
+## 9.1 Lifecycle and Cleanup
+
+每个 gameplay module 都必须遵循 `GameplayModule` 生命周期：
+
+```text
+init：查询 binding、创建 runtime 对象、注册事件。
+update：只推进该模块拥有的运行时状态。
+dispose：注销事件、zone listener、DOM listener、计时器，释放临时 mesh / UI / VFX。
+```
+
+要求：
+
+```text
+ZoneSystem.onEnter/onTick/onLeave 返回的 unsubscribe 必须保存，并在 dispose 调用。
+window/document/canvas 事件监听必须在 dispose 移除。
+临时 Babylon mesh、material、texture、particle system 必须有明确释放路径。
+system 不应在 dispose 后继续持有 scene node、mesh、DOM 或 service 的强引用。
+```
 
 ## 10. Coverage 对应
 
