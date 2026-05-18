@@ -15,16 +15,18 @@
 1. [QUESTION_FRAMEWORK.md](./QUESTION_FRAMEWORK.md)：定义生成 `gameplay.md` 前必须回答的问题、可选问题和 gameplay 模式约束。
 2. [GAMEPLAY_MD_TEMPLATE.md](./GAMEPLAY_MD_TEMPLATE.md)：定义项目级 `gameplay.md` 的默认输出结构。
 3. [ARTIST_GAMEPLAY_MD_GUIDE.md](./ARTIST_GAMEPLAY_MD_GUIDE.md)：定义美术如何配合 agent 描述目标流程、资产关系、地编意图和遗漏流程修正。
-4. [GAMEPLAY_BUILDER_GUIDE.md](./GAMEPLAY_BUILDER_GUIDE.md)：定义 `gameplay-builder` agent 的实现流程、coverage 检查和 gap 报告。
-5. [GAMEPLAY_IMPLEMENTATION_CODE_RULES.md](./GAMEPLAY_IMPLEMENTATION_CODE_RULES.md)：定义 gameplay 实现代码的设计边界和模块划分规则。
-6. [../agents/gameplay.md](../agents/gameplay.md)：定义 `gameplay` agent 的职责、边界和输出契约。
-7. [../agents/gameplay-builder.md](../agents/gameplay-builder.md)：定义 `gameplay-builder` agent 的职责、边界和输出契约。
+4. [BINDING_CHECK_GUIDE.md](./BINDING_CHECK_GUIDE.md)：定义现有 `gameplay` / `gameplay-builder` 工作流里的 binding readiness 检查、gap 报告和用户追问规则。
+5. [GAMEPLAY_BUILDER_GUIDE.md](./GAMEPLAY_BUILDER_GUIDE.md)：定义 `gameplay-builder` agent 的实现流程、coverage 检查和 gap 报告。
+6. [GAMEPLAY_IMPLEMENTATION_CODE_RULES.md](./GAMEPLAY_IMPLEMENTATION_CODE_RULES.md)：定义 gameplay 实现代码的设计边界和模块划分规则。
+7. [../agents/gameplay.md](../agents/gameplay.md)：定义 `gameplay` agent 的职责、边界和输出契约。
+8. [../agents/gameplay-builder.md](../agents/gameplay-builder.md)：定义 `gameplay-builder` agent 的职责、边界和输出契约。
 
 ## 使用顺序
 
 1. 先确认 `wiki/sources/docs/guides/gameplay/FIRST_PLAYABLE_WORKFLOW.md` 的流程 0 已完成。
 2. 再用 `QUESTION_FRAMEWORK.md` 收集并确认必答问题。
 3. 当美术提供场景、资产、地编或遗漏修正信息时，按 `ARTIST_GAMEPLAY_MD_GUIDE.md` 整理。
-4. 按 `GAMEPLAY_MD_TEMPLATE.md` 组织项目级 `gameplay.md`。
-5. 地编和 binding 完成后，按 `wiki/sources/docs/guides/gameplay/templates/READINESS_CHECK_TEMPLATE.md` 做开发前 Gate。
-6. 开发 first playable gameplay 时，按 `GAMEPLAY_BUILDER_GUIDE.md` 和 `GAMEPLAY_IMPLEMENTATION_CODE_RULES.md` 执行。
+4. 按 `GAMEPLAY_MD_TEMPLATE.md` 组织项目级 `gameplay.md`，并写清楚 Binding 需求清单。
+5. 用 `BINDING_CHECK_GUIDE.md` 对比 `gameplay.md` 与当前 `scene.json` / binding 状态；缺少 binding、zone 或关键字段时，先向用户追问。
+6. 地编和 binding 完成后，按 `wiki/sources/docs/guides/gameplay/templates/READINESS_CHECK_TEMPLATE.md` 做开发前 Gate。
+7. 开发 first playable gameplay 时，按 `BINDING_CHECK_GUIDE.md`、`GAMEPLAY_BUILDER_GUIDE.md` 和 `GAMEPLAY_IMPLEMENTATION_CODE_RULES.md` 执行。

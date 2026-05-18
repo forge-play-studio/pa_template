@@ -110,7 +110,19 @@
 11. 游戏是否有失败条件？
 12. 初版 gameplay 的最小完整游玩路径是什么？玩家完成到哪一步算初版闭环完成？
 
-### 5.5 可选问题
+### 5.5 Binding 需求
+
+这类问题用于确保美术、地编、文档 AI 和开发 AI 对 gameplay binding 的责任一致。只要对象参与 first playable 主路径，就必须回答。
+
+1. 哪些 gameplay 对象需要明确 binding、zone、spawn point、path point 或 runtime node reference？
+2. 每个需要 binding 的对象期望的 logicType 或等价玩法类型是什么？
+3. 每个 binding 需要哪些字段才能实现，例如 resourceType、acceptsResourceTypes、producesResourceTypes、capacity、cost、dependsOn、unlocks、spawnRootId、pathPointIds？
+4. 哪些对象目前由美术或地编负责补 binding？
+5. 哪些对象允许开发临时使用 fallback？fallback 需要用户明确确认，不能由 AI 静默决定。
+6. 缺少哪些 binding 会阻塞 first playable 主路径？
+7. 如果 binding 缺失，应该问用户什么具体问题？
+
+### 5.6 可选问题
 
 这类问题不影响初版 gameplay 文档成立，可以在信息不足或项目不适用时跳过。
 

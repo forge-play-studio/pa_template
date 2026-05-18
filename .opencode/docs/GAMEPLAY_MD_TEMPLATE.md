@@ -55,5 +55,26 @@
 
 ### 4.7 初版完整游玩路径
 
-## 5. 假设项
+## 5. Binding 需求清单
+
+本节列出 first playable 实现前必须由场景、地编、binding 或等价配置明确提供的对象。每一项至少写清楚期望 id、对象类型、用途、所需字段和是否阻塞主路径。
+
+```md
+| gameplay object | expected binding / zone | logic type | required fields | gameplay flow | blocking |
+| --- | --- | --- | --- | --- | --- |
+```
+
+必须覆盖：
+
+1. 玩家主体和出生点。
+2. 资源来源、资源掉落或 runtime spawn root。
+3. 背包、容器、加工点、出售点、提交点。
+4. PayArea、UpgradeArea、UnlockableArea 和其他站立交互区域。
+5. NPC、顾客、工人、敌人、车辆、路径点和等待点。
+6. 阶段解锁后会显示、隐藏、启用或生成的对象。
+7. 引导目标、结束条件、CTA / Endcard 触发对象。
+
+如果当前还不知道具体 scene node 或 binding id，应标记为 `待确认`，并写出需要向用户确认的问题。最终版 `gameplay.md` 不应留下阻塞 first playable 主路径的 binding 待确认项。
+
+## 6. 假设项
 ```

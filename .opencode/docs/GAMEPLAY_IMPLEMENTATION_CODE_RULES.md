@@ -186,6 +186,17 @@ HUD 只展示状态，不结算资源。
 ```
 
 如果 binding 缺失，应报告 Binding Gap。允许临时 fallback，但必须在最终说明里标记。
+临时 fallback 必须先问用户并得到明确确认；不能由开发 AI 静默决定。
+
+实现前必须先做 binding readiness 检查，至少确认：
+
+```text
+gameplay.md 中的每个主路径 gameplay 对象都有对应 binding、zone 或等价查询方式。
+每个 binding 的 logicType 和关键字段足够实现。
+entityId / runtimeParent / spawnRootId / pathPointIds 能对应到 scene.nodes 或明确的 runtime 规则。
+PayArea / UpgradeArea / UnlockableArea 等区域优先对应 gameplay.zones。
+缺失项已经作为 Binding Gap 向用户提问。
+```
 
 ## 8. 规则与表现分离
 
@@ -203,7 +214,7 @@ HUD 只展示状态，不结算资源。
 ```text
 资源扣除、容量判断、升级完成、阶段推进必须先在 system 中完成。
 飞物品、节点弹跳、粒子、音效、飘字只能订阅或响应规则结果。
-如果表现目标节点缺失，应报告 Binding Gap 或使用可说明的 fallback，不能阻塞资源结算。
+如果表现目标节点缺失，应报告 Binding Gap；只有用户确认后才能使用可说明的 fallback，且 fallback 不能阻塞资源结算。
 如果音频/VFX 服务不可用，核心玩法仍必须可运行。
 ```
 

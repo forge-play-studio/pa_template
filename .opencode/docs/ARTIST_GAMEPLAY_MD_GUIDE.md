@@ -61,6 +61,20 @@ Decoration
 
 不能把缺少规则的 gameplay 对象临时写成 Decoration。Decoration 只能表示不参与 gameplay 的装饰对象。
 
+如果某个资产会参与 first playable 主路径，美术还应说明它是否需要：
+
+```text
+gameplay binding
+zone
+spawn point
+path point
+runtime parent
+guide target
+unlock / hide / show 状态
+```
+
+如果这些信息缺失，agent 必须追问用户；不能把 AI 对节点名或资产名的猜测写成已确认 binding。
+
 ## 4. 地编意图
 
 美术应补充场景布局背后的玩法意图：
@@ -88,6 +102,8 @@ NPC / 顾客 / 车辆的出生、等待、工作和离开位置
 每个交互对象是否有触发规则和结果？
 每个升级是否有消耗、触发和完成效果？
 每个阶段是否有开始条件和完成条件？
+每个参与 first playable 的对象是否都有 binding、zone 或等价查询方式？
+缺少 binding 时是否已经向用户确认补 binding 或 fallback？
 指定资产是否都有 gameplay 角色，或明确为 Decoration？
 地编区域是否都有玩法意义，或明确为装饰区域？
 结束条件、CTA、Endcard、跳转是否清楚？

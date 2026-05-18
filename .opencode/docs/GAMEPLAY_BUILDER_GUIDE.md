@@ -38,6 +38,7 @@ acceptance_tests.md
 
 ```text
 gameplay.md
+.opencode/docs/BINDING_CHECK_GUIDE.md
 package.json
 项目入口和主循环文件
 配置类型和场景配置
@@ -89,7 +90,36 @@ builder 的职责是接入和补齐项目 gameplay 系统。只有当 `gameplay.
 
 不得在不了解现有结构的情况下直接新增一套平行架构。
 
-## 4.1 Module Breakdown Plan
+## 4.1 Binding Readiness Gate
+
+实现前必须先按 `BINDING_CHECK_GUIDE.md` 做一次 binding 检查。检查输入至少包括：
+
+```text
+gameplay.md
+src/config/scene.json
+src/config/types.ts
+src/services/GameplayBindingService.ts
+src/services/ConfigValidator.ts
+```
+
+必须输出 Binding Coverage Checklist：
+
+```md
+| gameplay requirement | expected binding / zone | current config | status | impact | question |
+| --- | --- | --- | --- | --- | --- |
+```
+
+如果 first playable 主路径上的 gameplay 对象缺少 binding、zone、spawn point、path point 或关键字段，必须先问用户。不得静默使用相似节点名、资产名或 Decoration 作为 fallback。
+
+允许继续实现不依赖缺失 binding 的独立模块，但必须明确：
+
+```text
+哪些模块可以继续。
+哪些模块被 Binding Gap 阻塞。
+需要用户回答什么问题。
+```
+
+## 4.2 Module Breakdown Plan
 
 实现前必须先输出 Module Breakdown Plan。该计划用于防止把 first playable 全部塞进一个大文件。
 
@@ -308,9 +338,11 @@ Use existing files when they already provide the responsibility clearly. Create 
 
 - 缺失 binding：
 - 期望 logicType：
+- 期望字段：
 - 影响的 gameplay 流程：
 - 需要补充的场景节点 / 字段：
 - 临时 fallback：
+- 需要询问用户的问题：
 ```
 
 如果是资产问题，输出：
