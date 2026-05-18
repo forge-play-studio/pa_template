@@ -4,7 +4,7 @@
 
 生成或更新 `gameplay.md` 时，应先根据 `QUESTION_FRAMEWORK.md` 收集必答问题的答案，再把答案整理到下面结构中。
 
-权威模板维护在 `pa_maker/docs/guides/gameplay/GAMEPLAY_MD_TEMPLATE.md`。本文件只是 `.opencode` 兼容副本。
+权威模板维护在 `wiki/sources/docs/guides/gameplay/GAMEPLAY_MD_TEMPLATE.md`。本文件只是 `.opencode` 兼容副本。
 
 ```md
 # Gameplay
@@ -23,7 +23,7 @@
 
 ### 3.1 资源列表
 
-资源、容器、加工、出售、升级、队列和工人对象应能映射到 `pa_maker/docs/standards/GAMEPLAY_OBJECT_STANDARD.md` 中定义的 Gameplay Object 类型。场景节点与玩法字段的对应关系应在 `gameplay.gameplayBindings` 或等价 binding 表中记录。
+资源、容器、加工、出售、升级、队列和工人对象应能映射到 `wiki/sources/docs/standards/GAMEPLAY_OBJECT_STANDARD.md` 中定义的 Gameplay Object 类型。场景节点与玩法字段的对应关系应在 `gameplay.gameplayBindings` 或等价 binding 表中记录。
 
 ### 3.2 可收集资源来源
 

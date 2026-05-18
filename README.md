@@ -57,13 +57,13 @@
 
 ## 团队级文档
 
-`pa_template` 不再保留 `docs/` 目录。团队级 First Playable Workflow、Gameplay Object / Binding / Naming 标准、Readiness 和 Acceptance 模板统一维护在 `pa_maker/docs`：
+`pa_template` 不再保留 `docs/` 目录。团队级 First Playable Workflow、Gameplay Object / Binding / Naming 标准、Readiness 和 Acceptance 模板统一维护在 `wiki/sources/docs`：
 
-1. [First Playable Workflow](https://github.com/forge-play-studio/pa_maker/blob/main/docs/guides/gameplay/FIRST_PLAYABLE_WORKFLOW.md)
-2. [Gameplay docs index](https://github.com/forge-play-studio/pa_maker/blob/main/docs/guides/gameplay/README.md)
-3. [Gameplay Object Standard](https://github.com/forge-play-studio/pa_maker/blob/main/docs/standards/GAMEPLAY_OBJECT_STANDARD.md)
-4. [Gameplay Binding Standard](https://github.com/forge-play-studio/pa_maker/blob/main/docs/standards/GAMEPLAY_BINDING_STANDARD.md)
-5. [pa_template docs archive](https://github.com/forge-play-studio/pa_maker/tree/main/docs/templates/pa_template)
+1. [First Playable Workflow](https://github.com/forge-play-studio/wiki/blob/main/sources/docs/guides/gameplay/FIRST_PLAYABLE_WORKFLOW.md)
+2. [Gameplay docs index](https://github.com/forge-play-studio/wiki/blob/main/sources/docs/guides/gameplay/README.md)
+3. [Gameplay Object Standard](https://github.com/forge-play-studio/wiki/blob/main/sources/docs/standards/GAMEPLAY_OBJECT_STANDARD.md)
+4. [Gameplay Binding Standard](https://github.com/forge-play-studio/wiki/blob/main/sources/docs/standards/GAMEPLAY_BINDING_STANDARD.md)
+5. [pa_template docs archive](https://github.com/forge-play-studio/wiki/tree/main/sources/docs/templates/pa_template)
 
 流程 0 完成后，新项目才能进入流程 1。模板只承载 gameplay contract layer，不默认实现 Backpack、Upgrade、Queue、Worker 等具体 gameplay 系统。
 
