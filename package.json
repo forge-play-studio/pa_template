@@ -19,7 +19,8 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@babylonjs/inspector": "8.52.1",
+    "@babylonjs/inspector": "^9.0.0",
+    "@fps-games/vite-plugins": "^0.1.2",
     "cross-env": "^7.0.3",
     "rollup-plugin-visualizer": "^7.0.1",
     "terser": "^5.44.1",
@@ -28,8 +29,8 @@
     "vite-plugin-singlefile": "^2.3.0"
   },
   "dependencies": {
-    "@babylonjs/core": "8.52.1",
-    "@babylonjs/loaders": "8.52.1",
+    "@babylonjs/core": "^9.0.0",
+    "@babylonjs/loaders": "^9.0.0",
     "brotli-dec-wasm": "^2.3.2"
   }
 }

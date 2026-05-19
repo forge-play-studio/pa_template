@@ -12,6 +12,14 @@ import {
   stripBabylonPlugin,
   thirdPartyWhitelistPlugin,
 } from './vite-plugins';
+import {
+  scriptInjectPlugin,
+  inspectorBridgePlugin,
+} from '@fps-games/vite-plugins';
+import {
+  stripBabylonPlugin as fpsStripBabylonPlugin,
+  babylonInspectorPlugin,
+} from '@fps-games/vite-plugins/babylon';
 
 const liteBuild = process.env.LITE_BUILD === 'true';
 const isProduction = process.env.NODE_ENV === 'production';
@@ -42,13 +50,30 @@ export default defineConfig({
     __BUNDLED_LOCALES__: JSON.stringify(bundledLocales),
   },
   plugins: [
+    // Inspector 命令拦截 + 内置通用 handler (handler.iife.js)
+    inspectorBridgePlugin({
+      enabled: true,
+      builtinHandler: true,
+    }),
     // 平台 bridge 自动注入（仅开发模式）
     bridgePlugin({
       port: 8080,
       delay: 2000,
     }),
+    // Game Bridge 自动注入（仅开发模式）
+    scriptInjectPlugin({
+      src: 'http://localhost:8080/script/bridge.js',
+      delay: 2000,
+      errorMessage: '[GameBridge] MCP Server not available',
+      urlRewrite: `
+        var e2b = location.href.match(/https?:\/\/\d+-([a-z0-9]+)\.e2b\.(app|dev)/);
+        return e2b ? 'https://8080-' + e2b[1] + '.e2b.app/script/bridge.js' : defaultSrc;
+      `,
+    }),
     // Inspector 暴露到 globalThis（仅开发模式）
     inspectorPlugin(),
+    // Babylon Inspector 暴露到 globalThis（仅开发模式）
+    babylonInspectorPlugin(),
     // 开发模式模型强缓存 + URL 版本化（mtime）
     modelCachePlugin({
       extensions: ['.glb', '.gltf', '.png', '.jpg', '.jpeg', '.mp3'],
@@ -67,6 +92,7 @@ export default defineConfig({
     }),
     // Strip unused Babylon.js code (WGSL shaders, submodules, OpenPBR, texture loaders)
     stripBabylonPlugin(),
+    fpsStripBabylonPlugin(),
     localePlugin({
       locale,
       htmlLang: localeMeta.htmlLang,
