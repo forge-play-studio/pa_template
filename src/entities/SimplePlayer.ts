@@ -40,6 +40,7 @@ export class SimplePlayer {
   private _position: Vector3;
   private baseSpeed: number;
   private speedMultiplier: number = 1;
+  private _radius: number;
 
   constructor(scene: Scene, movementInput: MovementInputSource | null, config: SimplePlayerConfig) {
     this.scene = scene;
@@ -48,6 +49,7 @@ export class SimplePlayer {
     this.baseSpeed = config.speed;
 
     const radius = config.radius ?? 0.35;
+    this._radius = radius;
 
     // 使用基元 Mesh 作为占位角色
     const mesh = MeshBuilder.CreateSphere('player_sphere', { diameter: radius * 2 }, this.scene);
@@ -63,6 +65,10 @@ export class SimplePlayer {
 
   get position(): Vector3 {
     return this._position;
+  }
+
+  get radius(): number {
+    return this._radius;
   }
 
   setSpeedMultiplier(multiplier: number): void {

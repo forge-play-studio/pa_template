@@ -53,12 +53,15 @@ import {
   SceneVfxService,
   configValidator,
 } from '../services';
+import { ZoneSystem } from '../systems';
 
 // 实体 / UI（脚手架）
 import { SimplePlayer } from '../entities';
 
 import { configService } from '../config';
 import type { SceneConfig } from '../config';
+import { createProjectGameplayModules } from '../gameplay';
+import type { GameplayModule } from '../gameplay';
 
 export interface GameOptions {
   canvasId: string;
@@ -84,12 +87,16 @@ export class Game {
   private materialConfigService: MaterialConfigService | null = null;
   private shadowService: ShadowService | null = null;
   private sceneVfxService: SceneVfxService | null = null;
+  private zoneSystem: ZoneSystem | null = null;
 
   // Input
   private inputService: InputService | null = null;
 
   // Entities
   private player: SimplePlayer | null = null;
+
+  // Project gameplay modules
+  private gameplayModules: GameplayModule[] = [];
 
   // Loop state
   private isRunning = false;
@@ -154,30 +161,39 @@ export class Game {
     this.materialConfigService.logMissingMaterials();
     this.modelPool.setMaterialConfigService(this.materialConfigService);
 
-    // 7) Refresh shadows after scene loaded
+    // 7) Warm up pooled model instances declared in scene.assets
+    this.warmupModelsFromConfig();
+
+    // 8) Refresh shadows after scene loaded
     this.shadowService.refreshShadowMeshes();
 
-    // 8) Input
+    // 9) Input
     this.initInput();
 
-    // 9) Entities
+    // 10) Entities
     this.createPlayer();
 
-    // 10) Scene VFX (optional)
+    // 11) Zone interactions
+    this.initZoneSystem();
+
+    // 12) Scene VFX (optional)
     this.sceneVfxService = new SceneVfxService(this.scene);
     this.sceneVfxService.initFromConfig();
 
-    // 11) Config validation (DEV)
+    // 13) Config validation (DEV)
     if (import.meta.env.DEV) {
       configValidator.validate();
     }
 
-    // 12) Audio (optional)
+    // 14) Audio (optional)
     if (this.enableAudio) {
       this.audioService = new AudioService(this.scene);
       await this.audioService.preload();
       this.audioService.setupUnlockListener();
     }
+
+    // 15) Project gameplay modules
+    await this.initGameplayModules();
 
   }
 
@@ -194,10 +210,11 @@ export class Game {
 
     // AssetLoader 需要先创建灯光（已在 buildSceneEnvironment 完成）
     await this.assetLoader.preload(modelIds);
+  }
 
-    // NOTE:
-    // 原项目可能会做对象池预热（warmupCount）。
-    // 该行为在不同团队/项目中实现差异较大，因此脚手架默认不强制执行。
+  private warmupModelsFromConfig(): void {
+    if (!this.modelPool) return;
+    this.modelPool.warmupFromSceneAssets(configService.getSceneAssets());
   }
 
   private initInput(): void {
@@ -215,6 +232,52 @@ export class Game {
     // 摄像机跟随（ArcRotateCamera：target 跟随）
     if (this.camera) {
       this.camera.target = this.player.position;
+    }
+  }
+
+  private initZoneSystem(): void {
+    this.zoneSystem = new ZoneSystem({
+      sceneConfig: configService.getSceneConfig(),
+      getPlayer: () => this.player,
+    });
+  }
+
+  private async initGameplayModules(): Promise<void> {
+    if (
+      !this.assetLoader ||
+      !this.animationService ||
+      !this.inputService ||
+      !this.materialConfigService ||
+      !this.modelPool ||
+      !this.renderingService ||
+      !this.sceneBuilder ||
+      !this.sceneVfxService ||
+      !this.shadowService ||
+      !this.player ||
+      !this.zoneSystem
+    ) {
+      return;
+    }
+
+    this.gameplayModules = createProjectGameplayModules({
+      scene: this.scene,
+      camera: this.camera,
+      assetLoader: this.assetLoader,
+      animationService: this.animationService,
+      audioService: this.audioService,
+      inputService: this.inputService,
+      materialConfigService: this.materialConfigService,
+      modelPool: this.modelPool,
+      renderingService: this.renderingService,
+      sceneBuilder: this.sceneBuilder,
+      sceneVfxService: this.sceneVfxService,
+      shadowService: this.shadowService,
+      player: this.player,
+      zoneSystem: this.zoneSystem,
+    });
+
+    for (const module of this.gameplayModules) {
+      await module.init?.();
     }
   }
 
@@ -265,6 +328,10 @@ export class Game {
   private update(deltaTime: number): void {
     // Entities
     this.player?.update(deltaTime);
+    this.zoneSystem?.update(deltaTime);
+    for (const module of this.gameplayModules) {
+      module.update?.(deltaTime);
+    }
   }
 
   // ============================================================
@@ -314,6 +381,10 @@ export class Game {
     return this.inputService;
   }
 
+  getZoneSystem(): ZoneSystem | null {
+    return this.zoneSystem;
+  }
+
   getSceneNodeRuntime(id: string): any | null {
     return this.sceneBuilder?.getSceneNodeRuntime(id) ?? null;
   }
@@ -327,6 +398,7 @@ export class Game {
 
   onEditorDocumentCommitted(sceneConfig: SceneConfig): void {
     configService.replaceSceneConfig(sceneConfig);
+    this.zoneSystem?.reloadFromSceneConfig(sceneConfig);
   }
 
   // ============================================================
@@ -335,6 +407,11 @@ export class Game {
 
   dispose(): void {
     this.stop();
+
+    for (let i = this.gameplayModules.length - 1; i >= 0; i--) {
+      this.gameplayModules[i].dispose?.();
+    }
+    this.gameplayModules = [];
 
     this.player?.dispose();
     this.player = null;
@@ -347,6 +424,9 @@ export class Game {
 
     this.sceneVfxService?.dispose();
     this.sceneVfxService = null;
+
+    this.zoneSystem?.dispose();
+    this.zoneSystem = null;
 
     this.renderingService?.dispose();
     this.renderingService = null;

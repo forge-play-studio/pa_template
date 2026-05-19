@@ -116,7 +116,7 @@ export class AssetLoader {
       pathInfo.filename,
       this.scene,
       undefined,
-      pathInfo.isDataUrl ? '.glb' : undefined
+      this.getPluginExtension(pathInfo)
     );
 
     if (result.meshes.length > 0) {
@@ -168,12 +168,16 @@ export class AssetLoader {
     this.pathInfoCache.clear();
   }
 
+  private getPluginExtension(pathInfo: ModelPathInfo): string | undefined {
+    return pathInfo.isDataUrl || pathInfo.isCompressed ? '.glb' : undefined;
+  }
+
   /**
    * 内部方法：执行实际加载
    *
    * 统一使用 LoadAssetContainerAsync 处理所有 URL 类型：
    * - 常规 URL: path + filename 分开传递
-   * - Data URL: 需要指定 pluginExtension 告诉加载器文件类型
+   * - Data URL / 压缩后 Blob URL: 需要指定 pluginExtension 告诉加载器文件类型
    */
   private async doLoadContainer(modelId: string): Promise<AssetContainer> {
     const pathInfo = await this.getPathInfo(modelId);
@@ -186,7 +190,7 @@ export class AssetLoader {
       pathInfo.filename,
       this.scene,
       undefined,
-      pathInfo.isDataUrl ? '.glb' : undefined
+      this.getPluginExtension(pathInfo)
     );
 
 
