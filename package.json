@@ -1,5 +1,5 @@
 {
-  "name": "pa_maker_scaffold",
+  "name": "pa_template",
   "version": "0.1.0",
   "description": "Playable ad project base with platform bridge and project-side editor package",
   "type": "module",
