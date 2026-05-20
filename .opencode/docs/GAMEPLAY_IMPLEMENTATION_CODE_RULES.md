@@ -6,12 +6,17 @@
 
 实现代码只服务于 `gameplay.md` 中的 first playable 闭环。
 
+`gameplay.md` 和用户最新明确表达的意图是实现依据。代码必须能追溯到已确认的玩法描述、绑定说明或用户确认，不得把 AI 自己的推测、简化版本或临时替代方案伪装成正式实现。
+
 ```text
 复用现有项目架构。
 复用 pa_template 已有基础能力。
 优先使用 scene / config / gameplay binding。
 优先跑通最小完整玩法路径。
+严格覆盖 gameplay.md 中的已确认主路径。
+遇到矛盾、缺字段、缺 binding、缺资产或实现路径不清楚时，先提问或报告 gap。
 不要为了套模板新增文档中没有的系统。
+不要因为实现困难而自行简化、缩小、替换或省略 gameplay.md 已定义的玩法。
 不要做与 first playable 无关的长期重构。
 ```
 
