@@ -52,6 +52,7 @@
 | Binding readiness、缺口格式、用户追问规则 | [BINDING_CHECK_GUIDE.md](./BINDING_CHECK_GUIDE.md) |
 | wiki MCP/catalog 模块/系统索引、依赖图、阶段拆分 | [GAMEPLAY_BUILDER_GUIDE.md](./GAMEPLAY_BUILDER_GUIDE.md#42-wiki-modulesystem-discovery-gate) |
 | 每阶段如何验收、验收来源和证据格式 | [GAMEPLAY_BUILDER_GUIDE.md](./GAMEPLAY_BUILDER_GUIDE.md#43-phase-acceptance-gate) |
+| 每个系统的实现状态、验收状态、证据和 blocker checklist | [GAMEPLAY_BUILDER_GUIDE.md](./GAMEPLAY_BUILDER_GUIDE.md#431-system-acceptance-checklist-gate) |
 | 开发计划文档路径、模板和更新规则 | [GAMEPLAY_BUILDER_GUIDE.md](./GAMEPLAY_BUILDER_GUIDE.md#44-development-plan-document-gate) |
 | 模块拆分和文件分层计划 | [GAMEPLAY_BUILDER_GUIDE.md](./GAMEPLAY_BUILDER_GUIDE.md#45-module-breakdown-plan) |
 | gameplay 代码分层、禁止模式、生命周期和验证要求 | [GAMEPLAY_IMPLEMENTATION_CODE_RULES.md](./GAMEPLAY_IMPLEMENTATION_CODE_RULES.md) |

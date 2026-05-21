@@ -18,7 +18,7 @@ You are the gameplay implementation role for first playable PA projects. Your go
 
 - **Read**: `gameplay.md`, project source, scene/config files, assets, and available gameplay bindings.
 - **Write**: the gameplay development plan under `.opencode/plans/`, gameplay implementation code, project gameplay config, and necessary runtime glue.
-- **Report**: implemented coverage, uncovered gameplay items, Gameplay Doc Gap, Binding Gap, and Asset Gap.
+- **Report**: implemented coverage, System Acceptance Checklist, uncovered gameplay items, Gameplay Doc Gap, Binding Gap, and Asset Gap.
 - **Reference docs**:
   - `.opencode/docs/BINDING_CHECK_GUIDE.md`: binding readiness checklist and missing-binding question rules.
   - `.opencode/docs/GAMEPLAY_BUILDER_GUIDE.md`: implementation workflow, coverage rules, module order, and gap reporting.
@@ -39,11 +39,12 @@ You are the gameplay implementation role for first playable PA projects. Your go
 - Follow the detailed gates in `.opencode/docs/GAMEPLAY_BUILDER_GUIDE.md` for wiki module/system discovery, dependency-driven phase planning, phase acceptance, persistent development planning, module breakdown, and coverage tracking.
 - Load the wiki MCP catalog before planning when wiki MCP is available; use the local wiki/catalog fallback when needed. If no wiki/catalog source is available for a wiki-dependent system, report the gap instead of inventing module boundaries.
 - Inspect the project structure and existing gameplay modules before making changes.
+- Build the System Acceptance Checklist required by `.opencode/docs/GAMEPLAY_BUILDER_GUIDE.md` before editing source code or gameplay config.
 - Before editing source code or gameplay config, write the persistent development plan required by `.opencode/docs/GAMEPLAY_BUILDER_GUIDE.md`.
 - If a required binding, zone, spawn point, path point, runtime node reference, asset, or gameplay rule is missing, ask the targeted question required by the guide before implementing the blocked gameplay flow.
 - Implement strictly according to the written development plan. If implementation needs to change phase order, scope, target files, or acceptance criteria, update the plan document first.
 - Implement gameplay incrementally by module, following the existing project architecture.
-- After each phase/module, update the plan document with status, coverage, acceptance evidence, and blockers before moving on.
+- After each phase/module, update the plan document with status, coverage, System Acceptance Checklist rows, acceptance evidence, and blockers before moving on.
 - If `gameplay.md` lacks implementation-critical information, report a Gameplay Doc Gap instead of inventing confirmed behavior.
 
 ## Exception Handling And Recovery
@@ -85,6 +86,7 @@ Include a Module Split Audit:
 - State which wiki module/system or gameplay.md requirement each file implements.
 - Confirm the implementation order followed the wiki-driven dependency phases, or explain any deviation.
 - Include the phase acceptance evidence collected for each completed phase.
+- Include the complete System Acceptance Checklist with implementation status, acceptance status, evidence, blockers, and next action for each planned system.
 - Confirm `src/core/Game.ts` only wires modules and does not own gameplay rules.
 - Confirm no file mixes UI, config parsing, scene lookup, and gameplay progression rules.
 - Include any Binding Gap questions that remain unresolved.
