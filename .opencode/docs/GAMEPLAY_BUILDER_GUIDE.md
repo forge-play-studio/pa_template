@@ -2,6 +2,22 @@
 
 本文档定义 `gameplay-builder` agent 的实现流程。该 agent 负责根据 `gameplay.md` 开发 first playable gameplay，并持续检查实现是否覆盖文档。
 
+## 快速索引
+
+| 主题 | 位置 | 用途 |
+| --- | --- | --- |
+| 启动前读取清单 | 3. 启动前读取清单 | 确认必须读取的 gameplay、wiki、项目和 binding 输入 |
+| Binding readiness | 4.1 Binding Readiness Gate | 开发前检查 gameplay 对象、scene/config 和 binding 是否足够 |
+| Wiki 模块/系统发现 | 4.2 Wiki Module/System Discovery Gate | 从 wiki MCP/catalog 建立模块/系统索引和依赖图 |
+| 阶段验收定义 | 4.3 Phase Acceptance Gate | 为每个阶段写清楚验收来源、步骤、预期和证据 |
+| 开发计划文档 | 4.4 Development Plan Document Gate | 写入 `.opencode/plans/gameplay-builder-development-plan.md` 并作为执行记录 |
+| 模块拆分计划 | 4.5 Module Breakdown Plan | 把 gameplay responsibility 映射到文件和分层 |
+| Coverage checklist | 5. Gameplay Coverage Checklist | 跟踪 gameplay.md 覆盖状态和 gap |
+| 默认 fallback 顺序 | 6. 默认模块顺序 | 只在 wiki 没有更具体依赖时使用 |
+| Babylon 分层参考 | 6.1 Babylon Gameplay Architecture Reference | 决定 systems/entities/services/ui/config 归属 |
+| Gap 报告 | 9. Gap 报告 | 统一 Gameplay Doc Gap / Binding Gap / Asset Gap 格式 |
+| 验证要求 | 12. 验证要求 | 完成实现后的命令、运行时和人工验收要求 |
+
 ## 1. 目标
 
 `gameplay-builder` 的目标不是重新设计玩法，而是把已经写清楚的 `gameplay.md` 落到项目代码中。
@@ -45,6 +61,10 @@ acceptance_tests.md
 ```text
 gameplay.md
 .opencode/docs/BINDING_CHECK_GUIDE.md
+.opencode/docs/GAMEPLAY_BUILDER_GUIDE.md
+.opencode/docs/GAMEPLAY_IMPLEMENTATION_CODE_RULES.md
+wiki MCP catalog / local wiki catalog if available
+wiki gameplay templates: READINESS_CHECK_TEMPLATE.md and ACCEPTANCE_TEST_TEMPLATE.md when available
 package.json
 项目入口和主循环文件
 配置类型和场景配置
@@ -125,25 +145,229 @@ src/services/ConfigValidator.ts
 需要用户回答什么问题。
 ```
 
-## 4.2 Module Breakdown Plan
+## 4.2 Wiki Module/System Discovery Gate
 
-实现前必须先输出 Module Breakdown Plan。该计划用于防止把 first playable 全部塞进一个大文件。
+实现前必须先根据 wiki MCP/catalog 建立模块/系统索引。这里的目标不是照抄 wiki 代码，而是让实现拆分和顺序优先服从团队已有模块、能力和系统边界。
+
+默认流程：
+
+```text
+1. 使用 wiki MCP 加载 catalog。
+2. 根据 gameplay.md 的玩法对象、系统名、资源链和完整路径检索相关 wiki 模块/系统。
+3. 读取相关模块/系统页面，提取职责、输入、输出、依赖、事件/API、配置字段、适用边界。
+4. 把结果整理为 Wiki Module/System Index。
+5. 根据依赖关系生成 Dependency Graph。
+6. 从 wiki gameplay templates、ability README/REFERENCE 和项目 gameplay.md 中提取验收标准。
+7. 根据 Dependency Graph 输出 Wiki-Driven Phase Plan 和每阶段验收定义。
+8. 写入持久化开发计划文档，默认路径为 `.opencode/plans/gameplay-builder-development-plan.md`。
+```
+
+如果 wiki MCP 不可用：
+
+```text
+优先读取本地 wiki/catalog，例如 wiki/wiki/index.md 和相关 wiki/sources/abilities 文档。
+如果本地 catalog 也不可用，必须说明 wiki/catalog 缺失。
+对 gameplay.md 明确要求必须基于 wiki 的系统，标记为 Gameplay Doc Gap 或 External Knowledge Gap。
+不要把缺少 wiki 依据解释成可以随意重建模块边界。
+```
+
+Wiki Module/System Index 必须使用下面格式：
+
+```md
+| module/system | wiki/catalog source | responsibility | lower-level dependencies | depends on it | gameplay.md coverage | implementation note |
+| --- | --- | --- | --- | --- | --- | --- |
+```
+
+字段要求：
+
+```text
+module/system：wiki MCP/catalog 中的模块、系统、ability 或明确机制名称。
+wiki/catalog source：wiki 页面、source 文档或 catalog 条目。
+responsibility：该模块/系统拥有的单一职责。
+lower-level dependencies：它运行前必须先存在的更底层模块、服务、数据结构或配置。
+depends on it：哪些更上层 gameplay 流程依赖它。
+gameplay.md coverage：它覆盖 gameplay.md 的哪些条目或流程。
+implementation note：复用、改写、项目内实现、或仅作为边界参考。
+```
+
+Dependency Graph 规则：
+
+```text
+如果 A 需要 B 的状态、API、事件或配置才能工作，则 A depends on B。
+如果 A 只是把事件通知给 B，通常 B depends on A 的事件契约，但不一定依赖 A 的内部实现。
+如果两个模块互相需要彼此的具体实现才能成立，它们是循环依赖，应放入同一阶段。
+如果两个模块只共享事件或接口，先定义共享 contract，再按底层到上层拆阶段。
+配置、runtime node lookup、event bus、inventory/economy state、resource model 通常比采集、加工、售卖、支付、引导更底层。
+表现层、HUD、引导箭头、VFX 通常依赖规则系统，不应先于规则状态实现，除非 wiki 明确指出某个表现服务是底层能力。
+```
+
+必须输出 Wiki-Driven Phase Plan：
+
+```md
+| phase | wiki modules/systems | dependency reason | gameplay coverage target | target files/layers | acceptance source | verification / evidence | pass criteria |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+```
+
+阶段排序规则：
+
+```text
+优先做更底层的模块或系统。
+如果模块/系统之间存在依赖关系，被依赖者必须在更早阶段完成。
+如果互相依赖，必须放在同一阶段，并先实现 shared contract / event / config，再实现各自内部。
+如果多个模块没有依赖关系，可以放在同一阶段，但必须有明确的共同验收路径，且不混合不相关职责。
+每个阶段必须能给出一个可验证结果；不能只是“写一些文件”。
+每个阶段完成后，更新 Gameplay Coverage Checklist 和 Binding Coverage Checklist，再进入下一阶段。
+```
+
+## 4.3 Phase Acceptance Gate
+
+每个实现阶段都必须写清楚“如何验收”。验收标准优先来自 wiki MCP/catalog，而不是 agent 自己临时发明。
+
+验收来源优先级：
+
+```text
+1. gameplay.md 中对应完整路径、数值、绑定、反馈和边界要求。
+2. wiki gameplay templates：
+   - READINESS_CHECK_TEMPLATE.md：开发前 gating、P0/P1/P2、结构/链路/实现完整性。
+   - ACCEPTANCE_TEST_TEMPLATE.md：核心闭环、可选系统、负向与边界用例、通过标准。
+3. wiki ability README / REFERENCE：
+   - ability-specific validation / checklist / performance verification。
+   - ability README 中的接入结果要求，例如目录结构一致、配置一致、引用清楚、typecheck/build 通过。
+4. 项目本地 README / AGENTS / package scripts 里的验证要求。
+5. 如果以上都没有覆盖，才允许定义项目内临时验收，但必须标记为 Project-specific fallback acceptance。
+```
+
+每个 phase 必须输出 Phase Acceptance Definition：
+
+```md
+| phase | acceptance source | test case / check | steps or command | expected result | evidence | status |
+| --- | --- | --- | --- | --- | --- | --- |
+```
+
+规则：
+
+```text
+acceptance source 必须指向 wiki 页面、ability README/REFERENCE、gameplay.md 条目或项目文档。
+steps or command 必须具体，例如 pnpm typecheck、进入某 zone、完成一车订单、检查 scene.json 中字段、观察现金数值变化。
+expected result 必须能判定 Pass / Fail，不能写“看起来正常”。
+evidence 必须说明交付时怎么证明：命令输出、coverage checklist 状态、截图/录屏、运行时行为、文件回读或人工验收项。
+不能自动验证的表现项必须明确列为 Manual-only check，并说明谁需要人工验收。
+如果某阶段依赖 binding gap、asset gap 或 doc gap，phase status 必须是 Blocked，不能写成 Partially pass。
+```
+
+阶段通过标准：
+
+```text
+1. 该阶段所有 P0/P1 blocker 已处理，或明确停在 Blocked。
+2. 该阶段对应 gameplay coverage 条目不再是 Not started。
+3. 该阶段用到的 binding coverage 条目不是 Missing / Ambiguous，除非用户确认 fallback。
+4. 该阶段所有 applies = Yes 的 wiki acceptance 用例有结果。
+5. 该阶段规定的命令或运行时检查已经执行；无法执行时必须写原因。
+```
+
+## 4.4 Development Plan Document Gate
+
+`gameplay-builder` 不能只在对话里给计划。开始写 source code 或 gameplay config 前，必须先在项目内写入一个开发计划文档。
+
+默认路径：
+
+```text
+.opencode/plans/gameplay-builder-development-plan.md
+```
+
+如果用户指定了其他路径，可以使用用户指定路径；否则使用默认路径。如果目录不存在，先创建目录。
+
+开发计划文档必须包含：
+
+```md
+# Gameplay Builder Development Plan
+
+## 1. Source Analysis
+
+- gameplay.md:
+- wiki MCP/catalog:
+- project docs:
+- scene/config/assets:
+- binding/readiness evidence:
+
+## 2. Gameplay Contract Summary
+
+## 3. Wiki Module/System Index
+
+| module/system | wiki/catalog source | responsibility | lower-level dependencies | depends on it | gameplay.md coverage | implementation note |
+| --- | --- | --- | --- | --- | --- | --- |
+
+## 4. Dependency Graph
+
+## 5. Wiki-Driven Phase Plan
+
+| phase | wiki modules/systems | dependency reason | gameplay coverage target | target files/layers | acceptance source | verification / evidence | pass criteria |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+
+## 6. Phase Acceptance Definitions
+
+| phase | acceptance source | test case / check | steps or command | expected result | evidence | status |
+| --- | --- | --- | --- | --- | --- | --- |
+
+## 7. Module Breakdown Plan
+
+| gameplay responsibility | wiki module/system source | target file | layer | reason | depends on |
+| --- | --- | --- | --- | --- | --- |
+
+## 8. Step-by-Step Implementation Checklist
+
+| step | phase | task | target files | acceptance check | status |
+| --- | --- | --- | --- | --- | --- |
+
+## 9. Gaps, Risks, and Questions
+
+## 10. Status Log
+```
+
+计划文档规则：
+
+```text
+Source Analysis 必须说明已经完整分析 gameplay.md 和 wiki MCP/catalog；如果无法访问 wiki MCP，必须说明本地 fallback 或缺口。
+Step-by-Step Implementation Checklist 必须写清楚每一步“做什么”和“怎么验收”。
+每个 step 的 acceptance check 必须能追溯到 Phase Acceptance Definitions。
+源码实现必须按计划中的 phase / step 顺序推进。
+如果需要改变 phase 顺序、目标文件、实现范围或验收标准，必须先更新开发计划文档，再继续编码。
+每完成一个 phase 或重要 step，必须更新 Status Log、coverage 状态、验收 evidence 和 blocker。
+如果阶段被 Binding Gap / Asset Gap / Gameplay Doc Gap 阻塞，计划文档中该阶段必须标记 Blocked，不得继续实现被阻塞流程。
+```
+
+开发计划文档不是一次性产物。它是开发期间的执行记录。最终报告必须引用该计划中的完成状态和验收 evidence。
+
+如果 wiki MCP/catalog 给出的模块边界与 `gameplay.md` 冲突：
+
+```text
+gameplay.md 和用户最新意图仍是 gameplay 合同。
+wiki 模块/系统作为实现边界和复用依据。
+冲突必须显式列为 Gameplay Doc Gap / Implementation Risk / Wiki Conflict。
+不要自行改变 gameplay scope，也不要因为 wiki 中没有完全匹配模块就简化玩法。
+```
+
+## 4.5 Module Breakdown Plan
+
+实现前必须先输出 Module Breakdown Plan。该计划必须建立在 Wiki Module/System Index、Wiki-Driven Phase Plan、Phase Acceptance Definitions 和 Development Plan Document 之后，用于防止把 first playable 全部塞进一个大文件。
 
 格式：
 
 ```md
-| gameplay responsibility | target file | layer | reason | depends on |
-| --- | --- | --- | --- | --- |
+| gameplay responsibility | wiki module/system source | target file | layer | reason | depends on |
+| --- | --- | --- | --- | --- | --- |
 ```
 
 要求：
 
 ```text
 每个 gameplay responsibility 必须有明确目标文件。
+每个 gameplay responsibility 必须能追溯到 gameplay.md 条目，优先追溯到 wiki MCP/catalog 中的模块或系统。
 每个目标文件只能有一个主要责任。
 src/gameplay/createProjectGameplay.ts 只能组合模块，不写业务规则。
 src/core/Game.ts 只能接入 composition hook，不写项目 gameplay 规则。
 如果某个目标文件会混合 UI、规则、节点查询、表现动画或多个系统，必须在计划阶段拆分。
+Module Breakdown Plan 的 depends on 必须与 Wiki-Driven Phase Plan 的依赖顺序一致。
 ```
 
 ## 5. Gameplay Coverage Checklist
@@ -180,7 +404,9 @@ Asset gap
 
 ## 6. 默认模块顺序
 
-默认按下面顺序实现：
+默认模块顺序只在 wiki MCP/catalog 没有给出更具体模块或依赖关系时使用。只要 wiki MCP/catalog 提供了相关模块、系统或 ability，优先使用 Wiki-Driven Phase Plan。
+
+fallback 顺序如下：
 
 ```text
 1. Runtime state / system runner，若项目已有则接入已有入口
