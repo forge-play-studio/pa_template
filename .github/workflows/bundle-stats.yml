@@ -1,0 +1,79 @@
+name: Bundle Stats
+
+on:
+  workflow_dispatch:
+  schedule:
+    # GitHub cron is UTC. This runs daily at 18:00 Asia/Shanghai.
+    - cron: '0 10 * * *'
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  bundle-stats:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build and capture log
+        id: build
+        shell: bash
+        run: |
+          set +e
+          pnpm run build 2>&1 | tee build.log
+          status=${PIPESTATUS[0]}
+          echo "exit_code=${status}" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Analyze bundle stats
+        if: always()
+        run: node scripts/analyze-bundle-stats.mjs --build-exit-code "${{ steps.build.outputs.exit_code }}"
+
+      - name: Upload bundle reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundle-stats-${{ github.run_number }}
+          if-no-files-found: ignore
+          path: |
+            dist/stats.html
+            dist/stats.json
+            dist/**/*.html
+            build.log
+            bundle-stats-report/**
+
+      - name: Create or update issue
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_TITLE: '[bundle-stats] Daily bundle report'
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh label create "bundle-stats" --color "0E8A16" --description "Daily bundle size analysis" 2>/dev/null || true
+          gh label create "auto-generated" --color "EDEDED" --description "Created automatically by GitHub Actions" 2>/dev/null || true
+          existing=$(gh issue list --state open --search "in:title \"$ISSUE_TITLE\"" --json number --jq '.[0].number // ""')
+          if [ -n "$existing" ]; then
+            gh issue edit "$existing" --title "$ISSUE_TITLE" --body-file bundle-stats-report/issue.md --add-label "bundle-stats,auto-generated"
+          else
+            gh issue create --title "$ISSUE_TITLE" --body-file bundle-stats-report/issue.md --label "bundle-stats,auto-generated"
+          fi
+
+      - name: Fail workflow if build failed
+        if: steps.build.outputs.exit_code != '0'
+        run: exit "${{ steps.build.outputs.exit_code }}"
