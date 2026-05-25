@@ -58,6 +58,22 @@ jobs:
             build.log
             bundle-stats-report/**
 
+      - name: Upload playable HTML
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playable-index-html-${{ github.run_number }}
+          if-no-files-found: error
+          path: dist/index.html
+
+      - name: Upload bundle stats HTML
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundle-stats-html-${{ github.run_number }}
+          if-no-files-found: error
+          path: dist/stats.html
+
       - name: Create or update issue
         if: always()
         env:

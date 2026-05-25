@@ -260,7 +260,7 @@ function buildIssueBody(data) {
   }
 
   lines.push('---');
-  lines.push('Workflow artifacts include the playable HTML at `dist/index.html`, the visual bundle report at `dist/stats.html`, and machine-readable data at `dist/stats.json`.');
+  lines.push('Workflow artifacts include standalone attachments for the playable HTML and visual bundle report, plus the full `bundle-stats-*` report bundle.');
   return lines.join('\n');
 }
 
