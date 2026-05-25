@@ -98,10 +98,11 @@ jobs:
           process.stdout.write(result);
           NODE
           )"
-          issue_title="[Daily bundle report][${report_date}]包体是否超过5mb：${bundle_over_5mb}"
+          issue_key="[Daily bundle report][${report_date}]"
+          issue_title="${issue_key}包体是否超过5mb：${bundle_over_5mb}"
           gh label create "bundle-stats" --color "0E8A16" --description "Daily bundle size analysis" 2>/dev/null || true
           gh label create "auto-generated" --color "EDEDED" --description "Created automatically by GitHub Actions" 2>/dev/null || true
-          existing=$(gh issue list --state all --search "\"${issue_title}\" in:title" --json number,title --jq ".[] | select(.title == \"${issue_title}\") | .number" | head -n 1)
+          existing=$(gh issue list --state all --search "\"${issue_key}\" in:title" --json number,title --jq ".[] | select(.title | startswith(\"${issue_key}\")) | .number" | head -n 1)
           if [ -n "$existing" ]; then
             gh issue edit "$existing" --title "$issue_title" --body-file bundle-stats-report/issue.md --add-label "bundle-stats,auto-generated"
           else

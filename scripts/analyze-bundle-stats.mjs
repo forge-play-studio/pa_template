@@ -234,30 +234,16 @@ function buildIssueBody(data) {
     return lines.join('\n');
   }
 
-  if (data.htmlOutputs.length > 0) {
-    lines.push('## Final HTML Outputs', '');
-    lines.push('| File | Raw | Gzip | Brotli |');
-    lines.push('|---|---:|---:|---:|');
-    for (const output of data.htmlOutputs) {
-      lines.push(`| \`${output.file}\` | ${formatBytes(output.bytes)} | ${formatBytes(output.gzipBytes)} | ${formatBytes(output.brotliBytes)} |`);
-    }
-    lines.push('');
+  const indexOutput = data.htmlOutputs.find((output) => output.file === 'dist/index.html');
+  lines.push('## Index HTML Size', '');
+  if (indexOutput) {
+    lines.push('| File | Raw |');
+    lines.push('|---|---:|');
+    lines.push(`| \`${indexOutput.file}\` | ${formatBytes(indexOutput.bytes)} |`);
+  } else {
+    lines.push('`dist/index.html` was not found in the build output.');
   }
-
-  const stats = data.stats;
-  if (stats) {
-    lines.push('## Rollup Module Totals', '');
-    lines.push('| Modules | Rendered | Gzip | Brotli |');
-    lines.push('|---:|---:|---:|---:|');
-    lines.push(`| ${stats.moduleCount} | ${formatBytes(stats.totals.renderedLength)} | ${formatBytes(stats.totals.gzipLength)} | ${formatBytes(stats.totals.brotliLength)} |`);
-    lines.push('');
-
-    lines.push('## Top Packages', '');
-    appendSizeTable(lines, stats.topPackages, 'name');
-
-    lines.push('## Top Modules', '');
-    appendSizeTable(lines, stats.topModules, 'id');
-  }
+  lines.push('');
 
   lines.push('---');
   lines.push('Workflow artifacts include standalone attachments for the playable HTML and visual bundle report, plus the full `bundle-stats-*` report bundle.');
