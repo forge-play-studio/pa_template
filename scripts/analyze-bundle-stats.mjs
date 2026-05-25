@@ -16,9 +16,10 @@ const runUrl = getRunUrl();
 const refName = process.env.GITHUB_REF_NAME ?? '';
 const sha = process.env.GITHUB_SHA ?? '';
 const commit = sha ? sha.slice(0, 7) : 'unknown';
-const generatedAt = new Date().toISOString();
+const generatedAt = formatBeijingTime(new Date());
 
 const htmlOutputs = listHtmlOutputs('dist');
+const artAssets = analyzeArtAssets(['src/assets', 'public']);
 const result = {
   status: buildExitCode === 0 ? 'success' : 'failure',
   generatedAt,
@@ -28,6 +29,7 @@ const result = {
   runUrl,
   buildExitCode,
   htmlOutputs,
+  artAssets,
   stats: null,
   error: null,
 };
@@ -102,6 +104,56 @@ function listHtmlOutputs(dir) {
       brotliBytes: brotliCompressSync(data).length,
     };
   });
+}
+
+function analyzeArtAssets(roots) {
+  const artExtensions = new Set([
+    '.avif',
+    '.basis',
+    '.bmp',
+    '.exr',
+    '.fbx',
+    '.gif',
+    '.glb',
+    '.gltf',
+    '.hdr',
+    '.jpeg',
+    '.jpg',
+    '.ktx',
+    '.ktx2',
+    '.mtl',
+    '.obj',
+    '.png',
+    '.svg',
+    '.tga',
+    '.webp',
+  ]);
+  const ignoredPathParts = new Set(['placeholders']);
+  const files = [];
+
+  for (const root of roots) {
+    if (!fs.existsSync(root)) continue;
+    for (const file of walk(root)) {
+      const normalized = normalizePath(file);
+      const parts = normalized.split('/');
+      if (parts.some((part) => ignoredPathParts.has(part))) continue;
+      const ext = path.extname(file).toLowerCase();
+      if (!artExtensions.has(ext)) continue;
+      const stat = fs.statSync(file);
+      files.push({
+        file: normalized,
+        bytes: stat.size,
+      });
+    }
+  }
+
+  files.sort((a, b) => b.bytes - a.bytes || a.file.localeCompare(b.file));
+  return {
+    roots,
+    fileCount: files.length,
+    totalBytes: files.reduce((total, file) => total + file.bytes, 0),
+    topFiles: files.slice(0, 20),
+  };
 }
 
 function walk(dir) {
@@ -213,7 +265,7 @@ function buildIssueBody(data) {
     '# Bundle Stats Daily Report',
     '',
     `**Status**: ${statusIcon}`,
-    `**Updated**: ${data.generatedAt}`,
+    `**Updated (Beijing)**: ${data.generatedAt}`,
     `**Repository**: ${data.repo}`,
     `**Ref**: ${data.refName || 'unknown'}`,
     `**Commit**: \`${data.commit}\``,
@@ -245,6 +297,21 @@ function buildIssueBody(data) {
   }
   lines.push('');
 
+  lines.push('## Art Assets', '');
+  const artAssets = data.artAssets;
+  if (!artAssets || artAssets.fileCount === 0) {
+    lines.push('No art assets found under `src/assets` or `public`.');
+  } else {
+    lines.push(`Total raw size: ${formatBytes(artAssets.totalBytes)} across ${artAssets.fileCount} files.`);
+    lines.push('');
+    lines.push('| File | Raw |');
+    lines.push('|---|---:|');
+    for (const asset of artAssets.topFiles) {
+      lines.push(`| \`${asset.file}\` | ${formatBytes(asset.bytes)} |`);
+    }
+  }
+  lines.push('');
+
   lines.push('---');
   lines.push('Workflow artifacts include standalone attachments for the playable HTML and visual bundle report, plus the full `bundle-stats-*` report bundle.');
   return lines.join('\n');
@@ -270,6 +337,11 @@ function formatBytes(bytes) {
   const kib = bytes / 1024;
   if (kib < 1024) return `${kib.toFixed(1)} KiB`;
   return `${(kib / 1024).toFixed(2)} MiB`;
+}
+
+function formatBeijingTime(date) {
+  const beijing = new Date(date.getTime() + 8 * 60 * 60 * 1000);
+  return beijing.toISOString().replace('T', ' ').slice(0, 19);
 }
 
 function readBuildLogTail() {
