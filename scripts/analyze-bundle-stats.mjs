@@ -260,7 +260,7 @@ function buildIssueBody(data) {
   }
 
   lines.push('---');
-  lines.push('The full visual report is available in the workflow artifact as `dist/stats.html`; machine-readable data is in `dist/stats.json`.');
+  lines.push('Workflow artifacts include the playable HTML at `dist/index.html`, the visual bundle report at `dist/stats.html`, and machine-readable data at `dist/stats.json`.');
   return lines.join('\n');
 }
 

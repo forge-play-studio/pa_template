@@ -51,6 +51,7 @@ jobs:
           name: bundle-stats-${{ github.run_number }}
           if-no-files-found: ignore
           path: |
+            dist/index.html
             dist/stats.html
             dist/stats.json
             dist/**/*.html
