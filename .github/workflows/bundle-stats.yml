@@ -3,8 +3,8 @@ name: Bundle Stats
 on:
   workflow_dispatch:
   schedule:
-    # GitHub cron is UTC. This runs daily at 18:00 Asia/Shanghai.
-    - cron: '0 10 * * *'
+    # GitHub cron is UTC. This runs daily at 19:37 Asia/Shanghai.
+    - cron: '37 11 * * *'
 
 permissions:
   contents: read
