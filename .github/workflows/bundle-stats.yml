@@ -27,6 +27,11 @@ jobs:
           node-version: 22
           cache: pnpm
 
+      - name: Compute report date
+        id: report-date
+        shell: bash
+        run: echo "date=$(TZ=Asia/Shanghai date +%F)" >> "$GITHUB_OUTPUT"
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -48,7 +53,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: bundle-stats-${{ github.run_number }}
+          name: bundle-report-${{ steps.report-date.outputs.date }}
           if-no-files-found: ignore
           path: |
             dist/index.html
@@ -62,7 +67,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playable-index-html-${{ github.run_number }}
+          name: index-html-${{ steps.report-date.outputs.date }}
           if-no-files-found: error
           path: dist/index.html
 
@@ -70,7 +75,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: bundle-stats-html-${{ github.run_number }}
+          name: stats-html-${{ steps.report-date.outputs.date }}
           if-no-files-found: error
           path: dist/stats.html
 
@@ -81,7 +86,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          report_date="$(TZ=Asia/Shanghai date +%F)"
+          report_date="${{ steps.report-date.outputs.date }}"
           bundle_over_5mb="$(node - <<'NODE'
           const fs = require('node:fs');
           const limitBytes = 5 * 1024 * 1024;
