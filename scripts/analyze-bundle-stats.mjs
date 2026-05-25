@@ -9,6 +9,29 @@ const reportDir = String(args.reportDir ?? 'bundle-stats-report');
 const statsPath = String(args.statsPath ?? 'dist/stats.json');
 const buildLogPath = String(args.buildLog ?? 'build.log');
 
+const artAssetExtensions = new Set([
+  '.avif',
+  '.basis',
+  '.bmp',
+  '.exr',
+  '.fbx',
+  '.gif',
+  '.glb',
+  '.gltf',
+  '.hdr',
+  '.jpeg',
+  '.jpg',
+  '.ktx',
+  '.ktx2',
+  '.mtl',
+  '.obj',
+  '.png',
+  '.svg',
+  '.tga',
+  '.webp',
+]);
+const ignoredArtPathParts = new Set(['placeholders']);
+
 fs.mkdirSync(reportDir, { recursive: true });
 
 const repo = process.env.GITHUB_REPOSITORY ?? readPackageName();
@@ -107,28 +130,6 @@ function listHtmlOutputs(dir) {
 }
 
 function analyzeArtAssets(roots) {
-  const artExtensions = new Set([
-    '.avif',
-    '.basis',
-    '.bmp',
-    '.exr',
-    '.fbx',
-    '.gif',
-    '.glb',
-    '.gltf',
-    '.hdr',
-    '.jpeg',
-    '.jpg',
-    '.ktx',
-    '.ktx2',
-    '.mtl',
-    '.obj',
-    '.png',
-    '.svg',
-    '.tga',
-    '.webp',
-  ]);
-  const ignoredPathParts = new Set(['placeholders']);
   const files = [];
 
   for (const root of roots) {
@@ -136,9 +137,9 @@ function analyzeArtAssets(roots) {
     for (const file of walk(root)) {
       const normalized = normalizePath(file);
       const parts = normalized.split('/');
-      if (parts.some((part) => ignoredPathParts.has(part))) continue;
+      if (parts.some((part) => ignoredArtPathParts.has(part))) continue;
       const ext = path.extname(file).toLowerCase();
-      if (!artExtensions.has(ext)) continue;
+      if (!artAssetExtensions.has(ext)) continue;
       const stat = fs.statSync(file);
       files.push({
         file: normalized,
@@ -188,12 +189,14 @@ function analyzeStats(file) {
     .sort((a, b) => b.renderedLength - a.renderedLength)
     .slice(0, 20);
   const topPackages = aggregatePackages(modules).slice(0, 15);
+  const usedArtAssets = aggregateUsedArtAssets(modules);
 
   return {
     moduleCount: modules.length,
     totals,
     topModules,
     topPackages,
+    usedArtAssets,
   };
 }
 
@@ -244,6 +247,38 @@ function aggregatePackages(modules) {
     byPackage.set(name, current);
   }
   return [...byPackage.values()].sort((a, b) => b.renderedLength - a.renderedLength);
+}
+
+function aggregateUsedArtAssets(modules) {
+  const byAsset = new Map();
+  for (const mod of modules) {
+    if (!isArtAssetModuleId(mod.id)) continue;
+    const current = byAsset.get(mod.id) ?? {
+      id: mod.id,
+      renderedLength: 0,
+      gzipLength: 0,
+      brotliLength: 0,
+    };
+    current.renderedLength += mod.renderedLength;
+    current.gzipLength += mod.gzipLength;
+    current.brotliLength += mod.brotliLength;
+    byAsset.set(mod.id, current);
+  }
+
+  const topAssets = [...byAsset.values()].sort((a, b) => b.renderedLength - a.renderedLength);
+  return {
+    fileCount: topAssets.length,
+    totals: sumSizes(topAssets),
+    topAssets: topAssets.slice(0, 20),
+  };
+}
+
+function isArtAssetModuleId(id) {
+  const withoutQuery = normalizePath(id).split('?')[0].split('#')[0];
+  const parts = withoutQuery.split('/');
+  if (parts.some((part) => ignoredArtPathParts.has(part))) return false;
+  const ext = path.extname(withoutQuery).toLowerCase();
+  return artAssetExtensions.has(ext);
 }
 
 function getPackageGroup(id) {
@@ -299,6 +334,18 @@ function buildIssueBody(data) {
 
   lines.push('## Art Assets', '');
   const artAssets = data.artAssets;
+  const usedArtAssets = data.stats?.usedArtAssets;
+  lines.push('### Used In Bundle', '');
+  if (!usedArtAssets || usedArtAssets.fileCount === 0) {
+    lines.push('No art asset modules found in the bundle.');
+  } else {
+    lines.push(`Total rendered size: ${formatBytes(usedArtAssets.totals.renderedLength)} across ${usedArtAssets.fileCount} files.`);
+    lines.push('');
+    appendSizeTable(lines, usedArtAssets.topAssets, 'id');
+  }
+  lines.push('');
+
+  lines.push('### Source Art Assets', '');
   if (!artAssets || artAssets.fileCount === 0) {
     lines.push('No art assets found under `src/assets` or `public`.');
   } else {
@@ -311,6 +358,21 @@ function buildIssueBody(data) {
     }
   }
   lines.push('');
+
+  const stats = data.stats;
+  if (stats) {
+    lines.push('## Rollup Module Totals', '');
+    lines.push('| Modules | Rendered | Gzip | Brotli |');
+    lines.push('|---:|---:|---:|---:|');
+    lines.push(`| ${stats.moduleCount} | ${formatBytes(stats.totals.renderedLength)} | ${formatBytes(stats.totals.gzipLength)} | ${formatBytes(stats.totals.brotliLength)} |`);
+    lines.push('');
+
+    lines.push('## Top Packages', '');
+    appendSizeTable(lines, stats.topPackages, 'name');
+
+    lines.push('## Top Modules', '');
+    appendSizeTable(lines, stats.topModules, 'id');
+  }
 
   lines.push('---');
   lines.push('Workflow artifacts include standalone attachments for the playable HTML and visual bundle report, plus the full `bundle-stats-*` report bundle.');
