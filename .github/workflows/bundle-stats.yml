@@ -78,17 +78,18 @@ jobs:
         if: always()
         env:
           GH_TOKEN: ${{ github.token }}
-          ISSUE_TITLE: '[bundle-stats] Daily bundle report'
         shell: bash
         run: |
           set -euo pipefail
+          report_date="$(TZ=Asia/Shanghai date +%F)"
+          issue_title="[bundle-stats] Daily bundle report ${report_date} BJT"
           gh label create "bundle-stats" --color "0E8A16" --description "Daily bundle size analysis" 2>/dev/null || true
           gh label create "auto-generated" --color "EDEDED" --description "Created automatically by GitHub Actions" 2>/dev/null || true
-          existing=$(gh issue list --state open --search "in:title \"$ISSUE_TITLE\"" --json number --jq '.[0].number // ""')
+          existing=$(gh issue list --state all --search "\"${issue_title}\" in:title" --json number,title --jq ".[] | select(.title == \"${issue_title}\") | .number" | head -n 1)
           if [ -n "$existing" ]; then
-            gh issue edit "$existing" --title "$ISSUE_TITLE" --body-file bundle-stats-report/issue.md --add-label "bundle-stats,auto-generated"
+            gh issue edit "$existing" --title "$issue_title" --body-file bundle-stats-report/issue.md --add-label "bundle-stats,auto-generated"
           else
-            gh issue create --title "$ISSUE_TITLE" --body-file bundle-stats-report/issue.md --label "bundle-stats,auto-generated"
+            gh issue create --title "$issue_title" --body-file bundle-stats-report/issue.md --label "bundle-stats,auto-generated"
           fi
 
       - name: Fail workflow if build failed
