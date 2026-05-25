@@ -47,6 +47,7 @@ readiness check 文档
 资源来源
 可拾取资源 / 掉落物 / runtime spawn root
 背包、容器、堆放点
+角色身后背负资源的挂点、堆叠表现或 runtime parent
 加工点、机器、输入点、输出点
 出售点、提交点、订单点、顾客或车辆
 PayArea / UpgradeArea / UnlockableArea
@@ -67,6 +68,7 @@ NPC / worker / customer / enemy
 如果绑定场景节点，entityId 能在 scene.nodes 中找到。
 如果绑定区域，zone id 能在 gameplay.zones 中找到。
 需要资源规则时，resourceType / acceptsResourceTypes / producesResourceTypes / cost / capacity 等字段足够实现。
+需要角色身后背负表现时，资源类型、可背负状态、容量规则、挂点或 runtime parent 足够实现。
 需要 runtime 生成时，spawnRootId 或 runtimeParent 足够定位。
 需要路径时，pathPointIds 指向明确节点或路径点。
 需要解锁依赖时，dependsOn / unlocks 或项目等价配置足够表达。
