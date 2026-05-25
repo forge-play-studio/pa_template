@@ -82,7 +82,23 @@ jobs:
         run: |
           set -euo pipefail
           report_date="$(TZ=Asia/Shanghai date +%F)"
-          issue_title="[bundle-stats] Daily bundle report ${report_date} BJT"
+          bundle_over_5mb="$(node - <<'NODE'
+          const fs = require('node:fs');
+          const limitBytes = 5 * 1024 * 1024;
+          let result = '未知';
+          try {
+            const summary = JSON.parse(fs.readFileSync('bundle-stats-report/summary.json', 'utf8'));
+            const output = (summary.htmlOutputs || []).find((item) => item.file === 'dist/index.html') || summary.htmlOutputs?.[0];
+            if (output && Number.isFinite(output.bytes)) {
+              result = output.bytes > limitBytes ? '是' : '否';
+            }
+          } catch {
+            result = '未知';
+          }
+          process.stdout.write(result);
+          NODE
+          )"
+          issue_title="[Daily bundle report][${report_date}]包体是否超过5mb：${bundle_over_5mb}"
           gh label create "bundle-stats" --color "0E8A16" --description "Daily bundle size analysis" 2>/dev/null || true
           gh label create "auto-generated" --color "EDEDED" --description "Created automatically by GitHub Actions" 2>/dev/null || true
           existing=$(gh issue list --state all --search "\"${issue_title}\" in:title" --json number,title --jq ".[] | select(.title == \"${issue_title}\") | .number" | head -n 1)
