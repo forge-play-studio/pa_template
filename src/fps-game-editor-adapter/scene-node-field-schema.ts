@@ -40,12 +40,12 @@ function isVec3(value: unknown): value is Position3D {
 }
 
 function isScale(value: unknown): value is number | Scale3D {
-  if (isFiniteNumber(value)) return value > 0;
+  if (isFiniteNumber(value)) return value >= 0;
   if (!value || typeof value !== 'object') return false;
   const record = value as Record<string, unknown>;
-  return isFiniteNumber(record.x) && record.x > 0
-    && isFiniteNumber(record.y) && record.y > 0
-    && isFiniteNumber(record.z) && record.z > 0;
+  return isFiniteNumber(record.x) && record.x >= 0
+    && isFiniteNumber(record.y) && record.y >= 0
+    && isFiniteNumber(record.z) && record.z >= 0;
 }
 
 function isColor(value: unknown): value is ColorRGB {
@@ -113,7 +113,7 @@ function transformAxisPath(
     ...(vectorName === 'scale' ? { allowDelete: false } : {}),
     validate: (value) => value == null || (
       vectorName === 'scale'
-        ? isPositiveFiniteNumber(value)
+        ? isNonNegativeFiniteNumber(value)
         : isFiniteNumber(value)
     ),
   };
