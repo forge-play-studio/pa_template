@@ -54,10 +54,13 @@ export function compileEditorSceneDocumentToSceneConfig(
     ...(nextSceneConfig.meta ?? {}),
     generatedFrom,
   };
+  const rootId = previousScene?.rootId || 'root';
+  const compiledGameObjects = editorDocument.scene.gameObjects
+    .filter((gameObject) => gameObject.id !== rootId);
   nextSceneConfig.scene = {
-    rootId: previousScene?.rootId || 'root',
+    rootId,
     assets: editorDocument.assets.map(compileAsset),
-    nodes: editorDocument.scene.gameObjects.map((gameObject) => compileGameObject(gameObject, sourceRef)),
+    nodes: compiledGameObjects.map((gameObject) => compileGameObject(gameObject, sourceRef)),
     materials: previousScene?.materials ?? [],
     textures: previousScene?.textures ?? [],
   };
