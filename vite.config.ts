@@ -30,8 +30,13 @@ const localeMeta = {
 const isMultiLocale = false;
 const bundledLocales = [locale];
 const debugPanelConfigRoot = resolve(__dirname, 'src/config');
+const localFpsGameEditorRepo = process.env.FPS_GAME_EDITOR_REPO
+  ? resolve(process.env.FPS_GAME_EDITOR_REPO)
+  : null;
 const bundledEditorPackagesRoot = resolve(__dirname, 'node_modules/@fps-games/editor/node_modules/@fps-games');
-const fpsEditorPackageJsonPath = resolve(__dirname, 'node_modules/@fps-games/editor/package.json');
+const fpsEditorPackageJsonPath = localFpsGameEditorRepo
+  ? resolve(localFpsGameEditorRepo, 'packages/editor/package.json')
+  : resolve(__dirname, 'node_modules/@fps-games/editor/package.json');
 const allowedThirdPartyPackages = [
   '@babylonjs/core',
   '@babylonjs/loaders',
@@ -43,6 +48,15 @@ const allowedThirdPartyPackages = [
   '@fps-games/editor-protocol',
   'brotli-dec-wasm',
 ];
+
+const editorPackageIds = [
+  '@fps-games/editor',
+  '@fps-games/editor-babylon',
+  '@fps-games/editor-browser',
+  '@fps-games/editor-core',
+  '@fps-games/editor-forge-play',
+  '@fps-games/editor-protocol',
+] as const;
 
 function readFpsEditorVersion(): string {
   if (!existsSync(fpsEditorPackageJsonPath)) return 'missing';
@@ -56,6 +70,44 @@ function readFpsEditorVersion(): string {
   }
 }
 
+function editorPackageAlias(find: string | RegExp, replacement: string): { find: string | RegExp; replacement: string } {
+  return { find, replacement };
+}
+
+function packageIdRegex(packageId: string): RegExp {
+  return new RegExp(`^${packageId.replaceAll('/', '\\/')}$`);
+}
+
+function assertAliasFilesExist(aliasFiles: ReadonlyArray<readonly [string, string]>, intro: string): void {
+  const missing = aliasFiles.filter(([, file]) => !existsSync(file));
+  if (missing.length === 0) return;
+  throw new Error(
+    [
+      intro,
+      ...missing.map(([pkg, file]) => `- ${pkg}: ${file}`),
+    ].join('\n'),
+  );
+}
+
+function createLocalEditorSourceAliases(repoRoot: string): Array<{ find: string | RegExp; replacement: string }> {
+  const aliasFiles = [
+    ['@fps-games/editor-babylon/legacy-runtime', resolve(repoRoot, 'packages/editor-babylon/src/legacy-runtime.ts')],
+    ['@fps-games/editor-babylon', resolve(repoRoot, 'packages/editor-babylon/src/index.ts')],
+    ['@fps-games/editor-browser', resolve(repoRoot, 'packages/editor-browser/src/index.ts')],
+    ['@fps-games/editor-core', resolve(repoRoot, 'packages/editor-core/src/index.ts')],
+    ['@fps-games/editor-forge-play', resolve(repoRoot, 'packages/editor-forge-play/src/index.ts')],
+    ['@fps-games/editor-protocol', resolve(repoRoot, 'packages/editor-protocol/src/index.ts')],
+    ['@fps-games/editor', resolve(repoRoot, 'packages/editor/src/index.ts')],
+  ] as const;
+
+  assertAliasFilesExist(
+    aliasFiles,
+    `FPS_GAME_EDITOR_REPO is set to "${repoRoot}", but the editor source files are missing.`,
+  );
+
+  return aliasFiles.map(([pkg, file]) => editorPackageAlias(packageIdRegex(pkg), file));
+}
+
 function createBundledEditorAliases(): Array<{ find: string | RegExp; replacement: string }> {
   const aliasFiles = [
     ['@fps-games/editor-babylon/legacy-runtime', resolve(bundledEditorPackagesRoot, 'editor-babylon/dist/legacy-runtime.js')],
@@ -66,23 +118,21 @@ function createBundledEditorAliases(): Array<{ find: string | RegExp; replacemen
     ['@fps-games/editor-protocol', resolve(bundledEditorPackagesRoot, 'editor-protocol/dist/index.js')],
   ] as const;
 
-  const missing = aliasFiles.filter(([, file]) => !existsSync(file));
-  if (missing.length > 0) {
-    throw new Error(
-      [
-        'The bundled @fps-games/editor packages are missing. Run npm install or pnpm install before starting Vite.',
-        ...missing.map(([pkg, file]) => `- ${pkg}: ${file}`),
-      ].join('\n'),
-    );
-  }
+  assertAliasFilesExist(
+    aliasFiles,
+    'The bundled @fps-games/editor packages are missing. Run npm install or pnpm install before starting Vite.',
+  );
 
-  return aliasFiles.map(([pkg, file]) => ({
-    find: new RegExp(`^${pkg.replaceAll('/', '\\/')}$`),
-    replacement: file,
-  }));
+  return aliasFiles.map(([pkg, file]) => editorPackageAlias(packageIdRegex(pkg), file));
 }
 
-const bundledEditorAliases = createBundledEditorAliases();
+const editorPackageAliases = localFpsGameEditorRepo
+  ? createLocalEditorSourceAliases(localFpsGameEditorRepo)
+  : createBundledEditorAliases();
+
+if (localFpsGameEditorRepo) {
+  console.info(`[fps-editor] Using local editor sources from ${localFpsGameEditorRepo}`);
+}
 
 function resolveDebugPanelConfigFile(file: string | null): string | null {
   if (!file || file.includes('/') || file.includes('\\') || file.includes('..') || !file.endsWith('.json')) {
@@ -566,7 +616,7 @@ export default defineConfig({
   resolve: {
     alias: [
       { find: '@', replacement: resolve(__dirname, 'src') },
-      ...bundledEditorAliases,
+      ...editorPackageAliases,
     ],
     dedupe: [
       '@babylonjs/core',
@@ -575,6 +625,7 @@ export default defineConfig({
     ],
   },
   optimizeDeps: {
+    exclude: localFpsGameEditorRepo ? [...editorPackageIds] : [],
     include: [
       '@babylonjs/core',
       '@babylonjs/core/Layers/effectLayerSceneComponent',
@@ -665,6 +716,11 @@ export default defineConfig({
     strictPort: true,
     cors: true,
     allowedHosts: ['.e2b.app'],
+    fs: localFpsGameEditorRepo
+      ? {
+          allow: [__dirname, localFpsGameEditorRepo],
+        }
+      : undefined,
     headers: {
       'Cross-Origin-Resource-Policy': 'cross-origin',
       'Cross-Origin-Embedder-Policy': 'credentialless',
