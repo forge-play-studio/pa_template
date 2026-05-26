@@ -2132,7 +2132,6 @@ export function createEditorSceneInspectorPropertyPatch(
   if (isEditorSceneRootTransformPath(input.targetId, path)) return null;
   if (!validateEditorSceneInspectorValue(input.document, gameObject, path, value).ok) return null;
   if (isBlockedEditorSceneCameraFieldPatch(input.document, input.targetId, path, value)) return null;
-  if (isUnsafeGroupRotationOrScale(input.document, input.targetId, path)) return null;
   const changedIds = path.startsWith('transform.')
     ? collectEditorSceneSubtreeIdList(input.document, [input.targetId])
     : [input.targetId];
@@ -3793,17 +3792,6 @@ function normalizeEditorSceneInspectorValue(path: string, value: unknown): unkno
     return trimmed ? trimmed : null;
   }
   return value;
-}
-
-function isUnsafeGroupRotationOrScale(
-  editorScene: EditorSceneDocument,
-  targetId: string,
-  serializedPath: string,
-): boolean {
-  if (!serializedPath.startsWith('transform.rotation.') && !serializedPath.startsWith('transform.scale.')) {
-    return false;
-  }
-  return collectEditorSceneSubtreeIdList(editorScene, [targetId]).length > 1;
 }
 
 export function patchEditorSceneGameObjectField(

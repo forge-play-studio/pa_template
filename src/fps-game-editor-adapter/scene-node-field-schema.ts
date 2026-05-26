@@ -14,6 +14,8 @@ type SceneNodeFieldSchemaEntry = {
 
 const ANY_NODE_KIND = ['group', 'instance', 'transform', 'primitive'] as const;
 const VISUAL_NODE_KIND = ['instance', 'transform', 'primitive'] as const;
+const TRANSFORM_VECTOR_NAMES = ['position', 'rotation', 'scale'] as const;
+const TRANSFORM_AXES = ['x', 'y', 'z'] as const;
 
 function isFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
@@ -93,24 +95,47 @@ function materialTextureUrlPath(path: string): SceneNodeFieldSchemaEntry {
   return { path, appliesTo: VISUAL_NODE_KIND, validate: isOptionalNonEmptyString };
 }
 
+function transformVectorPath(vectorName: typeof TRANSFORM_VECTOR_NAMES[number]): SceneNodeFieldSchemaEntry {
+  return {
+    path: `transform.${vectorName}`,
+    appliesTo: ANY_NODE_KIND,
+    validate: (value) => value == null || (vectorName === 'scale' ? isScale(value) : isVec3(value)),
+  };
+}
+
+function transformAxisPath(
+  vectorName: typeof TRANSFORM_VECTOR_NAMES[number],
+  axis: typeof TRANSFORM_AXES[number],
+): SceneNodeFieldSchemaEntry {
+  return {
+    path: `transform.${vectorName}.${axis}`,
+    appliesTo: ANY_NODE_KIND,
+    ...(vectorName === 'scale' ? { allowDelete: false } : {}),
+    validate: (value) => value == null || (
+      vectorName === 'scale'
+        ? isPositiveFiniteNumber(value)
+        : isFiniteNumber(value)
+    ),
+  };
+}
+
+function transformVectorFieldPaths(vectorName: typeof TRANSFORM_VECTOR_NAMES[number]): SceneNodeFieldSchemaEntry[] {
+  return [
+    transformVectorPath(vectorName),
+    ...TRANSFORM_AXES.map(axis => transformAxisPath(vectorName, axis)),
+  ];
+}
+
 export const SCENE_NODE_FIELD_SCHEMA: ReadonlyArray<SceneNodeFieldSchemaEntry> = [
   { path: 'name', appliesTo: ANY_NODE_KIND, validate: isOptionalString },
   { path: 'parentId', appliesTo: ANY_NODE_KIND, validate: isOptionalString },
   { path: 'enabled', appliesTo: ANY_NODE_KIND, validate: isOptionalBoolean },
   { path: 'transform', appliesTo: ANY_NODE_KIND, validate: (value) => value == null || isTransform(value) },
-  { path: 'transform.position', appliesTo: ANY_NODE_KIND, validate: (value) => value == null || isVec3(value) },
-  { path: 'transform.position.x', appliesTo: ANY_NODE_KIND, validate: (value) => value == null || isFiniteNumber(value) },
-  { path: 'transform.position.y', appliesTo: ANY_NODE_KIND, validate: (value) => value == null || isFiniteNumber(value) },
-  { path: 'transform.position.z', appliesTo: ANY_NODE_KIND, validate: (value) => value == null || isFiniteNumber(value) },
-  { path: 'transform.rotation', appliesTo: ANY_NODE_KIND, validate: (value) => value == null || isVec3(value) },
-  { path: 'transform.rotation.x', appliesTo: ANY_NODE_KIND, validate: (value) => value == null || isFiniteNumber(value) },
-  { path: 'transform.rotation.y', appliesTo: ANY_NODE_KIND, validate: (value) => value == null || isFiniteNumber(value) },
-  { path: 'transform.rotation.z', appliesTo: ANY_NODE_KIND, validate: (value) => value == null || isFiniteNumber(value) },
+  ...TRANSFORM_VECTOR_NAMES.flatMap(transformVectorFieldPaths),
   { path: 'transform.rotationDeg', appliesTo: ANY_NODE_KIND, validate: (value) => value == null || isVec3(value) },
   { path: 'transform.rotationDeg.x', appliesTo: ANY_NODE_KIND, validate: (value) => value == null || isFiniteNumber(value) },
   { path: 'transform.rotationDeg.y', appliesTo: ANY_NODE_KIND, validate: (value) => value == null || isFiniteNumber(value) },
   { path: 'transform.rotationDeg.z', appliesTo: ANY_NODE_KIND, validate: (value) => value == null || isFiniteNumber(value) },
-  { path: 'transform.scale', appliesTo: ANY_NODE_KIND, validate: (value) => value == null || isScale(value) },
   { path: 'instance.assetId', appliesTo: ['instance'], validate: (value) => typeof value === 'string' && value.trim().length > 0, allowDelete: false },
   { path: 'primitive.shape', appliesTo: ['primitive'], validate: (value) => value === 'cube' || value === 'sphere' || value === 'plane' || value === 'capsule', allowDelete: false },
   { path: 'transformType', appliesTo: ['transform'], validate: (value) => value == null || value === 'plain' || value === 'light' || value === 'camera' || value === 'groundDecal' },

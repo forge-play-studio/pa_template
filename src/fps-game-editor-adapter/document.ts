@@ -1873,6 +1873,16 @@ function applyJsonFieldPatch(target: Record<string, any>, patch: SceneNodeFieldP
   let cursor: Record<string, any> = target;
   for (const segment of segments.slice(0, -1)) {
     const next = cursor[segment];
+    if (segment === 'scale' && isTransformScaleAxisPath(segments) && typeof next === 'number' && Number.isFinite(next)) {
+      cursor[segment] = { x: next, y: next, z: next };
+      cursor = cursor[segment] as Record<string, any>;
+      continue;
+    }
+    if (segment === 'scale' && isTransformScaleAxisPath(segments) && next == null) {
+      cursor[segment] = { x: 1, y: 1, z: 1 };
+      cursor = cursor[segment] as Record<string, any>;
+      continue;
+    }
     if (!next || typeof next !== 'object' || Array.isArray(next)) {
       cursor[segment] = {};
     }
@@ -1884,6 +1894,13 @@ function applyJsonFieldPatch(target: Record<string, any>, patch: SceneNodeFieldP
     return;
   }
   cursor[leaf] = cloneJson(patch.value);
+}
+
+function isTransformScaleAxisPath(segments: readonly string[]): boolean {
+  return segments.length === 3
+    && segments[0] === 'transform'
+    && segments[1] === 'scale'
+    && (segments[2] === 'x' || segments[2] === 'y' || segments[2] === 'z');
 }
 
 function normalizeSceneNodePatchValue(path: string, value: unknown): unknown {

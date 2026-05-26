@@ -755,7 +755,12 @@ function createEditorSceneSerializedMultiPropertyPatch(
   const serializedPath = input.path;
   const value = Number(input.value);
   if (input.targetIds.length === 0 || !serializedPath || !Number.isFinite(value)) return null;
-  if (input.targetIds.some((targetId) => isUnsafeGroupRotationOrScale(input.document, targetId, serializedPath))) return null;
+  if (input.targetIds.some((targetId) => !createEditorSceneInspectorPropertyPatch({
+    document: input.document,
+    targetId,
+    path: serializedPath,
+    value,
+  }))) return null;
   const transform = createTransformFromSerializedPath(serializedPath, value);
   if (!transform) return null;
   return {
@@ -810,17 +815,6 @@ function createEditorSceneTransformBatchPatch(
     },
     changedIds: collectEditorSceneSubtreeIdList(input.document, input.targets.map((target) => target.id)),
   };
-}
-
-function isUnsafeGroupRotationOrScale(
-  editorScene: EditorSceneDocument,
-  targetId: string,
-  serializedPath: string,
-): boolean {
-  if (!serializedPath.startsWith('transform.rotation.') && !serializedPath.startsWith('transform.scale.')) {
-    return false;
-  }
-  return hasEditorSceneDescendants(editorScene, targetId);
 }
 
 function hasEditorSceneDescendants(editorScene: EditorSceneDocument, targetId: string): boolean {
