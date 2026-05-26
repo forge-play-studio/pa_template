@@ -12,7 +12,7 @@
  */
 
 import { configService } from '../config';
-import { isModelRegistered } from '../assets';
+import { isModelAssetRegistered } from '../assets';
 
 interface ValidationResult {
   warnings: string[];
@@ -59,13 +59,9 @@ class ConfigValidator {
       }
       assetIds.add(asset.id);
 
-      if (!asset.sourceId) {
-        result.errors.push(`scene.assets[${asset.id}] 缺少 sourceId`);
-        continue;
-      }
-      if (!isModelRegistered(asset.sourceId)) {
+      if (!isModelAssetRegistered(asset.id)) {
         result.warnings.push(
-          `scene.assets[${asset.id}] 引用了未注册的 sourceId "${asset.sourceId}"（请在 src/assets/index.ts 的 MODEL_URL_MAP 中注册）`
+          `scene.assets[${asset.id}] 引用了未注册的 model assetId（请确认该 id 存在于 asset catalog）`
         );
       }
 
@@ -91,7 +87,7 @@ class ConfigValidator {
       nodeIds.add(node.id);
 
       const kind = (node as { kind?: unknown }).kind;
-      if (kind !== 'group' && kind !== 'transform' && kind !== 'instance') {
+      if (kind !== 'group' && kind !== 'transform' && kind !== 'instance' && kind !== 'primitive') {
         result.errors.push(`scene.nodes[${node.id}] kind "${String(kind)}" 非法`);
       }
 
@@ -105,6 +101,13 @@ class ConfigValidator {
           result.errors.push(`scene.nodes[${node.id}] 缺少 instance.assetId`);
         } else if (!assetIds.has(assetId)) {
           result.errors.push(`scene.nodes[${node.id}] 引用了不存在的 assetId "${assetId}"`);
+        }
+      }
+
+      if (node.kind === 'primitive') {
+        const shape = node.primitive?.shape;
+        if (shape !== 'cube' && shape !== 'sphere' && shape !== 'plane' && shape !== 'capsule') {
+          result.errors.push(`scene.nodes[${node.id}] primitive.shape "${String(shape)}" 非法`);
         }
       }
     }

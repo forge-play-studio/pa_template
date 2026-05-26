@@ -12,7 +12,10 @@ import type {
   WorldBoundsConfig,
   SceneAssetConfig,
   SceneAssetMaterialMode,
+  SceneCameraRigConfig,
+  SceneDirectionalLightConfig,
   SceneInstanceNode,
+  ScenePrimitiveNode,
   SceneMaterialScope,
   SceneNodeVisualOverrides,
   MaterialOverrideConfig,
@@ -27,6 +30,7 @@ import type {
   LayoutPlaceholderSurfaceConfig,
   GroundOverlayPlaneConfig,
   GameplayBindingConfig,
+  SceneTransformNode,
   TransformConfig,
 } from './types';
 
@@ -90,6 +94,47 @@ function normalizeTransformConfig(value: unknown): TransformConfig | undefined {
   }
 
   return Object.keys(normalized).length > 0 ? normalized : undefined;
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
+function isPositiveFiniteNumber(value: unknown): value is number {
+  return isFiniteNumber(value) && value > 0;
+}
+
+function isNonNegativeFiniteNumber(value: unknown): value is number {
+  return isFiniteNumber(value) && value >= 0;
+}
+
+function normalizeSceneCameraRigConfig(value: unknown): SceneCameraRigConfig | undefined {
+  if (!isRecord(value)) return undefined;
+  if (!isFiniteNumber(value.alpha)) return undefined;
+  if (!isFiniteNumber(value.beta)) return undefined;
+  if (!isPositiveFiniteNumber(value.radius)) return undefined;
+  if (!isPositiveFiniteNumber(value.orthoSize)) return undefined;
+  return {
+    alpha: value.alpha,
+    beta: value.beta,
+    radius: value.radius,
+    orthoSize: value.orthoSize,
+  };
+}
+
+function normalizeSceneDirectionalLightConfig(value: unknown): SceneDirectionalLightConfig | undefined {
+  if (!isRecord(value)) return undefined;
+  if (value.type !== 'directional') return undefined;
+  if (!isNonNegativeFiniteNumber(value.intensity)) return undefined;
+  const direction = normalizePosition3D(value.direction);
+  if (!direction) return undefined;
+  const diffuseColor = normalizeColorRGB(value.diffuseColor);
+  return {
+    type: 'directional',
+    intensity: value.intensity,
+    direction,
+    ...(diffuseColor ? { diffuseColor } : {}),
+  };
 }
 
 function normalizeSceneAssetMaterialMode(value: unknown): SceneAssetMaterialMode | undefined {
@@ -367,17 +412,48 @@ export class ConfigService {
   }
 
   private normalizeSceneNode(node: SceneNodeConfig): void {
-    if (node.kind !== 'instance') return;
-    this.normalizeSceneInstanceNode(node);
+    if (node.kind !== 'instance' && node.kind !== 'transform' && node.kind !== 'primitive') return;
+    this.normalizeSceneVisualNode(node);
+    if (node.kind === 'transform') {
+      this.normalizeSceneTransformNode(node);
+    }
   }
 
-  private normalizeSceneInstanceNode(node: SceneInstanceNode): void {
+  private normalizeSceneVisualNode(node: SceneInstanceNode | SceneTransformNode | ScenePrimitiveNode): void {
     const normalizedOverrides = normalizeSceneNodeOverrides(node.overrides);
     if (normalizedOverrides) {
       node.overrides = normalizedOverrides;
       return;
     }
     delete node.overrides;
+  }
+
+  private normalizeSceneTransformNode(node: SceneTransformNode): void {
+    if (
+      node.transformType !== undefined
+      && node.transformType !== 'plain'
+      && node.transformType !== 'light'
+      && node.transformType !== 'camera'
+      && node.transformType !== 'groundDecal'
+    ) {
+      delete node.transformType;
+    }
+
+    if (node.transformType === 'camera' || (node.transformType == null && node.camera)) {
+      const camera = normalizeSceneCameraRigConfig(node.camera);
+      if (camera) node.camera = camera;
+      else delete node.camera;
+    } else {
+      delete node.camera;
+    }
+
+    if (node.transformType === 'light' || (node.transformType == null && node.light)) {
+      const light = normalizeSceneDirectionalLightConfig(node.light);
+      if (light) node.light = light;
+      else delete node.light;
+    } else {
+      delete node.light;
+    }
   }
 
   private buildIndexes(): void {
@@ -434,6 +510,27 @@ export class ConfigService {
 
   getSceneNodeById(id: string): SceneNodeConfig | undefined {
     return this.sceneNodeMap.get(id);
+  }
+
+  getSceneCameraRig(): SceneCameraRigConfig | undefined {
+    const nodes = this.ensureSceneSection().nodes;
+    const node = nodes.find((item): item is SceneTransformNode => (
+      item.kind === 'transform'
+      && !!item.camera
+      && (item.transformType === 'camera' || item.transformType == null)
+    ));
+    return node?.camera;
+  }
+
+  getSceneDirectionalLight(): SceneDirectionalLightConfig | undefined {
+    const nodes = this.ensureSceneSection().nodes;
+    const node = nodes.find((item): item is SceneTransformNode => (
+      item.kind === 'transform'
+      && !!item.light
+      && (item.transformType === 'light' || item.transformType == null)
+      && item.light.type === 'directional'
+    ));
+    return node?.light;
   }
 
   getRenderConfig(): Record<string, unknown> {

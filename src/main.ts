@@ -5,7 +5,7 @@
 
 import { LoadingScreen } from './ui';
 import { Game } from './core/Game';
-import { registerProjectEditorPlugin, registerProjectEditorRuntimeBridge } from './editor-package';
+import type { LocalEditorModeSwitcher } from './debug/local-editor-mode-switcher';
 
 // ============================================================
 // 全局实例
@@ -17,57 +17,17 @@ let game: Game | null = null;
 /** 加载屏幕 */
 let loadingScreen: LoadingScreen | null = null;
 
-function installBridgeInspectorPatch(): void {
-  if (!import.meta.env.DEV) return;
+/** DEV-only local editor/game mode switcher */
+let localEditorModeSwitcher: LocalEditorModeSwitcher | null = null;
 
-  const w = window as any;
-  let attempts = 0;
-  const maxAttempts = 120;
+async function registerRuntimeEditorBridge(): Promise<void> {
+  const editorModule = await import('./fps-game-editor-adapter/runtime');
+  editorModule.registerProjectFpsGameEditorRuntimeBridge();
+}
 
-  const tryPatch = () => {
-    const editor = w.__bridge?.editor;
-    if (!editor) {
-      if (attempts < maxAttempts) {
-        attempts++;
-        window.setTimeout(tryPatch, 250);
-      }
-      return;
-    }
-
-    if (editor.__localInspectorLoadPatched) return;
-
-    const ensureLocalInspector = async () => {
-      const localInspector = typeof w.ensureInspectorReady === 'function'
-        ? await w.ensureInspectorReady()
-        : null;
-      if (localInspector?.ShowInspector) {
-        w.INSPECTOR = localInspector;
-      }
-      return localInspector;
-    };
-
-    if (typeof editor.showInspector === 'function') {
-      const originalShowInspector = editor.showInspector.bind(editor);
-      editor.showInspector = async (...args: unknown[]) => {
-        await ensureLocalInspector();
-        return originalShowInspector(...args);
-      };
-    }
-
-    if (typeof editor.loadV2 === 'function') {
-      const originalLoadV2 = editor.loadV2.bind(editor);
-      editor.loadV2 = async (...args: unknown[]) => {
-        const localInspector = await ensureLocalInspector();
-        if (localInspector?.ShowInspector) {
-          return localInspector;
-        }
-        return originalLoadV2(...args);
-      };
-    }
-    editor.__localInspectorLoadPatched = true;
-  };
-
-  tryPatch();
+function disposeLocalEditorModeSwitcher(): void {
+  localEditorModeSwitcher?.dispose();
+  localEditorModeSwitcher = null;
 }
 
 // ============================================================
@@ -83,7 +43,6 @@ async function init(): Promise<void> {
     if (import.meta.env.DEV) {
       const BABYLON = await import('@babylonjs/core');
       (window as any).BABYLON = BABYLON;
-      installBridgeInspectorPatch();
     }
 
     // 创建并显示加载页面
@@ -99,8 +58,9 @@ async function init(): Promise<void> {
     // 初始化游戏（包括资源加载和场景构建）
     await game.init();
 
-    registerProjectEditorPlugin();
-    registerProjectEditorRuntimeBridge();
+    if (import.meta.env.VITE_ENABLE_LEGACY_RUNTIME_EDITOR === 'true') {
+      await registerRuntimeEditorBridge();
+    }
 
     // 隐藏加载页面
     loadingScreen?.hide();
@@ -110,6 +70,28 @@ async function init(): Promise<void> {
 
     // 暴露给调试
     window.gameInstance = game;
+
+    if (import.meta.env.DEV) {
+      void import('./debug/local-editor-mode-switcher')
+        .then(({ mountLocalEditorModeSwitcher }) => {
+          disposeLocalEditorModeSwitcher();
+          localEditorModeSwitcher = mountLocalEditorModeSwitcher({
+            root: document.body,
+            disposeGameWorld: () => {
+              game?.dispose();
+              game = null;
+              window.gameInstance = null;
+              (window as any).game = null;
+              (window as any).__bridgeProjectRuntime = null;
+              (window as any).__pendingEditorRuntime = null;
+            },
+            onBeforeReload: () => {
+              disposeLocalEditorModeSwitcher();
+            },
+          });
+        })
+        .catch((error) => console.warn('[local-editor-mode-switcher] mount failed', error));
+    }
 
   } catch (error) {
     console.error('[Main] Failed to initialize game:', error);
@@ -127,6 +109,14 @@ if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', init);
 } else {
   init();
+}
+
+if (import.meta.env.DEV) {
+  const disposeDevTools = () => {
+    disposeLocalEditorModeSwitcher();
+  };
+  window.addEventListener('beforeunload', disposeDevTools);
+  import.meta.hot?.dispose(disposeDevTools);
 }
 
 // ============================================================

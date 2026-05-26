@@ -9,8 +9,9 @@ import { SceneLoader } from '@babylonjs/core/Loading/sceneLoader';
 import { AssetContainer } from '@babylonjs/core/assetContainer';
 import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import {
-  MODEL_URL_MAP,
+  getModelAssetIds,
   getModelPathAndFileAsync,
+  resolveModelAssetUrl,
   type ModelPathInfo,
 } from '../assets';
 
@@ -38,6 +39,9 @@ export class AssetLoader {
   // 路径信息缓存
   private pathInfoCache = new Map<string, ModelPathInfo>();
 
+  // 编辑期动态注册的模型 URL。正式持久化后以 asset catalog 为准。
+  private runtimeModelUrls = new Map<string, string>();
+
   constructor(scene: Scene) {
     this.scene = scene;
   }
@@ -49,7 +53,7 @@ export class AssetLoader {
    * 否则材质着色器不会包含光照代码，导致模型显示为黑色。
    */
   async preload(
-    modelIds: string[],
+    assetIds: string[],
     onProgress?: (progress: LoadProgress) => void
   ): Promise<void> {
     // 开发模式下检查灯光是否存在
@@ -57,29 +61,28 @@ export class AssetLoader {
       this.assertLightsExist();
     }
 
-    const total = modelIds.length;
+    const total = assetIds.length;
     let loaded = 0;
 
-    for (const modelId of modelIds) {
-      onProgress?.({ loaded, total, currentAsset: modelId });
+    for (const assetId of assetIds) {
+      onProgress?.({ loaded, total, currentAsset: assetId });
 
       try {
-        await this.loadAssetContainer(modelId);
+        await this.loadAssetContainer(assetId);
         loaded++;
       } catch (error) {
         loaded++;
       }
 
-      onProgress?.({ loaded, total, currentAsset: modelId });
+      onProgress?.({ loaded, total, currentAsset: assetId });
     }
   }
 
   /**
    * 加载模型为 AssetContainer（用于多次实例化）
    */
-  async loadAssetContainer(modelId: string): Promise<AssetContainer> {
-    // 标准化模型 ID
-    const normalizedId = this.normalizeModelId(modelId);
+  async loadAssetContainer(assetId: string): Promise<AssetContainer> {
+    const normalizedId = this.normalizeModelAssetId(assetId);
 
     // 已缓存
     if (this.containers.has(normalizedId)) {
@@ -107,8 +110,8 @@ export class AssetLoader {
   /**
    * 加载模型为 TransformNode（一次性使用）
    */
-  async loadModel(modelId: string): Promise<TransformNode> {
-    const pathInfo = await this.getPathInfo(modelId);
+  async loadModel(assetId: string): Promise<TransformNode> {
+    const pathInfo = await this.getPathInfo(assetId);
 
     const result = await SceneLoader.ImportMeshAsync(
       '',
@@ -116,45 +119,59 @@ export class AssetLoader {
       pathInfo.filename,
       this.scene,
       undefined,
-      this.getPluginExtension(pathInfo)
+      pathInfo.isDataUrl || pathInfo.isCompressed ? '.glb' : undefined
     );
 
     if (result.meshes.length > 0) {
       return result.meshes[0] as TransformNode;
     }
 
-    throw new Error(`[AssetLoader] No meshes found in model: ${modelId}`);
+    throw new Error(`[AssetLoader] No meshes found in model asset: ${assetId}`);
   }
 
   /**
    * 同步获取已缓存的 AssetContainer
    */
-  getContainerSync(modelId: string): AssetContainer | undefined {
-    const normalizedId = this.normalizeModelId(modelId);
+  getContainerSync(assetId: string): AssetContainer | undefined {
+    const normalizedId = this.normalizeModelAssetId(assetId);
     return this.containers.get(normalizedId);
   }
 
   /**
    * 检查模型是否已加载
    */
-  isLoaded(modelId: string): boolean {
-    const normalizedId = this.normalizeModelId(modelId);
+  isLoaded(assetId: string): boolean {
+    const normalizedId = this.normalizeModelAssetId(assetId);
     return this.containers.has(normalizedId);
   }
 
   /**
    * 获取模型的 URL
    */
-  getModelUrl(modelId: string): string | undefined {
-    const normalizedId = this.normalizeModelId(modelId);
-    return MODEL_URL_MAP[normalizedId];
+  getModelUrl(assetId: string): string | undefined {
+    const normalizedId = this.normalizeModelAssetId(assetId);
+    return this.runtimeModelUrls.get(normalizedId) ?? resolveModelAssetUrl(normalizedId);
+  }
+
+  registerRuntimeModelUrl(assetId: string, url: string): void {
+    const normalizedId = this.normalizeModelAssetId(assetId);
+    const normalizedUrl = url.trim();
+    if (!normalizedId || !normalizedUrl) return;
+    this.runtimeModelUrls.set(normalizedId, normalizedUrl);
+    this.pathInfoCache.delete(normalizedId);
+  }
+
+  unregisterRuntimeModelUrl(assetId: string): void {
+    const normalizedId = this.normalizeModelAssetId(assetId);
+    this.runtimeModelUrls.delete(normalizedId);
+    this.pathInfoCache.delete(normalizedId);
   }
 
   /**
-   * 获取所有可用的模型 ID
+   * 获取所有可用的模型资产 ID
    */
-  getAllModelIds(): string[] {
-    return Object.keys(MODEL_URL_MAP);
+  getAllModelAssetIds(): string[] {
+    return [...new Set([...getModelAssetIds(), ...this.runtimeModelUrls.keys()])];
   }
 
   /**
@@ -168,19 +185,15 @@ export class AssetLoader {
     this.pathInfoCache.clear();
   }
 
-  private getPluginExtension(pathInfo: ModelPathInfo): string | undefined {
-    return pathInfo.isDataUrl || pathInfo.isCompressed ? '.glb' : undefined;
-  }
-
   /**
    * 内部方法：执行实际加载
    *
    * 统一使用 LoadAssetContainerAsync 处理所有 URL 类型：
    * - 常规 URL: path + filename 分开传递
-   * - Data URL / 压缩后 Blob URL: 需要指定 pluginExtension 告诉加载器文件类型
+   * - Data URL: 需要指定 pluginExtension 告诉加载器文件类型
    */
-  private async doLoadContainer(modelId: string): Promise<AssetContainer> {
-    const pathInfo = await this.getPathInfo(modelId);
+  private async doLoadContainer(assetId: string): Promise<AssetContainer> {
+    const pathInfo = await this.getPathInfo(assetId);
 
 
     // 使用与旧系统相同的调用方式：path 和 filename 分开传递
@@ -190,7 +203,7 @@ export class AssetLoader {
       pathInfo.filename,
       this.scene,
       undefined,
-      this.getPluginExtension(pathInfo)
+      pathInfo.isDataUrl || pathInfo.isCompressed ? '.glb' : undefined
     );
 
 
@@ -200,8 +213,8 @@ export class AssetLoader {
   /**
    * 获取模型的路径信息
    */
-  private async getPathInfo(modelId: string): Promise<ModelPathInfo> {
-    const normalizedId = this.normalizeModelId(modelId);
+  private async getPathInfo(assetId: string): Promise<ModelPathInfo> {
+    const normalizedId = this.normalizeModelAssetId(assetId);
 
     // 检查缓存
     if (this.pathInfoCache.has(normalizedId)) {
@@ -209,9 +222,9 @@ export class AssetLoader {
     }
 
     // 获取 URL
-    const url = MODEL_URL_MAP[normalizedId];
+    const url = this.getModelUrl(normalizedId);
     if (!url) {
-      throw new Error(`[AssetLoader] Unknown model ID: ${modelId}`);
+      throw new Error(`[AssetLoader] Unknown model assetId: ${assetId}`);
     }
 
     // 解析路径（处理压缩 GLB）
@@ -222,15 +235,10 @@ export class AssetLoader {
   }
 
   /**
-   * 标准化模型 ID
+   * 标准化模型资产 ID
    */
-  private normalizeModelId(modelId: string): string {
-    // 如果传入的是文件名，去掉 .glb 后缀
-    if (modelId.endsWith('.glb')) {
-      const filename = modelId.split('/').pop() || modelId;
-      return filename.replace('.glb', '');
-    }
-    return modelId;
+  private normalizeModelAssetId(assetId: string): string {
+    return assetId.trim();
   }
 
   /**

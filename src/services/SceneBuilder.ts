@@ -16,7 +16,7 @@ import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import { Texture } from '@babylonjs/core/Materials/Textures/texture';
-import { TextureAssets } from '../assets/index';
+import { resolveTextureAssetUrl } from '../assets/index';
 import { Color3 } from '@babylonjs/core/Maths/math.color';
 import { ArcRotateCamera } from '@babylonjs/core/Cameras/arcRotateCamera';
 import { Camera } from '@babylonjs/core/Cameras/camera';
@@ -27,17 +27,23 @@ import { AssetLoader } from './AssetLoader';
 import { ModelPool } from './ModelPool';
 import { RenderingService } from './RenderingService';
 import { ShadowService } from './ShadowService';
+import { applyMaterialDebugAdjustments } from '../utils/materialDebugAdjust';
 
 import renderingConfig from '../config/rendering.json';
 import {
   configService,
+  type ColorRGB,
   type MaterialOverrideConfig,
   type OutlineOverrideConfig,
   type SceneAssetConfig,
   type SceneAssetMaterialMode,
+  type SceneCameraRigConfig,
+  type SceneDirectionalLightConfig,
   type SceneInstanceNode,
+  type ScenePrimitiveNode,
   type SceneSharedMaterialConfig,
   type SceneNodeConfig,
+  type SceneRuntimeSourceBinding,
   type SceneTransformNode,
   type TransformConfig,
 } from '../config';
@@ -46,8 +52,8 @@ import {
   applyMaterialValueToRuntimeNode,
   resolveMaterialRuntimeKind,
   resolveMaterialOwnerNode,
-} from '../editor-package/runtime-core/material-property-adapter';
-import { resolveOutlineTarget } from '../editor-package/runtime-core/outline-adapter';
+  resolveOutlineTarget,
+} from '@fps-games/editor-babylon';
 
 /** 场景环境构建结果 */
 export interface SceneEnvironment {
@@ -67,6 +73,7 @@ export class SceneBuilder {
   readonly sceneNodeRuntimes = new Map<string, TransformNode>();
   private sceneNodeCleanup = new Map<string, (() => void) | null>();
   private sceneAssetConfigs = new Map<string, SceneAssetConfig>();
+  private selectedCameraRig: SceneCameraRigConfig | null = null;
 
   constructor(scene: Scene, assetLoader: AssetLoader, modelPool?: ModelPool) {
     this.scene = scene;
@@ -78,6 +85,19 @@ export class SceneBuilder {
 
   setModelPool(pool: ModelPool): void {
     this.modelPool = pool;
+  }
+
+  registerRuntimeModelUrl(assetId: string, url: string): void {
+    this.assetLoader.registerRuntimeModelUrl(assetId, url);
+  }
+
+  upsertSceneAssetConfig(asset: SceneAssetConfig): void {
+    this.sceneAssetConfigs.set(asset.id, asset);
+  }
+
+  async preloadSceneAsset(asset: SceneAssetConfig): Promise<void> {
+    this.upsertSceneAssetConfig(asset);
+    await this.assetLoader.loadAssetContainer(asset.id);
   }
 
   getRootNode(): TransformNode {
@@ -112,28 +132,26 @@ export class SceneBuilder {
   }
 
   private createCamera(): ArcRotateCamera {
-    const camCfg = (renderingConfig as any).globalVolume?.camera ?? {};
-    const target = camCfg.target ? new Vector3(camCfg.target.x, camCfg.target.y, camCfg.target.z) : new Vector3(0, 0, 0);
-    const alpha = camCfg.alpha ?? Math.PI / 4;
-    const beta = camCfg.beta ?? Math.PI / 4;
-    const radius = camCfg.radius ?? 14;
+    const cameraRig = this.resolveCameraRig();
+    this.selectedCameraRig = cameraRig;
+    const target = this.resolveFallbackCameraTarget();
 
     const camera = new ArcRotateCamera(
       'mainCamera',
-      alpha,
-      beta,
-      radius,
+      cameraRig.alpha,
+      cameraRig.beta,
+      cameraRig.radius,
       target,
       this.scene
     );
 
     camera.mode = Camera.ORTHOGRAPHIC_CAMERA;
-    camera.lowerAlphaLimit = alpha;
-    camera.upperAlphaLimit = alpha;
-    camera.lowerBetaLimit = beta;
-    camera.upperBetaLimit = beta;
-    camera.lowerRadiusLimit = radius;
-    camera.upperRadiusLimit = radius;
+    camera.lowerAlphaLimit = cameraRig.alpha;
+    camera.upperAlphaLimit = cameraRig.alpha;
+    camera.lowerBetaLimit = cameraRig.beta;
+    camera.upperBetaLimit = cameraRig.beta;
+    camera.lowerRadiusLimit = cameraRig.radius;
+    camera.upperRadiusLimit = cameraRig.radius;
 
     this.updateCameraProjection(camera);
 
@@ -143,21 +161,21 @@ export class SceneBuilder {
   updateCameraProjection(camera: ArcRotateCamera): void {
     if (camera.mode !== Camera.ORTHOGRAPHIC_CAMERA) return;
 
-    const camCfg = (renderingConfig as any).globalVolume?.camera ?? {};
+    const orthoSize = this.getSelectedCameraOrthoSize();
     const engine = this.scene.getEngine();
-    const canvas = engine.getRenderingCanvas();
-    const width = Math.max(1, canvas?.clientWidth ?? engine.getRenderWidth());
-    const height = Math.max(1, canvas?.clientHeight ?? engine.getRenderHeight());
-    const aspect = width / height;
-    const desktopSize = camCfg.orthoSizeDesktop ?? camCfg.orthoSize ?? 10;
-    const mobileSize = camCfg.orthoSizeMobile ?? camCfg.orthoSize ?? desktopSize;
-    const orthoSize = (aspect < 1 ? mobileSize : desktopSize) as number;
+    const width = Math.max(1, engine.getRenderWidth());
+    const height = Math.max(1, engine.getRenderHeight());
     const halfH = orthoSize;
-    const halfW = orthoSize * aspect;
+    const halfW = orthoSize * (width / height);
     camera.orthoLeft = -halfW;
     camera.orthoRight = halfW;
     camera.orthoBottom = -halfH;
     camera.orthoTop = halfH;
+  }
+
+  getSelectedCameraOrthoSize(): number {
+    const cameraRig = this.selectedCameraRig ?? this.resolveCameraRig();
+    return cameraRig.orthoSize;
   }
 
   private enforceMainCamera(camera: ArcRotateCamera): void {
@@ -174,16 +192,69 @@ export class SceneBuilder {
 
     const hemi = new HemisphericLight('hemiLight', new Vector3(0, 1, 0), this.scene);
     hemi.intensity = lightsCfg.hemispheric?.intensity ?? 0.8;
+    const hemiDiffuse = lightsCfg.hemispheric?.diffuseColor ?? lightsCfg.hemispheric?.skyLightColor;
+    if (hemiDiffuse) {
+      hemi.diffuse = new Color3(hemiDiffuse.r, hemiDiffuse.g, hemiDiffuse.b);
+    }
 
-    const dir = new DirectionalLight('dirLight', new Vector3(-0.3, -1, -0.2), this.scene);
-    dir.intensity = lightsCfg.directional?.intensity ?? 1.2;
-
-    const d = lightsCfg.directional?.direction;
-    if (d) {
-      dir.direction = new Vector3(d.x, d.y, d.z);
+    const sun = this.resolveDirectionalLight();
+    const dir = new DirectionalLight(
+      'dirLight',
+      new Vector3(sun.direction.x, sun.direction.y, sun.direction.z),
+      this.scene,
+    );
+    dir.intensity = sun.intensity;
+    if (sun.diffuseColor) {
+      dir.diffuse = new Color3(sun.diffuseColor.r, sun.diffuseColor.g, sun.diffuseColor.b);
     }
 
     return { hemisphericLight: hemi, directionalLight: dir };
+  }
+
+  private resolveCameraRig(): SceneCameraRigConfig {
+    return configService.getSceneCameraRig() ?? this.resolveFallbackCameraRig();
+  }
+
+  private resolveFallbackCameraRig(): SceneCameraRigConfig {
+    const camCfg = (renderingConfig as any).globalVolume?.camera ?? {};
+    return {
+      alpha: readFiniteNumber(camCfg.alpha, Math.PI / 4),
+      beta: readFiniteNumber(camCfg.beta, Math.PI / 4),
+      radius: readPositiveFiniteNumber(camCfg.radius, 14),
+      orthoSize: readPositiveFiniteNumber(camCfg.orthoSizeDesktop, 10),
+    };
+  }
+
+  private resolveFallbackCameraTarget(): Vector3 {
+    const camCfg = (renderingConfig as any).globalVolume?.camera ?? {};
+    const target = camCfg.target;
+    if (!target) return new Vector3(0, 0, 0);
+    return new Vector3(
+      readFiniteNumber(target.x, 0),
+      readFiniteNumber(target.y, 0),
+      readFiniteNumber(target.z, 0),
+    );
+  }
+
+  private resolveDirectionalLight(): SceneDirectionalLightConfig {
+    return configService.getSceneDirectionalLight() ?? this.resolveFallbackDirectionalLight();
+  }
+
+  private resolveFallbackDirectionalLight(): SceneDirectionalLightConfig {
+    const lightsCfg = (renderingConfig as any).globalVolume?.lights ?? {};
+    const directional = lightsCfg.directional ?? {};
+    const direction = directional.direction ?? {};
+    const diffuseColor = readColorRGB(directional.diffuseColor);
+    return {
+      type: 'directional',
+      intensity: readNonNegativeFiniteNumber(directional.intensity, 1.2),
+      direction: {
+        x: readFiniteNumber(direction.x, -0.3),
+        y: readFiniteNumber(direction.y, -1),
+        z: readFiniteNumber(direction.z, -0.2),
+      },
+      ...(diffuseColor ? { diffuseColor } : {}),
+    };
   }
 
   private buildDefaultGround(): void {
@@ -210,9 +281,8 @@ export class SceneBuilder {
       mat.diffuseColor = new Color3(overlay.color.r, overlay.color.g, overlay.color.b);
       mat.specularColor = new Color3(0, 0, 0);
       
-      const groundTextures = (TextureAssets as any).ground as Record<string, string> | undefined;
-      if (overlay.textureId && groundTextures?.[overlay.textureId]) {
-        const textureUrl = groundTextures[overlay.textureId];
+      const textureUrl = overlay.textureId ? resolveTextureAssetUrl(overlay.textureId) : undefined;
+      if (textureUrl) {
         const texture = new Texture(textureUrl, this.scene);
         texture.hasAlpha = true;
         mat.diffuseTexture = texture;
@@ -242,9 +312,7 @@ export class SceneBuilder {
     const nodes = configService.getSceneNodes();
     if (nodes.length === 0) return;
 
-    for (const kind of ['group', 'transform', 'instance'] as const) {
-      await this.buildSceneNodePass(nodes.filter((nodeConfig) => nodeConfig.kind === kind));
-    }
+    await this.buildSceneNodePass(nodes);
   }
 
   getSceneNodeRuntime(id: string): TransformNode | undefined {
@@ -333,9 +401,9 @@ export class SceneBuilder {
     const parent = parentOverride ?? this.resolveParentRuntime(nodeConfig.parentId);
     if (!parent) return null;
 
-    const runtimeNode = new TransformNode(nodeConfig.name ?? nodeConfig.id, this.scene);
+    const runtimeNode = this.createRuntimeNode(nodeConfig);
     runtimeNode.id = nodeConfig.id;
-    this.attachSceneNodeMetadata(runtimeNode, nodeConfig.id);
+    this.attachSceneNodeMetadata(runtimeNode, nodeConfig.id, nodeConfig.source);
     this.applyTransform(runtimeNode, nodeConfig.transform);
     runtimeNode.parent = parent;
     runtimeNode.setEnabled(nodeConfig.enabled !== false);
@@ -343,6 +411,13 @@ export class SceneBuilder {
 
     if (nodeConfig.kind === 'transform') {
       this.attachTransformRuntime(nodeConfig, runtimeNode);
+      this.applyNodeMaterialEntries(nodeConfig, runtimeNode);
+      this.applySceneNodeOverrides(nodeConfig, runtimeNode);
+      this.sceneNodeCleanup.set(nodeConfig.id, null);
+      return runtimeNode;
+    }
+
+    if (nodeConfig.kind === 'primitive') {
       this.applyNodeMaterialEntries(nodeConfig, runtimeNode);
       this.applySceneNodeOverrides(nodeConfig, runtimeNode);
       this.sceneNodeCleanup.set(nodeConfig.id, null);
@@ -361,11 +436,58 @@ export class SceneBuilder {
     return this.attachInstanceAssetSync(nodeConfig, runtimeNode);
   }
 
+  private createRuntimeNode(nodeConfig: SceneNodeConfig): TransformNode {
+    if (nodeConfig.kind === 'transform' && nodeConfig.transformType === 'groundDecal' && nodeConfig.groundDecal) {
+      return MeshBuilder.CreateGround(nodeConfig.name ?? nodeConfig.id, {
+        width: nodeConfig.groundDecal.size.width,
+        height: nodeConfig.groundDecal.size.depth,
+      }, this.scene) as unknown as TransformNode;
+    }
+
+    if (nodeConfig.kind === 'primitive') {
+      return this.createPrimitiveRuntimeNode(nodeConfig);
+    }
+
+    return new TransformNode(nodeConfig.name ?? nodeConfig.id, this.scene);
+  }
+
+  private createPrimitiveRuntimeNode(nodeConfig: ScenePrimitiveNode): TransformNode {
+    const builder = MeshBuilder as unknown as {
+      CreateBox?: typeof MeshBuilder.CreateBox;
+      CreateSphere?: typeof MeshBuilder.CreateSphere;
+      CreateGround?: typeof MeshBuilder.CreateGround;
+      CreateCapsule?: (name: string, options: Record<string, unknown>, scene: Scene) => unknown;
+      CreateCylinder?: typeof MeshBuilder.CreateCylinder;
+    };
+    const name = nodeConfig.name ?? nodeConfig.id;
+    const shape = nodeConfig.primitive.shape;
+    const mesh = shape === 'sphere'
+      ? builder.CreateSphere?.(name, { diameter: 1, segments: 32 }, this.scene)
+      : shape === 'plane'
+        ? builder.CreateGround?.(name, { width: 1, height: 1, subdivisions: 1 }, this.scene)
+        : shape === 'capsule'
+          ? builder.CreateCapsule?.(name, { height: 2, radius: 0.5, tessellation: 24, subdivisions: 8 }, this.scene)
+            ?? builder.CreateCylinder?.(name, { height: 2, diameter: 1, tessellation: 24 }, this.scene)
+          : builder.CreateBox?.(name, { size: 1 }, this.scene);
+    const runtimeNode = (mesh ?? new TransformNode(name, this.scene)) as TransformNode;
+    const material = new StandardMaterial(`${nodeConfig.id}_primitive_mat`, this.scene);
+    material.diffuseColor = new Color3(0.72, 0.74, 0.76);
+    material.specularColor = new Color3(0.12, 0.14, 0.16);
+    if (shape === 'plane') material.backFaceCulling = false;
+    (runtimeNode as any).material = material;
+    return runtimeNode;
+  }
+
   private async attachInstanceAssetAsync(
     nodeConfig: SceneInstanceNode,
     runtimeNode: TransformNode,
   ): Promise<TransformNode | null> {
-    const attached = await this.createSceneAssetRuntime(nodeConfig, 'async');
+    let attached: { asset: SceneAssetConfig; modelNode: TransformNode; cleanup: () => void } | null = null;
+    try {
+      attached = await this.createSceneAssetRuntime(nodeConfig, 'async');
+    } catch (error) {
+      console.warn(`[SceneBuilder] Failed to attach scene asset for node "${nodeConfig.id}"`, error);
+    }
     if (!attached) {
       this.sceneNodeRuntimes.delete(nodeConfig.id);
       runtimeNode.dispose();
@@ -387,7 +509,12 @@ export class SceneBuilder {
     nodeConfig: SceneInstanceNode,
     runtimeNode: TransformNode,
   ): TransformNode | null {
-    const attached = this.createSceneAssetRuntime(nodeConfig, 'sync');
+    let attached: { asset: SceneAssetConfig; modelNode: TransformNode; cleanup: () => void } | null = null;
+    try {
+      attached = this.createSceneAssetRuntime(nodeConfig, 'sync');
+    } catch (error) {
+      console.warn(`[SceneBuilder] Failed to attach scene asset for node "${nodeConfig.id}"`, error);
+    }
     if (!attached) {
       this.sceneNodeRuntimes.delete(nodeConfig.id);
       runtimeNode.dispose();
@@ -435,7 +562,7 @@ export class SceneBuilder {
     nodeConfig?: SceneInstanceNode,
   ): Promise<{ asset: SceneAssetConfig; modelNode: TransformNode; cleanup: () => void } | null> {
     if (asset.singleton && this.modelPool) {
-      const pooled = await this.modelPool.acquireOnce(asset.sourceId);
+      const pooled = await this.modelPool.acquireOnce(asset.id);
       pooled.node.setEnabled(true);
       return {
         asset,
@@ -450,10 +577,10 @@ export class SceneBuilder {
     const requiresUniqueMaterialRuntime = nodeConfig ? this.requiresUniqueMaterialRuntime(nodeConfig) : false;
 
     if (this.shouldShareAssetMaterials(asset) && this.modelPool) {
-      await this.assetLoader.loadAssetContainer(asset.sourceId);
+      await this.assetLoader.loadAssetContainer(asset.id);
       const pooled = requiresUniqueMaterialRuntime
-        ? this.modelPool.acquireUnique(asset.sourceId)
-        : this.modelPool.acquire(asset.sourceId);
+        ? this.modelPool.acquireUnique(asset.id)
+        : this.modelPool.acquire(asset.id);
       pooled.node.setEnabled(true);
       return {
         asset,
@@ -470,7 +597,7 @@ export class SceneBuilder {
       };
     }
 
-    const modelNode = await this.assetLoader.loadModel(asset.sourceId);
+    const modelNode = await this.assetLoader.loadModel(asset.id);
     return {
       asset,
       modelNode,
@@ -490,8 +617,8 @@ export class SceneBuilder {
 
     const requiresUniqueMaterialRuntime = nodeConfig ? this.requiresUniqueMaterialRuntime(nodeConfig) : false;
     const pooled = requiresUniqueMaterialRuntime
-      ? this.modelPool.acquireUnique(asset.sourceId)
-      : this.modelPool.acquire(asset.sourceId);
+      ? this.modelPool.acquireUnique(asset.id)
+      : this.modelPool.acquire(asset.id);
     pooled.node.setEnabled(true);
     const restoreMaterials = this.shouldShareAssetMaterials(asset)
       ? null
@@ -629,8 +756,7 @@ export class SceneBuilder {
     if (!materialName || !properties) return;
 
     if (ownerNodePath) {
-      const normalizedOwnerNodePath = this.normalizeSharedOwnerNodePath(ownerNodePath);
-      const ownerNode = resolveMaterialOwnerNode(rootNode, normalizedOwnerNodePath || ownerNodePath);
+      const ownerNode = this.resolveNodeMaterialOwner(rootNode, ownerNodePath);
       if (!ownerNode?.material) return;
       this.applyMaterialPropertiesToRuntimeMaterial(ownerNode.material, properties);
       return;
@@ -652,9 +778,8 @@ export class SceneBuilder {
     const properties = materialEntry.properties;
     if (!materialName || !properties) return;
 
-    const normalizedOwnerNodePath = this.normalizeSharedOwnerNodePath(ownerNodePath);
-    const ownerNode = (normalizedOwnerNodePath || ownerNodePath)
-      ? resolveMaterialOwnerNode(rootNode, normalizedOwnerNodePath || ownerNodePath)
+    const ownerNode = ownerNodePath
+      ? this.resolveNodeMaterialOwner(rootNode, ownerNodePath)
       : this.collectMaterialNodes(rootNode).find((node) => node?.material?.name === materialName)
         ?? this.collectMaterialNodes(rootNode).find((node) => !!node?.material)
         ?? null;
@@ -680,8 +805,28 @@ export class SceneBuilder {
     if (properties.alpha !== undefined) {
       applyMaterialValueToRuntimeMaterial(material, this.scene, 'material.alpha', properties.alpha);
     }
+    if (properties.alphaCutOff !== undefined && 'alphaCutOff' in material) {
+      material.alphaCutOff = properties.alphaCutOff;
+    }
+    if (properties.transparencyMode !== undefined && 'transparencyMode' in material) {
+      material.transparencyMode = properties.transparencyMode;
+    }
     if (properties.backFaceCulling !== undefined) {
       applyMaterialValueToRuntimeMaterial(material, this.scene, 'material.backFaceCulling', properties.backFaceCulling);
+    }
+    if (
+      properties.contrast !== undefined
+      || properties.brightness !== undefined
+      || properties.saturation !== undefined
+      || properties.hue !== undefined
+      || properties.colorDensity !== undefined
+      || properties.metallic !== undefined
+      || properties.roughness !== undefined
+      || properties.alpha !== undefined
+      || properties.alphaCutOff !== undefined
+      || properties.transparencyMode !== undefined
+    ) {
+      applyMaterialDebugAdjustments(material, properties);
     }
     if (properties.albedoTexture !== undefined) {
       applyMaterialValueToRuntimeMaterial(material, this.scene, 'material.albedoTexture.url', properties.albedoTexture?.url ?? null);
@@ -769,11 +914,9 @@ export class SceneBuilder {
   private attachTransformRuntime(nodeConfig: SceneTransformNode, runtimeNode: TransformNode): void {
     if (nodeConfig.transformType !== 'groundDecal' || !nodeConfig.groundDecal) return;
 
-    const decal = MeshBuilder.CreateGround(`${nodeConfig.id}_mesh`, {
-      width: nodeConfig.groundDecal.size.width,
-      height: nodeConfig.groundDecal.size.depth,
-    }, this.scene);
-    decal.parent = runtimeNode;
+    if (typeof nodeConfig.groundDecal.alphaIndex === 'number' && Number.isFinite(nodeConfig.groundDecal.alphaIndex)) {
+      (runtimeNode as any).alphaIndex = nodeConfig.groundDecal.alphaIndex;
+    }
 
     const mat = new StandardMaterial(`${nodeConfig.id}_mat`, this.scene);
     const color = nodeConfig.groundDecal.color ?? { r: 1, g: 1, b: 1 };
@@ -781,18 +924,42 @@ export class SceneBuilder {
     mat.specularColor = new Color3(0, 0, 0);
     mat.backFaceCulling = false;
 
-    const groundTextures = (TextureAssets as any).ground as Record<string, string> | undefined;
-    if (nodeConfig.groundDecal.textureId && groundTextures?.[nodeConfig.groundDecal.textureId]) {
-      const texture = new Texture(groundTextures[nodeConfig.groundDecal.textureId], this.scene);
+    const textureUrl = nodeConfig.groundDecal.textureId ? resolveTextureAssetUrl(nodeConfig.groundDecal.textureId) : undefined;
+    if (textureUrl) {
+      const texture = new Texture(textureUrl, this.scene);
       texture.hasAlpha = true;
-      texture.uScale = -1;
-      texture.uOffset = 1;
+      // Ground decal 是 XZ 平面；图片像素行方向与地面 UV 的 V 轴相反。
+      // 在贴图层翻转 V 轴，而不是设置 mesh rotation，避免破坏地贴朝向语义。
+      texture.vScale = -1;
+      texture.vOffset = 1;
       mat.diffuseTexture = texture;
+      if (typeof nodeConfig.groundDecal.diffuseTextureLevel === 'number' && Number.isFinite(nodeConfig.groundDecal.diffuseTextureLevel)) {
+        mat.diffuseTexture.level = nodeConfig.groundDecal.diffuseTextureLevel;
+      }
       mat.useAlphaFromDiffuseTexture = true;
       mat.diffuseColor = new Color3(1, 1, 1);
+      if (typeof nodeConfig.groundDecal.emissiveTextureLevel === 'number' && Number.isFinite(nodeConfig.groundDecal.emissiveTextureLevel)) {
+        mat.emissiveTexture = mat.emissiveTexture ?? texture;
+        mat.emissiveTexture.level = nodeConfig.groundDecal.emissiveTextureLevel;
+      }
     }
 
-    decal.material = mat;
+    (runtimeNode as any).material = mat;
+  }
+
+  private resolveNodeMaterialOwner(rootNode: TransformNode, ownerNodePath: string): any | null {
+    const normalizedOwnerNodePath = this.normalizeSharedOwnerNodePath(ownerNodePath);
+    const resolved = resolveMaterialOwnerNode(rootNode, normalizedOwnerNodePath || ownerNodePath);
+    if (resolved) return resolved;
+
+    const normalizedTarget = (normalizedOwnerNodePath || ownerNodePath).trim();
+    const rootName = String((rootNode as any)?.name ?? '').trim();
+    const rootId = String((rootNode as any)?.id ?? '').trim();
+    if (!normalizedTarget) return null;
+    if (normalizedTarget === `${rootName}_mesh` || normalizedTarget === `${rootId}_mesh`) {
+      return rootNode as any;
+    }
+    return null;
   }
 
   private syncSceneAssetIndex(): void {
@@ -802,13 +969,17 @@ export class SceneBuilder {
     }
   }
 
-  private attachSceneNodeMetadata(node: TransformNode, nodeId: string): void {
+  private attachSceneNodeMetadata(node: TransformNode, nodeId: string, source?: SceneRuntimeSourceBinding): void {
     const metadata = node.metadata && typeof node.metadata === 'object' ? node.metadata : {};
-    node.metadata = {
+    const nextMetadata: Record<string, unknown> = {
       ...metadata,
       sceneNodeId: nodeId,
       nodeId,
     };
+    if (source) {
+      nextMetadata.sourceBinding = structuredClone(source);
+    }
+    node.metadata = nextMetadata;
   }
 
   private applyChildTransforms(root: TransformNode, transforms?: Record<string, TransformConfig>): void {
@@ -889,14 +1060,14 @@ export class SceneBuilder {
   }
 
   private applySceneNodeOverrides(
-    nodeConfig: SceneInstanceNode | SceneTransformNode,
+    nodeConfig: SceneInstanceNode | SceneTransformNode | ScenePrimitiveNode,
     rootNode: TransformNode,
     asset?: SceneAssetConfig,
   ): void {
     const overrides = nodeConfig.overrides;
     if (!overrides) return;
 
-    if (nodeConfig.kind === 'transform') {
+    if (nodeConfig.kind === 'transform' || nodeConfig.kind === 'primitive') {
       this.applyChildTransforms(rootNode, overrides.childTransforms);
     }
 
@@ -989,4 +1160,32 @@ export class SceneBuilder {
     this.clearSceneRuntime();
     this.root.dispose();
   }
+}
+
+function readFiniteNumber(value: unknown, fallback: number): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+}
+
+function readPositiveFiniteNumber(value: unknown, fallback: number): number {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : fallback;
+}
+
+function readNonNegativeFiniteNumber(value: unknown, fallback: number): number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : fallback;
+}
+
+function readColorRGB(value: unknown): ColorRGB | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const record = value as Record<string, unknown>;
+  if (
+    typeof record.r !== 'number'
+    || !Number.isFinite(record.r)
+    || typeof record.g !== 'number'
+    || !Number.isFinite(record.g)
+    || typeof record.b !== 'number'
+    || !Number.isFinite(record.b)
+  ) {
+    return undefined;
+  }
+  return { r: record.r, g: record.g, b: record.b };
 }

@@ -55,6 +55,22 @@ export interface TransformConfig {
 
 export type TransformType = 'plain' | 'light' | 'camera' | 'groundDecal';
 
+export type ScenePrimitiveShape = 'cube' | 'sphere' | 'plane' | 'capsule';
+
+export interface SceneCameraRigConfig {
+  alpha: number;
+  beta: number;
+  radius: number;
+  orthoSize: number;
+}
+
+export interface SceneDirectionalLightConfig {
+  type: 'directional';
+  intensity: number;
+  direction: Position3D;
+  diffuseColor?: ColorRGB;
+}
+
 // ============================================================
 // World Bounds
 // ============================================================
@@ -100,24 +116,55 @@ export interface SceneAssetDefaults {
 
 export type SceneAssetMaterialMode = 'shared' | 'instance';
 
+export interface AssetExternalRef {
+  platformAssetId?: string;
+  assetPath?: string;
+  assetUrl?: string;
+  [key: string]: unknown;
+}
+
 export interface SceneAssetConfig {
   id: string;
+  guid?: string;
   type: 'glb';
-  sourceId: string;
+  external?: AssetExternalRef;
   displayName?: string;
+  category?: string;
   warmupCount?: number;
   singleton?: boolean;
   materialMode?: SceneAssetMaterialMode;
   defaults?: SceneAssetDefaults;
+  metadata?: Record<string, unknown>;
+}
+
+export type SceneAuthoringSourceType = 'scene' | 'effect' | 'material' | 'gameplay-config' | 'code';
+
+export interface SceneAuthoringSourceRef {
+  sourceId: string;
+  sourceType: SceneAuthoringSourceType | string;
+  revision?: number;
+}
+
+export interface SceneCompiledArtifactProvenance extends SceneAuthoringSourceRef {
+  compilerId: string;
+  compilerVersion: string;
+  compiledAt: string;
+}
+
+export interface SceneRuntimeSourceBinding extends SceneAuthoringSourceRef {
+  objectId?: string;
+  component?: string;
+  propertyPath?: string;
 }
 
 export interface SceneNodeBase {
   id: string;
   name?: string;
-  kind: 'group' | 'instance' | 'transform';
+  kind: 'group' | 'instance' | 'transform' | 'primitive';
   parentId?: string;
   enabled?: boolean;
   transform?: TransformConfig;
+  source?: SceneRuntimeSourceBinding;
 }
 
 export interface SceneGroupNode extends SceneNodeBase {
@@ -136,6 +183,12 @@ export interface PbrMaterialLightingOverrideConfig {
   emissiveColor?: ColorRGB;
   ambientColor?: ColorRGB;
   lightFalloff?: number;
+  directIntensity?: number;
+  emissiveIntensity?: number;
+  environmentIntensity?: number;
+  specularIntensity?: number;
+  metallicF0Factor?: number;
+  indexOfRefraction?: number;
 }
 
 export interface StandardMaterialLightingOverrideConfig {
@@ -153,7 +206,14 @@ export interface MaterialOverrideConfig {
   emissiveColor?: ColorRGB;
   metallic?: number;
   roughness?: number;
+  contrast?: number;
+  brightness?: number;
+  saturation?: number;
+  hue?: number;
+  colorDensity?: number;
   alpha?: number;
+  alphaCutOff?: number;
+  transparencyMode?: number;
   backFaceCulling?: boolean;
   albedoTexture?: MaterialTextureOverrideConfig;
   normalTexture?: MaterialTextureOverrideConfig;
@@ -197,6 +257,14 @@ export interface SceneInstanceNode extends SceneNodeBase {
   overrides?: SceneNodeVisualOverrides;
 }
 
+export interface ScenePrimitiveNode extends SceneNodeBase {
+  kind: 'primitive';
+  primitive: {
+    shape: ScenePrimitiveShape;
+  };
+  overrides?: SceneNodeVisualOverrides;
+}
+
 export interface SceneTransformNode extends SceneNodeBase {
   kind: 'transform';
   transformType?: TransformType;
@@ -208,10 +276,15 @@ export interface SceneTransformNode extends SceneNodeBase {
     };
     textureId?: string;
     color?: ColorRGB;
+    alphaIndex?: number;
+    diffuseTextureLevel?: number;
+    emissiveTextureLevel?: number;
   };
+  camera?: SceneCameraRigConfig;
+  light?: SceneDirectionalLightConfig;
 }
 
-export type SceneNodeConfig = SceneGroupNode | SceneInstanceNode | SceneTransformNode;
+export type SceneNodeConfig = SceneGroupNode | SceneInstanceNode | SceneTransformNode | ScenePrimitiveNode;
 
 export interface SceneDocumentScene {
   rootId: string;
@@ -297,13 +370,17 @@ export interface SceneRenderConfig {
   [key: string]: unknown;
 }
 
+export interface SceneConfigMeta extends Record<string, unknown> {
+  generatedFrom?: SceneCompiledArtifactProvenance;
+}
+
 // ============================================================
 // Root Config Files
 // ============================================================
 
 export interface SceneConfig {
   schemaVersion?: number;
-  meta?: Record<string, unknown>;
+  meta?: SceneConfigMeta;
   gameplay?: SceneGameplayConfig;
   scene?: SceneDocumentScene;
   render?: SceneRenderConfig;

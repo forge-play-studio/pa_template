@@ -1,0 +1,45 @@
+{
+  "nodeKinds": ["group", "instance", "transform", "primitive"],
+  "primitiveShapes": ["cube", "sphere", "plane", "capsule"],
+  "transformTypes": ["plain", "light", "camera", "groundDecal"],
+  "assetTypes": ["glb"],
+  "materialScopes": ["sharedAsset", "nodeMaterial"],
+  "materialModes": ["shared", "instance"],
+  "hierarchy": {
+    "parentTargets": ["root", "sceneNode"]
+  },
+  "runtimeOnlyTokens": ["/@fs", "assetUrl", "sourceAssetUrl", "sourceAssetPath"],
+  "assetManagerMetadata": {
+    "key": "registeredBy",
+    "value": "project-asset-manager"
+  },
+  "errorCodes": {
+    "assetIdConflict": "asset_id_conflict",
+    "sourceIdConflict": "source_id_conflict",
+    "assetStillReferenced": "asset_still_referenced",
+    "assetRegistrationPlanFailed": "asset_registration_plan_failed",
+    "assetUnregistrationPlanFailed": "asset_unregistration_plan_failed",
+    "assetImportFailed": "asset_import_failed",
+    "assetRemoveFailed": "asset_remove_failed",
+    "sceneNodeCreateFailed": "scene_node_create_failed",
+    "sceneNodePatchFailed": "scene_node_patch_failed",
+    "sceneNodeRemoveFailed": "scene_node_remove_failed",
+    "sceneNodeSchemaValidationFailed": "scene_node_schema_validation_failed",
+    "invalidSceneNodeKind": "invalid_scene_node_kind",
+    "sceneNodeAlreadyExists": "scene_node_already_exists",
+    "invalidSceneNodeParent": "invalid_scene_node_parent",
+    "sceneNodeParentCycle": "scene_node_parent_cycle",
+    "sceneNodePatchEmpty": "scene_node_patch_empty",
+    "unsupportedSceneNodeField": "unsupported_scene_node_field",
+    "invalidSceneNodeFieldValue": "invalid_scene_node_field_value",
+    "invalidSceneNodeFieldDelete": "invalid_scene_node_field_delete",
+    "nodeNotFound": "node_not_found",
+    "missingNodeId": "missing_node_id",
+    "missingAssetId": "missing_asset_id",
+    "missingSourceId": "missing_source_id",
+    "sourceMustBeGlb": "source_must_be_glb",
+    "sourceFileNotFound": "source_file_not_found",
+    "manifestEntryNotFound": "manifest_entry_not_found",
+    "generatedRegistrySyntaxError": "generated_registry_syntax_error"
+  }
+}

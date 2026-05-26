@@ -203,8 +203,8 @@ export class Game {
     const modelIds = [...new Set(
       configService
         .getSceneAssets()
-        .map((asset) => asset.sourceId)
-        .filter((sourceId): sourceId is string => typeof sourceId === 'string' && sourceId.length > 0),
+        .map((asset) => asset.id)
+        .filter((assetId): assetId is string => typeof assetId === 'string' && assetId.length > 0),
     )];
     if (modelIds.length === 0) return;
 
