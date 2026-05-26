@@ -302,14 +302,22 @@ export class SceneBuilder {
   async loadSceneFromDocument(): Promise<void> {
     this.clearSceneRuntime();
     this.syncSceneAssetIndex();
-    this.attachSceneNodeMetadata(this.root, configService.getSceneRootId());
-    this.root.name = configService.getSceneRootId();
-    this.root.id = configService.getSceneRootId();
+    const rootId = configService.getSceneRootId();
+    this.attachSceneNodeMetadata(this.root, rootId);
+    this.root.name = rootId;
+    this.root.id = rootId;
     this.root.setEnabled(true);
-    this.sceneNodeRuntimes.set(configService.getSceneRootId(), this.root);
-    this.sceneNodeCleanup.set(configService.getSceneRootId(), null);
+    this.sceneNodeRuntimes.set(rootId, this.root);
+    this.sceneNodeCleanup.set(rootId, null);
 
-    const nodes = configService.getSceneNodes();
+    const nodes = configService.getSceneNodes().filter((nodeConfig) => {
+      if (!this.isSceneRootConfigNode(nodeConfig)) return true;
+      console.warn('[SceneBuilder] Ignoring scene.nodes entry that matches scene.rootId', {
+        id: nodeConfig.id,
+        rootId,
+      });
+      return false;
+    });
     if (nodes.length === 0) return;
 
     await this.buildSceneNodePass(nodes);
@@ -326,6 +334,7 @@ export class SceneBuilder {
    * 至少需要让这个方法在自己的 SceneBuilder 上成立。
    */
   addSceneNodeFromConfig(nodeConfig: SceneNodeConfig, parent?: TransformNode | null): TransformNode | null {
+    if (this.isSceneRootConfigNode(nodeConfig)) return null;
     return this.buildSceneNodeRuntime(nodeConfig, 'sync', parent ?? undefined);
   }
 
@@ -398,6 +407,7 @@ export class SceneBuilder {
     mode: 'async' | 'sync',
     parentOverride?: TransformNode | null,
   ): Promise<TransformNode | null> | TransformNode | null {
+    if (this.isSceneRootConfigNode(nodeConfig)) return null;
     const parent = parentOverride ?? this.resolveParentRuntime(nodeConfig.parentId);
     if (!parent) return null;
 
@@ -434,6 +444,11 @@ export class SceneBuilder {
     }
 
     return this.attachInstanceAssetSync(nodeConfig, runtimeNode);
+  }
+
+  private isSceneRootConfigNode(nodeConfig: SceneNodeConfig): boolean {
+    const rootId = configService.getSceneRootId();
+    return !!rootId && nodeConfig.id === rootId;
   }
 
   private createRuntimeNode(nodeConfig: SceneNodeConfig): TransformNode {

@@ -260,6 +260,9 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
       cameraTarget: { x: 0, y: 0.6, z: 0 },
       cameraRadius: 12,
       clearColor: { r: 0.055, g: 0.07, b: 0.09, a: 1 },
+      sky: {
+        preset: 'simple',
+      },
       useRightHandedSystem: true,
     },
     createGrid: createEditorGrid,
@@ -271,7 +274,10 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
   const enterEditorWithLoading = async (): Promise<void> => {
     editorLoadingOverlay.show(EDITOR_LOADING_OVERLAY_CONTENT.enter);
     try {
+      await waitForEditorLoadingOverlayPaint();
       await rawEnterEditor();
+      harness.render();
+      await waitForEditorLoadingOverlayPaint();
     } finally {
       editorLoadingOverlay.hide();
     }
