@@ -76,6 +76,7 @@ export type EditorSceneComponent =
 
 export interface EditorSceneGameObject {
   id: string;
+  guid?: string;
   name?: string;
   kind?: SceneNodeConfig['kind'];
   parentId?: string;

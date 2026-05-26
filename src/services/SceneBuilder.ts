@@ -132,7 +132,8 @@ export class SceneBuilder {
   }
 
   private createCamera(): ArcRotateCamera {
-    const cameraRig = this.resolveCameraRig();
+    const cameraNode = configService.getSceneCameraNode();
+    const cameraRig = cameraNode?.camera ?? this.resolveFallbackCameraRig();
     this.selectedCameraRig = cameraRig;
     const target = this.resolveFallbackCameraTarget();
 
@@ -153,6 +154,8 @@ export class SceneBuilder {
     camera.lowerRadiusLimit = cameraRig.radius;
     camera.upperRadiusLimit = cameraRig.radius;
 
+    this.attachMainCameraMetadata(camera, cameraNode?.source);
+
     this.updateCameraProjection(camera);
 
     return camera;
@@ -171,6 +174,26 @@ export class SceneBuilder {
     camera.orthoRight = halfW;
     camera.orthoBottom = -halfH;
     camera.orthoTop = halfH;
+  }
+
+  applyCameraRig(camera: ArcRotateCamera, cameraRig: SceneCameraRigConfig, target?: Vector3): void {
+    this.selectedCameraRig = { ...cameraRig };
+    camera.alpha = cameraRig.alpha;
+    camera.beta = cameraRig.beta;
+    camera.radius = cameraRig.radius;
+    camera.lowerAlphaLimit = cameraRig.alpha;
+    camera.upperAlphaLimit = cameraRig.alpha;
+    camera.lowerBetaLimit = cameraRig.beta;
+    camera.upperBetaLimit = cameraRig.beta;
+    camera.lowerRadiusLimit = cameraRig.radius;
+    camera.upperRadiusLimit = cameraRig.radius;
+    if (target) camera.target = target;
+    this.updateCameraProjection(camera);
+  }
+
+  getSelectedCameraRig(): SceneCameraRigConfig {
+    const cameraRig = this.selectedCameraRig ?? this.resolveCameraRig();
+    return { ...cameraRig };
   }
 
   getSelectedCameraOrthoSize(): number {
@@ -213,6 +236,20 @@ export class SceneBuilder {
 
   private resolveCameraRig(): SceneCameraRigConfig {
     return configService.getSceneCameraRig() ?? this.resolveFallbackCameraRig();
+  }
+
+  private attachMainCameraMetadata(camera: ArcRotateCamera, source?: SceneRuntimeSourceBinding): void {
+    if (!source) return;
+    const metadata = camera.metadata && typeof camera.metadata === 'object' ? camera.metadata : {};
+    camera.metadata = {
+      ...metadata,
+      __fpsEditor: {
+        sourceId: source.sourceId,
+        ...(source.objectGuid ? { objectGuid: source.objectGuid } : {}),
+        ...(source.objectId ? { objectId: source.objectId } : {}),
+        propertyPath: 'camera',
+      },
+    };
   }
 
   private resolveFallbackCameraRig(): SceneCameraRigConfig {

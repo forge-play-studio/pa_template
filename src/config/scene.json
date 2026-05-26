@@ -4,6 +4,14 @@
     "playableAdInfo": {
       "ctaUrl": "",
       "notes": "Scaffold scene json: 填写你的 CTA 链接或 endcard 信息"
+    },
+    "generatedFrom": {
+      "sourceId": "scene.main",
+      "sourceType": "scene",
+      "revision": 4,
+      "compilerId": "pa_template.editor-scene.compiler",
+      "compilerVersion": "1",
+      "compiledAt": "2026-05-26T15:59:16.204Z"
     }
   },
   "gameplay": {
@@ -24,9 +32,130 @@
   "scene": {
     "rootId": "root",
     "assets": [],
-    "nodes": [],
+    "nodes": [
+      {
+        "id": "main_camera",
+        "name": "Main Camera",
+        "parentId": "root",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 4,
+          "objectGuid": "go_2406b122-d63b-4971-bf66-7d78a8776543",
+          "objectId": "main_camera",
+          "component": "Transform"
+        },
+        "transform": {
+          "position": {
+            "x": 0,
+            "y": 5,
+            "z": -8
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "transform",
+        "transformType": "camera",
+        "camera": {
+          "alpha": 0.7854,
+          "beta": 0.7854,
+          "radius": 17,
+          "orthoSize": 2
+        }
+      },
+      {
+        "id": "sun_light",
+        "name": "Sun Light",
+        "parentId": "root",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 4,
+          "objectGuid": "go_7017d029-9d69-4381-91ac-75093053caa9",
+          "objectId": "sun_light",
+          "component": "Transform"
+        },
+        "transform": {
+          "position": {
+            "x": 0,
+            "y": 4,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "transform",
+        "transformType": "light",
+        "light": {
+          "type": "directional",
+          "intensity": 2,
+          "direction": {
+            "x": -0.3,
+            "y": -1,
+            "z": -0.2
+          },
+          "diffuseColor": {
+            "r": 1,
+            "g": 1,
+            "b": 1
+          }
+        }
+      },
+      {
+        "id": "plane",
+        "name": "Plane",
+        "parentId": "root",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 4,
+          "objectGuid": "go_3e3578c4-1e4a-41df-8160-013bdcd02aa5",
+          "objectId": "plane",
+          "component": "PrimitiveRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": -3.6,
+            "y": 0,
+            "z": 1.8
+          },
+          "rotation": {
+            "z": 0,
+            "x": 0,
+            "y": 0
+          },
+          "scale": {
+            "x": 10,
+            "y": 1,
+            "z": 10
+          }
+        },
+        "kind": "primitive",
+        "primitive": {
+          "shape": "plane"
+        }
+      }
+    ],
     "materials": [],
     "textures": []
   },
-  "render": {}
+  "render": {},
+  "version": 3,
+  "updatedAt": "2026-05-26T15:59:16.204Z"
 }

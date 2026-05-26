@@ -104,6 +104,7 @@ function compileGameObject(
     sourceId: sourceRef.sourceId,
     sourceType: sourceRef.sourceType,
     revision: sourceRef.revision,
+    ...(gameObject.guid ? { objectGuid: gameObject.guid } : {}),
     objectId: gameObject.id,
     component: modelRenderer ? 'ModelRenderer' : (primitiveRenderer || nodeKind === 'primitive') ? 'PrimitiveRenderer' : nodeKind === 'transform' ? 'Transform' : 'GameObject',
   };

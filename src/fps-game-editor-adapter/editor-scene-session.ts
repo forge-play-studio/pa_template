@@ -139,6 +139,7 @@ export const EDITOR_SCENE_MAIN_CAMERA_ID = 'main_camera';
 export const EDITOR_SCENE_SUN_LIGHT_ID = 'sun_light';
 const EDITOR_SCENE_ROOT_ID = 'root';
 const EDITOR_SCENE_ROOT_TRANSFORM = createIdentityEditorTransform();
+const EDITOR_SCENE_GAME_OBJECT_GUID_PREFIX = 'go_';
 
 export const DEFAULT_EDITOR_SCENE_CAMERA: EditorSceneCameraRig = {
   alpha: 3.9269908169872414,
@@ -153,6 +154,38 @@ export const DEFAULT_EDITOR_SCENE_SUN_LIGHT: EditorSceneDirectionalLight = {
   direction: { x: -0.3, y: -1, z: -0.2 },
   diffuseColor: { r: 1, g: 1, b: 1 },
 };
+
+function createEditorSceneGameObjectGuid(): string {
+  const uuid = globalThis.crypto?.randomUUID?.();
+  if (uuid) return `${EDITOR_SCENE_GAME_OBJECT_GUID_PREFIX}${uuid}`;
+  const random = Math.random().toString(36).slice(2, 12);
+  const timestamp = Date.now().toString(36);
+  return `${EDITOR_SCENE_GAME_OBJECT_GUID_PREFIX}${timestamp}_${random}`;
+}
+
+function readEditorSceneGameObjectGuid(gameObject: EditorSceneGameObject): string | null {
+  return typeof gameObject.guid === 'string' && gameObject.guid.trim()
+    ? gameObject.guid.trim()
+    : null;
+}
+
+function ensureUniqueEditorSceneGameObjectGuid(
+  gameObject: EditorSceneGameObject,
+  usedGuids: Set<string>,
+): EditorSceneGameObject {
+  const existingGuid = readEditorSceneGameObjectGuid(gameObject);
+  if (existingGuid && !usedGuids.has(existingGuid)) {
+    usedGuids.add(existingGuid);
+    return existingGuid === gameObject.guid ? gameObject : { ...gameObject, guid: existingGuid };
+  }
+
+  let guid = createEditorSceneGameObjectGuid();
+  while (usedGuids.has(guid)) {
+    guid = createEditorSceneGameObjectGuid();
+  }
+  usedGuids.add(guid);
+  return { ...gameObject, guid };
+}
 
 function isEditorSceneRootGameObjectId(gameObjectId: string | null | undefined): boolean {
   return gameObjectId === EDITOR_SCENE_ROOT_ID;
@@ -226,6 +259,25 @@ function normalizeEditorSceneRootGameObject(gameObject: EditorSceneGameObject): 
   return shallowEditorSceneGameObjectsEqual(next, gameObject) ? gameObject : next;
 }
 
+export function ensureEditorSceneGameObjectGuids(document: EditorSceneDocument): EditorSceneDocument {
+  const usedGuids = new Set<string>();
+  let changed = false;
+  const gameObjects = document.scene.gameObjects.map((gameObject) => {
+    const next = ensureUniqueEditorSceneGameObjectGuid(gameObject, usedGuids);
+    changed = changed || next !== gameObject;
+    return next;
+  });
+  return changed
+    ? {
+        ...document,
+        scene: {
+          ...document.scene,
+          gameObjects,
+        },
+      }
+    : document;
+}
+
 function patchEditorSceneGameObjectLocalTransform(
   gameObject: EditorSceneGameObject,
   transform: EditorTransformSnapshot,
@@ -249,8 +301,10 @@ export function reduceEditorSceneDocument(
   document: EditorSceneDocument,
   command: DocumentCommand<EditorSceneDocument, EditorSceneDocumentPatch>,
 ): EditorSceneDocument {
-  return normalizeEditorSceneRootTransformDocument(
-    reduceEditorSceneDocumentUnchecked(document, command),
+  return ensureEditorSceneGameObjectGuids(
+    normalizeEditorSceneRootTransformDocument(
+      reduceEditorSceneDocumentUnchecked(document, command),
+    ),
   );
 }
 
@@ -482,10 +536,11 @@ function isEditorSceneProtectedSystemGameObject(gameObject: EditorSceneGameObjec
 }
 
 export function ensureEditorSceneEnvironmentDefaults(document: EditorSceneDocument): EditorSceneDocument {
-  const rootId = resolveEditorSceneRootContainerId(document);
+  const documentWithGuids = ensureEditorSceneGameObjectGuids(document);
+  const rootId = resolveEditorSceneRootContainerId(documentWithGuids);
   let cameraSeen = false;
-  let changed = false;
-  const gameObjects = document.scene.gameObjects.map((gameObject) => {
+  let changed = documentWithGuids !== document;
+  const gameObjects = documentWithGuids.scene.gameObjects.map((gameObject) => {
     if (isEditorSceneCameraGameObject(gameObject)) {
       if (!cameraSeen) {
         cameraSeen = true;
@@ -516,13 +571,13 @@ export function ensureEditorSceneEnvironmentDefaults(document: EditorSceneDocume
 
   return changed
     ? {
-        ...document,
+        ...documentWithGuids,
         scene: {
-          ...document.scene,
+          ...documentWithGuids.scene,
           gameObjects,
         },
       }
-    : document;
+    : documentWithGuids;
 }
 
 export function getEditorSceneHierarchyItems(document: EditorSceneDocument): SceneGraphTreeItem[] {
@@ -614,6 +669,7 @@ export function createEditorSceneCreateGroupPatch(
   const name = intent.name?.trim() || 'Empty';
   const gameObject: EditorSceneGameObject = {
     id,
+    guid: createEditorSceneGameObjectGuid(),
     name,
     kind: 'transform',
     transformType: 'plain',
@@ -658,6 +714,7 @@ export function createEditorSceneCreatePrimitivePatch(
     : worldTransform;
   const gameObject: EditorSceneGameObject = {
     id,
+    guid: createEditorSceneGameObjectGuid(),
     name,
     kind: 'primitive',
     ...(parentId ? { parentId } : {}),
@@ -885,6 +942,7 @@ export function createEditorSceneGroupSelectionPatch(
   const id = createUniqueEditorSceneId(document.scene.gameObjects.map((gameObject) => gameObject.id), 'parent');
   const gameObject: EditorSceneGameObject = {
     id,
+    guid: createEditorSceneGameObjectGuid(),
     name: intent.name?.trim() || 'Parent',
     kind: 'transform',
     transformType: 'plain',
@@ -948,6 +1006,7 @@ export function createEditorSceneDuplicateSelectionPatch(input: {
     .map((source) => {
       const duplicate = structuredClone(source);
       duplicate.id = idMap.get(source.id)!;
+      duplicate.guid = createEditorSceneGameObjectGuid();
       duplicate.name = `${source.name ?? source.id} Copy`;
       if (duplicate.parentId && idMap.has(duplicate.parentId)) {
         duplicate.parentId = idMap.get(duplicate.parentId)!;
@@ -3983,6 +4042,7 @@ function createDefaultEditorSceneCameraGameObject(
   const id = reserveEditorSceneDefaultId(usedIds, EDITOR_SCENE_MAIN_CAMERA_ID);
   return {
     id,
+    guid: createEditorSceneGameObjectGuid(),
     name: 'Main Camera',
     kind: 'transform',
     ...(rootId ? { parentId: rootId } : {}),
@@ -4005,6 +4065,7 @@ function createDefaultEditorSceneSunLightGameObject(
   const id = reserveEditorSceneDefaultId(usedIds, EDITOR_SCENE_SUN_LIGHT_ID);
   return {
     id,
+    guid: createEditorSceneGameObjectGuid(),
     name: 'Sun Light',
     kind: 'transform',
     ...(rootId ? { parentId: rootId } : {}),
@@ -4372,6 +4433,7 @@ function createGameObjectForAsset(
     : worldTransform;
   return {
     id,
+    guid: createEditorSceneGameObjectGuid(),
     name: assetItem.displayName,
     ...(parentId ? { parentId } : {}),
     active: true,
@@ -4408,6 +4470,7 @@ function createGroundDecalGameObjectForTextureAsset(
     : worldTransform;
   return {
     id,
+    guid: createEditorSceneGameObjectGuid(),
     name: assetItem.displayName,
     kind: 'transform',
     ...(parentId ? { parentId } : {}),

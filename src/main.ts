@@ -20,6 +20,9 @@ let loadingScreen: LoadingScreen | null = null;
 /** DEV-only local editor/game mode switcher */
 let localEditorModeSwitcher: LocalEditorModeSwitcher | null = null;
 
+/** DEV-only runtime camera debug panel */
+let cameraDebugPanel: { dispose(): void } | null = null;
+
 async function registerRuntimeEditorBridge(): Promise<void> {
   const editorModule = await import('./fps-game-editor-adapter/runtime');
   editorModule.registerProjectFpsGameEditorRuntimeBridge();
@@ -28,6 +31,11 @@ async function registerRuntimeEditorBridge(): Promise<void> {
 function disposeLocalEditorModeSwitcher(): void {
   localEditorModeSwitcher?.dispose();
   localEditorModeSwitcher = null;
+}
+
+function disposeCameraDebugPanel(): void {
+  cameraDebugPanel?.dispose();
+  cameraDebugPanel = null;
 }
 
 // ============================================================
@@ -72,6 +80,16 @@ async function init(): Promise<void> {
     window.gameInstance = game;
 
     if (import.meta.env.DEV) {
+      void import('./debug/camera-debug-panel')
+        .then(({ mountCameraDebugPanel }) => {
+          disposeCameraDebugPanel();
+          cameraDebugPanel = mountCameraDebugPanel({
+            root: document.body,
+            getGame: () => game,
+          });
+        })
+        .catch((error) => console.warn('[camera-debug-panel] mount failed', error));
+
       void import('./debug/local-editor-mode-switcher')
         .then(({ mountLocalEditorModeSwitcher }) => {
           disposeLocalEditorModeSwitcher();
@@ -114,6 +132,7 @@ if (document.readyState === 'loading') {
 if (import.meta.env.DEV) {
   const disposeDevTools = () => {
     disposeLocalEditorModeSwitcher();
+    disposeCameraDebugPanel();
   };
   window.addEventListener('beforeunload', disposeDevTools);
   import.meta.hot?.dispose(disposeDevTools);

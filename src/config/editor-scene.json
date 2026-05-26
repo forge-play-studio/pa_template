@@ -5,7 +5,7 @@
     "authoringSource": {
       "sourceId": "scene.main",
       "sourceType": "scene",
-      "revision": 1
+      "revision": 4
     }
   },
   "assets": [],
@@ -18,11 +18,24 @@
         "components": [
           {
             "type": "Transform",
-            "position": { "x": 0, "y": 0, "z": 0 },
-            "rotation": { "x": 0, "y": 0, "z": 0 },
-            "scale": { "x": 1, "y": 1, "z": 1 }
+            "position": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
           }
-        ]
+        ],
+        "guid": "go_0a88d3f6-cb95-48de-96b7-f96d715f596e"
       },
       {
         "id": "main_camera",
@@ -32,19 +45,32 @@
         "active": true,
         "transformType": "camera",
         "camera": {
-          "alpha": 0.7853981633974483,
-          "beta": 0.7853981633974483,
-          "radius": 14,
-          "orthoSize": 10
+          "alpha": 0.7854,
+          "beta": 0.7854,
+          "radius": 17,
+          "orthoSize": 2
         },
         "components": [
           {
             "type": "Transform",
-            "position": { "x": 0, "y": 5, "z": -8 },
-            "rotation": { "x": 0, "y": 0, "z": 0 },
-            "scale": { "x": 1, "y": 1, "z": 1 }
+            "position": {
+              "x": 0,
+              "y": 5,
+              "z": -8
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
           }
-        ]
+        ],
+        "guid": "go_2406b122-d63b-4971-bf66-7d78a8776543"
       },
       {
         "id": "sun_light",
@@ -56,17 +82,69 @@
         "light": {
           "type": "directional",
           "intensity": 2,
-          "direction": { "x": -0.3, "y": -1, "z": -0.2 },
-          "diffuseColor": { "r": 1, "g": 1, "b": 1 }
+          "direction": {
+            "x": -0.3,
+            "y": -1,
+            "z": -0.2
+          },
+          "diffuseColor": {
+            "r": 1,
+            "g": 1,
+            "b": 1
+          }
         },
         "components": [
           {
             "type": "Transform",
-            "position": { "x": 0, "y": 4, "z": 0 },
-            "rotation": { "x": 0, "y": 0, "z": 0 },
-            "scale": { "x": 1, "y": 1, "z": 1 }
+            "position": {
+              "x": 0,
+              "y": 4,
+              "z": 0
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
           }
-        ]
+        ],
+        "guid": "go_7017d029-9d69-4381-91ac-75093053caa9"
+      },
+      {
+        "id": "plane",
+        "name": "Plane",
+        "kind": "primitive",
+        "parentId": "root",
+        "active": true,
+        "primitive": {
+          "shape": "plane"
+        },
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": -3.6,
+              "y": 0,
+              "z": 1.8
+            },
+            "rotation": {
+              "z": 0,
+              "x": 0,
+              "y": 0
+            },
+            "scale": {
+              "x": 10,
+              "y": 1,
+              "z": 10
+            }
+          }
+        ],
+        "guid": "go_3e3578c4-1e4a-41df-8160-013bdcd02aa5"
       }
     ]
   }

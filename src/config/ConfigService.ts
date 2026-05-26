@@ -512,13 +512,17 @@ export class ConfigService {
     return this.sceneNodeMap.get(id);
   }
 
-  getSceneCameraRig(): SceneCameraRigConfig | undefined {
+  getSceneCameraNode(): SceneTransformNode | undefined {
     const nodes = this.ensureSceneSection().nodes;
-    const node = nodes.find((item): item is SceneTransformNode => (
+    return nodes.find((item): item is SceneTransformNode => (
       item.kind === 'transform'
       && !!item.camera
       && (item.transformType === 'camera' || item.transformType == null)
     ));
+  }
+
+  getSceneCameraRig(): SceneCameraRigConfig | undefined {
+    const node = this.getSceneCameraNode();
     return node?.camera;
   }
 

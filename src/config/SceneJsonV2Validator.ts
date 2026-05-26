@@ -262,6 +262,7 @@ function validateRuntimeSourceBinding(
     return;
   }
   validateAuthoringSourceRef(source, path, add);
+  if (source.objectGuid != null && !nonEmptyString(source.objectGuid)) add(`${path}.objectGuid`, 'objectGuid must be a non-empty string when present');
   if (source.objectId != null && !nonEmptyString(source.objectId)) add(`${path}.objectId`, 'objectId must be a non-empty string when present');
   if (source.component != null && !nonEmptyString(source.component)) add(`${path}.component`, 'component must be a non-empty string when present');
   if (source.propertyPath != null && !nonEmptyString(source.propertyPath)) add(`${path}.propertyPath`, 'propertyPath must be a non-empty string when present');

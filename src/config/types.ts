@@ -152,6 +152,7 @@ export interface SceneCompiledArtifactProvenance extends SceneAuthoringSourceRef
 }
 
 export interface SceneRuntimeSourceBinding extends SceneAuthoringSourceRef {
+  objectGuid?: string;
   objectId?: string;
   component?: string;
   propertyPath?: string;
