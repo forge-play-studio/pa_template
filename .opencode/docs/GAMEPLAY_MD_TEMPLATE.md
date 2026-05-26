@@ -81,6 +81,22 @@
 
 ### 4.7 初版完整游玩路径
 
+本节必须用编号步骤描述 first playable 主路径。每一步都必须足够具体，可以被 gameplay builder 转成实现任务、coverage 条目和验收项。不能只写“完成资源循环”“进行升级”这类抽象描述。
+
+```md
+| step | player action / event | target object / binding | resources / values | expected state change | observable result | required systems / abilities | blocking gaps |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+```
+
+字段要求：
+
+1. `target object / binding` 必须写 scene node、zone、anchor、runtime parent、path point 或 `待确认`。
+2. `resources / values` 必须写资源增减、费用、容量、奖励、进度或明确 `Not applicable`。
+3. `expected state change` 必须写 inventory、machine queue、order progress、cash、unlock、stage、guide target 等状态变化。
+4. `observable result` 必须写玩家能看到的表现，例如资源飞行、身后堆叠、HUD 更新、地贴进度、门打开、卡车移动。
+5. `required systems / abilities` 可写 gameplay responsibility 或 wiki ability，例如 `inventory-system`、`actor-carry-stack`、`item-visual-effects`。
+6. `blocking gaps` 写缺失绑定、缺数值、缺资产、缺用户确认；没有则写 `None`。
+
 ## 5. 场景节点和美术资产绑定
 
 这一节是给 gameplay builder 使用的绑定索引。玩法对象必须优先绑定到现有场景节点、资产 ID、zone、spawn point、path point、runtime parent 或等价配置，不应重新猜一套区域或美术命名。
