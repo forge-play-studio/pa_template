@@ -25,6 +25,7 @@ import { getEditorSceneAuthoringSourceRef } from './editor-authoring-source';
 
 const EDITOR_SCENE_COMPILER_ID = 'pa_template.editor-scene.compiler';
 const EDITOR_SCENE_COMPILER_VERSION = '1';
+const EDITOR_SCENE_WORLD_ORIGIN_ID = 'root';
 
 export interface CompiledEditorSceneSummary {
   assetCount: number;
@@ -57,7 +58,7 @@ export function compileEditorSceneDocumentToSceneConfig(
   };
   const rootId = previousScene?.rootId || 'root';
   const compiledGameObjects = editorDocument.scene.gameObjects
-    .filter((gameObject) => gameObject.id !== rootId);
+    .filter((gameObject) => gameObject.id !== rootId && gameObject.id !== EDITOR_SCENE_WORLD_ORIGIN_ID);
   nextSceneConfig.scene = {
     rootId,
     assets: editorDocument.assets.map(compileAsset),
