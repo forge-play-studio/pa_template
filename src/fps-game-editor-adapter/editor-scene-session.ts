@@ -164,7 +164,7 @@ function isEditorSceneRootGameObject(gameObject: EditorSceneGameObject): boolean
 
 function isEditorSceneRootTransformPath(targetId: string, path: string): boolean {
   return isEditorSceneRootGameObjectId(targetId)
-    && /^transform\.(position|rotation|scale)\.(x|y|z)$/.test(path);
+    && /^transform(?:\.(position|rotation|scale)(?:\.(x|y|z))?)?$/.test(path);
 }
 
 function createEditorSceneRootTransformComponent(): EditorSceneGameObject['components'][number] {
@@ -2754,7 +2754,7 @@ function createCommonInspectorProperties(
 }
 
 function createTransformInspectorProperties(
-  document: EditorSceneDocument,
+  _document: EditorSceneDocument,
   gameObject: EditorSceneGameObject,
   nodeKind: SceneNodeConfig['kind'],
   transform: { position: EditorSceneVec3; rotation: EditorSceneVec3; scale?: EditorSceneVec3 },
@@ -2769,10 +2769,10 @@ function createTransformInspectorProperties(
       const path = `transform.${vectorName}.${axis}`;
       const value = vectorName === 'rotation' ? roundForInspector(radiansToDegrees(vector[axis])) : vector[axis];
       properties.push(rootTransform
-        ? createReadonlyInspectorProperty(path, `${toEditorSceneTransformVectorLabel('local', vectorName)}.${axis}`, value, order)
+        ? createReadonlyInspectorProperty(path, `${toEditorSceneTransformVectorLabel(vectorName)}.${axis}`, value, order)
         : createDocumentInspectorProperty(null, nodeKind, {
             path,
-            label: `${toEditorSceneTransformVectorLabel('local', vectorName)}.${axis}`,
+            label: `${toEditorSceneTransformVectorLabel(vectorName)}.${axis}`,
             valueType: 'number',
             control: 'number',
             value,
@@ -2783,36 +2783,6 @@ function createTransformInspectorProperties(
       order += 1;
     }
   }
-  const world = getEditorSceneGameObjectWorldTransform(document, gameObject.id);
-  if (world) {
-    properties.push(...createEditorSceneReadonlyVector3Properties({
-      basePath: 'transform.world.position',
-      label: 'World Position',
-      value: world.position,
-      order,
-      source: 'Derived',
-    }));
-    order += 3;
-    properties.push(...createEditorSceneReadonlyVector3Properties({
-      basePath: 'transform.world.rotation',
-      label: 'World Rotation',
-      value: {
-        x: radiansToDegrees(world.rotation.x),
-        y: radiansToDegrees(world.rotation.y),
-        z: radiansToDegrees(world.rotation.z),
-      },
-      order,
-      source: 'Derived',
-    }));
-    order += 3;
-    properties.push(...createEditorSceneReadonlyVector3Properties({
-      basePath: 'transform.world.scale',
-      label: 'World Scale',
-      value: world.scale,
-      order,
-      source: 'Derived',
-    }));
-  }
   return properties;
 }
 
@@ -2821,16 +2791,14 @@ function createTransformInspectorSummary(
   gameObject: EditorSceneGameObject,
 ): string {
   const parent = gameObject.parentId ? findEditorSceneGameObject(document, gameObject.parentId) : null;
-  return `Local: ${parent ? parent.name ?? parent.id : 'Scene'} + World`;
+  if (isEditorSceneRootGameObject(gameObject)) return 'Identity Root';
+  return `Relative to: ${parent ? parent.name ?? parent.id : 'Scene'}`;
 }
 
 function toEditorSceneTransformVectorLabel(
-  space: 'local' | 'world',
   vectorName: 'position' | 'rotation' | 'scale',
 ): string {
-  const prefix = space === 'local' ? 'Local' : 'World';
-  const label = vectorName === 'position' ? 'Position' : vectorName === 'rotation' ? 'Rotation' : 'Scale';
-  return `${prefix} ${label}`;
+  return vectorName === 'position' ? 'Position' : vectorName === 'rotation' ? 'Rotation' : 'Scale';
 }
 
 function createRendererInspectorProperties(
@@ -3861,6 +3829,29 @@ function patchEditorSceneGameObject(
     }
     return next;
   }
+  const transformVectorMatch = path.match(/^transform\.(position|rotation|scale)$/);
+  if (transformVectorMatch) {
+    const transform = findEditorSceneTransform(next);
+    if (!transform) return next;
+    const vectorName = transformVectorMatch[1] as 'position' | 'rotation' | 'scale';
+    if (vectorName === 'scale') {
+      if (typeof value === 'number' && Number.isFinite(value)) {
+        transform.scale = { x: value, y: value, z: value };
+      } else if (isVec3(value)) {
+        transform.scale = { ...value };
+      }
+      return next;
+    }
+    if (!isVec3(value)) return next;
+    transform[vectorName] = vectorName === 'rotation'
+      ? {
+          x: degreesToRadians(value.x),
+          y: degreesToRadians(value.y),
+          z: degreesToRadians(value.z),
+        }
+      : { ...value };
+    return next;
+  }
   const transformMatch = path.match(/^transform\.(position|rotation|scale)\.(x|y|z)$/);
   if (transformMatch && typeof value === 'number' && Number.isFinite(value)) {
     const transform = findEditorSceneTransform(next);
@@ -4248,7 +4239,15 @@ function createEditorScenePropertyDescriptors(
                   if (!targetId || !Number.isFinite(numericValue)) return document;
                   const target = document.scene.gameObjects.find((entry) => entry.id === targetId);
                   const targetTransform = target ? findEditorSceneTransform(target) : null;
-                  if (!targetTransform) return document;
+                  if (!target || !targetTransform) return document;
+                  if (!validateEditorSceneInspectorValue(
+                    document,
+                    target,
+                    `transform.${vectorName}.${axis}`,
+                    numericValue,
+                  ).ok) {
+                    return document;
+                  }
                   const storedValue = vectorName === 'rotation' ? degreesToRadians(numericValue) : numericValue;
                   const position = vectorName === 'position'
                     ? { ...targetTransform.position, [axis]: storedValue }
