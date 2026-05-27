@@ -265,6 +265,12 @@ const CAMERA_DEBUG_RANGE_FIELD_PAIRS: ReadonlyArray<{
 ];
 const CAMERA_DEBUG_RANGE_FIELD_ENDS = new Set(CAMERA_DEBUG_RANGE_FIELD_PAIRS.map(pair => pair.upper));
 const CAMERA_DEBUG_TOOLTIP_DELAY_MS = 140;
+const CAMERA_DEBUG_TARGET_MARKER_Y_OFFSET = 0.32;
+const CAMERA_DEBUG_TARGET_MARKER_ARM_LENGTH = 0.16;
+const CAMERA_DEBUG_TARGET_MARKER_ARM_GAP = 0.02;
+const CAMERA_DEBUG_TARGET_MARKER_ARM_HEIGHT = 0.2;
+const CAMERA_DEBUG_TARGET_LABEL_MIN_GAP_PX = 8;
+const CAMERA_DEBUG_TARGET_LABEL_MAX_GAP_PX = 20;
 
 export function mountCameraDebugPanel(options: CameraDebugPanelOptions): CameraDebugPanel {
   const root = options.root ?? document.body;
@@ -909,12 +915,8 @@ export function mountCameraDebugPanel(options: CameraDebugPanelOptions): CameraD
     material.specularColor = new Color3(0.35, 0.02, 0.02);
     material.disableLighting = true;
 
-    const markerYOffset = 0.32;
-    const armLength = 0.16;
-    const armGap = 0.02;
     const armDiameter = 0.048;
-    const armHeight = 0.2;
-    const createArm = (name: string, position: Vector3, rotation: Vector3, height = armLength): void => {
+    const createArm = (name: string, position: Vector3, rotation: Vector3, height = CAMERA_DEBUG_TARGET_MARKER_ARM_LENGTH): void => {
       const arm = MeshBuilder.CreateCylinder(name, {
         height,
         diameter: armDiameter,
@@ -928,12 +930,12 @@ export function mountCameraDebugPanel(options: CameraDebugPanelOptions): CameraD
       arm.renderingGroupId = 2;
     };
 
-    const centerDistance = armGap + armLength / 2;
-    createArm('cameraDebugTargetMarker.arm.x.positive', new Vector3(centerDistance, markerYOffset, 0), new Vector3(0, 0, Math.PI / 2));
-    createArm('cameraDebugTargetMarker.arm.x.negative', new Vector3(-centerDistance, markerYOffset, 0), new Vector3(0, 0, Math.PI / 2));
-    createArm('cameraDebugTargetMarker.arm.z.positive', new Vector3(0, markerYOffset, centerDistance), new Vector3(Math.PI / 2, 0, 0));
-    createArm('cameraDebugTargetMarker.arm.z.negative', new Vector3(0, markerYOffset, -centerDistance), new Vector3(Math.PI / 2, 0, 0));
-    createArm('cameraDebugTargetMarker.arm.y', new Vector3(0, markerYOffset, 0), new Vector3(0, 0, 0), armHeight);
+    const centerDistance = CAMERA_DEBUG_TARGET_MARKER_ARM_GAP + CAMERA_DEBUG_TARGET_MARKER_ARM_LENGTH / 2;
+    createArm('cameraDebugTargetMarker.arm.x.positive', new Vector3(centerDistance, CAMERA_DEBUG_TARGET_MARKER_Y_OFFSET, 0), new Vector3(0, 0, Math.PI / 2));
+    createArm('cameraDebugTargetMarker.arm.x.negative', new Vector3(-centerDistance, CAMERA_DEBUG_TARGET_MARKER_Y_OFFSET, 0), new Vector3(0, 0, Math.PI / 2));
+    createArm('cameraDebugTargetMarker.arm.z.positive', new Vector3(0, CAMERA_DEBUG_TARGET_MARKER_Y_OFFSET, centerDistance), new Vector3(Math.PI / 2, 0, 0));
+    createArm('cameraDebugTargetMarker.arm.z.negative', new Vector3(0, CAMERA_DEBUG_TARGET_MARKER_Y_OFFSET, -centerDistance), new Vector3(Math.PI / 2, 0, 0));
+    createArm('cameraDebugTargetMarker.arm.y', new Vector3(0, CAMERA_DEBUG_TARGET_MARKER_Y_OFFSET, 0), new Vector3(0, 0, 0), CAMERA_DEBUG_TARGET_MARKER_ARM_HEIGHT);
 
     return rootNode;
   }
@@ -965,7 +967,7 @@ export function mountCameraDebugPanel(options: CameraDebugPanelOptions): CameraD
       'letter-spacing:0',
       'white-space:nowrap',
       'pointer-events:none',
-      'transform:translate(-50%, calc(-100% - 28px))',
+      'transform:translate(-50%, -100%)',
     ].join(';');
     root.append(label);
     targetCoordinateLabel = label;
@@ -977,15 +979,15 @@ export function mountCameraDebugPanel(options: CameraDebugPanelOptions): CameraD
       hideTargetCoordinateLabel();
       return;
     }
-    const projected = projectTargetToScreen(target);
-    if (!projected || projected.depth < 0 || projected.depth > 1) {
+    const labelAnchor = projectTargetLabelAnchorToScreen(target);
+    if (!labelAnchor) {
       hideTargetCoordinateLabel();
       return;
     }
     const label = ensureTargetCoordinateLabel();
     label.textContent = formatTargetCoordinateLabel(target);
-    label.style.left = `${projected.x}px`;
-    label.style.top = `${projected.y}px`;
+    label.style.left = `${labelAnchor.x}px`;
+    label.style.top = `${labelAnchor.y}px`;
     label.style.display = '';
   }
 
@@ -1008,12 +1010,12 @@ export function mountCameraDebugPanel(options: CameraDebugPanelOptions): CameraD
       engine?.getRenderWidth?.() ?? canvas?.width ?? 0,
       engine?.getRenderHeight?.() ?? canvas?.height ?? 0,
     );
-    const transformMatrix = scene?.getTransformMatrix?.();
-    if (!scene || !camera || !canvas || !viewport || !transformMatrix) return null;
+    if (!scene || !camera || !canvas || !viewport) return null;
 
     const rect = canvas.getBoundingClientRect();
     const renderWidth = Math.max(1, Number(engine?.getRenderWidth?.() ?? canvas.width ?? rect.width));
     const renderHeight = Math.max(1, Number(engine?.getRenderHeight?.() ?? canvas.height ?? rect.height));
+    const transformMatrix = camera.getViewMatrix(true).multiply(camera.getProjectionMatrix(true));
     const projected = Vector3.Project(
       new Vector3(target.x, target.y, target.z),
       Matrix.Identity(),
@@ -1026,9 +1028,46 @@ export function mountCameraDebugPanel(options: CameraDebugPanelOptions): CameraD
     return Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(depth) ? { x, y, depth } : null;
   }
 
+  function projectTargetLabelAnchorToScreen(target: CameraDebugSnapshot['target']): { x: number; y: number } | null {
+    const targetScreen = projectTargetToScreen(target);
+    if (!targetScreen || targetScreen.depth < 0 || targetScreen.depth > 1) return null;
+    const markerScreens = getTargetMarkerWorldPoints(target)
+      .map(point => projectTargetToScreen(point))
+      .filter((point): point is { x: number; y: number; depth: number } => !!point && point.depth >= 0 && point.depth <= 1);
+    if (markerScreens.length === 0) return {
+      x: targetScreen.x,
+      y: targetScreen.y - CAMERA_DEBUG_TARGET_LABEL_MIN_GAP_PX,
+    };
+
+    const minX = Math.min(...markerScreens.map(point => point.x));
+    const maxX = Math.max(...markerScreens.map(point => point.x));
+    const minY = Math.min(...markerScreens.map(point => point.y));
+    const maxY = Math.max(...markerScreens.map(point => point.y));
+    const markerHeight = Math.max(0, maxY - minY);
+    const gap = clamp(markerHeight * 0.25, CAMERA_DEBUG_TARGET_LABEL_MIN_GAP_PX, CAMERA_DEBUG_TARGET_LABEL_MAX_GAP_PX);
+    return {
+      x: (minX + maxX) / 2,
+      y: minY - gap,
+    };
+  }
+
+  function getTargetMarkerWorldPoints(target: CameraDebugSnapshot['target']): CameraDebugSnapshot['target'][] {
+    const armExtent = CAMERA_DEBUG_TARGET_MARKER_ARM_GAP + CAMERA_DEBUG_TARGET_MARKER_ARM_LENGTH;
+    const centerY = target.y + CAMERA_DEBUG_TARGET_MARKER_Y_OFFSET;
+    const halfHeight = CAMERA_DEBUG_TARGET_MARKER_ARM_HEIGHT / 2;
+    return [
+      { x: target.x, y: target.y, z: target.z },
+      { x: target.x - armExtent, y: centerY, z: target.z },
+      { x: target.x + armExtent, y: centerY, z: target.z },
+      { x: target.x, y: centerY, z: target.z - armExtent },
+      { x: target.x, y: centerY, z: target.z + armExtent },
+      { x: target.x, y: centerY - halfHeight, z: target.z },
+      { x: target.x, y: centerY + halfHeight, z: target.z },
+    ];
+  }
+
   function formatTargetCoordinateLabel(target: CameraDebugSnapshot['target']): string {
-    const copy = text();
-    return `${copy.worldPosition}  X ${formatCoordinate(target.x)}  Y ${formatCoordinate(target.y)}  Z ${formatCoordinate(target.z)}`;
+    return `position: (${formatCoordinate(target.x)}, ${formatCoordinate(target.y)}, ${formatCoordinate(target.z)})`;
   }
 
   function setDebugTooltip(element: HTMLElement, message: string): void {
@@ -1325,7 +1364,7 @@ function roundNumber(value: number): number {
 }
 
 function formatCoordinate(value: number): string {
-  return roundNumber(value).toFixed(3);
+  return roundNumber(value).toFixed(1);
 }
 
 function readFiniteNumber(value: unknown, fallback: number): number {
