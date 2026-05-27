@@ -273,13 +273,20 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
   const rawDiscardAndRunGame = harness.discardAndRunGame.bind(harness);
   const enterEditorWithLoading = async (): Promise<void> => {
     editorLoadingOverlay.show(EDITOR_LOADING_OVERLAY_CONTENT.enter);
+    let entered = false;
     try {
       await waitForEditorLoadingOverlayPaint();
       await rawEnterEditor();
+      entered = true;
       harness.render();
       await waitForEditorLoadingOverlayPaint();
     } finally {
       editorLoadingOverlay.hide();
+      if (entered) {
+        (harness as LocalEditorHarness<EditorSceneDocument> & {
+          notifyViewportRevealed?: (reason?: string) => void;
+        }).notifyViewportRevealed?.('editor-loading-overlay-hidden');
+      }
     }
   };
   const showLoadingOverlayIfNeeded = (content: EditorLoadingOverlayContent): void => {
@@ -428,10 +435,11 @@ function waitForMilliseconds(milliseconds: number): Promise<void> {
   return new Promise(resolve => window.setTimeout(resolve, milliseconds));
 }
 
-function createEditorGrid(BABYLON: BabylonModule, scene: any) {
+function createEditorGrid(BABYLON: BabylonModule, scene: any, camera?: any) {
   return createBabylonEditorInfiniteGrid({
     babylon: BABYLON,
     scene,
+    camera,
     name: 'pa-template-editor-grid',
     halfLineCount: 96,
   });

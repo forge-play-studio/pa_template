@@ -644,18 +644,11 @@ export function createEditorSceneCreatePrimitivePatch(
 ): { patch: EditorSceneDocumentPatch; label: string; createdId: string; changedIds: string[] } | null {
   const shape = normalizeEditorScenePrimitiveShape(intent.shape);
   if (!shape) return null;
-  const parentId = resolveCreateGroupParentId(document, intent);
+  const parentId = resolveCreatePrimitiveParentId(document, intent);
   if (parentId === null) return null;
   const id = createUniqueEditorSceneId(document.scene.gameObjects.map((gameObject) => gameObject.id), shape);
   const name = intent.name?.trim() || getEditorScenePrimitiveDisplayName(shape);
-  const worldTransform: EditorTransformSnapshot = {
-    position: getNextPlacementPosition(document),
-    rotation: { x: 0, y: 0, z: 0 },
-    scale: getEditorScenePrimitiveDefaultScale(shape),
-  };
-  const localTransform = parentId
-    ? toLocalTransformForParent(document, parentId, worldTransform) ?? worldTransform
-    : worldTransform;
+  const localTransform = createDefaultEditorScenePrimitiveTransform(shape);
   const gameObject: EditorSceneGameObject = {
     id,
     name,
@@ -2179,6 +2172,14 @@ function resolveCreateGroupParentId(
   }
   return document.scene.gameObjects.find((gameObject) => gameObject.id === EDITOR_SCENE_ROOT_ID && canEditorSceneGameObjectHaveChildren(gameObject))?.id
     ?? document.scene.gameObjects.find((gameObject) => !gameObject.parentId && canEditorSceneGameObjectHaveChildren(gameObject))?.id;
+}
+
+function resolveCreatePrimitiveParentId(
+  document: EditorSceneDocument,
+  intent: SceneGraphCreatePrimitiveIntent,
+): string | null | undefined {
+  if (intent.parentId === null) return resolveEditorSceneRootContainerId(document);
+  return resolveCreateGroupParentId(document, intent);
 }
 
 function resolveEditorSceneRootContainerId(document: EditorSceneDocument): string | undefined {
@@ -4453,10 +4454,16 @@ function getEditorScenePrimitiveDisplayName(shape: ScenePrimitiveShape): string 
   return shape[0]!.toUpperCase() + shape.slice(1);
 }
 
-function getEditorScenePrimitiveDefaultScale(shape: ScenePrimitiveShape): EditorSceneVec3 {
-  return shape === 'plane'
-    ? { x: 10, y: 1, z: 10 }
-    : { x: 1, y: 1, z: 1 };
+function createDefaultEditorScenePrimitiveTransform(shape: ScenePrimitiveShape): EditorTransformSnapshot {
+  return {
+    position: { x: 0, y: 0, z: 0 },
+    rotation: { x: 0, y: 0, z: 0 },
+    scale: getEditorScenePrimitiveDefaultScale(shape),
+  };
+}
+
+function getEditorScenePrimitiveDefaultScale(_shape: ScenePrimitiveShape): EditorSceneVec3 {
+  return { x: 1, y: 1, z: 1 };
 }
 
 function createUniqueEditorSceneId(existingIds: string[], preferredId: string): string {
