@@ -441,11 +441,17 @@ function waitForMilliseconds(milliseconds: number): Promise<void> {
   return new Promise(resolve => window.setTimeout(resolve, milliseconds));
 }
 
-function createEditorGrid(BABYLON: BabylonModule, scene: any, camera?: any) {
+function createEditorGrid(
+  BABYLON: BabylonModule,
+  scene: any,
+  camera?: any,
+  context?: { getCamera?: () => any },
+) {
   return createBabylonEditorInfiniteGrid({
     babylon: BABYLON,
     scene,
     camera,
+    getCamera: () => context?.getCamera?.() ?? camera ?? scene?.activeCamera ?? null,
     name: 'pa-template-editor-grid',
     halfLineCount: 96,
   });
