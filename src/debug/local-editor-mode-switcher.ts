@@ -11,7 +11,6 @@ import type {
   BabylonEditorProjectionImportContext,
   BabylonEditorProjectionImportResult,
   BabylonEditorProjectionNode,
-  BabylonSceneCameraPreviewRig,
 } from '@fps-games/editor-babylon';
 import { createBabylonEditorInfiniteGrid } from '@fps-games/editor-babylon';
 import baseSceneConfig from '../config/scene.json';
@@ -65,6 +64,10 @@ import {
 import { compileEditorSceneDocumentToSceneConfig } from '../fps-game-editor-adapter/editor-scene-compiler';
 
 type BabylonModule = Record<string, any>;
+
+type MainCameraPreviewRig = {
+  settings: typeof DEFAULT_EDITOR_SCENE_CAMERA;
+};
 
 export interface LocalEditorModeSwitcherOptions {
   root?: HTMLElement;
@@ -154,6 +157,9 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
   const authoringHost = createProjectAuthoringHost({
     drivers: [sceneMainSourceDriver],
   });
+  const mainCameraPreviewDocumentAdapter = {
+    getMainCameraPreviewRig: createMainCameraPreviewRig,
+  };
   const harness: LocalEditorHarness<EditorSceneDocument> = createLocalEditorHarness<EditorSceneDocument, EditorSceneDocumentPatch, EditorSceneAssetLibraryItem>({
     root: options.root,
     localTestActions: window.parent === window,
@@ -174,7 +180,7 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
         const gameObject = document.scene.gameObjects.find((entry) => entry.id === id);
         return gameObject ? createProjectionNode(document, gameObject) : null;
       },
-      getSceneCameraPreviewRig: createSceneCameraPreviewRig,
+      ...mainCameraPreviewDocumentAdapter,
       isSelectable: (_document, id) => id !== 'root',
       isLocked: () => false,
       createPatchFromAsset: (assetItem, input) => ({
@@ -505,13 +511,12 @@ function createProjectionNode(
   };
 }
 
-function createSceneCameraPreviewRig(
+function createMainCameraPreviewRig(
   editorScene: EditorSceneDocument,
-): BabylonSceneCameraPreviewRig | null {
+): MainCameraPreviewRig | null {
   const camera = editorScene.scene.gameObjects.find(isEditorSceneCameraGameObject);
   if (!camera || camera.active === false) return null;
   return {
-    target: { x: 0, y: 0, z: 0 },
     settings: {
       ...DEFAULT_EDITOR_SCENE_CAMERA,
       ...(camera.camera ?? {}),

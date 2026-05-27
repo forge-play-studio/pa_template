@@ -57,6 +57,11 @@ import {
 } from '@fps-games/editor-babylon';
 
 const DEFAULT_CAMERA_FOV = 0.85;
+const DEFAULT_CAMERA_LOWER_BETA_LIMIT = 0.1;
+const DEFAULT_CAMERA_UPPER_BETA_LIMIT = 1.45;
+const DEFAULT_CAMERA_RADIUS_LIMIT_FACTOR_MIN = 0.25;
+const DEFAULT_CAMERA_RADIUS_LIMIT_FACTOR_MAX = 4;
+const MIN_CAMERA_RADIUS_LIMIT = 0.1;
 
 /** 场景环境构建结果 */
 export interface SceneEnvironment {
@@ -136,7 +141,7 @@ export class SceneBuilder {
 
   private createCamera(): ArcRotateCamera {
     const cameraNode = configService.getSceneCameraNode();
-    const cameraRig = cloneCameraRig(cameraNode?.camera ?? this.resolveFallbackCameraRig());
+    const cameraRig = applyCameraRigLimitDefaults(cloneCameraRig(cameraNode?.camera ?? this.resolveFallbackCameraRig()));
     this.selectedCameraRig = cloneCameraRig(cameraRig);
     const target = this.getCameraRigTarget(cameraRig);
 
@@ -178,7 +183,7 @@ export class SceneBuilder {
   }
 
   applyCameraRig(camera: ArcRotateCamera, cameraRig: SceneCameraRigConfig, target?: Vector3): void {
-    const nextRig = cloneCameraRig(cameraRig);
+    const nextRig = applyCameraRigLimitDefaults(cloneCameraRig(cameraRig));
     this.selectedCameraRig = cloneCameraRig(nextRig);
     this.relaxCameraLimitsForRigAssignment(camera);
     this.applyCameraRuntimeProperties(camera, nextRig, target ?? camera.target.clone());
@@ -202,16 +207,18 @@ export class SceneBuilder {
   }
 
   private applyCameraRuntimeProperties(camera: ArcRotateCamera, cameraRig: SceneCameraRigConfig, target: Vector3): void {
+    const betaLimits = resolveCameraBetaLimitDefaults(cameraRig.beta, cameraRig.lowerBetaLimit, cameraRig.upperBetaLimit);
+    const radiusLimits = resolveCameraRadiusLimitDefaults(cameraRig.radius, cameraRig.lowerRadiusLimit, cameraRig.upperRadiusLimit);
+    camera.target = target;
     camera.alpha = cameraRig.alpha;
     camera.beta = cameraRig.beta;
     camera.radius = cameraRig.radius;
-    camera.target = target;
     camera.lowerAlphaLimit = cameraRig.alpha;
     camera.upperAlphaLimit = cameraRig.alpha;
-    camera.lowerBetaLimit = cameraRig.lowerBetaLimit ?? cameraRig.beta;
-    camera.upperBetaLimit = cameraRig.upperBetaLimit ?? cameraRig.beta;
-    camera.lowerRadiusLimit = cameraRig.lowerRadiusLimit ?? cameraRig.radius;
-    camera.upperRadiusLimit = cameraRig.upperRadiusLimit ?? cameraRig.radius;
+    camera.lowerBetaLimit = betaLimits.lower;
+    camera.upperBetaLimit = betaLimits.upper;
+    camera.lowerRadiusLimit = radiusLimits.lower;
+    camera.upperRadiusLimit = radiusLimits.upper;
     camera.minZ = cameraRig.minZ ?? 1;
     camera.maxZ = cameraRig.maxZ ?? 10000;
     camera.inertia = cameraRig.inertia ?? 0.9;
@@ -283,7 +290,7 @@ export class SceneBuilder {
   private resolveFallbackCameraRig(): SceneCameraRigConfig {
     const camCfg = (renderingConfig as any).globalVolume?.camera ?? {};
     const target = readPosition3D(camCfg.target);
-    return {
+    return applyCameraRigLimitDefaults({
       projection: readCameraProjection(camCfg.projection),
       alpha: readFiniteNumber(camCfg.alpha, Math.PI / 4),
       beta: readFiniteNumber(camCfg.beta, Math.PI / 4),
@@ -299,7 +306,7 @@ export class SceneBuilder {
       upperRadiusLimit: readOptionalPositiveFiniteNumber(camCfg.upperRadiusLimit) ?? readPositiveFiniteNumber(camCfg.radius, 14),
       inertia: readOptionalUnitNumber(camCfg.inertia) ?? 0.9,
       targetScreenOffset: readPosition2D(camCfg.targetScreenOffset) ?? { x: 0, y: 0 },
-    };
+    });
   }
 
   private resolveFallbackCameraTarget(): Vector3 {
@@ -1290,6 +1297,58 @@ function cloneCameraRig(cameraRig: SceneCameraRigConfig): SceneCameraRigConfig {
     ...(cameraRig.targetOffset ? { targetOffset: { ...cameraRig.targetOffset } } : {}),
     ...(cameraRig.targetScreenOffset ? { targetScreenOffset: { ...cameraRig.targetScreenOffset } } : {}),
   };
+}
+
+function applyCameraRigLimitDefaults(cameraRig: SceneCameraRigConfig): SceneCameraRigConfig {
+  const betaLimits = resolveCameraBetaLimitDefaults(cameraRig.beta, cameraRig.lowerBetaLimit, cameraRig.upperBetaLimit);
+  const radiusLimits = resolveCameraRadiusLimitDefaults(cameraRig.radius, cameraRig.lowerRadiusLimit, cameraRig.upperRadiusLimit);
+  return {
+    ...cameraRig,
+    lowerBetaLimit: betaLimits.lower,
+    upperBetaLimit: betaLimits.upper,
+    lowerRadiusLimit: radiusLimits.lower,
+    upperRadiusLimit: radiusLimits.upper,
+  };
+}
+
+function resolveCameraBetaLimitDefaults(
+  beta: number,
+  lower: number | undefined,
+  upper: number | undefined,
+): { lower: number; upper: number } {
+  let nextLower = Number.isFinite(lower) ? lower as number : DEFAULT_CAMERA_LOWER_BETA_LIMIT;
+  let nextUpper = Number.isFinite(upper) ? upper as number : DEFAULT_CAMERA_UPPER_BETA_LIMIT;
+  if (isLockedToCurrentValue(nextLower, nextUpper, beta)) {
+    nextLower = DEFAULT_CAMERA_LOWER_BETA_LIMIT;
+    nextUpper = DEFAULT_CAMERA_UPPER_BETA_LIMIT;
+  }
+  if (nextUpper < nextLower) [nextLower, nextUpper] = [nextUpper, nextLower];
+  if (beta < nextLower) nextLower = beta;
+  if (beta > nextUpper) nextUpper = beta;
+  return { lower: nextLower, upper: nextUpper };
+}
+
+function resolveCameraRadiusLimitDefaults(
+  radius: number,
+  lower: number | undefined,
+  upper: number | undefined,
+): { lower: number; upper: number } {
+  const defaultLower = Math.max(MIN_CAMERA_RADIUS_LIMIT, radius * DEFAULT_CAMERA_RADIUS_LIMIT_FACTOR_MIN);
+  const defaultUpper = Math.max(radius + 1, radius * DEFAULT_CAMERA_RADIUS_LIMIT_FACTOR_MAX);
+  let nextLower = Number.isFinite(lower) && (lower as number) > 0 ? lower as number : defaultLower;
+  let nextUpper = Number.isFinite(upper) && (upper as number) > 0 ? upper as number : defaultUpper;
+  if (isLockedToCurrentValue(nextLower, nextUpper, radius)) {
+    nextLower = defaultLower;
+    nextUpper = defaultUpper;
+  }
+  if (nextUpper < nextLower) [nextLower, nextUpper] = [nextUpper, nextLower];
+  if (radius < nextLower) nextLower = Math.max(MIN_CAMERA_RADIUS_LIMIT, radius);
+  if (radius > nextUpper) nextUpper = radius;
+  return { lower: nextLower, upper: nextUpper };
+}
+
+function isLockedToCurrentValue(lower: number, upper: number, value: number): boolean {
+  return Math.abs(lower - upper) <= 0.000001 && Math.abs(lower - value) <= 0.000001;
 }
 
 function readNonNegativeFiniteNumber(value: unknown, fallback: number): number {

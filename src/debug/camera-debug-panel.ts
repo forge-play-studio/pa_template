@@ -1,7 +1,9 @@
 import { Camera } from '@babylonjs/core/Cameras/camera';
+import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import { Color3 } from '@babylonjs/core/Maths/math.color';
-import { Vector3 } from '@babylonjs/core/Maths/math.vector';
+import { Matrix, Vector3 } from '@babylonjs/core/Maths/math.vector';
 import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
+import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import type { Game } from '../core/Game';
 import type { SceneCameraProjection, SceneCameraRigConfig } from '../config';
 import {
@@ -60,18 +62,47 @@ type CameraDebugText = Record<
   | 'farClip'
   | 'minBeta'
   | 'maxBeta'
+  | 'betaRange'
   | 'minRadius'
   | 'maxRadius'
+  | 'radiusRange'
   | 'inertia'
   | 'screenOffsetX'
   | 'screenOffsetY'
   | 'panHint'
   | 'reset'
   | 'save'
+  | 'worldPosition'
   | 'resetStatus'
   | 'savingStatus'
   | 'savedStatus'
   | 'saveFailed',
+  string
+>;
+
+type CameraDebugTooltipText = Record<
+  | 'languageButton'
+  | 'toggleTitle'
+  | 'projection'
+  | 'alpha'
+  | 'beta'
+  | 'radius'
+  | 'orthoSize'
+  | 'fov'
+  | 'nearClip'
+  | 'farClip'
+  | 'minBeta'
+  | 'maxBeta'
+  | 'betaRange'
+  | 'minRadius'
+  | 'maxRadius'
+  | 'radiusRange'
+  | 'inertia'
+  | 'screenOffsetX'
+  | 'screenOffsetY'
+  | 'panHint'
+  | 'reset'
+  | 'save',
   string
 >;
 
@@ -87,26 +118,29 @@ const CAMERA_DEBUG_TEXT: Record<CameraDebugLanguage, CameraDebugText> = {
     projection: '投影模式',
     orthographic: '正交',
     perspective: '透视',
-    alpha: 'Alpha',
-    beta: 'Beta',
-    radius: '半径',
-    orthoSize: '正交尺寸',
-    fov: '视野角度',
-    nearClip: '近裁剪',
-    farClip: '远裁剪',
-    minBeta: '最小 Beta',
-    maxBeta: '最大 Beta',
-    minRadius: '最小半径',
-    maxRadius: '最大半径',
-    inertia: '惯性',
-    screenOffsetX: '屏幕偏移 X',
-    screenOffsetY: '屏幕偏移 Y',
+    alpha: '水平环绕角',
+    beta: '俯仰角',
+    radius: '跟随距离',
+    orthoSize: '正交视野高度',
+    fov: '透视视野角',
+    nearClip: '近裁面距离',
+    farClip: '远裁面距离',
+    minBeta: '最小俯仰角',
+    maxBeta: '最大俯仰角',
+    betaRange: '俯仰角范围',
+    minRadius: '最小跟随距离',
+    maxRadius: '最大跟随距离',
+    radiusRange: '跟随距离范围',
+    inertia: '平滑惯性',
+    screenOffsetX: '画面偏移 X',
+    screenOffsetY: '画面偏移 Y',
     panHint: 'W/S 前进 / 后退 · A/D 左 / 右 · 十字准星 = 预览目标',
-    reset: '重置',
-    save: '保存 Rig',
+    reset: '重置参数',
+    save: '保存参数',
+    worldPosition: '世界坐标',
     resetStatus: '已重置为初始运行时摄像机。',
-    savingStatus: '正在保存 Rig...',
-    savedStatus: '已保存 Rig，正在重新加载...',
+    savingStatus: '正在保存摄像机参数...',
+    savedStatus: '已保存摄像机参数，正在重新加载...',
     saveFailed: '保存失败',
   },
   en: {
@@ -126,14 +160,17 @@ const CAMERA_DEBUG_TEXT: Record<CameraDebugLanguage, CameraDebugText> = {
     farClip: 'Far Clip',
     minBeta: 'Min Beta',
     maxBeta: 'Max Beta',
+    betaRange: 'Pitch Range',
     minRadius: 'Min Radius',
     maxRadius: 'Max Radius',
+    radiusRange: 'Follow Distance Range',
     inertia: 'Inertia',
     screenOffsetX: 'Screen Offset X',
     screenOffsetY: 'Screen Offset Y',
     panHint: 'W/S Forward / Back · A/D Left / Right · crosshair = preview target',
     reset: 'Reset',
     save: 'Save Rig',
+    worldPosition: 'World',
     resetStatus: 'Reset to initial runtime camera.',
     savingStatus: 'Saving rig...',
     savedStatus: 'Saved rig. Reloading...',
@@ -141,14 +178,67 @@ const CAMERA_DEBUG_TEXT: Record<CameraDebugLanguage, CameraDebugText> = {
   },
 };
 
-const CAMERA_NUMBER_FIELDS: ReadonlyArray<{
+const CAMERA_DEBUG_TOOLTIPS: Record<CameraDebugLanguage, CameraDebugTooltipText> = {
+  zh: {
+    languageButton: '切换摄像机调试面板的显示语言。',
+    toggleTitle: '打开或关闭运行时摄像机调试面板。',
+    projection: '切换主摄像机的正交或透视投影模式。',
+    alpha: 'ArcRotate 水平环绕角，单位为弧度。',
+    beta: 'ArcRotate 垂直俯仰角，单位为弧度。',
+    radius: '摄像机到观察目标的距离。',
+    orthoSize: '正交模式下的视野高度，数值越大看到的范围越大。',
+    fov: '透视模式下的垂直视野角；界面用角度显示，保存为弧度。',
+    nearClip: '小于该距离的内容不会被摄像机渲染。',
+    farClip: '大于该距离的内容不会被摄像机渲染。',
+    minBeta: '限制运行时可用的最小俯仰角。',
+    maxBeta: '限制运行时可用的最大俯仰角。',
+    betaRange: '运行时允许的俯仰角范围，左侧为最小值，右侧为最大值。',
+    minRadius: '限制摄像机可接近目标的最小距离。',
+    maxRadius: '限制摄像机可远离目标的最大距离。',
+    radiusRange: '运行时允许的跟随距离范围，左侧为最小值，右侧为最大值。',
+    inertia: '摄像机输入或跟随的平滑惯性，0 最灵敏，1 最平滑。',
+    screenOffsetX: '将观察目标在画面中水平偏移。',
+    screenOffsetY: '将观察目标在画面中垂直偏移。',
+    panHint: '面板打开时可用 W/A/S/D 移动预览目标；关闭面板会恢复目标位置。',
+    reset: '恢复为打开运行时时读取到的初始摄像机参数。',
+    save: '通过编辑器保存链路写回 Main Camera，并在保存成功后重新加载运行时。',
+  },
+  en: {
+    languageButton: 'Switch the camera debug panel language.',
+    toggleTitle: 'Open or close the runtime camera debug panel.',
+    projection: 'Switch the Main Camera between orthographic and perspective projection.',
+    alpha: 'ArcRotate horizontal orbit angle, in radians.',
+    beta: 'ArcRotate vertical pitch angle, in radians.',
+    radius: 'Distance from the camera to the look target.',
+    orthoSize: 'Orthographic view height. Larger values show a wider area.',
+    fov: 'Perspective vertical field of view. The UI uses degrees; saved data uses radians.',
+    nearClip: 'Content closer than this distance is not rendered.',
+    farClip: 'Content farther than this distance is not rendered.',
+    minBeta: 'Minimum allowed runtime pitch angle.',
+    maxBeta: 'Maximum allowed runtime pitch angle.',
+    betaRange: 'Allowed runtime pitch range. Left is minimum; right is maximum.',
+    minRadius: 'Minimum allowed camera distance from the target.',
+    maxRadius: 'Maximum allowed camera distance from the target.',
+    radiusRange: 'Allowed runtime follow distance range. Left is minimum; right is maximum.',
+    inertia: 'Camera input/follow smoothing. 0 is most responsive; 1 is smoothest.',
+    screenOffsetX: 'Moves the look target horizontally in screen space.',
+    screenOffsetY: 'Moves the look target vertically in screen space.',
+    panHint: 'When the panel is open, use W/A/S/D to move the preview target; closing the panel restores it.',
+    reset: 'Restore the camera parameters captured when runtime opened.',
+    save: 'Save back to the Main Camera through the editor authoring pipeline, then reload runtime.',
+  },
+};
+
+type CameraNumberFieldConfig = {
   field: CameraNumberField;
   textKey: keyof CameraDebugText;
   step: number;
   min?: number;
   max?: number;
   projection?: SceneCameraProjection;
-}> = [
+};
+
+const CAMERA_NUMBER_FIELDS: ReadonlyArray<CameraNumberFieldConfig> = [
   { field: 'alpha', textKey: 'alpha', step: 0.01 },
   { field: 'beta', textKey: 'beta', step: 0.01 },
   { field: 'radius', textKey: 'radius', step: 0.1, min: 0.001 },
@@ -164,6 +254,17 @@ const CAMERA_NUMBER_FIELDS: ReadonlyArray<{
   { field: 'targetScreenOffsetX', textKey: 'screenOffsetX', step: 0.01 },
   { field: 'targetScreenOffsetY', textKey: 'screenOffsetY', step: 0.01 },
 ];
+const CAMERA_DEBUG_RANGE_FIELD_PAIRS: ReadonlyArray<{
+  labelKey: keyof CameraDebugText;
+  tooltipKey: keyof CameraDebugTooltipText;
+  lower: CameraNumberField;
+  upper: CameraNumberField;
+}> = [
+  { labelKey: 'betaRange', tooltipKey: 'betaRange', lower: 'lowerBetaLimit', upper: 'upperBetaLimit' },
+  { labelKey: 'radiusRange', tooltipKey: 'radiusRange', lower: 'lowerRadiusLimit', upper: 'upperRadiusLimit' },
+];
+const CAMERA_DEBUG_RANGE_FIELD_ENDS = new Set(CAMERA_DEBUG_RANGE_FIELD_PAIRS.map(pair => pair.upper));
+const CAMERA_DEBUG_TOOLTIP_DELAY_MS = 140;
 
 export function mountCameraDebugPanel(options: CameraDebugPanelOptions): CameraDebugPanel {
   const root = options.root ?? document.body;
@@ -175,7 +276,9 @@ export function mountCameraDebugPanel(options: CameraDebugPanelOptions): CameraD
   let initialSnapshot: CameraDebugSnapshot | null = null;
   let latestSnapshot: CameraDebugSnapshot | null = null;
   let cameraPanRestoreTarget: CameraDebugSnapshot['target'] | null = null;
-  let targetMarker: ReturnType<typeof MeshBuilder.CreateLineSystem> | null = null;
+  let targetMarker: TransformNode | null = null;
+  let targetCoordinateLabel: HTMLDivElement | null = null;
+  let targetCoordinate: CameraDebugSnapshot['target'] | null = null;
   let frameHandle = 0;
   let lastFrameTime = 0;
   let statusTimeout = 0;
@@ -276,29 +379,51 @@ export function mountCameraDebugPanel(options: CameraDebugPanelOptions): CameraD
   grid.append(projectionLabel, projectionSelect);
 
   const fields = new Map<CameraNumberField, HTMLInputElement>();
-  const fieldRows = new Map<CameraNumberField, { label: HTMLLabelElement; input: HTMLInputElement; config: typeof CAMERA_NUMBER_FIELDS[number] }>();
+  const fieldRows = new Map<CameraNumberField, { label: HTMLLabelElement; input: HTMLInputElement; config: CameraNumberFieldConfig }>();
+  const rangeRows: Array<{
+    label: HTMLLabelElement;
+    wrapper: HTMLDivElement;
+    labelKey: keyof CameraDebugText;
+    tooltipKey: keyof CameraDebugTooltipText;
+    lowerConfig: CameraNumberFieldConfig;
+    upperConfig: CameraNumberFieldConfig;
+    lowerInput: HTMLInputElement;
+    upperInput: HTMLInputElement;
+  }> = [];
 
   for (const config of CAMERA_NUMBER_FIELDS) {
+    if (CAMERA_DEBUG_RANGE_FIELD_ENDS.has(config.field)) continue;
+    const rangePair = CAMERA_DEBUG_RANGE_FIELD_PAIRS.find(pair => pair.lower === config.field);
+    if (rangePair) {
+      const upperConfig = CAMERA_NUMBER_FIELDS.find(candidate => candidate.field === rangePair.upper);
+      if (!upperConfig) continue;
+      const labelEl = ownerDocument.createElement('label');
+      labelEl.style.cssText = 'font-size:11px;color:#cbd5e1;';
+      const wrapper = ownerDocument.createElement('div');
+      wrapper.style.cssText = 'display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;width:108px;';
+      const lowerInput = createCameraNumberInput(config, { compact: true });
+      const upperInput = createCameraNumberInput(upperConfig, { compact: true });
+      fields.set(config.field, lowerInput);
+      fields.set(upperConfig.field, upperInput);
+      rangeRows.push({
+        label: labelEl,
+        wrapper,
+        labelKey: rangePair.labelKey,
+        tooltipKey: rangePair.tooltipKey,
+        lowerConfig: config,
+        upperConfig,
+        lowerInput,
+        upperInput,
+      });
+      wrapper.append(lowerInput, upperInput);
+      grid.append(labelEl, wrapper);
+      continue;
+    }
+
     const labelEl = ownerDocument.createElement('label');
     labelEl.style.cssText = 'font-size:11px;color:#cbd5e1;';
 
-    const input = ownerDocument.createElement('input');
-    input.type = 'number';
-    input.step = String(config.step);
-    if (config.min != null) input.min = String(config.min);
-    if (config.max != null) input.max = String(config.max);
-    input.inputMode = 'decimal';
-    input.style.cssText = [
-      'width:108px',
-      'height:26px',
-      'border:1px solid rgba(148, 163, 184, 0.34)',
-      'border-radius:6px',
-      'background:rgba(15, 23, 42, 0.84)',
-      'color:#f8fafc',
-      'padding:0 6px',
-      'font:12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-    ].join(';');
-    input.addEventListener('input', () => applyInputSnapshot());
+    const input = createCameraNumberInput(config);
     fields.set(config.field, input);
     fieldRows.set(config.field, { label: labelEl, input, config });
     grid.append(labelEl, input);
@@ -325,11 +450,38 @@ export function mountCameraDebugPanel(options: CameraDebugPanelOptions): CameraD
   container.append(panel, toggleButton);
   root.append(container);
 
+  const debugTooltip = ownerDocument.createElement('div');
+  debugTooltip.style.cssText = [
+    'position:fixed',
+    'z-index:2147483601',
+    'display:none',
+    'max-width:min(280px, calc(100vw - 16px))',
+    'box-sizing:border-box',
+    'padding:5px 7px',
+    'border:1px solid rgba(148, 163, 184, 0.32)',
+    'border-radius:5px',
+    'background:rgba(15, 23, 42, 0.94)',
+    'box-shadow:0 10px 26px rgba(0, 0, 0, 0.3)',
+    'color:#dbeafe',
+    'font:700 11px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    'line-height:1.35',
+    'white-space:normal',
+    'pointer-events:none',
+  ].join(';');
+  root.append(debugTooltip);
+  let debugTooltipTarget: HTMLElement | null = null;
+  let debugTooltipTimer = 0;
+
   toggleButton.addEventListener('click', () => {
     open = !open;
     writeStoredOpen(ownerDocument.defaultView, open);
     renderOpenState();
   });
+  container.addEventListener('pointerover', handleDebugTooltipPointerOver);
+  container.addEventListener('pointerout', handleDebugTooltipPointerOut);
+  container.addEventListener('focusin', handleDebugTooltipFocusIn);
+  container.addEventListener('focusout', hideDebugTooltip);
+  container.addEventListener('click', hideDebugTooltip);
   languageButton.addEventListener('click', () => {
     language = language === 'zh' ? 'en' : 'zh';
     writeStoredLanguage(ownerDocument.defaultView, language);
@@ -382,12 +534,14 @@ export function mountCameraDebugPanel(options: CameraDebugPanelOptions): CameraD
     }
     syncPanel(snapshot);
     applyCameraPan(deltaSeconds);
+    updateTargetCoordinateLabel();
     frameHandle = ownerDocument.defaultView?.requestAnimationFrame(tick) ?? window.requestAnimationFrame(tick);
   }
 
   function syncPanel(snapshot: CameraDebugSnapshot | null): void {
     container.style.display = snapshot ? 'flex' : 'none';
     if (!snapshot) {
+      hideDebugTooltip();
       stopCameraPanMode();
       return;
     }
@@ -409,6 +563,7 @@ export function mountCameraDebugPanel(options: CameraDebugPanelOptions): CameraD
     const next = readInputs(current);
     syncVisibleFields(next.projection);
     applySnapshot(next);
+    syncInputsExceptActive(next);
   }
 
   function applySnapshot(snapshot: CameraDebugSnapshot, applyOptions: { restoreTarget?: boolean } = {}): void {
@@ -438,6 +593,16 @@ export function mountCameraDebugPanel(options: CameraDebugPanelOptions): CameraD
     input.value = value == null ? '' : String(roundNumber(value));
   }
 
+  function syncInputsExceptActive(snapshot: CameraDebugSnapshot): void {
+    const active = ownerDocument.activeElement;
+    if (active !== projectionSelect) projectionSelect.value = snapshot.projection;
+    for (const config of CAMERA_NUMBER_FIELDS) {
+      const input = fields.get(config.field);
+      if (!input || active === input) continue;
+      setInputValue(config.field, readSnapshotField(snapshot, config.field));
+    }
+  }
+
   function readInputs(fallback: CameraDebugSnapshot): CameraDebugSnapshot {
     const projection = readProjectionSelectValue();
     const next: CameraDebugSnapshot = {
@@ -462,9 +627,62 @@ export function mountCameraDebugPanel(options: CameraDebugPanelOptions): CameraD
     };
     const minZ = next.minZ ?? 0.001;
     if ((next.maxZ ?? minZ + 0.001) <= minZ) next.maxZ = minZ + 0.001;
-    if ((next.upperBetaLimit ?? 0) < (next.lowerBetaLimit ?? 0)) next.upperBetaLimit = next.lowerBetaLimit;
-    if ((next.upperRadiusLimit ?? 0) < (next.lowerRadiusLimit ?? 0)) next.upperRadiusLimit = next.lowerRadiusLimit;
+    normalizeInteractiveCameraRanges(next, readActiveNumberField());
     return next;
+  }
+
+  function readActiveNumberField(): CameraNumberField | null {
+    const active = ownerDocument.activeElement;
+    for (const [field, input] of fields) {
+      if (active === input) return field;
+    }
+    return null;
+  }
+
+  function normalizeInteractiveCameraRanges(snapshot: CameraDebugSnapshot, activeField: CameraNumberField | null): void {
+    normalizeInteractiveNumberRange(snapshot, {
+      valueField: 'beta',
+      lowerField: 'lowerBetaLimit',
+      upperField: 'upperBetaLimit',
+      activeField,
+      minValue: Number.NEGATIVE_INFINITY,
+    });
+    normalizeInteractiveNumberRange(snapshot, {
+      valueField: 'radius',
+      lowerField: 'lowerRadiusLimit',
+      upperField: 'upperRadiusLimit',
+      activeField,
+      minValue: 0.001,
+    });
+  }
+
+  function normalizeInteractiveNumberRange(
+    snapshot: CameraDebugSnapshot,
+    options: {
+      valueField: 'beta' | 'radius';
+      lowerField: 'lowerBetaLimit' | 'lowerRadiusLimit';
+      upperField: 'upperBetaLimit' | 'upperRadiusLimit';
+      activeField: CameraNumberField | null;
+      minValue: number;
+    },
+  ): void {
+    let value = snapshot[options.valueField];
+    let lower = snapshot[options.lowerField] ?? value;
+    let upper = snapshot[options.upperField] ?? value;
+    if (upper < lower) {
+      if (options.activeField === options.upperField) lower = upper;
+      else upper = lower;
+    }
+    if (options.activeField === options.lowerField || options.activeField === options.upperField) {
+      value = clamp(value, lower, upper);
+      if (Number.isFinite(options.minValue)) value = Math.max(options.minValue, value);
+    } else {
+      if (value < lower) lower = value;
+      if (value > upper) upper = value;
+    }
+    snapshot[options.valueField] = value;
+    snapshot[options.lowerField] = Number.isFinite(options.minValue) ? Math.max(options.minValue, lower) : lower;
+    snapshot[options.upperField] = Number.isFinite(options.minValue) ? Math.max(options.minValue, upper) : upper;
   }
 
   function readInputNumber(field: CameraNumberField, fallback: number): number {
@@ -478,11 +696,42 @@ export function mountCameraDebugPanel(options: CameraDebugPanelOptions): CameraD
     return projectionSelect.value === 'perspective' ? 'perspective' : 'orthographic';
   }
 
+  function createCameraNumberInput(
+    config: CameraNumberFieldConfig,
+    options: { compact?: boolean } = {},
+  ): HTMLInputElement {
+    const input = ownerDocument.createElement('input');
+    input.type = 'number';
+    input.step = String(config.step);
+    if (config.min != null) input.min = String(config.min);
+    if (config.max != null) input.max = String(config.max);
+    input.inputMode = 'decimal';
+    input.style.cssText = [
+      `width:${options.compact ? '100%' : '108px'}`,
+      'height:26px',
+      'min-width:0',
+      'box-sizing:border-box',
+      'border:1px solid rgba(148, 163, 184, 0.34)',
+      'border-radius:6px',
+      'background:rgba(15, 23, 42, 0.84)',
+      'color:#f8fafc',
+      'padding:0 6px',
+      'font:12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+    ].join(';');
+    input.addEventListener('input', () => applyInputSnapshot());
+    return input;
+  }
+
   function syncVisibleFields(projection: SceneCameraProjection): void {
     for (const { label, input, config } of fieldRows.values()) {
       const visible = !config.projection || config.projection === projection;
       label.style.display = visible ? '' : 'none';
       input.style.display = visible ? '' : 'none';
+    }
+    for (const { label, wrapper, lowerConfig, upperConfig } of rangeRows) {
+      const visible = [lowerConfig, upperConfig].every(config => !config.projection || config.projection === projection);
+      label.style.display = visible ? '' : 'none';
+      wrapper.style.display = visible ? 'grid' : 'none';
     }
   }
 
@@ -491,17 +740,25 @@ export function mountCameraDebugPanel(options: CameraDebugPanelOptions): CameraD
     toggleButton.style.background = open ? 'rgba(29, 78, 216, 0.9)' : 'rgba(15, 23, 42, 0.88)';
     const snapshot = latestSnapshot ?? readSnapshot(options.getGame());
     if (open && snapshot) startCameraPanMode(snapshot);
-    if (!open) stopCameraPanMode();
+    if (!open) {
+      hideDebugTooltip();
+      stopCameraPanMode();
+    }
   }
 
   function renderLanguage(): void {
     const copy = text();
+    const hints = tooltips();
     const currentProjection = readProjectionSelectValue();
     title.textContent = copy.title;
     modeLabel.textContent = copy.runtime;
     languageButton.textContent = copy.languageButton;
-    toggleButton.title = copy.toggleTitle;
+    setDebugTooltip(languageButton, hints.languageButton);
+    setDebugTooltip(toggleButton, hints.toggleTitle);
+    toggleButton.setAttribute('aria-label', hints.toggleTitle);
     projectionLabel.textContent = copy.projection;
+    setDebugTooltip(projectionLabel, hints.projection);
+    setDebugTooltip(projectionSelect, hints.projection);
     projectionSelect.innerHTML = '';
     for (const option of [
       { label: copy.orthographic, value: 'orthographic' },
@@ -513,10 +770,31 @@ export function mountCameraDebugPanel(options: CameraDebugPanelOptions): CameraD
       projectionSelect.append(optionEl);
     }
     projectionSelect.value = latestSnapshot?.projection ?? currentProjection;
-    for (const { label, config } of fieldRows.values()) label.textContent = copy[config.textKey];
+    for (const { label, input, config } of fieldRows.values()) {
+      const hint = hints[config.textKey as keyof CameraDebugTooltipText];
+      label.textContent = copy[config.textKey];
+      setDebugTooltip(label, hint ?? '');
+      setDebugTooltip(input, hint ?? '');
+    }
+    for (const row of rangeRows) {
+      const rangeHint = hints[row.tooltipKey];
+      const lowerHint = hints[row.lowerConfig.textKey as keyof CameraDebugTooltipText];
+      const upperHint = hints[row.upperConfig.textKey as keyof CameraDebugTooltipText];
+      row.label.textContent = copy[row.labelKey];
+      row.lowerInput.placeholder = copy[row.lowerConfig.textKey];
+      row.upperInput.placeholder = copy[row.upperConfig.textKey];
+      setDebugTooltip(row.label, rangeHint);
+      setDebugTooltip(row.wrapper, rangeHint);
+      setDebugTooltip(row.lowerInput, lowerHint ?? rangeHint);
+      setDebugTooltip(row.upperInput, upperHint ?? rangeHint);
+    }
     panHint.textContent = copy.panHint;
+    setDebugTooltip(panHint, hints.panHint);
     resetButton.textContent = copy.reset;
+    setDebugTooltip(resetButton, hints.reset);
     saveButton.textContent = copy.save;
+    setDebugTooltip(saveButton, hints.save);
+    updateTargetCoordinateLabel();
   }
 
   function startCameraPanMode(snapshot: CameraDebugSnapshot): void {
@@ -532,8 +810,13 @@ export function mountCameraDebugPanel(options: CameraDebugPanelOptions): CameraD
     if (!restoreTarget) return;
     const game = options.getGame();
     const camera = game?.getCamera();
-    if (!camera) return;
-    camera.target = new Vector3(restoreTarget.x, restoreTarget.y, restoreTarget.z);
+    const sceneBuilder = game?.getSceneBuilder();
+    if (!camera || !sceneBuilder) return;
+    sceneBuilder.applyCameraRig(
+      camera,
+      sceneBuilder.getSelectedCameraRig(),
+      new Vector3(restoreTarget.x, restoreTarget.y, restoreTarget.z),
+    );
     const snapshot = readSnapshot(game);
     latestSnapshot = snapshot ? cloneSnapshot(snapshot) : null;
   }
@@ -596,8 +879,9 @@ export function mountCameraDebugPanel(options: CameraDebugPanelOptions): CameraD
     const movement = forward.scale(direction.z).addInPlace(right.scale(direction.x));
     if (movement.lengthSquared() === 0) return;
     movement.normalize().scaleInPlace(speed * deltaSeconds);
-    camera.target = camera.target.add(movement);
-    updateTargetMarker({ x: camera.target.x, y: camera.target.y, z: camera.target.z });
+    const nextTarget = camera.target.add(movement);
+    sceneBuilder.applyCameraRig(camera, cameraRig, nextTarget);
+    updateTargetMarker({ x: nextTarget.x, y: nextTarget.y, z: nextTarget.z });
 
     const snapshot = readSnapshot(game);
     latestSnapshot = snapshot ? cloneSnapshot(snapshot) : null;
@@ -607,26 +891,225 @@ export function mountCameraDebugPanel(options: CameraDebugPanelOptions): CameraD
     const game = options.getGame();
     const scene = game?.getScene();
     if (!scene || !open) return;
-    if (!targetMarker) {
-      const size = 0.42;
-      targetMarker = MeshBuilder.CreateLineSystem('cameraDebugTargetCrosshair', {
-        lines: [
-          [new Vector3(-size, 0.025, 0), new Vector3(size, 0.025, 0)],
-          [new Vector3(0, 0.025, -size), new Vector3(0, 0.025, size)],
-          [new Vector3(0, -size * 0.45, 0), new Vector3(0, size * 0.45, 0)],
-        ],
-        updatable: false,
-      }, scene);
-      targetMarker.color = new Color3(1, 0.08, 0.06);
-      targetMarker.isPickable = false;
-      targetMarker.renderingGroupId = 2;
-    }
+    if (!targetMarker) targetMarker = createTargetMarker();
     targetMarker.position.set(target.x, target.y, target.z);
+    targetCoordinate = cloneTarget(target);
+    updateTargetCoordinateLabel(target);
+  }
+
+  function createTargetMarker(): TransformNode {
+    const game = options.getGame();
+    const scene = game?.getScene();
+    if (!scene) throw new Error('Camera debug target marker requires an active scene.');
+
+    const rootNode = new TransformNode('cameraDebugTargetMarker', scene);
+    const material = new StandardMaterial('cameraDebugTargetMarker.material', scene);
+    material.diffuseColor = new Color3(1, 0.04, 0.03);
+    material.emissiveColor = new Color3(1, 0.04, 0.03);
+    material.specularColor = new Color3(0.35, 0.02, 0.02);
+    material.disableLighting = true;
+
+    const markerYOffset = 0.32;
+    const armLength = 0.16;
+    const armGap = 0.02;
+    const armDiameter = 0.048;
+    const armHeight = 0.2;
+    const createArm = (name: string, position: Vector3, rotation: Vector3, height = armLength): void => {
+      const arm = MeshBuilder.CreateCylinder(name, {
+        height,
+        diameter: armDiameter,
+        tessellation: 8,
+      }, scene);
+      arm.parent = rootNode;
+      arm.position.copyFrom(position);
+      arm.rotation.copyFrom(rotation);
+      arm.material = material;
+      arm.isPickable = false;
+      arm.renderingGroupId = 2;
+    };
+
+    const centerDistance = armGap + armLength / 2;
+    createArm('cameraDebugTargetMarker.arm.x.positive', new Vector3(centerDistance, markerYOffset, 0), new Vector3(0, 0, Math.PI / 2));
+    createArm('cameraDebugTargetMarker.arm.x.negative', new Vector3(-centerDistance, markerYOffset, 0), new Vector3(0, 0, Math.PI / 2));
+    createArm('cameraDebugTargetMarker.arm.z.positive', new Vector3(0, markerYOffset, centerDistance), new Vector3(Math.PI / 2, 0, 0));
+    createArm('cameraDebugTargetMarker.arm.z.negative', new Vector3(0, markerYOffset, -centerDistance), new Vector3(Math.PI / 2, 0, 0));
+    createArm('cameraDebugTargetMarker.arm.y', new Vector3(0, markerYOffset, 0), new Vector3(0, 0, 0), armHeight);
+
+    return rootNode;
   }
 
   function disposeTargetMarker(): void {
     targetMarker?.dispose();
     targetMarker = null;
+    targetCoordinate = null;
+    disposeTargetCoordinateLabel();
+  }
+
+  function ensureTargetCoordinateLabel(): HTMLDivElement {
+    if (targetCoordinateLabel) return targetCoordinateLabel;
+    const label = ownerDocument.createElement('div');
+    label.style.cssText = [
+      'position:fixed',
+      'z-index:2147482599',
+      'display:none',
+      'box-sizing:border-box',
+      'max-width:min(280px, calc(100vw - 24px))',
+      'padding:3px 6px',
+      'border:1px solid rgba(248, 113, 113, 0.55)',
+      'border-radius:5px',
+      'background:rgba(15, 23, 42, 0.86)',
+      'box-shadow:0 8px 22px rgba(0, 0, 0, 0.28)',
+      'color:#fecaca',
+      'font:700 10px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+      'line-height:1.25',
+      'letter-spacing:0',
+      'white-space:nowrap',
+      'pointer-events:none',
+      'transform:translate(-50%, calc(-100% - 28px))',
+    ].join(';');
+    root.append(label);
+    targetCoordinateLabel = label;
+    return label;
+  }
+
+  function updateTargetCoordinateLabel(target = targetCoordinate): void {
+    if (!open || !target) {
+      hideTargetCoordinateLabel();
+      return;
+    }
+    const projected = projectTargetToScreen(target);
+    if (!projected || projected.depth < 0 || projected.depth > 1) {
+      hideTargetCoordinateLabel();
+      return;
+    }
+    const label = ensureTargetCoordinateLabel();
+    label.textContent = formatTargetCoordinateLabel(target);
+    label.style.left = `${projected.x}px`;
+    label.style.top = `${projected.y}px`;
+    label.style.display = '';
+  }
+
+  function hideTargetCoordinateLabel(): void {
+    if (targetCoordinateLabel) targetCoordinateLabel.style.display = 'none';
+  }
+
+  function disposeTargetCoordinateLabel(): void {
+    targetCoordinateLabel?.remove();
+    targetCoordinateLabel = null;
+  }
+
+  function projectTargetToScreen(target: CameraDebugSnapshot['target']): { x: number; y: number; depth: number } | null {
+    const game = options.getGame();
+    const scene = game?.getScene();
+    const camera = game?.getCamera() ?? scene?.activeCamera ?? null;
+    const engine = scene?.getEngine?.();
+    const canvas = engine?.getRenderingCanvas?.() as HTMLCanvasElement | null | undefined;
+    const viewport = camera?.viewport?.toGlobal?.(
+      engine?.getRenderWidth?.() ?? canvas?.width ?? 0,
+      engine?.getRenderHeight?.() ?? canvas?.height ?? 0,
+    );
+    const transformMatrix = scene?.getTransformMatrix?.();
+    if (!scene || !camera || !canvas || !viewport || !transformMatrix) return null;
+
+    const rect = canvas.getBoundingClientRect();
+    const renderWidth = Math.max(1, Number(engine?.getRenderWidth?.() ?? canvas.width ?? rect.width));
+    const renderHeight = Math.max(1, Number(engine?.getRenderHeight?.() ?? canvas.height ?? rect.height));
+    const projected = Vector3.Project(
+      new Vector3(target.x, target.y, target.z),
+      Matrix.Identity(),
+      transformMatrix,
+      viewport,
+    );
+    const x = rect.left + Number(projected?.x) * (rect.width / renderWidth);
+    const y = rect.top + Number(projected?.y) * (rect.height / renderHeight);
+    const depth = Number(projected?.z);
+    return Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(depth) ? { x, y, depth } : null;
+  }
+
+  function formatTargetCoordinateLabel(target: CameraDebugSnapshot['target']): string {
+    const copy = text();
+    return `${copy.worldPosition}  X ${formatCoordinate(target.x)}  Y ${formatCoordinate(target.y)}  Z ${formatCoordinate(target.z)}`;
+  }
+
+  function setDebugTooltip(element: HTMLElement, message: string): void {
+    const value = message.trim();
+    if (!value) {
+      delete element.dataset.cameraDebugTooltip;
+      element.removeAttribute('title');
+      return;
+    }
+    element.dataset.cameraDebugTooltip = value;
+    element.removeAttribute('title');
+  }
+
+  function handleDebugTooltipPointerOver(event: PointerEvent): void {
+    const target = findDebugTooltipTarget(event.target);
+    if (!target || target === debugTooltipTarget) return;
+    scheduleDebugTooltip(target);
+  }
+
+  function handleDebugTooltipPointerOut(event: PointerEvent): void {
+    if (!debugTooltipTarget) return;
+    const related = event.relatedTarget instanceof Node ? event.relatedTarget : null;
+    if (related && debugTooltipTarget.contains(related)) return;
+    hideDebugTooltip();
+  }
+
+  function handleDebugTooltipFocusIn(event: FocusEvent): void {
+    const target = findDebugTooltipTarget(event.target);
+    if (target) scheduleDebugTooltip(target);
+  }
+
+  function findDebugTooltipTarget(value: EventTarget | null): HTMLElement | null {
+    return value instanceof HTMLElement ? value.closest<HTMLElement>('[data-camera-debug-tooltip]') : null;
+  }
+
+  function scheduleDebugTooltip(target: HTMLElement): void {
+    const message = target.dataset.cameraDebugTooltip?.trim();
+    if (!message) {
+      hideDebugTooltip();
+      return;
+    }
+    clearDebugTooltipTimer();
+    debugTooltipTarget = target;
+    debugTooltipTimer = ownerDocument.defaultView?.setTimeout(() => {
+      debugTooltipTimer = 0;
+      if (debugTooltipTarget !== target) return;
+      showDebugTooltip(target, message);
+    }, CAMERA_DEBUG_TOOLTIP_DELAY_MS) ?? 0;
+  }
+
+  function showDebugTooltip(target: HTMLElement, message: string): void {
+    debugTooltip.textContent = message;
+    debugTooltip.style.display = '';
+    debugTooltip.style.left = '0px';
+    debugTooltip.style.top = '0px';
+    const targetRect = target.getBoundingClientRect();
+    const tooltipRect = debugTooltip.getBoundingClientRect();
+    const viewportWidth = ownerDocument.defaultView?.innerWidth ?? ownerDocument.documentElement.clientWidth;
+    const viewportHeight = ownerDocument.defaultView?.innerHeight ?? ownerDocument.documentElement.clientHeight;
+    const left = Math.max(8, Math.min(
+      targetRect.left + (targetRect.width - tooltipRect.width) / 2,
+      viewportWidth - tooltipRect.width - 8,
+    ));
+    const belowTop = targetRect.bottom + 7;
+    const aboveTop = targetRect.top - tooltipRect.height - 7;
+    const top = belowTop + tooltipRect.height <= viewportHeight - 8 ? belowTop : Math.max(8, aboveTop);
+    debugTooltip.style.left = `${left}px`;
+    debugTooltip.style.top = `${top}px`;
+  }
+
+  function hideDebugTooltip(): void {
+    clearDebugTooltipTimer();
+    debugTooltipTarget = null;
+    debugTooltip.style.display = 'none';
+    debugTooltip.textContent = '';
+  }
+
+  function clearDebugTooltipTimer(): void {
+    if (!debugTooltipTimer) return;
+    ownerDocument.defaultView?.clearTimeout(debugTooltipTimer);
+    debugTooltipTimer = 0;
   }
 
   function showStatus(
@@ -654,6 +1137,10 @@ export function mountCameraDebugPanel(options: CameraDebugPanelOptions): CameraD
     return CAMERA_DEBUG_TEXT[language] ?? CAMERA_DEBUG_TEXT.zh;
   }
 
+  function tooltips(): CameraDebugTooltipText {
+    return CAMERA_DEBUG_TOOLTIPS[language] ?? CAMERA_DEBUG_TOOLTIPS.zh;
+  }
+
   renderLanguage();
   renderOpenState();
   frameHandle = ownerDocument.defaultView?.requestAnimationFrame(tick) ?? window.requestAnimationFrame(tick);
@@ -664,10 +1151,12 @@ export function mountCameraDebugPanel(options: CameraDebugPanelOptions): CameraD
       stopCameraPanMode();
       if (frameHandle) ownerDocument.defaultView?.cancelAnimationFrame(frameHandle);
       if (statusTimeout) ownerDocument.defaultView?.clearTimeout(statusTimeout);
+      clearDebugTooltipTimer();
       ownerDocument.defaultView?.removeEventListener('keydown', handlePanKeyDown, { capture: true });
       ownerDocument.defaultView?.removeEventListener('keyup', handlePanKeyUp, { capture: true });
       ownerDocument.defaultView?.removeEventListener('blur', clearPanKeys);
       container.remove();
+      debugTooltip.remove();
     },
   };
 }
@@ -833,6 +1322,10 @@ function formatErrorMessage(error: unknown, prefix: string): string {
 
 function roundNumber(value: number): number {
   return Number.isFinite(value) ? Number(value.toFixed(4)) : 0;
+}
+
+function formatCoordinate(value: number): string {
+  return roundNumber(value).toFixed(3);
 }
 
 function readFiniteNumber(value: unknown, fallback: number): number {

@@ -142,6 +142,11 @@ export const EDITOR_SCENE_SUN_LIGHT_ID = 'sun_light';
 const EDITOR_SCENE_ROOT_ID = 'root';
 const EDITOR_SCENE_ROOT_TRANSFORM = createIdentityEditorTransform();
 const EDITOR_SCENE_GAME_OBJECT_GUID_PREFIX = 'go_';
+const DEFAULT_CAMERA_LOWER_BETA_LIMIT = 0.1;
+const DEFAULT_CAMERA_UPPER_BETA_LIMIT = 1.45;
+const DEFAULT_CAMERA_RADIUS_LIMIT_FACTOR_MIN = 0.25;
+const DEFAULT_CAMERA_RADIUS_LIMIT_FACTOR_MAX = 4;
+const MIN_CAMERA_RADIUS_LIMIT = 0.1;
 
 export const DEFAULT_EDITOR_SCENE_CAMERA: EditorSceneCameraRig = {
   projection: 'orthographic',
@@ -153,10 +158,10 @@ export const DEFAULT_EDITOR_SCENE_CAMERA: EditorSceneCameraRig = {
   targetOffset: { x: 0, y: 0, z: 0 },
   minZ: 1,
   maxZ: 10000,
-  lowerBetaLimit: 0.8,
-  upperBetaLimit: 0.8,
-  lowerRadiusLimit: 14,
-  upperRadiusLimit: 14,
+  lowerBetaLimit: DEFAULT_CAMERA_LOWER_BETA_LIMIT,
+  upperBetaLimit: DEFAULT_CAMERA_UPPER_BETA_LIMIT,
+  lowerRadiusLimit: 3.5,
+  upperRadiusLimit: 56,
   inertia: 0.9,
   targetScreenOffset: { x: 0, y: 0 },
   inspectorLanguage: 'zh',
@@ -187,12 +192,38 @@ type CameraInspectorText = {
   farClip: string;
   minBeta: string;
   maxBeta: string;
+  betaRange: string;
   minRadius: string;
   maxRadius: string;
+  radiusRange: string;
   inertia: string;
   screenOffset: string;
   rawCamera: string;
+  tooltips: CameraInspectorTooltipText;
 };
+
+type CameraInspectorTooltipText = Record<
+  | 'language'
+  | 'projection'
+  | 'alpha'
+  | 'beta'
+  | 'radius'
+  | 'orthoSize'
+  | 'fov'
+  | 'targetOffset'
+  | 'nearClip'
+  | 'farClip'
+  | 'minBeta'
+  | 'maxBeta'
+  | 'betaRange'
+  | 'minRadius'
+  | 'maxRadius'
+  | 'radiusRange'
+  | 'inertia'
+  | 'screenOffset'
+  | 'rawCamera',
+  string
+>;
 
 const CAMERA_INSPECTOR_TEXT: Record<EditorSceneCameraInspectorLanguage, CameraInspectorText> = {
   zh: {
@@ -203,21 +234,44 @@ const CAMERA_INSPECTOR_TEXT: Record<EditorSceneCameraInspectorLanguage, CameraIn
     projection: '投影模式',
     projectionOrthographic: '正交',
     projectionPerspective: '透视',
-    alpha: 'Alpha',
-    beta: 'Beta',
-    radius: '半径',
-    orthoSize: '正交尺寸',
-    fov: '视野角度',
-    targetOffset: '目标偏移',
-    nearClip: '近裁剪',
-    farClip: '远裁剪',
-    minBeta: '最小 Beta',
-    maxBeta: '最大 Beta',
-    minRadius: '最小半径',
-    maxRadius: '最大半径',
-    inertia: '惯性',
-    screenOffset: '屏幕偏移',
-    rawCamera: '原始摄像机',
+    alpha: '水平环绕角',
+    beta: '俯仰角',
+    radius: '跟随距离',
+    orthoSize: '正交视野高度',
+    fov: '透视视野角',
+    targetOffset: '观察目标偏移',
+    nearClip: '近裁面距离',
+    farClip: '远裁面距离',
+    minBeta: '最小俯仰角',
+    maxBeta: '最大俯仰角',
+    betaRange: '俯仰角范围',
+    minRadius: '最小跟随距离',
+    maxRadius: '最大跟随距离',
+    radiusRange: '跟随距离范围',
+    inertia: '平滑惯性',
+    screenOffset: '画面偏移',
+    rawCamera: '原始摄像机数据',
+    tooltips: {
+      language: '切换摄像机 Inspector 的显示语言。',
+      projection: '切换 Main Camera 使用正交投影或透视投影。',
+      alpha: 'ArcRotate 水平环绕角，单位为弧度。',
+      beta: 'ArcRotate 垂直俯仰角，单位为弧度。',
+      radius: '摄像机到观察目标的距离。',
+      orthoSize: '正交模式下的视野高度，数值越大看到的范围越大。',
+      fov: '透视模式下的垂直视野角；界面用角度显示，保存为弧度。',
+      targetOffset: 'Main Camera 围绕观察的目标点偏移，按 X/Y/Z 一行编辑。',
+      nearClip: '小于该距离的内容不会被摄像机渲染。',
+      farClip: '大于该距离的内容不会被摄像机渲染。',
+      minBeta: '限制运行时可用的最小俯仰角。',
+      maxBeta: '限制运行时可用的最大俯仰角。',
+      betaRange: '运行时允许的俯仰角范围，左侧为最小值，右侧为最大值。',
+      minRadius: '限制摄像机可接近目标的最小距离。',
+      maxRadius: '限制摄像机可远离目标的最大距离。',
+      radiusRange: '运行时允许的跟随距离范围，左侧为最小值，右侧为最大值。',
+      inertia: '摄像机输入或跟随的平滑惯性，0 最灵敏，1 最平滑。',
+      screenOffset: '将观察目标在画面中偏移，X 为水平，Y 为垂直。',
+      rawCamera: '合并默认值前的原始摄像机 authoring 数据。',
+    },
   },
   en: {
     title: 'Camera',
@@ -237,11 +291,34 @@ const CAMERA_INSPECTOR_TEXT: Record<EditorSceneCameraInspectorLanguage, CameraIn
     farClip: 'Far Clip',
     minBeta: 'Min Beta',
     maxBeta: 'Max Beta',
+    betaRange: 'Pitch Range',
     minRadius: 'Min Radius',
     maxRadius: 'Max Radius',
+    radiusRange: 'Follow Distance Range',
     inertia: 'Inertia',
     screenOffset: 'Screen Offset',
     rawCamera: 'Raw Camera',
+    tooltips: {
+      language: 'Switch the camera Inspector language.',
+      projection: 'Switch the Main Camera between orthographic and perspective projection.',
+      alpha: 'ArcRotate horizontal orbit angle, in radians.',
+      beta: 'ArcRotate vertical pitch angle, in radians.',
+      radius: 'Distance from the camera to the look target.',
+      orthoSize: 'Orthographic view height. Larger values show a wider area.',
+      fov: 'Perspective vertical field of view. The UI uses degrees; saved data uses radians.',
+      targetOffset: 'Look target offset for the Main Camera, edited as X/Y/Z in one row.',
+      nearClip: 'Content closer than this distance is not rendered.',
+      farClip: 'Content farther than this distance is not rendered.',
+      minBeta: 'Minimum allowed runtime pitch angle.',
+      maxBeta: 'Maximum allowed runtime pitch angle.',
+      betaRange: 'Allowed runtime pitch range. Left is minimum; right is maximum.',
+      minRadius: 'Minimum allowed camera distance from the target.',
+      maxRadius: 'Maximum allowed camera distance from the target.',
+      radiusRange: 'Allowed runtime follow distance range. Left is minimum; right is maximum.',
+      inertia: 'Camera input/follow smoothing. 0 is most responsive; 1 is smoothest.',
+      screenOffset: 'Moves the look target in screen space. X is horizontal; Y is vertical.',
+      rawCamera: 'Raw camera authoring data before defaults are merged.',
+    },
   },
 };
 
@@ -3188,6 +3265,7 @@ function createCameraInspectorProperties(
     order,
     options: CAMERA_LANGUAGE_OPTIONS,
     controlOptions: { variant: 'segmented' },
+    tooltip: text.tooltips.language,
   }));
   order += 1;
 
@@ -3201,14 +3279,37 @@ function createCameraInspectorProperties(
     order,
     options: createCameraProjectionOptions(text),
     controlOptions: { variant: 'segmented' },
+    tooltip: text.tooltips.projection,
   }));
   order += 1;
 
-  properties.push(createCameraNumberInspectorProperty(nodeKind, { path: 'camera.alpha', label: text.alpha, value: rig.alpha, order, step: 0.01 }));
+  properties.push(createCameraNumberInspectorProperty(nodeKind, {
+    path: 'camera.alpha',
+    label: text.alpha,
+    value: rig.alpha,
+    order,
+    step: 0.01,
+    tooltip: text.tooltips.alpha,
+  }));
   order += 1;
-  properties.push(createCameraNumberInspectorProperty(nodeKind, { path: 'camera.beta', label: text.beta, value: rig.beta, order, step: 0.01 }));
+  properties.push(createCameraNumberInspectorProperty(nodeKind, {
+    path: 'camera.beta',
+    label: text.beta,
+    value: rig.beta,
+    order,
+    step: 0.01,
+    tooltip: text.tooltips.beta,
+  }));
   order += 1;
-  properties.push(createCameraNumberInspectorProperty(nodeKind, { path: 'camera.radius', label: text.radius, value: rig.radius, order, min: 0.001, step: 0.1 }));
+  properties.push(createCameraNumberInspectorProperty(nodeKind, {
+    path: 'camera.radius',
+    label: text.radius,
+    value: rig.radius,
+    order,
+    min: 0.001,
+    step: 0.1,
+    tooltip: text.tooltips.radius,
+  }));
   order += 1;
 
   if ((rig.projection ?? 'orthographic') === 'perspective') {
@@ -3220,6 +3321,7 @@ function createCameraInspectorProperties(
       min: 1,
       max: 179,
       step: 1,
+      tooltip: text.tooltips.fov,
       coerce: (value: unknown) => typeof value === 'number' && Number.isFinite(value) ? degreesToRadians(value) : value,
     }));
   } else {
@@ -3230,34 +3332,96 @@ function createCameraInspectorProperties(
       order,
       min: 0.001,
       step: 0.1,
+      tooltip: text.tooltips.orthoSize,
     }));
   }
   order += 1;
 
-  for (const axis of ['x', 'y', 'z'] as const) {
-    properties.push(createCameraNumberInspectorProperty(nodeKind, {
-      path: `camera.targetOffset.${axis}`,
-      label: `${text.targetOffset} ${axis.toUpperCase()}`,
-      value: rig.targetOffset?.[axis] ?? 0,
-      order,
-      step: 0.05,
-    }));
-    order += 1;
-  }
+  properties.push(createDocumentInspectorProperty(null, nodeKind, {
+    path: 'camera.targetOffset',
+    label: text.targetOffset,
+    valueType: 'vec3',
+    control: 'vec3',
+    value: rig.targetOffset ?? { x: 0, y: 0, z: 0 },
+    commitMode: 'live',
+    order,
+    step: 0.05,
+    tooltip: text.tooltips.targetOffset,
+  }));
+  order += 1;
 
-  properties.push(createCameraNumberInspectorProperty(nodeKind, { path: 'camera.minZ', label: text.nearClip, value: rig.minZ ?? 1, order, min: 0.001, step: 0.1 }));
+  properties.push(createCameraNumberInspectorProperty(nodeKind, {
+    path: 'camera.minZ',
+    label: text.nearClip,
+    value: rig.minZ ?? 1,
+    order,
+    min: 0.001,
+    step: 0.1,
+    tooltip: text.tooltips.nearClip,
+  }));
   order += 1;
-  properties.push(createCameraNumberInspectorProperty(nodeKind, { path: 'camera.maxZ', label: text.farClip, value: rig.maxZ ?? 10000, order, min: 0.001, step: 1 }));
+  properties.push(createCameraNumberInspectorProperty(nodeKind, {
+    path: 'camera.maxZ',
+    label: text.farClip,
+    value: rig.maxZ ?? 10000,
+    order,
+    min: 0.001,
+    step: 1,
+    tooltip: text.tooltips.farClip,
+  }));
   order += 1;
-  properties.push(createCameraNumberInspectorProperty(nodeKind, { path: 'camera.lowerBetaLimit', label: text.minBeta, value: rig.lowerBetaLimit ?? rig.beta, order, step: 0.01 }));
+  properties.push(createCameraNumberInspectorProperty(nodeKind, {
+    path: 'camera.lowerBetaLimit',
+    label: text.minBeta,
+    value: rig.lowerBetaLimit ?? rig.beta,
+    order,
+    step: 0.01,
+    tooltip: text.tooltips.minBeta,
+    controlOptions: { groupPath: 'camera.betaLimitRange', groupLabel: text.betaRange, groupOrder: 0 },
+  }));
   order += 1;
-  properties.push(createCameraNumberInspectorProperty(nodeKind, { path: 'camera.upperBetaLimit', label: text.maxBeta, value: rig.upperBetaLimit ?? rig.beta, order, step: 0.01 }));
+  properties.push(createCameraNumberInspectorProperty(nodeKind, {
+    path: 'camera.upperBetaLimit',
+    label: text.maxBeta,
+    value: rig.upperBetaLimit ?? rig.beta,
+    order,
+    step: 0.01,
+    tooltip: text.tooltips.maxBeta,
+    controlOptions: { groupPath: 'camera.betaLimitRange', groupLabel: text.betaRange, groupOrder: 1 },
+  }));
   order += 1;
-  properties.push(createCameraNumberInspectorProperty(nodeKind, { path: 'camera.lowerRadiusLimit', label: text.minRadius, value: rig.lowerRadiusLimit ?? rig.radius, order, min: 0.001, step: 0.1 }));
+  properties.push(createCameraNumberInspectorProperty(nodeKind, {
+    path: 'camera.lowerRadiusLimit',
+    label: text.minRadius,
+    value: rig.lowerRadiusLimit ?? rig.radius,
+    order,
+    min: 0.001,
+    step: 0.1,
+    tooltip: text.tooltips.minRadius,
+    controlOptions: { groupPath: 'camera.radiusLimitRange', groupLabel: text.radiusRange, groupOrder: 0 },
+  }));
   order += 1;
-  properties.push(createCameraNumberInspectorProperty(nodeKind, { path: 'camera.upperRadiusLimit', label: text.maxRadius, value: rig.upperRadiusLimit ?? rig.radius, order, min: 0.001, step: 0.1 }));
+  properties.push(createCameraNumberInspectorProperty(nodeKind, {
+    path: 'camera.upperRadiusLimit',
+    label: text.maxRadius,
+    value: rig.upperRadiusLimit ?? rig.radius,
+    order,
+    min: 0.001,
+    step: 0.1,
+    tooltip: text.tooltips.maxRadius,
+    controlOptions: { groupPath: 'camera.radiusLimitRange', groupLabel: text.radiusRange, groupOrder: 1 },
+  }));
   order += 1;
-  properties.push(createCameraNumberInspectorProperty(nodeKind, { path: 'camera.inertia', label: text.inertia, value: rig.inertia ?? 0.9, order, min: 0, max: 1, step: 0.05 }));
+  properties.push(createCameraNumberInspectorProperty(nodeKind, {
+    path: 'camera.inertia',
+    label: text.inertia,
+    value: rig.inertia ?? 0.9,
+    order,
+    min: 0,
+    max: 1,
+    step: 0.05,
+    tooltip: text.tooltips.inertia,
+  }));
   order += 1;
 
   for (const axis of ['x', 'y'] as const) {
@@ -3267,6 +3431,7 @@ function createCameraInspectorProperties(
       value: rig.targetScreenOffset?.[axis] ?? 0,
       order,
       step: 0.01,
+      tooltip: text.tooltips.screenOffset,
     }));
     order += 1;
   }
@@ -3278,6 +3443,7 @@ function createCameraInspectorProperties(
     order: properties.length,
     source: 'Document',
     tags: ['Raw'],
+    tooltip: text.tooltips.rawCamera,
   });
   return properties;
 }
@@ -3292,6 +3458,8 @@ function createCameraNumberInspectorProperty(
     min?: number;
     max?: number;
     step?: number;
+    tooltip?: string;
+    controlOptions?: InspectorProperty<EditorSceneDocument>['controlOptions'];
     coerce?: (value: unknown) => unknown;
   },
 ): InspectorProperty<EditorSceneDocument> {
@@ -3306,6 +3474,8 @@ function createCameraNumberInspectorProperty(
     min: input.min,
     max: input.max,
     step: input.step ?? 0.05,
+    tooltip: input.tooltip,
+    controlOptions: input.controlOptions,
     coerce: input.coerce,
   });
 }
@@ -4133,6 +4303,7 @@ function patchEditorSceneGameObject(
     delete next.groundDecal;
     delete next.primitive;
     applyJsonFieldPatch(next as unknown as Record<string, unknown>, path, value);
+    next.camera = normalizeEditorSceneCameraAfterFieldPatch(next.camera, path);
     return next;
   }
   if (path.startsWith('light.')) {
@@ -4341,7 +4512,7 @@ function mergeEditorSceneCameraDefaults(
   camera: EditorSceneGameObject['camera'],
 ): EditorSceneCameraRig {
   const defaults = DEFAULT_EDITOR_SCENE_CAMERA;
-  return {
+  const merged: EditorSceneCameraRig = {
     ...defaults,
     ...(camera ?? {}),
     projection: readEditorSceneCameraProjection(camera?.projection),
@@ -4361,6 +4532,114 @@ function mergeEditorSceneCameraDefaults(
       : { ...(defaults.targetScreenOffset ?? { x: 0, y: 0 }) },
     inspectorLanguage: readEditorSceneCameraInspectorLanguage(camera?.inspectorLanguage),
   };
+  return applyEditorSceneCameraLimitDefaults(merged);
+}
+
+function applyEditorSceneCameraLimitDefaults(camera: EditorSceneCameraRig): EditorSceneCameraRig {
+  const betaLimits = resolveCameraBetaLimitDefaults(camera.beta, camera.lowerBetaLimit, camera.upperBetaLimit);
+  const radiusLimits = resolveCameraRadiusLimitDefaults(camera.radius, camera.lowerRadiusLimit, camera.upperRadiusLimit);
+  return {
+    ...camera,
+    lowerBetaLimit: betaLimits.lower,
+    upperBetaLimit: betaLimits.upper,
+    lowerRadiusLimit: radiusLimits.lower,
+    upperRadiusLimit: radiusLimits.upper,
+  };
+}
+
+function normalizeEditorSceneCameraAfterFieldPatch(
+  camera: EditorSceneCameraRig,
+  path: string,
+): EditorSceneCameraRig {
+  normalizeEditorSceneCameraRangeAfterFieldPatch(camera, path, {
+    valueField: 'beta',
+    lowerField: 'lowerBetaLimit',
+    upperField: 'upperBetaLimit',
+    minValue: Number.NEGATIVE_INFINITY,
+  });
+  normalizeEditorSceneCameraRangeAfterFieldPatch(camera, path, {
+    valueField: 'radius',
+    lowerField: 'lowerRadiusLimit',
+    upperField: 'upperRadiusLimit',
+    minValue: 0.001,
+  });
+  return camera;
+}
+
+function normalizeEditorSceneCameraRangeAfterFieldPatch(
+  camera: EditorSceneCameraRig,
+  path: string,
+  options: {
+    valueField: 'beta' | 'radius';
+    lowerField: 'lowerBetaLimit' | 'lowerRadiusLimit';
+    upperField: 'upperBetaLimit' | 'upperRadiusLimit';
+    minValue: number;
+  },
+): void {
+  const valuePath = `camera.${options.valueField}`;
+  const lowerPath = `camera.${options.lowerField}`;
+  const upperPath = `camera.${options.upperField}`;
+  let value = readFiniteNumber(camera[options.valueField], DEFAULT_EDITOR_SCENE_CAMERA[options.valueField]);
+  let lower = readFiniteNumber(camera[options.lowerField], value);
+  let upper = readFiniteNumber(camera[options.upperField], value);
+  if (Number.isFinite(options.minValue)) {
+    value = Math.max(options.minValue, value);
+    lower = Math.max(options.minValue, lower);
+    upper = Math.max(options.minValue, upper);
+  }
+  if (upper < lower) {
+    if (path === upperPath) lower = upper;
+    else upper = lower;
+  }
+  if (path === lowerPath || path === upperPath) {
+    value = Math.min(upper, Math.max(lower, value));
+  } else if (path === valuePath) {
+    if (value < lower) lower = value;
+    if (value > upper) upper = value;
+  }
+  camera[options.valueField] = value;
+  camera[options.lowerField] = lower;
+  camera[options.upperField] = upper;
+}
+
+function resolveCameraBetaLimitDefaults(
+  beta: number,
+  lower: number | undefined,
+  upper: number | undefined,
+): { lower: number; upper: number } {
+  let nextLower = Number.isFinite(lower) ? lower as number : DEFAULT_CAMERA_LOWER_BETA_LIMIT;
+  let nextUpper = Number.isFinite(upper) ? upper as number : DEFAULT_CAMERA_UPPER_BETA_LIMIT;
+  if (isLockedToCurrentValue(nextLower, nextUpper, beta)) {
+    nextLower = DEFAULT_CAMERA_LOWER_BETA_LIMIT;
+    nextUpper = DEFAULT_CAMERA_UPPER_BETA_LIMIT;
+  }
+  if (nextUpper < nextLower) [nextLower, nextUpper] = [nextUpper, nextLower];
+  if (beta < nextLower) nextLower = beta;
+  if (beta > nextUpper) nextUpper = beta;
+  return { lower: nextLower, upper: nextUpper };
+}
+
+function resolveCameraRadiusLimitDefaults(
+  radius: number,
+  lower: number | undefined,
+  upper: number | undefined,
+): { lower: number; upper: number } {
+  const defaultLower = Math.max(MIN_CAMERA_RADIUS_LIMIT, radius * DEFAULT_CAMERA_RADIUS_LIMIT_FACTOR_MIN);
+  const defaultUpper = Math.max(radius + 1, radius * DEFAULT_CAMERA_RADIUS_LIMIT_FACTOR_MAX);
+  let nextLower = Number.isFinite(lower) && (lower as number) > 0 ? lower as number : defaultLower;
+  let nextUpper = Number.isFinite(upper) && (upper as number) > 0 ? upper as number : defaultUpper;
+  if (isLockedToCurrentValue(nextLower, nextUpper, radius)) {
+    nextLower = defaultLower;
+    nextUpper = defaultUpper;
+  }
+  if (nextUpper < nextLower) [nextLower, nextUpper] = [nextUpper, nextLower];
+  if (radius < nextLower) nextLower = Math.max(MIN_CAMERA_RADIUS_LIMIT, radius);
+  if (radius > nextUpper) nextUpper = radius;
+  return { lower: nextLower, upper: nextUpper };
+}
+
+function isLockedToCurrentValue(lower: number, upper: number, value: number): boolean {
+  return Math.abs(lower - upper) <= 0.000001 && Math.abs(lower - value) <= 0.000001;
 }
 
 function readEditorSceneCameraProjection(value: unknown): SceneCameraProjection {
@@ -4437,6 +4716,7 @@ function isBlockedEditorSceneCameraFieldPatch(
   if (path.startsWith('camera.') && targetIsCamera) {
     const patchedCameraHost = { camera: mergeEditorSceneCameraDefaults(target.camera) };
     applyJsonFieldPatch(patchedCameraHost as unknown as Record<string, unknown>, path, value);
+    patchedCameraHost.camera = normalizeEditorSceneCameraAfterFieldPatch(patchedCameraHost.camera, path);
     if (hasInvalidEditorSceneCameraRelationships(patchedCameraHost.camera)) return true;
   }
   if (path.startsWith('light.') && !isEditorSceneLightGameObject(target)) return true;
