@@ -13,6 +13,7 @@ import type {
   SceneAssetConfig,
   SceneAssetMaterialMode,
   SceneCameraRigConfig,
+  SceneCameraProjection,
   SceneDirectionalLightConfig,
   SceneInstanceNode,
   ScenePrimitiveNode,
@@ -36,6 +37,7 @@ import type {
 
 import sceneConfigJson from './scene.json';
 import gameConfigJson from './game.json';
+import renderingConfigJson from './rendering.json';
 
 const DEFAULT_WORLD_BOUNDS: WorldBoundsConfig = {
   minX: -10,
@@ -108,18 +110,65 @@ function isNonNegativeFiniteNumber(value: unknown): value is number {
   return isFiniteNumber(value) && value >= 0;
 }
 
+function isUnitRangeNumber(value: unknown): value is number {
+  return isFiniteNumber(value) && value >= 0 && value <= 1;
+}
+
+function normalizeCameraProjection(value: unknown): SceneCameraProjection {
+  return value === 'perspective' ? 'perspective' : 'orthographic';
+}
+
+function readRenderingCameraFovDefault(): number {
+  const camera = (renderingConfigJson as Record<string, any>).globalVolume?.camera;
+  return isPositiveFiniteNumber(camera?.fov) ? camera.fov : 0.85;
+}
+
+function normalizeCameraScreenOffset(value: unknown): SceneCameraRigConfig['targetScreenOffset'] | undefined {
+  if (!isRecord(value)) return undefined;
+  const x = isFiniteNumber(value.x) ? value.x : undefined;
+  const y = isFiniteNumber(value.y) ? value.y : undefined;
+  if (x == null || y == null) return undefined;
+  return { x, y };
+}
+
 function normalizeSceneCameraRigConfig(value: unknown): SceneCameraRigConfig | undefined {
   if (!isRecord(value)) return undefined;
   if (!isFiniteNumber(value.alpha)) return undefined;
   if (!isFiniteNumber(value.beta)) return undefined;
   if (!isPositiveFiniteNumber(value.radius)) return undefined;
   if (!isPositiveFiniteNumber(value.orthoSize)) return undefined;
-  return {
+
+  const normalized: SceneCameraRigConfig = {
+    projection: normalizeCameraProjection(value.projection),
     alpha: value.alpha,
     beta: value.beta,
     radius: value.radius,
     orthoSize: value.orthoSize,
+    fov: isPositiveFiniteNumber(value.fov) ? value.fov : readRenderingCameraFovDefault(),
   };
+
+  const targetOffset = normalizePosition3D(value.targetOffset);
+  if (targetOffset) normalized.targetOffset = targetOffset;
+
+  if (isPositiveFiniteNumber(value.minZ)) normalized.minZ = value.minZ;
+  if (isPositiveFiniteNumber(value.maxZ) && (normalized.minZ == null || value.maxZ > normalized.minZ)) normalized.maxZ = value.maxZ;
+
+  if (isFiniteNumber(value.lowerBetaLimit)) normalized.lowerBetaLimit = value.lowerBetaLimit;
+  if (isFiniteNumber(value.upperBetaLimit) && (normalized.lowerBetaLimit == null || value.upperBetaLimit >= normalized.lowerBetaLimit)) {
+    normalized.upperBetaLimit = value.upperBetaLimit;
+  }
+
+  if (isPositiveFiniteNumber(value.lowerRadiusLimit)) normalized.lowerRadiusLimit = value.lowerRadiusLimit;
+  if (isPositiveFiniteNumber(value.upperRadiusLimit) && (normalized.lowerRadiusLimit == null || value.upperRadiusLimit >= normalized.lowerRadiusLimit)) {
+    normalized.upperRadiusLimit = value.upperRadiusLimit;
+  }
+
+  if (isUnitRangeNumber(value.inertia)) normalized.inertia = value.inertia;
+
+  const targetScreenOffset = normalizeCameraScreenOffset(value.targetScreenOffset);
+  if (targetScreenOffset) normalized.targetScreenOffset = targetScreenOffset;
+
+  return normalized;
 }
 
 function normalizeSceneDirectionalLightConfig(value: unknown): SceneDirectionalLightConfig | undefined {

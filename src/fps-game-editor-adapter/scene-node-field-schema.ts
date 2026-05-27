@@ -39,6 +39,16 @@ function isVec3(value: unknown): value is Position3D {
   return isFiniteNumber(record.x) && isFiniteNumber(record.y) && isFiniteNumber(record.z);
 }
 
+function isVec2(value: unknown): value is { x: number; y: number } {
+  if (!value || typeof value !== 'object') return false;
+  const record = value as Record<string, unknown>;
+  return isFiniteNumber(record.x) && isFiniteNumber(record.y);
+}
+
+function isCameraProjection(value: unknown): value is 'orthographic' | 'perspective' {
+  return value === 'orthographic' || value === 'perspective';
+}
+
 function isScale(value: unknown): value is number | Scale3D {
   if (isFiniteNumber(value)) return value > 0;
   if (!value || typeof value !== 'object') return false;
@@ -60,6 +70,10 @@ function isPositiveFiniteNumber(value: unknown): value is number {
 
 function isNonNegativeFiniteNumber(value: unknown): value is number {
   return isFiniteNumber(value) && value >= 0;
+}
+
+function isUnitRangeNumber(value: unknown): value is number {
+  return isFiniteNumber(value) && value >= 0 && value <= 1;
 }
 
 function isPositiveSize(value: unknown): value is { width: number; depth: number } {
@@ -139,10 +153,26 @@ export const SCENE_NODE_FIELD_SCHEMA: ReadonlyArray<SceneNodeFieldSchemaEntry> =
   { path: 'instance.assetId', appliesTo: ['instance'], validate: (value) => typeof value === 'string' && value.trim().length > 0, allowDelete: false },
   { path: 'primitive.shape', appliesTo: ['primitive'], validate: (value) => value === 'cube' || value === 'sphere' || value === 'plane' || value === 'capsule', allowDelete: false },
   { path: 'transformType', appliesTo: ['transform'], validate: (value) => value == null || value === 'plain' || value === 'light' || value === 'camera' || value === 'groundDecal' },
+  { path: 'camera.projection', appliesTo: ['transform'], validate: isCameraProjection, allowDelete: false },
   { path: 'camera.alpha', appliesTo: ['transform'], validate: isFiniteNumber, allowDelete: false },
   { path: 'camera.beta', appliesTo: ['transform'], validate: isFiniteNumber, allowDelete: false },
   { path: 'camera.radius', appliesTo: ['transform'], validate: isPositiveFiniteNumber, allowDelete: false },
   { path: 'camera.orthoSize', appliesTo: ['transform'], validate: isPositiveFiniteNumber, allowDelete: false },
+  { path: 'camera.fov', appliesTo: ['transform'], validate: isPositiveFiniteNumber, allowDelete: false },
+  { path: 'camera.targetOffset', appliesTo: ['transform'], validate: (value) => value == null || isVec3(value) },
+  { path: 'camera.targetOffset.x', appliesTo: ['transform'], validate: isFiniteNumber, allowDelete: false },
+  { path: 'camera.targetOffset.y', appliesTo: ['transform'], validate: isFiniteNumber, allowDelete: false },
+  { path: 'camera.targetOffset.z', appliesTo: ['transform'], validate: isFiniteNumber, allowDelete: false },
+  { path: 'camera.minZ', appliesTo: ['transform'], validate: isPositiveFiniteNumber, allowDelete: false },
+  { path: 'camera.maxZ', appliesTo: ['transform'], validate: isPositiveFiniteNumber, allowDelete: false },
+  { path: 'camera.lowerBetaLimit', appliesTo: ['transform'], validate: isFiniteNumber, allowDelete: false },
+  { path: 'camera.upperBetaLimit', appliesTo: ['transform'], validate: isFiniteNumber, allowDelete: false },
+  { path: 'camera.lowerRadiusLimit', appliesTo: ['transform'], validate: isPositiveFiniteNumber, allowDelete: false },
+  { path: 'camera.upperRadiusLimit', appliesTo: ['transform'], validate: isPositiveFiniteNumber, allowDelete: false },
+  { path: 'camera.inertia', appliesTo: ['transform'], validate: isUnitRangeNumber, allowDelete: false },
+  { path: 'camera.targetScreenOffset', appliesTo: ['transform'], validate: (value) => value == null || isVec2(value) },
+  { path: 'camera.targetScreenOffset.x', appliesTo: ['transform'], validate: isFiniteNumber, allowDelete: false },
+  { path: 'camera.targetScreenOffset.y', appliesTo: ['transform'], validate: isFiniteNumber, allowDelete: false },
   { path: 'light.intensity', appliesTo: ['transform'], validate: isNonNegativeFiniteNumber, allowDelete: false },
   { path: 'light.direction', appliesTo: ['transform'], validate: isVec3, allowDelete: false },
   { path: 'light.direction.x', appliesTo: ['transform'], validate: isFiniteNumber, allowDelete: false },

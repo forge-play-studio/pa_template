@@ -11,7 +11,7 @@
  */
 
 import { Scene } from '@babylonjs/core/scene';
-import { Vector3 } from '@babylonjs/core/Maths/math.vector';
+import { Vector2, Vector3 } from '@babylonjs/core/Maths/math.vector';
 import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
@@ -37,6 +37,7 @@ import {
   type OutlineOverrideConfig,
   type SceneAssetConfig,
   type SceneAssetMaterialMode,
+  type SceneCameraProjection,
   type SceneCameraRigConfig,
   type SceneDirectionalLightConfig,
   type SceneInstanceNode,
@@ -54,6 +55,8 @@ import {
   resolveMaterialOwnerNode,
   resolveOutlineTarget,
 } from '@fps-games/editor-babylon';
+
+const DEFAULT_CAMERA_FOV = 0.85;
 
 /** 场景环境构建结果 */
 export interface SceneEnvironment {
@@ -133,9 +136,9 @@ export class SceneBuilder {
 
   private createCamera(): ArcRotateCamera {
     const cameraNode = configService.getSceneCameraNode();
-    const cameraRig = cameraNode?.camera ?? this.resolveFallbackCameraRig();
-    this.selectedCameraRig = cameraRig;
-    const target = this.resolveFallbackCameraTarget();
+    const cameraRig = cloneCameraRig(cameraNode?.camera ?? this.resolveFallbackCameraRig());
+    this.selectedCameraRig = cloneCameraRig(cameraRig);
+    const target = this.getCameraRigTarget(cameraRig);
 
     const camera = new ArcRotateCamera(
       'mainCamera',
@@ -146,25 +149,23 @@ export class SceneBuilder {
       this.scene
     );
 
-    camera.mode = Camera.ORTHOGRAPHIC_CAMERA;
-    camera.lowerAlphaLimit = cameraRig.alpha;
-    camera.upperAlphaLimit = cameraRig.alpha;
-    camera.lowerBetaLimit = cameraRig.beta;
-    camera.upperBetaLimit = cameraRig.beta;
-    camera.lowerRadiusLimit = cameraRig.radius;
-    camera.upperRadiusLimit = cameraRig.radius;
-
     this.attachMainCameraMetadata(camera, cameraNode?.source);
-
-    this.updateCameraProjection(camera);
+    this.applyCameraRuntimeProperties(camera, cameraRig, target);
 
     return camera;
   }
 
   updateCameraProjection(camera: ArcRotateCamera): void {
-    if (camera.mode !== Camera.ORTHOGRAPHIC_CAMERA) return;
+    const cameraRig = this.selectedCameraRig ?? this.resolveCameraRig();
+    const projection = resolveCameraProjection(cameraRig.projection);
+    if (projection === 'perspective') {
+      camera.mode = Camera.PERSPECTIVE_CAMERA;
+      camera.fov = resolveCameraFov(cameraRig.fov);
+      return;
+    }
 
-    const orthoSize = this.getSelectedCameraOrthoSize();
+    camera.mode = Camera.ORTHOGRAPHIC_CAMERA;
+    const orthoSize = cameraRig.orthoSize;
     const engine = this.scene.getEngine();
     const width = Math.max(1, engine.getRenderWidth());
     const height = Math.max(1, engine.getRenderHeight());
@@ -177,28 +178,55 @@ export class SceneBuilder {
   }
 
   applyCameraRig(camera: ArcRotateCamera, cameraRig: SceneCameraRigConfig, target?: Vector3): void {
-    this.selectedCameraRig = { ...cameraRig };
-    camera.alpha = cameraRig.alpha;
-    camera.beta = cameraRig.beta;
-    camera.radius = cameraRig.radius;
-    camera.lowerAlphaLimit = cameraRig.alpha;
-    camera.upperAlphaLimit = cameraRig.alpha;
-    camera.lowerBetaLimit = cameraRig.beta;
-    camera.upperBetaLimit = cameraRig.beta;
-    camera.lowerRadiusLimit = cameraRig.radius;
-    camera.upperRadiusLimit = cameraRig.radius;
-    if (target) camera.target = target;
-    this.updateCameraProjection(camera);
+    const nextRig = cloneCameraRig(cameraRig);
+    this.selectedCameraRig = cloneCameraRig(nextRig);
+    this.relaxCameraLimitsForRigAssignment(camera);
+    this.applyCameraRuntimeProperties(camera, nextRig, target ?? camera.target.clone());
   }
 
   getSelectedCameraRig(): SceneCameraRigConfig {
     const cameraRig = this.selectedCameraRig ?? this.resolveCameraRig();
-    return { ...cameraRig };
+    return cloneCameraRig(cameraRig);
   }
 
   getSelectedCameraOrthoSize(): number {
     const cameraRig = this.selectedCameraRig ?? this.resolveCameraRig();
     return cameraRig.orthoSize;
+  }
+
+  private getCameraRigTarget(cameraRig: SceneCameraRigConfig, fallback?: Vector3): Vector3 {
+    const targetOffset = getCameraTargetOffset(cameraRig);
+    if (targetOffset) return new Vector3(targetOffset.x, targetOffset.y, targetOffset.z);
+    if (fallback) return fallback.clone();
+    return this.resolveFallbackCameraTarget();
+  }
+
+  private applyCameraRuntimeProperties(camera: ArcRotateCamera, cameraRig: SceneCameraRigConfig, target: Vector3): void {
+    camera.alpha = cameraRig.alpha;
+    camera.beta = cameraRig.beta;
+    camera.radius = cameraRig.radius;
+    camera.target = target;
+    camera.lowerAlphaLimit = cameraRig.alpha;
+    camera.upperAlphaLimit = cameraRig.alpha;
+    camera.lowerBetaLimit = cameraRig.lowerBetaLimit ?? cameraRig.beta;
+    camera.upperBetaLimit = cameraRig.upperBetaLimit ?? cameraRig.beta;
+    camera.lowerRadiusLimit = cameraRig.lowerRadiusLimit ?? cameraRig.radius;
+    camera.upperRadiusLimit = cameraRig.upperRadiusLimit ?? cameraRig.radius;
+    camera.minZ = cameraRig.minZ ?? 1;
+    camera.maxZ = cameraRig.maxZ ?? 10000;
+    camera.inertia = cameraRig.inertia ?? 0.9;
+    const screenOffset = cameraRig.targetScreenOffset ?? { x: 0, y: 0 };
+    camera.targetScreenOffset = new Vector2(screenOffset.x, screenOffset.y);
+    this.updateCameraProjection(camera);
+  }
+
+  private relaxCameraLimitsForRigAssignment(camera: ArcRotateCamera): void {
+    camera.lowerAlphaLimit = null;
+    camera.upperAlphaLimit = null;
+    camera.lowerBetaLimit = null;
+    camera.upperBetaLimit = null;
+    camera.lowerRadiusLimit = null;
+    camera.upperRadiusLimit = null;
   }
 
   private enforceMainCamera(camera: ArcRotateCamera): void {
@@ -235,7 +263,7 @@ export class SceneBuilder {
   }
 
   private resolveCameraRig(): SceneCameraRigConfig {
-    return configService.getSceneCameraRig() ?? this.resolveFallbackCameraRig();
+    return cloneCameraRig(configService.getSceneCameraRig() ?? this.resolveFallbackCameraRig());
   }
 
   private attachMainCameraMetadata(camera: ArcRotateCamera, source?: SceneRuntimeSourceBinding): void {
@@ -254,23 +282,31 @@ export class SceneBuilder {
 
   private resolveFallbackCameraRig(): SceneCameraRigConfig {
     const camCfg = (renderingConfig as any).globalVolume?.camera ?? {};
+    const target = readPosition3D(camCfg.target);
     return {
+      projection: readCameraProjection(camCfg.projection),
       alpha: readFiniteNumber(camCfg.alpha, Math.PI / 4),
       beta: readFiniteNumber(camCfg.beta, Math.PI / 4),
       radius: readPositiveFiniteNumber(camCfg.radius, 14),
       orthoSize: readPositiveFiniteNumber(camCfg.orthoSizeDesktop, 10),
+      fov: readOptionalPositiveFiniteNumber(camCfg.fov) ?? DEFAULT_CAMERA_FOV,
+      ...(target ? { targetOffset: target } : {}),
+      minZ: readOptionalPositiveFiniteNumber(camCfg.minZ) ?? 1,
+      maxZ: readOptionalPositiveFiniteNumber(camCfg.maxZ) ?? 10000,
+      lowerBetaLimit: readFiniteNumber(camCfg.lowerBetaLimit, readFiniteNumber(camCfg.beta, Math.PI / 4)),
+      upperBetaLimit: readFiniteNumber(camCfg.upperBetaLimit, readFiniteNumber(camCfg.beta, Math.PI / 4)),
+      lowerRadiusLimit: readOptionalPositiveFiniteNumber(camCfg.lowerRadiusLimit) ?? readPositiveFiniteNumber(camCfg.radius, 14),
+      upperRadiusLimit: readOptionalPositiveFiniteNumber(camCfg.upperRadiusLimit) ?? readPositiveFiniteNumber(camCfg.radius, 14),
+      inertia: readOptionalUnitNumber(camCfg.inertia) ?? 0.9,
+      targetScreenOffset: readPosition2D(camCfg.targetScreenOffset) ?? { x: 0, y: 0 },
     };
   }
 
   private resolveFallbackCameraTarget(): Vector3 {
     const camCfg = (renderingConfig as any).globalVolume?.camera ?? {};
-    const target = camCfg.target;
+    const target = readPosition3D(camCfg.target);
     if (!target) return new Vector3(0, 0, 0);
-    return new Vector3(
-      readFiniteNumber(target.x, 0),
-      readFiniteNumber(target.y, 0),
-      readFiniteNumber(target.z, 0),
-    );
+    return new Vector3(target.x, target.y, target.z);
   }
 
   private resolveDirectionalLight(): SceneDirectionalLightConfig {
@@ -1205,6 +1241,55 @@ function readFiniteNumber(value: unknown, fallback: number): number {
 
 function readPositiveFiniteNumber(value: unknown, fallback: number): number {
   return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : fallback;
+}
+
+function readOptionalPositiveFiniteNumber(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : undefined;
+}
+
+function readCameraProjection(value: unknown): SceneCameraProjection {
+  return value === 'perspective' ? 'perspective' : 'orthographic';
+}
+
+function resolveCameraProjection(value: unknown): SceneCameraProjection {
+  return value === 'perspective' ? 'perspective' : 'orthographic';
+}
+
+function resolveCameraFov(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : DEFAULT_CAMERA_FOV;
+}
+
+function readOptionalUnitNumber(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1 ? value : undefined;
+}
+
+function readPosition3D(value: unknown): { x: number; y: number; z: number } | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const record = value as Record<string, unknown>;
+  if (typeof record.x !== 'number' || !Number.isFinite(record.x)) return undefined;
+  if (typeof record.y !== 'number' || !Number.isFinite(record.y)) return undefined;
+  if (typeof record.z !== 'number' || !Number.isFinite(record.z)) return undefined;
+  return { x: record.x, y: record.y, z: record.z };
+}
+
+function readPosition2D(value: unknown): { x: number; y: number } | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const record = value as Record<string, unknown>;
+  if (typeof record.x !== 'number' || !Number.isFinite(record.x)) return undefined;
+  if (typeof record.y !== 'number' || !Number.isFinite(record.y)) return undefined;
+  return { x: record.x, y: record.y };
+}
+
+function getCameraTargetOffset(cameraRig: SceneCameraRigConfig): { x: number; y: number; z: number } | undefined {
+  return readPosition3D(cameraRig.targetOffset);
+}
+
+function cloneCameraRig(cameraRig: SceneCameraRigConfig): SceneCameraRigConfig {
+  return {
+    ...cameraRig,
+    ...(cameraRig.targetOffset ? { targetOffset: { ...cameraRig.targetOffset } } : {}),
+    ...(cameraRig.targetScreenOffset ? { targetScreenOffset: { ...cameraRig.targetScreenOffset } } : {}),
+  };
 }
 
 function readNonNegativeFiniteNumber(value: unknown, fallback: number): number {

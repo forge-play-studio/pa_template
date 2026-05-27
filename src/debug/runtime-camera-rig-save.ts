@@ -1,4 +1,4 @@
-import type { SceneCameraRigConfig } from '../config';
+import type { SceneCameraProjection, SceneCameraRigConfig } from '../config';
 import type {
   EditorSceneDocument,
   EditorSceneGameObject,
@@ -14,7 +14,23 @@ import {
   type SceneMainSourceSaveResult,
 } from '../fps-game-editor-adapter/scene-main-source-driver';
 
-const CAMERA_RIG_SAVE_FIELDS = ['alpha', 'beta', 'radius', 'orthoSize'] as const;
+const CAMERA_RIG_SAVE_FIELDS = [
+  'projection',
+  'alpha',
+  'beta',
+  'radius',
+  'orthoSize',
+  'fov',
+  'targetOffset',
+  'minZ',
+  'maxZ',
+  'lowerBetaLimit',
+  'upperBetaLimit',
+  'lowerRadiusLimit',
+  'upperRadiusLimit',
+  'inertia',
+  'targetScreenOffset',
+] as const satisfies readonly (keyof SceneCameraRigConfig)[];
 
 export interface RuntimeCameraEditorBinding {
   sourceId: string;
@@ -75,6 +91,7 @@ export function patchRuntimeCameraRigInEditorScene(
 
   const sanitizedRig = sanitizeRuntimeCameraRig(cameraRig);
   for (const field of CAMERA_RIG_SAVE_FIELDS) {
+    if (!Object.prototype.hasOwnProperty.call(sanitizedRig, field)) continue;
     nextDocument = patchEditorSceneGameObjectField(
       nextDocument,
       target.id,
@@ -143,12 +160,59 @@ function createOriginalGuidById(document: EditorSceneDocument): Map<string, stri
 }
 
 function sanitizeRuntimeCameraRig(cameraRig: SceneCameraRigConfig): SceneCameraRigConfig {
-  return {
+  const sanitized: SceneCameraRigConfig = {
+    projection: readCameraProjection(cameraRig.projection),
     alpha: readFiniteRigNumber(cameraRig.alpha, 'alpha'),
     beta: readFiniteRigNumber(cameraRig.beta, 'beta'),
     radius: readPositiveFiniteRigNumber(cameraRig.radius, 'radius'),
     orthoSize: readPositiveFiniteRigNumber(cameraRig.orthoSize, 'orthoSize'),
+    fov: readPositiveFiniteRigNumber(cameraRig.fov ?? 0.85, 'fov'),
   };
+
+  const targetOffset = readRigVec3(cameraRig.targetOffset, 'targetOffset');
+  if (targetOffset) sanitized.targetOffset = targetOffset;
+
+  const minZ = readOptionalPositiveFiniteRigNumber(cameraRig.minZ, 'minZ');
+  if (minZ != null) sanitized.minZ = minZ;
+  const maxZ = readOptionalPositiveFiniteRigNumber(cameraRig.maxZ, 'maxZ');
+  if (maxZ != null) sanitized.maxZ = maxZ;
+
+  const lowerBetaLimit = readOptionalFiniteRigNumber(cameraRig.lowerBetaLimit, 'lowerBetaLimit');
+  if (lowerBetaLimit != null) sanitized.lowerBetaLimit = lowerBetaLimit;
+  const upperBetaLimit = readOptionalFiniteRigNumber(cameraRig.upperBetaLimit, 'upperBetaLimit');
+  if (upperBetaLimit != null) sanitized.upperBetaLimit = upperBetaLimit;
+
+  const lowerRadiusLimit = readOptionalPositiveFiniteRigNumber(cameraRig.lowerRadiusLimit, 'lowerRadiusLimit');
+  if (lowerRadiusLimit != null) sanitized.lowerRadiusLimit = lowerRadiusLimit;
+  const upperRadiusLimit = readOptionalPositiveFiniteRigNumber(cameraRig.upperRadiusLimit, 'upperRadiusLimit');
+  if (upperRadiusLimit != null) sanitized.upperRadiusLimit = upperRadiusLimit;
+
+  const inertia = readOptionalUnitRigNumber(cameraRig.inertia, 'inertia');
+  if (inertia != null) sanitized.inertia = inertia;
+
+  const targetScreenOffset = readRigVec2(cameraRig.targetScreenOffset, 'targetScreenOffset');
+  if (targetScreenOffset) sanitized.targetScreenOffset = targetScreenOffset;
+
+  assertCameraRigRelationships(sanitized);
+  return sanitized;
+}
+
+function readCameraProjection(value: unknown): SceneCameraProjection {
+  if (value == null) return 'orthographic';
+  if (value === 'orthographic' || value === 'perspective') return value;
+  throw new Error('Runtime camera rig projection must be orthographic or perspective.');
+}
+
+function assertCameraRigRelationships(cameraRig: SceneCameraRigConfig): void {
+  if (cameraRig.minZ != null && cameraRig.maxZ != null && cameraRig.maxZ <= cameraRig.minZ) {
+    throw new Error('Runtime camera rig maxZ must be greater than minZ.');
+  }
+  if (cameraRig.lowerBetaLimit != null && cameraRig.upperBetaLimit != null && cameraRig.upperBetaLimit < cameraRig.lowerBetaLimit) {
+    throw new Error('Runtime camera rig upperBetaLimit must be greater than or equal to lowerBetaLimit.');
+  }
+  if (cameraRig.lowerRadiusLimit != null && cameraRig.upperRadiusLimit != null && cameraRig.upperRadiusLimit < cameraRig.lowerRadiusLimit) {
+    throw new Error('Runtime camera rig upperRadiusLimit must be greater than or equal to lowerRadiusLimit.');
+  }
 }
 
 function readFiniteRigNumber(value: unknown, label: string): number {
@@ -158,10 +222,52 @@ function readFiniteRigNumber(value: unknown, label: string): number {
   return value;
 }
 
+function readOptionalFiniteRigNumber(value: unknown, label: string): number | undefined {
+  if (value == null) return undefined;
+  return readFiniteRigNumber(value, label);
+}
+
 function readPositiveFiniteRigNumber(value: unknown, label: string): number {
   const numberValue = readFiniteRigNumber(value, label);
   if (numberValue <= 0) throw new Error(`Runtime camera rig ${label} must be greater than 0.`);
   return numberValue;
+}
+
+function readOptionalPositiveFiniteRigNumber(value: unknown, label: string): number | undefined {
+  if (value == null) return undefined;
+  return readPositiveFiniteRigNumber(value, label);
+}
+
+function readOptionalUnitRigNumber(value: unknown, label: string): number | undefined {
+  if (value == null) return undefined;
+  const numberValue = readFiniteRigNumber(value, label);
+  if (numberValue < 0 || numberValue > 1) throw new Error(`Runtime camera rig ${label} must be between 0 and 1.`);
+  return numberValue;
+}
+
+function readRigVec3(value: unknown, label: string): { x: number; y: number; z: number } | undefined {
+  if (value == null) return undefined;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error(`Runtime camera rig ${label} must be a vector object.`);
+  }
+  const record = value as Record<string, unknown>;
+  return {
+    x: readFiniteRigNumber(record.x, `${label}.x`),
+    y: readFiniteRigNumber(record.y, `${label}.y`),
+    z: readFiniteRigNumber(record.z, `${label}.z`),
+  };
+}
+
+function readRigVec2(value: unknown, label: string): { x: number; y: number } | undefined {
+  if (value == null) return undefined;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error(`Runtime camera rig ${label} must be a vector object.`);
+  }
+  const record = value as Record<string, unknown>;
+  return {
+    x: readFiniteRigNumber(record.x, `${label}.x`),
+    y: readFiniteRigNumber(record.y, `${label}.y`),
+  };
 }
 
 function readNonEmptyString(value: unknown): string | null {

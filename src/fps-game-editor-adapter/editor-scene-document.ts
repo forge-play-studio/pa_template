@@ -63,7 +63,11 @@ export interface EditorScenePrimitiveRenderer {
   shape: ScenePrimitiveShape;
 }
 
-export type EditorSceneCameraRig = SceneCameraRigConfig;
+export type EditorSceneCameraInspectorLanguage = 'zh' | 'en';
+
+export interface EditorSceneCameraRig extends SceneCameraRigConfig {
+  inspectorLanguage?: EditorSceneCameraInspectorLanguage;
+}
 
 export interface EditorSceneDirectionalLight extends Omit<SceneDirectionalLightConfig, 'direction' | 'diffuseColor'> {
   direction: EditorSceneVec3;

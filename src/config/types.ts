@@ -57,11 +57,27 @@ export type TransformType = 'plain' | 'light' | 'camera' | 'groundDecal';
 
 export type ScenePrimitiveShape = 'cube' | 'sphere' | 'plane' | 'capsule';
 
+export type SceneCameraProjection = 'orthographic' | 'perspective';
+
 export interface SceneCameraRigConfig {
+  projection?: SceneCameraProjection;
   alpha: number;
   beta: number;
   radius: number;
   orthoSize: number;
+  fov?: number;
+  targetOffset?: Position3D;
+  minZ?: number;
+  maxZ?: number;
+  lowerBetaLimit?: number;
+  upperBetaLimit?: number;
+  lowerRadiusLimit?: number;
+  upperRadiusLimit?: number;
+  inertia?: number;
+  targetScreenOffset?: {
+    x: number;
+    y: number;
+  };
 }
 
 export interface SceneDirectionalLightConfig {

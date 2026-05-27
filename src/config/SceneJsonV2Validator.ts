@@ -323,6 +323,31 @@ function validateVec3(value: unknown, path: string, add: (path: string, message:
   }
 }
 
+function validateVec2(value: unknown, path: string, add: (path: string, message: string) => void): void {
+  if (value == null) return;
+  if (!isRecord(value)) {
+    add(path, 'value must be a vector object');
+    return;
+  }
+  for (const axis of ['x', 'y']) {
+    if (typeof value[axis] !== 'number' || !Number.isFinite(value[axis])) {
+      add(`${path}.${axis}`, 'vector component must be a finite number');
+    }
+  }
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
+function isPositiveFiniteNumber(value: unknown): value is number {
+  return isFiniteNumber(value) && value > 0;
+}
+
+function isUnitRangeNumber(value: unknown): value is number {
+  return isFiniteNumber(value) && value >= 0 && value <= 1;
+}
+
 function validateColor(value: unknown, path: string, add: (path: string, message: string) => void): void {
   if (value == null) return;
   if (!isRecord(value)) {
@@ -342,13 +367,45 @@ function validateCameraRig(value: unknown, path: string, add: (path: string, mes
     add(path, 'camera must be an object');
     return;
   }
-  for (const key of ['alpha', 'beta', 'radius', 'orthoSize']) {
-    if (typeof value[key] !== 'number' || !Number.isFinite(value[key])) {
+
+  if (value.projection != null && value.projection !== 'orthographic' && value.projection !== 'perspective') {
+    add(`${path}.projection`, 'camera projection must be orthographic or perspective');
+  }
+
+  for (const key of ['alpha', 'beta']) {
+    if (!isFiniteNumber(value[key])) add(`${path}.${key}`, 'camera property must be a finite number');
+  }
+  for (const key of ['radius', 'orthoSize']) {
+    if (!isPositiveFiniteNumber(value[key])) add(`${path}.${key}`, 'camera property must be a positive finite number');
+  }
+  if (value.fov != null && !isPositiveFiniteNumber(value.fov)) add(`${path}.fov`, 'camera fov must be a positive finite number');
+
+  validateVec3(value.targetOffset, `${path}.targetOffset`, add);
+  validateVec2(value.targetScreenOffset, `${path}.targetScreenOffset`, add);
+
+  for (const key of ['minZ', 'maxZ', 'lowerRadiusLimit', 'upperRadiusLimit']) {
+    if (value[key] != null && !isPositiveFiniteNumber(value[key])) {
+      add(`${path}.${key}`, 'camera property must be a positive finite number');
+    }
+  }
+  for (const key of ['lowerBetaLimit', 'upperBetaLimit']) {
+    if (value[key] != null && !isFiniteNumber(value[key])) {
       add(`${path}.${key}`, 'camera property must be a finite number');
     }
   }
-  if (typeof value.radius === 'number' && value.radius <= 0) add(`${path}.radius`, 'camera radius must be positive');
-  if (typeof value.orthoSize === 'number' && value.orthoSize <= 0) add(`${path}.orthoSize`, 'camera orthoSize must be positive');
+  if (value.inertia != null && !isUnitRangeNumber(value.inertia)) {
+    add(`${path}.inertia`, 'camera inertia must be between 0 and 1');
+  }
+
+  if (isPositiveFiniteNumber(value.minZ) && isPositiveFiniteNumber(value.maxZ) && value.maxZ <= value.minZ) {
+    add(`${path}.maxZ`, 'camera maxZ must be greater than minZ');
+  }
+  if (isFiniteNumber(value.lowerBetaLimit) && isFiniteNumber(value.upperBetaLimit) && value.upperBetaLimit < value.lowerBetaLimit) {
+    add(`${path}.upperBetaLimit`, 'camera upperBetaLimit must be greater than or equal to lowerBetaLimit');
+  }
+  if (isPositiveFiniteNumber(value.lowerRadiusLimit) && isPositiveFiniteNumber(value.upperRadiusLimit) && value.upperRadiusLimit < value.lowerRadiusLimit) {
+    add(`${path}.upperRadiusLimit`, 'camera upperRadiusLimit must be greater than or equal to lowerRadiusLimit');
+  }
 }
 
 function validateDirectionalLight(value: unknown, path: string, add: (path: string, message: string) => void): void {

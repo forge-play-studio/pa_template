@@ -1,5 +1,6 @@
 import type {
   EditorSceneAsset,
+  EditorSceneCameraRig,
   EditorSceneDocument,
   EditorSceneGameObject,
 } from './editor-scene-document';
@@ -142,7 +143,7 @@ function compileGameObject(
         ...base,
         kind: 'transform',
         ...(gameObject.transformType ? { transformType: gameObject.transformType } : {}),
-        ...(gameObject.camera ? { camera: structuredClone(gameObject.camera) } : {}),
+        ...(gameObject.camera ? { camera: compileEditorSceneCamera(gameObject.camera) } : {}),
         ...(gameObject.light ? { light: structuredClone(gameObject.light) } : {}),
         ...(gameObject.groundDecal ? { groundDecal: structuredClone(gameObject.groundDecal) } : {}),
         ...(visualOverrides ? { overrides: visualOverrides } : {}),
@@ -162,4 +163,10 @@ function compileGameObject(
     },
     ...(visualOverrides ? { overrides: visualOverrides } : {}),
   } satisfies SceneInstanceNode;
+}
+
+function compileEditorSceneCamera(camera: EditorSceneCameraRig): SceneTransformNode['camera'] {
+  const compiled = structuredClone(camera) as EditorSceneCameraRig;
+  delete compiled.inspectorLanguage;
+  return compiled;
 }
