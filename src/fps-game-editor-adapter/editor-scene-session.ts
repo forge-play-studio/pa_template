@@ -3377,7 +3377,7 @@ function createCameraInspectorProperties(
     order,
     step: 0.01,
     tooltip: text.tooltips.minBeta,
-    controlOptions: { groupPath: 'camera.betaLimitRange', groupLabel: text.betaRange, groupOrder: 0 },
+    controlOptions: { groupPath: 'camera.betaLimitRange', groupLabel: text.betaRange, groupOrder: 0, groupLayout: 'inline' },
   }));
   order += 1;
   properties.push(createCameraNumberInspectorProperty(nodeKind, {
@@ -3387,7 +3387,7 @@ function createCameraInspectorProperties(
     order,
     step: 0.01,
     tooltip: text.tooltips.maxBeta,
-    controlOptions: { groupPath: 'camera.betaLimitRange', groupLabel: text.betaRange, groupOrder: 1 },
+    controlOptions: { groupPath: 'camera.betaLimitRange', groupLabel: text.betaRange, groupOrder: 1, groupLayout: 'inline' },
   }));
   order += 1;
   properties.push(createCameraNumberInspectorProperty(nodeKind, {
@@ -3398,7 +3398,7 @@ function createCameraInspectorProperties(
     min: 0.001,
     step: 0.1,
     tooltip: text.tooltips.minRadius,
-    controlOptions: { groupPath: 'camera.radiusLimitRange', groupLabel: text.radiusRange, groupOrder: 0 },
+    controlOptions: { groupPath: 'camera.radiusLimitRange', groupLabel: text.radiusRange, groupOrder: 0, groupLayout: 'inline' },
   }));
   order += 1;
   properties.push(createCameraNumberInspectorProperty(nodeKind, {
@@ -3409,7 +3409,7 @@ function createCameraInspectorProperties(
     min: 0.001,
     step: 0.1,
     tooltip: text.tooltips.maxRadius,
-    controlOptions: { groupPath: 'camera.radiusLimitRange', groupLabel: text.radiusRange, groupOrder: 1 },
+    controlOptions: { groupPath: 'camera.radiusLimitRange', groupLabel: text.radiusRange, groupOrder: 1, groupLayout: 'inline' },
   }));
   order += 1;
   properties.push(createCameraNumberInspectorProperty(nodeKind, {
