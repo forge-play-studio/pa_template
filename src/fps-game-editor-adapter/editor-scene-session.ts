@@ -38,6 +38,9 @@ import type {
   EditorSceneDocument,
   EditorSceneDirectionalLight,
   EditorSceneGameObject,
+  EditorSceneHemisphericLight,
+  EditorSceneLightInspectorLanguage,
+  EditorSceneLight,
   EditorSceneVec3,
 } from './editor-scene-document';
 import type {
@@ -138,15 +141,11 @@ type EditorSceneHierarchyMovePatchEntry = {
 };
 
 export const EDITOR_SCENE_MAIN_CAMERA_ID = 'main_camera';
+export const EDITOR_SCENE_ENVIRONMENT_LIGHT_ID = 'environment_light';
 export const EDITOR_SCENE_SUN_LIGHT_ID = 'sun_light';
 const EDITOR_SCENE_ROOT_ID = 'root';
 const EDITOR_SCENE_ROOT_TRANSFORM = createIdentityEditorTransform();
 const EDITOR_SCENE_GAME_OBJECT_GUID_PREFIX = 'go_';
-const DEFAULT_CAMERA_LOWER_BETA_LIMIT = 0.1;
-const DEFAULT_CAMERA_UPPER_BETA_LIMIT = 1.45;
-const DEFAULT_CAMERA_RADIUS_LIMIT_FACTOR_MIN = 0.25;
-const DEFAULT_CAMERA_RADIUS_LIMIT_FACTOR_MAX = 4;
-const MIN_CAMERA_RADIUS_LIMIT = 0.1;
 
 export const DEFAULT_EDITOR_SCENE_CAMERA: EditorSceneCameraRig = {
   projection: 'orthographic',
@@ -158,10 +157,10 @@ export const DEFAULT_EDITOR_SCENE_CAMERA: EditorSceneCameraRig = {
   targetOffset: { x: 0, y: 0, z: 0 },
   minZ: 1,
   maxZ: 10000,
-  lowerBetaLimit: DEFAULT_CAMERA_LOWER_BETA_LIMIT,
-  upperBetaLimit: DEFAULT_CAMERA_UPPER_BETA_LIMIT,
-  lowerRadiusLimit: 3.5,
-  upperRadiusLimit: 56,
+  lowerBetaLimit: 0.8,
+  upperBetaLimit: 0.8,
+  lowerRadiusLimit: 14,
+  upperRadiusLimit: 14,
   inertia: 0.9,
   targetScreenOffset: { x: 0, y: 0 },
   inspectorLanguage: 'zh',
@@ -172,6 +171,15 @@ export const DEFAULT_EDITOR_SCENE_SUN_LIGHT: EditorSceneDirectionalLight = {
   intensity: 2,
   direction: { x: -0.3, y: -1, z: -0.2 },
   diffuseColor: { r: 1, g: 1, b: 1 },
+  inspectorLanguage: 'zh',
+};
+
+export const DEFAULT_EDITOR_SCENE_ENVIRONMENT_LIGHT: EditorSceneHemisphericLight = {
+  type: 'hemispheric',
+  intensity: 0.8,
+  diffuseColor: { r: 1, g: 1, b: 1 },
+  groundColor: { r: 0.48, g: 0.52, b: 0.62 },
+  inspectorLanguage: 'zh',
 };
 
 type CameraInspectorText = {
@@ -192,38 +200,12 @@ type CameraInspectorText = {
   farClip: string;
   minBeta: string;
   maxBeta: string;
-  betaRange: string;
   minRadius: string;
   maxRadius: string;
-  radiusRange: string;
   inertia: string;
   screenOffset: string;
   rawCamera: string;
-  tooltips: CameraInspectorTooltipText;
 };
-
-type CameraInspectorTooltipText = Record<
-  | 'language'
-  | 'projection'
-  | 'alpha'
-  | 'beta'
-  | 'radius'
-  | 'orthoSize'
-  | 'fov'
-  | 'targetOffset'
-  | 'nearClip'
-  | 'farClip'
-  | 'minBeta'
-  | 'maxBeta'
-  | 'betaRange'
-  | 'minRadius'
-  | 'maxRadius'
-  | 'radiusRange'
-  | 'inertia'
-  | 'screenOffset'
-  | 'rawCamera',
-  string
->;
 
 const CAMERA_INSPECTOR_TEXT: Record<EditorSceneCameraInspectorLanguage, CameraInspectorText> = {
   zh: {
@@ -234,44 +216,21 @@ const CAMERA_INSPECTOR_TEXT: Record<EditorSceneCameraInspectorLanguage, CameraIn
     projection: '投影模式',
     projectionOrthographic: '正交',
     projectionPerspective: '透视',
-    alpha: '水平环绕角',
-    beta: '俯仰角',
-    radius: '跟随距离',
-    orthoSize: '正交视野高度',
-    fov: '透视视野角',
-    targetOffset: '观察目标偏移',
-    nearClip: '近裁面距离',
-    farClip: '远裁面距离',
-    minBeta: '最小俯仰角',
-    maxBeta: '最大俯仰角',
-    betaRange: '俯仰角范围',
-    minRadius: '最小跟随距离',
-    maxRadius: '最大跟随距离',
-    radiusRange: '跟随距离范围',
-    inertia: '平滑惯性',
-    screenOffset: '画面偏移',
-    rawCamera: '原始摄像机数据',
-    tooltips: {
-      language: '切换摄像机 Inspector 的显示语言。',
-      projection: '切换 Main Camera 使用正交投影或透视投影。',
-      alpha: 'ArcRotate 水平环绕角，单位为弧度。',
-      beta: 'ArcRotate 垂直俯仰角，单位为弧度。',
-      radius: '摄像机到观察目标的距离。',
-      orthoSize: '正交模式下的视野高度，数值越大看到的范围越大。',
-      fov: '透视模式下的垂直视野角；界面用角度显示，保存为弧度。',
-      targetOffset: 'Main Camera 围绕观察的目标点偏移，按 X/Y/Z 一行编辑。',
-      nearClip: '小于该距离的内容不会被摄像机渲染。',
-      farClip: '大于该距离的内容不会被摄像机渲染。',
-      minBeta: '限制运行时可用的最小俯仰角。',
-      maxBeta: '限制运行时可用的最大俯仰角。',
-      betaRange: '运行时允许的俯仰角范围，左侧为最小值，右侧为最大值。',
-      minRadius: '限制摄像机可接近目标的最小距离。',
-      maxRadius: '限制摄像机可远离目标的最大距离。',
-      radiusRange: '运行时允许的跟随距离范围，左侧为最小值，右侧为最大值。',
-      inertia: '摄像机输入或跟随的平滑惯性，0 最灵敏，1 最平滑。',
-      screenOffset: '将观察目标在画面中偏移，X 为水平，Y 为垂直。',
-      rawCamera: '合并默认值前的原始摄像机 authoring 数据。',
-    },
+    alpha: 'Alpha',
+    beta: 'Beta',
+    radius: '半径',
+    orthoSize: '正交尺寸',
+    fov: '视野角度',
+    targetOffset: '目标偏移',
+    nearClip: '近裁剪',
+    farClip: '远裁剪',
+    minBeta: '最小 Beta',
+    maxBeta: '最大 Beta',
+    minRadius: '最小半径',
+    maxRadius: '最大半径',
+    inertia: '惯性',
+    screenOffset: '屏幕偏移',
+    rawCamera: '原始摄像机',
   },
   en: {
     title: 'Camera',
@@ -291,34 +250,11 @@ const CAMERA_INSPECTOR_TEXT: Record<EditorSceneCameraInspectorLanguage, CameraIn
     farClip: 'Far Clip',
     minBeta: 'Min Beta',
     maxBeta: 'Max Beta',
-    betaRange: 'Pitch Range',
     minRadius: 'Min Radius',
     maxRadius: 'Max Radius',
-    radiusRange: 'Follow Distance Range',
     inertia: 'Inertia',
     screenOffset: 'Screen Offset',
     rawCamera: 'Raw Camera',
-    tooltips: {
-      language: 'Switch the camera Inspector language.',
-      projection: 'Switch the Main Camera between orthographic and perspective projection.',
-      alpha: 'ArcRotate horizontal orbit angle, in radians.',
-      beta: 'ArcRotate vertical pitch angle, in radians.',
-      radius: 'Distance from the camera to the look target.',
-      orthoSize: 'Orthographic view height. Larger values show a wider area.',
-      fov: 'Perspective vertical field of view. The UI uses degrees; saved data uses radians.',
-      targetOffset: 'Look target offset for the Main Camera, edited as X/Y/Z in one row.',
-      nearClip: 'Content closer than this distance is not rendered.',
-      farClip: 'Content farther than this distance is not rendered.',
-      minBeta: 'Minimum allowed runtime pitch angle.',
-      maxBeta: 'Maximum allowed runtime pitch angle.',
-      betaRange: 'Allowed runtime pitch range. Left is minimum; right is maximum.',
-      minRadius: 'Minimum allowed camera distance from the target.',
-      maxRadius: 'Maximum allowed camera distance from the target.',
-      radiusRange: 'Allowed runtime follow distance range. Left is minimum; right is maximum.',
-      inertia: 'Camera input/follow smoothing. 0 is most responsive; 1 is smoothest.',
-      screenOffset: 'Moves the look target in screen space. X is horizontal; Y is vertical.',
-      rawCamera: 'Raw camera authoring data before defaults are merged.',
-    },
   },
 };
 
@@ -336,6 +272,110 @@ function createCameraProjectionOptions(text: CameraInspectorText): Array<{ label
     { label: text.projectionOrthographic, value: 'orthographic' },
     { label: text.projectionPerspective, value: 'perspective' },
   ];
+}
+
+type LightInspectorText = {
+  hemisphericTitle: string;
+  directionalTitle: string;
+  hemisphericSummary: string;
+  directionalSummary: string;
+  language: string;
+  type: string;
+  typeHemispheric: string;
+  typeDirectional: string;
+  intensity: string;
+  skyLightColor: string;
+  groundColor: string;
+  lightColor: string;
+  horizontalAngle: string;
+  elevationAngle: string;
+  rawLight: string;
+  tooltips: {
+    language: string;
+    type: string;
+    intensity: string;
+    skyLightColor: string;
+    groundColor: string;
+    lightColor: string;
+    horizontalAngle: string;
+    elevationAngle: string;
+    rawLight: string;
+  };
+};
+
+const LIGHT_INSPECTOR_TEXT: Record<EditorSceneLightInspectorLanguage, LightInspectorText> = {
+  zh: {
+    hemisphericTitle: '环境光',
+    directionalTitle: '直射光',
+    hemisphericSummary: 'Hemispheric',
+    directionalSummary: 'Directional',
+    language: '语言',
+    type: '类型',
+    typeHemispheric: '环境光',
+    typeDirectional: '直射光',
+    intensity: '强度',
+    skyLightColor: '天空光颜色',
+    groundColor: '地面颜色',
+    lightColor: '光照颜色',
+    horizontalAngle: '水平角',
+    elevationAngle: '高度角',
+    rawLight: '原始光源数据',
+    tooltips: {
+      language: '切换此光源检查器的属性显示语言。该字段只用于编辑器，不会导出到运行时。',
+      type: '系统光源类型只读。对应 BabylonJS 的 HemisphericLight 或 DirectionalLight。',
+      intensity: '光源强度，必须是非负数。BabylonJS 不设置硬上限；白色材质在较高强度下通常已经接近显示饱和，继续增大视觉变化会不明显。',
+      skyLightColor: '环境光来自天空方向的漫反射颜色，对应 BabylonJS HemisphericLight.diffuse。',
+      groundColor: '环境光来自地面反射方向的颜色，对应 BabylonJS HemisphericLight.groundColor。',
+      lightColor: '直射光颜色，对应 BabylonJS DirectionalLight.diffuse。',
+      horizontalAngle: '直射光在 XZ 平面内的朝向角度。编辑器会把它转换为 BabylonJS DirectionalLight.direction。',
+      elevationAngle: '直射光相对地平线的高度角；90 度表示从正上方照下。编辑器会把它转换为 BabylonJS DirectionalLight.direction。',
+      rawLight: '编辑器文档中的光源原始数据，只读显示。',
+    },
+  },
+  en: {
+    hemisphericTitle: 'Environment Light',
+    directionalTitle: 'Directional Light',
+    hemisphericSummary: 'Hemispheric',
+    directionalSummary: 'Directional',
+    language: 'Language',
+    type: 'Type',
+    typeHemispheric: 'Environment Light',
+    typeDirectional: 'Directional Light',
+    intensity: 'Intensity',
+    skyLightColor: 'Sky Light Color',
+    groundColor: 'Ground Color',
+    lightColor: 'Light Color',
+    horizontalAngle: 'Horizontal Angle',
+    elevationAngle: 'Elevation Angle',
+    rawLight: 'Raw Light Data',
+    tooltips: {
+      language: 'Switches the display language for this light inspector. This editor-only field is not exported to runtime.',
+      type: 'Read-only system light type. Maps to BabylonJS HemisphericLight or DirectionalLight.',
+      intensity: 'Light intensity. Must be a non-negative number. BabylonJS does not impose a hard upper limit; white surfaces often saturate at high intensity, so further increases may look subtle.',
+      skyLightColor: 'Diffuse sky color for the environment light. Maps to BabylonJS HemisphericLight.diffuse.',
+      groundColor: 'Ground bounce color for the environment light. Maps to BabylonJS HemisphericLight.groundColor.',
+      lightColor: 'Directional light color. Maps to BabylonJS DirectionalLight.diffuse.',
+      horizontalAngle: 'Directional light heading in the XZ plane. The editor converts it to BabylonJS DirectionalLight.direction.',
+      elevationAngle: 'Directional light elevation above the horizon; 90 degrees points straight down. The editor converts it to BabylonJS DirectionalLight.direction.',
+      rawLight: 'Read-only raw light data from the editor document.',
+    },
+  },
+};
+
+const LIGHT_LANGUAGE_OPTIONS = CAMERA_LANGUAGE_OPTIONS;
+const LIGHT_DIRECTION_HORIZONTAL_ANGLE_PATH = 'light.directionHorizontalAngleDeg';
+const LIGHT_DIRECTION_ELEVATION_ANGLE_PATH = 'light.directionElevationAngleDeg';
+const LIGHT_DIRECTION_HORIZONTAL_MIN_DEG = -180;
+const LIGHT_DIRECTION_HORIZONTAL_MAX_DEG = 180;
+const LIGHT_DIRECTION_ELEVATION_MIN_DEG = -90;
+const LIGHT_DIRECTION_ELEVATION_MAX_DEG = 90;
+
+function getLightInspectorText(language: EditorSceneLightInspectorLanguage): LightInspectorText {
+  return LIGHT_INSPECTOR_TEXT[language] ?? LIGHT_INSPECTOR_TEXT.zh;
+}
+
+function getLightInspectorLanguage(light: EditorSceneLight): EditorSceneLightInspectorLanguage {
+  return light.inspectorLanguage === 'en' ? 'en' : 'zh';
 }
 
 function createEditorSceneGameObjectGuid(): string {
@@ -501,7 +541,7 @@ function reduceEditorSceneDocumentUnchecked(
     return applyEditorSceneSerializedPropertyPatch(document, patch);
   }
   if (patch.kind === 'game-object.field') {
-    if (isBlockedEditorSceneCameraFieldPatch(document, patch.targetId, patch.path, patch.value)) return document;
+    if (isBlockedEditorSceneSystemFieldPatch(document, patch.targetId, patch.path, patch.value)) return document;
     return patchEditorSceneGameObjectField(document, patch.targetId, patch.path, patch.value);
   }
   if (patch.kind === 'game-object.create-from-asset') {
@@ -509,6 +549,7 @@ function reduceEditorSceneDocumentUnchecked(
   }
   if (patch.kind === 'game-object.transform') {
     if (isEditorSceneRootGameObjectId(patch.targetId)) return document;
+    if (isEditorSceneProtectedSystemGameObjectId(document, patch.targetId)) return document;
     return patchEditorSceneGameObjectTransform(document, patch.targetId, {
       position: patch.transform.position,
       rotation: patch.transform.rotation,
@@ -519,6 +560,7 @@ function reduceEditorSceneDocumentUnchecked(
     return patch.targets.reduce(
       (nextDocument, target) => {
         if (isEditorSceneRootGameObjectId(target.targetId)) return nextDocument;
+        if (isEditorSceneProtectedSystemGameObjectId(nextDocument, target.targetId)) return nextDocument;
         const gameObject = nextDocument.scene.gameObjects.find((entry) => entry.id === target.targetId);
         const transform = gameObject ? findEditorSceneTransform(gameObject) : null;
         return patchEditorSceneGameObjectTransform(nextDocument, target.targetId, {
@@ -541,7 +583,7 @@ function reduceEditorSceneDocumentUnchecked(
     const gameObjects = patch.gameObjects.filter((gameObject) => (
       !existingIds.has(gameObject.id)
       && !isEditorSceneRootGameObject(gameObject)
-      && !isEditorSceneCameraGameObject(gameObject)
+      && !isEditorSceneProtectedSystemGameObject(gameObject)
     ));
     if (gameObjects.length === 0) return document;
     return {
@@ -568,6 +610,7 @@ function reduceEditorSceneDocumentUnchecked(
   }
   if (patch.kind === 'game-object.create-group') {
     if (document.scene.gameObjects.some((gameObject) => gameObject.id === patch.gameObject.id)) return document;
+    if (isEditorSceneProtectedSystemGameObject(patch.gameObject)) return document;
     return {
       ...document,
       scene: {
@@ -578,6 +621,7 @@ function reduceEditorSceneDocumentUnchecked(
   }
   if (patch.kind === 'game-object.create-primitive') {
     if (document.scene.gameObjects.some((gameObject) => gameObject.id === patch.gameObject.id)) return document;
+    if (isEditorSceneProtectedSystemGameObject(patch.gameObject)) return document;
     return {
       ...document,
       scene: {
@@ -590,7 +634,7 @@ function reduceEditorSceneDocumentUnchecked(
     if (patch.targetIds.some(isEditorSceneRootGameObjectId)) return document;
     const deleteIds = collectEditorSceneSubtreeIds(document, patch.targetIds);
     if (deleteIds.size === 0) return document;
-    if (document.scene.gameObjects.some((gameObject) => deleteIds.has(gameObject.id) && isEditorSceneCameraGameObject(gameObject))) {
+    if (document.scene.gameObjects.some((gameObject) => deleteIds.has(gameObject.id) && isEditorSceneProtectedSystemGameObject(gameObject))) {
       return document;
     }
     return {
@@ -603,6 +647,8 @@ function reduceEditorSceneDocumentUnchecked(
   }
   if (patch.kind === 'game-object.reparent') {
     if (isEditorSceneRootGameObjectId(patch.targetId)) return document;
+    if (isEditorSceneProtectedSystemGameObjectId(document, patch.targetId)) return document;
+    if (isEditorSceneProtectedSystemGameObjectId(document, patch.parentId)) return document;
     return {
       ...document,
       scene: {
@@ -629,6 +675,9 @@ function reduceEditorSceneDocumentUnchecked(
     };
   }
   if (patch.kind === 'game-object.hierarchy-move') {
+    if (patch.moves.some((move) => isEditorSceneProtectedSystemGameObjectId(document, move.targetId) || isEditorSceneProtectedSystemGameObjectId(document, move.parentId))) {
+      return document;
+    }
     const moves = new Map(patch.moves
       .filter((move) => !isEditorSceneRootGameObjectId(move.targetId))
       .map((move) => [move.targetId, move]));
@@ -660,9 +709,14 @@ function reduceEditorSceneDocumentUnchecked(
   }
   if (patch.kind === 'game-object.group-selection') {
     if (isEditorSceneRootGameObject(patch.gameObject)) return document;
+    if (isEditorSceneProtectedSystemGameObject(patch.gameObject)) return document;
+    if (isEditorSceneProtectedSystemGameObjectId(document, patch.gameObject.parentId)) return document;
     if (document.scene.gameObjects.some((gameObject) => gameObject.id === patch.gameObject.id)) return document;
     const childIds = new Set(patch.childIds.filter((id) => !isEditorSceneRootGameObjectId(id)));
     if (childIds.size === 0) return document;
+    if (document.scene.gameObjects.some((gameObject) => childIds.has(gameObject.id) && isEditorSceneProtectedSystemGameObject(gameObject))) {
+      return document;
+    }
     const updated = document.scene.gameObjects.map((gameObject) => {
       if (!childIds.has(gameObject.id)) return gameObject;
       const transform = patch.childTransforms[gameObject.id];
@@ -713,17 +767,38 @@ export function isEditorSceneLightGameObject(gameObject: EditorSceneGameObject):
 
 function isEditorSceneProtectedSystemGameObject(gameObject: EditorSceneGameObject): boolean {
   return gameObject.id === EDITOR_SCENE_MAIN_CAMERA_ID
+    || gameObject.id === EDITOR_SCENE_ENVIRONMENT_LIGHT_ID
     || gameObject.id === EDITOR_SCENE_SUN_LIGHT_ID
     || isEditorSceneCameraGameObject(gameObject)
     || isEditorSceneLightGameObject(gameObject);
+}
+
+function isEditorSceneProtectedSystemGameObjectId(document: EditorSceneDocument, id: string | undefined): boolean {
+  if (!id) return false;
+  const gameObject = findEditorSceneGameObject(document, id);
+  return !!gameObject && isEditorSceneProtectedSystemGameObject(gameObject);
 }
 
 export function ensureEditorSceneEnvironmentDefaults(document: EditorSceneDocument): EditorSceneDocument {
   const documentWithGuids = ensureEditorSceneGameObjectGuids(document);
   const rootId = resolveEditorSceneRootContainerId(documentWithGuids);
   let cameraSeen = false;
+  let environmentLightSeen = false;
+  let sunLightSeen = false;
   let changed = documentWithGuids !== document;
   const gameObjects = documentWithGuids.scene.gameObjects.map((gameObject) => {
+    if (gameObject.id === EDITOR_SCENE_ENVIRONMENT_LIGHT_ID) {
+      environmentLightSeen = true;
+      const next = normalizeEditorSceneSystemLightGameObject(gameObject, 'hemispheric');
+      changed = changed || next !== gameObject;
+      return next;
+    }
+    if (gameObject.id === EDITOR_SCENE_SUN_LIGHT_ID) {
+      sunLightSeen = true;
+      const next = normalizeEditorSceneSystemLightGameObject(gameObject, 'directional');
+      changed = changed || next !== gameObject;
+      return next;
+    }
     if (isEditorSceneCameraGameObject(gameObject)) {
       if (!cameraSeen) {
         cameraSeen = true;
@@ -735,8 +810,8 @@ export function ensureEditorSceneEnvironmentDefaults(document: EditorSceneDocume
       return normalizeEditorScenePlainTransformGameObject(gameObject);
     }
     if (isEditorSceneLightGameObject(gameObject)) {
-      const next = normalizeEditorSceneLightGameObject(gameObject);
-      changed = changed || next !== gameObject;
+      const next = normalizeEditorScenePlainTransformGameObject(gameObject);
+      changed = true;
       return next;
     }
     return gameObject;
@@ -747,7 +822,11 @@ export function ensureEditorSceneEnvironmentDefaults(document: EditorSceneDocume
     changed = true;
     gameObjects.push(createDefaultEditorSceneCameraGameObject(rootId, usedIds));
   }
-  if (!gameObjects.some(isEditorSceneLightGameObject)) {
+  if (!environmentLightSeen) {
+    changed = true;
+    gameObjects.push(createDefaultEditorSceneEnvironmentLightGameObject(rootId, usedIds));
+  }
+  if (!sunLightSeen) {
     changed = true;
     gameObjects.push(createDefaultEditorSceneSunLightGameObject(rootId, usedIds));
   }
@@ -883,11 +962,18 @@ export function createEditorSceneCreatePrimitivePatch(
 ): { patch: EditorSceneDocumentPatch; label: string; createdId: string; changedIds: string[] } | null {
   const shape = normalizeEditorScenePrimitiveShape(intent.shape);
   if (!shape) return null;
-  const parentId = resolveCreatePrimitiveParentId(document, intent);
+  const parentId = resolveCreateGroupParentId(document, intent);
   if (parentId === null) return null;
   const id = createUniqueEditorSceneId(document.scene.gameObjects.map((gameObject) => gameObject.id), shape);
   const name = intent.name?.trim() || getEditorScenePrimitiveDisplayName(shape);
-  const localTransform = createDefaultEditorScenePrimitiveTransform(shape);
+  const worldTransform: EditorTransformSnapshot = {
+    position: getNextPlacementPosition(document),
+    rotation: { x: 0, y: 0, z: 0 },
+    scale: getEditorScenePrimitiveDefaultScale(shape),
+  };
+  const localTransform = parentId
+    ? toLocalTransformForParent(document, parentId, worldTransform) ?? worldTransform
+    : worldTransform;
   const gameObject: EditorSceneGameObject = {
     id,
     guid: createEditorSceneGameObjectGuid(),
@@ -923,7 +1009,7 @@ export function createEditorSceneDeleteSubtreePatch(
   if (intent.ids.some(isEditorSceneRootGameObjectId)) return null;
   const deletedIds = [...collectEditorSceneSubtreeIds(document, intent.ids)];
   if (deletedIds.length === 0) return null;
-  if (document.scene.gameObjects.some((gameObject) => deletedIds.includes(gameObject.id) && isEditorSceneCameraGameObject(gameObject))) {
+  if (document.scene.gameObjects.some((gameObject) => deletedIds.includes(gameObject.id) && isEditorSceneProtectedSystemGameObject(gameObject))) {
     return null;
   }
   const fallbackSelectionId = resolveDeleteFallbackSelectionId(document, deletedIds, intent.activeId ?? null);
@@ -951,7 +1037,9 @@ export function validateEditorSceneReparent(
   const target = findEditorSceneGameObject(document, intent.targetId);
   if (!dragged) return { ok: false, reason: `GameObject not found: ${intent.draggedId}` };
   if (isEditorSceneRootGameObject(dragged)) return { ok: false, reason: 'Root GameObject cannot be reparented.' };
+  if (isEditorSceneProtectedSystemGameObject(dragged)) return { ok: false, reason: 'Protected system GameObject cannot be reparented.' };
   if (!target) return { ok: false, reason: `Parent GameObject not found: ${intent.targetId}` };
+  if (isEditorSceneProtectedSystemGameObject(target)) return { ok: false, reason: 'Protected system GameObject cannot have children.' };
   if (!findEditorSceneTransform(dragged)) return { ok: false, reason: `${intent.draggedId} has no Transform to preserve.` };
   if (!canEditorSceneGameObjectHaveChildren(target)) return { ok: false, reason: `${intent.targetId} cannot have children.` };
   if (dragged.id === target.id) return { ok: false, reason: 'GameObject cannot be parented to itself.' };
@@ -999,7 +1087,13 @@ export function validateEditorSceneHierarchyMove(
   if (!validation.ok) return validation;
   const ids = getTopLevelSceneGraphNodeIds(hierarchy, intent.ids);
   if (ids.some(isEditorSceneRootGameObjectId)) return { ok: false, reason: 'Root GameObject cannot be moved.' };
+  if (ids.some((id) => isEditorSceneProtectedSystemGameObjectId(document, id))) {
+    return { ok: false, reason: 'Protected system GameObject cannot be moved.' };
+  }
   const parentId = resolveEditorSceneMoveParentId(document, intent);
+  if (isEditorSceneProtectedSystemGameObjectId(document, parentId)) {
+    return { ok: false, reason: 'Protected system GameObject cannot have children.' };
+  }
   if (parentId && !isEditorSceneContainer(document, parentId)) {
     return { ok: false, reason: `${parentId} cannot have children.` };
   }
@@ -1068,7 +1162,13 @@ export function validateEditorSceneGroupSelection(
   if (!validation.ok) return validation;
   const ids = getTopLevelSceneGraphNodeIds(hierarchy, intent.ids);
   if (ids.some(isEditorSceneRootGameObjectId)) return { ok: false, reason: 'Root GameObject cannot be grouped.' };
+  if (ids.some((id) => isEditorSceneProtectedSystemGameObjectId(document, id))) {
+    return { ok: false, reason: 'Protected system GameObject cannot be grouped.' };
+  }
   const parentId = resolveEditorSceneGroupSelectionParentId(document, intent.parentId ?? null);
+  if (isEditorSceneProtectedSystemGameObjectId(document, parentId)) {
+    return { ok: false, reason: 'Protected system GameObject cannot have children.' };
+  }
   if (parentId && !isEditorSceneContainer(document, parentId)) {
     return { ok: false, reason: `${parentId} cannot have children.` };
   }
@@ -1171,7 +1271,7 @@ export function createEditorSceneDuplicateSelectionPatch(input: {
   const usedIds = new Set(input.document.scene.gameObjects.map((gameObject) => gameObject.id));
   for (const targetId of input.targetIds) {
     const source = findEditorSceneGameObject(input.document, targetId);
-    if (!source || isEditorSceneRootGameObject(source) || isEditorSceneCameraGameObject(source)) continue;
+    if (!source || isEditorSceneRootGameObject(source) || isEditorSceneProtectedSystemGameObject(source)) continue;
     const duplicateId = createUniqueEditorSceneId([...usedIds], `${source.id}_copy`);
     usedIds.add(duplicateId);
     idMap.set(source.id, duplicateId);
@@ -2366,7 +2466,7 @@ export function createEditorSceneInspectorPropertyPatch(
   const value = normalizeEditorSceneInspectorValue(path, input.value);
   if (isEditorSceneRootTransformPath(input.targetId, path)) return null;
   if (!validateEditorSceneInspectorValue(input.document, gameObject, path, value).ok) return null;
-  if (isBlockedEditorSceneCameraFieldPatch(input.document, input.targetId, path, value)) return null;
+  if (isBlockedEditorSceneSystemFieldPatch(input.document, input.targetId, path, value)) return null;
   const changedIds = path.startsWith('transform.')
     ? collectEditorSceneSubtreeIdList(input.document, [input.targetId])
     : [input.targetId];
@@ -2414,14 +2514,6 @@ function resolveCreateGroupParentId(
   }
   return document.scene.gameObjects.find((gameObject) => gameObject.id === EDITOR_SCENE_ROOT_ID && canEditorSceneGameObjectHaveChildren(gameObject))?.id
     ?? document.scene.gameObjects.find((gameObject) => !gameObject.parentId && canEditorSceneGameObjectHaveChildren(gameObject))?.id;
-}
-
-function resolveCreatePrimitiveParentId(
-  document: EditorSceneDocument,
-  intent: SceneGraphCreatePrimitiveIntent,
-): string | null | undefined {
-  if (intent.parentId === null) return resolveEditorSceneRootContainerId(document);
-  return resolveCreateGroupParentId(document, intent);
 }
 
 function resolveEditorSceneRootContainerId(document: EditorSceneDocument): string | undefined {
@@ -2794,15 +2886,20 @@ function createEditorSceneInspectorSections(
     });
   }
   if (nodeKind === 'transform' && isEditorSceneLightGameObject(gameObject)) {
+    const light = mergeEditorSceneLightDefaults(
+      gameObject.light,
+      gameObject.id === EDITOR_SCENE_ENVIRONMENT_LIGHT_ID ? 'hemispheric' : 'directional',
+    );
+    const lightText = getLightInspectorText(getLightInspectorLanguage(light));
     sections.push({
       id: 'light',
-      title: 'Sun Light',
+      title: light.type === 'hemispheric' ? lightText.hemisphericTitle : lightText.directionalTitle,
       order: 44,
       placement: 'body',
-      summary: 'Directional',
+      summary: light.type === 'hemispheric' ? lightText.hemisphericSummary : lightText.directionalSummary,
       persistence: 'document',
       collapsedByDefault: false,
-      properties: createSunLightInspectorProperties(nodeKind, gameObject.light),
+      properties: createLightInspectorProperties(nodeKind, light),
     });
   }
   if (nodeKind === 'instance' || nodeKind === 'primitive' || (nodeKind === 'transform' && !isEditorSceneCameraGameObject(gameObject) && !isEditorSceneLightGameObject(gameObject))) {
@@ -3007,13 +3104,14 @@ function createTransformInspectorProperties(
   const properties: InspectorProperty<EditorSceneDocument>[] = [];
   let order = 0;
   const rootTransform = isEditorSceneRootGameObject(gameObject);
+  const protectedTransform = rootTransform || isEditorSceneProtectedSystemGameObject(gameObject);
   const displayTransform = rootTransform ? EDITOR_SCENE_ROOT_TRANSFORM : transform;
   for (const vectorName of ['position', 'rotation', 'scale'] as const) {
     const vector = readTransformVector(displayTransform, vectorName);
     for (const axis of ['x', 'y', 'z'] as const) {
       const path = `transform.${vectorName}.${axis}`;
       const value = vectorName === 'rotation' ? roundForInspector(radiansToDegrees(vector[axis])) : vector[axis];
-      properties.push(rootTransform
+      properties.push(protectedTransform
         ? createReadonlyInspectorProperty(path, `${toEditorSceneTransformVectorLabel(vectorName)}.${axis}`, value, order)
         : createDocumentInspectorProperty(null, nodeKind, {
             path,
@@ -3266,7 +3364,6 @@ function createCameraInspectorProperties(
     order,
     options: CAMERA_LANGUAGE_OPTIONS,
     controlOptions: { variant: 'segmented' },
-    tooltip: text.tooltips.language,
   }));
   order += 1;
 
@@ -3280,37 +3377,14 @@ function createCameraInspectorProperties(
     order,
     options: createCameraProjectionOptions(text),
     controlOptions: { variant: 'segmented' },
-    tooltip: text.tooltips.projection,
   }));
   order += 1;
 
-  properties.push(createCameraNumberInspectorProperty(nodeKind, {
-    path: 'camera.alpha',
-    label: text.alpha,
-    value: rig.alpha,
-    order,
-    step: 0.01,
-    tooltip: text.tooltips.alpha,
-  }));
+  properties.push(createCameraNumberInspectorProperty(nodeKind, { path: 'camera.alpha', label: text.alpha, value: rig.alpha, order, step: 0.01 }));
   order += 1;
-  properties.push(createCameraNumberInspectorProperty(nodeKind, {
-    path: 'camera.beta',
-    label: text.beta,
-    value: rig.beta,
-    order,
-    step: 0.01,
-    tooltip: text.tooltips.beta,
-  }));
+  properties.push(createCameraNumberInspectorProperty(nodeKind, { path: 'camera.beta', label: text.beta, value: rig.beta, order, step: 0.01 }));
   order += 1;
-  properties.push(createCameraNumberInspectorProperty(nodeKind, {
-    path: 'camera.radius',
-    label: text.radius,
-    value: rig.radius,
-    order,
-    min: 0.001,
-    step: 0.1,
-    tooltip: text.tooltips.radius,
-  }));
+  properties.push(createCameraNumberInspectorProperty(nodeKind, { path: 'camera.radius', label: text.radius, value: rig.radius, order, min: 0.001, step: 0.1 }));
   order += 1;
 
   if ((rig.projection ?? 'orthographic') === 'perspective') {
@@ -3322,7 +3396,6 @@ function createCameraInspectorProperties(
       min: 1,
       max: 179,
       step: 1,
-      tooltip: text.tooltips.fov,
       coerce: (value: unknown) => typeof value === 'number' && Number.isFinite(value) ? degreesToRadians(value) : value,
     }));
   } else {
@@ -3333,96 +3406,34 @@ function createCameraInspectorProperties(
       order,
       min: 0.001,
       step: 0.1,
-      tooltip: text.tooltips.orthoSize,
     }));
   }
   order += 1;
 
-  properties.push(createDocumentInspectorProperty(null, nodeKind, {
-    path: 'camera.targetOffset',
-    label: text.targetOffset,
-    valueType: 'vec3',
-    control: 'vec3',
-    value: rig.targetOffset ?? { x: 0, y: 0, z: 0 },
-    commitMode: 'live',
-    order,
-    step: 0.05,
-    tooltip: text.tooltips.targetOffset,
-  }));
-  order += 1;
+  for (const axis of ['x', 'y', 'z'] as const) {
+    properties.push(createCameraNumberInspectorProperty(nodeKind, {
+      path: `camera.targetOffset.${axis}`,
+      label: `${text.targetOffset} ${axis.toUpperCase()}`,
+      value: rig.targetOffset?.[axis] ?? 0,
+      order,
+      step: 0.05,
+    }));
+    order += 1;
+  }
 
-  properties.push(createCameraNumberInspectorProperty(nodeKind, {
-    path: 'camera.minZ',
-    label: text.nearClip,
-    value: rig.minZ ?? 1,
-    order,
-    min: 0.001,
-    step: 0.1,
-    tooltip: text.tooltips.nearClip,
-  }));
+  properties.push(createCameraNumberInspectorProperty(nodeKind, { path: 'camera.minZ', label: text.nearClip, value: rig.minZ ?? 1, order, min: 0.001, step: 0.1 }));
   order += 1;
-  properties.push(createCameraNumberInspectorProperty(nodeKind, {
-    path: 'camera.maxZ',
-    label: text.farClip,
-    value: rig.maxZ ?? 10000,
-    order,
-    min: 0.001,
-    step: 1,
-    tooltip: text.tooltips.farClip,
-  }));
+  properties.push(createCameraNumberInspectorProperty(nodeKind, { path: 'camera.maxZ', label: text.farClip, value: rig.maxZ ?? 10000, order, min: 0.001, step: 1 }));
   order += 1;
-  properties.push(createCameraNumberInspectorProperty(nodeKind, {
-    path: 'camera.lowerBetaLimit',
-    label: text.minBeta,
-    value: rig.lowerBetaLimit ?? rig.beta,
-    order,
-    step: 0.01,
-    tooltip: text.tooltips.minBeta,
-    controlOptions: { groupPath: 'camera.betaLimitRange', groupLabel: text.betaRange, groupOrder: 0, groupLayout: 'inline' },
-  }));
+  properties.push(createCameraNumberInspectorProperty(nodeKind, { path: 'camera.lowerBetaLimit', label: text.minBeta, value: rig.lowerBetaLimit ?? rig.beta, order, step: 0.01 }));
   order += 1;
-  properties.push(createCameraNumberInspectorProperty(nodeKind, {
-    path: 'camera.upperBetaLimit',
-    label: text.maxBeta,
-    value: rig.upperBetaLimit ?? rig.beta,
-    order,
-    step: 0.01,
-    tooltip: text.tooltips.maxBeta,
-    controlOptions: { groupPath: 'camera.betaLimitRange', groupLabel: text.betaRange, groupOrder: 1, groupLayout: 'inline' },
-  }));
+  properties.push(createCameraNumberInspectorProperty(nodeKind, { path: 'camera.upperBetaLimit', label: text.maxBeta, value: rig.upperBetaLimit ?? rig.beta, order, step: 0.01 }));
   order += 1;
-  properties.push(createCameraNumberInspectorProperty(nodeKind, {
-    path: 'camera.lowerRadiusLimit',
-    label: text.minRadius,
-    value: rig.lowerRadiusLimit ?? rig.radius,
-    order,
-    min: 0.001,
-    step: 0.1,
-    tooltip: text.tooltips.minRadius,
-    controlOptions: { groupPath: 'camera.radiusLimitRange', groupLabel: text.radiusRange, groupOrder: 0, groupLayout: 'inline' },
-  }));
+  properties.push(createCameraNumberInspectorProperty(nodeKind, { path: 'camera.lowerRadiusLimit', label: text.minRadius, value: rig.lowerRadiusLimit ?? rig.radius, order, min: 0.001, step: 0.1 }));
   order += 1;
-  properties.push(createCameraNumberInspectorProperty(nodeKind, {
-    path: 'camera.upperRadiusLimit',
-    label: text.maxRadius,
-    value: rig.upperRadiusLimit ?? rig.radius,
-    order,
-    min: 0.001,
-    step: 0.1,
-    tooltip: text.tooltips.maxRadius,
-    controlOptions: { groupPath: 'camera.radiusLimitRange', groupLabel: text.radiusRange, groupOrder: 1, groupLayout: 'inline' },
-  }));
+  properties.push(createCameraNumberInspectorProperty(nodeKind, { path: 'camera.upperRadiusLimit', label: text.maxRadius, value: rig.upperRadiusLimit ?? rig.radius, order, min: 0.001, step: 0.1 }));
   order += 1;
-  properties.push(createCameraNumberInspectorProperty(nodeKind, {
-    path: 'camera.inertia',
-    label: text.inertia,
-    value: rig.inertia ?? 0.9,
-    order,
-    min: 0,
-    max: 1,
-    step: 0.05,
-    tooltip: text.tooltips.inertia,
-  }));
+  properties.push(createCameraNumberInspectorProperty(nodeKind, { path: 'camera.inertia', label: text.inertia, value: rig.inertia ?? 0.9, order, min: 0, max: 1, step: 0.05 }));
   order += 1;
 
   for (const axis of ['x', 'y'] as const) {
@@ -3432,7 +3443,6 @@ function createCameraInspectorProperties(
       value: rig.targetScreenOffset?.[axis] ?? 0,
       order,
       step: 0.01,
-      tooltip: text.tooltips.screenOffset,
     }));
     order += 1;
   }
@@ -3444,7 +3454,6 @@ function createCameraInspectorProperties(
     order: properties.length,
     source: 'Document',
     tags: ['Raw'],
-    tooltip: text.tooltips.rawCamera,
   });
   return properties;
 }
@@ -3459,8 +3468,6 @@ function createCameraNumberInspectorProperty(
     min?: number;
     max?: number;
     step?: number;
-    tooltip?: string;
-    controlOptions?: InspectorProperty<EditorSceneDocument>['controlOptions'];
     coerce?: (value: unknown) => unknown;
   },
 ): InspectorProperty<EditorSceneDocument> {
@@ -3475,61 +3482,126 @@ function createCameraNumberInspectorProperty(
     min: input.min,
     max: input.max,
     step: input.step ?? 0.05,
-    tooltip: input.tooltip,
-    controlOptions: input.controlOptions,
     coerce: input.coerce,
   });
 }
 
-function createSunLightInspectorProperties(
+function createLightInspectorProperties(
   nodeKind: SceneNodeConfig['kind'],
-  light: EditorSceneGameObject['light'],
+  light: EditorSceneLight,
 ): InspectorProperty<EditorSceneDocument>[] {
-  const sun = mergeEditorSceneLightDefaults(light);
+  const language = getLightInspectorLanguage(light);
+  const text = getLightInspectorText(language);
   const properties: InspectorProperty<EditorSceneDocument>[] = [
-    createReadonlyInspectorProperty('light.type', 'Type', sun.type, 0),
+    createDocumentInspectorProperty(null, nodeKind, {
+      path: 'light.inspectorLanguage',
+      label: text.language,
+      valueType: 'enum',
+      control: 'enum',
+      value: language,
+      commitMode: 'immediate',
+      order: 0,
+      options: LIGHT_LANGUAGE_OPTIONS,
+      controlOptions: { variant: 'segmented' },
+      tooltip: text.tooltips.language,
+    }),
+    createEditorSceneReadonlyInspectorProperty({
+      path: 'light.type',
+      label: text.type,
+      value: light.type === 'hemispheric' ? text.typeHemispheric : text.typeDirectional,
+      order: 1,
+      source: 'Document',
+      tooltip: text.tooltips.type,
+    })!,
     createDocumentInspectorProperty(null, nodeKind, {
       path: 'light.intensity',
-      label: 'Intensity',
+      label: text.intensity,
       valueType: 'number',
       control: 'number',
-      value: sun.intensity,
+      value: light.intensity,
       commitMode: 'live',
-      order: 1,
+      order: 2,
       min: 0,
       step: 0.05,
+      tooltip: text.tooltips.intensity,
     }),
   ];
-  let order = 2;
-  for (const axis of ['x', 'y', 'z'] as const) {
+  let order = 3;
+  if (light.type === 'hemispheric') {
     properties.push(createDocumentInspectorProperty(null, nodeKind, {
-      path: `light.direction.${axis}`,
-      label: `Direction.${axis}`,
+      path: 'light.diffuseColor',
+      label: text.skyLightColor,
+      valueType: 'color',
+      control: 'color',
+      value: light.diffuseColor ?? { r: 1, g: 1, b: 1 },
+      commitMode: 'immediate',
+      order,
+      tooltip: text.tooltips.skyLightColor,
+    }));
+    order += 1;
+    properties.push(createDocumentInspectorProperty(null, nodeKind, {
+      path: 'light.groundColor',
+      label: text.groundColor,
+      valueType: 'color',
+      control: 'color',
+      value: light.groundColor ?? DEFAULT_EDITOR_SCENE_ENVIRONMENT_LIGHT.groundColor,
+      commitMode: 'immediate',
+      order,
+      tooltip: text.tooltips.groundColor,
+    }));
+    order += 1;
+  } else {
+    const angles = readDirectionalLightAngles(light.direction);
+    properties.push(createDocumentInspectorProperty(null, nodeKind, {
+      path: LIGHT_DIRECTION_HORIZONTAL_ANGLE_PATH,
+      label: text.horizontalAngle,
       valueType: 'number',
       control: 'number',
-      value: sun.direction[axis],
+      value: angles.horizontalAngleDeg,
       commitMode: 'live',
       order,
-      step: 0.05,
+      min: LIGHT_DIRECTION_HORIZONTAL_MIN_DEG,
+      max: LIGHT_DIRECTION_HORIZONTAL_MAX_DEG,
+      step: 1,
+      coerce: (value: unknown) => normalizeEditorSceneInspectorValue(LIGHT_DIRECTION_HORIZONTAL_ANGLE_PATH, value),
+      tooltip: text.tooltips.horizontalAngle,
+    }));
+    order += 1;
+    properties.push(createDocumentInspectorProperty(null, nodeKind, {
+      path: LIGHT_DIRECTION_ELEVATION_ANGLE_PATH,
+      label: text.elevationAngle,
+      valueType: 'number',
+      control: 'number',
+      value: angles.elevationAngleDeg,
+      commitMode: 'live',
+      order,
+      min: LIGHT_DIRECTION_ELEVATION_MIN_DEG,
+      max: LIGHT_DIRECTION_ELEVATION_MAX_DEG,
+      step: 1,
+      coerce: (value: unknown) => normalizeEditorSceneInspectorValue(LIGHT_DIRECTION_ELEVATION_ANGLE_PATH, value),
+      tooltip: text.tooltips.elevationAngle,
+    }));
+    order += 1;
+    properties.push(createDocumentInspectorProperty(null, nodeKind, {
+      path: 'light.diffuseColor',
+      label: text.lightColor,
+      valueType: 'color',
+      control: 'color',
+      value: light.diffuseColor ?? { r: 1, g: 1, b: 1 },
+      commitMode: 'immediate',
+      order,
+      tooltip: text.tooltips.lightColor,
     }));
     order += 1;
   }
-  properties.push(createDocumentInspectorProperty(null, nodeKind, {
-    path: 'light.diffuseColor',
-    label: 'Diffuse Color',
-    valueType: 'color',
-    control: 'color',
-    value: sun.diffuseColor ?? { r: 1, g: 1, b: 1 },
-    commitMode: 'immediate',
-    order,
-  }));
   appendReadonlyInspectorProperty(properties, {
     path: 'light.raw',
-    label: 'Raw Light',
+    label: text.rawLight,
     value: light ?? 'defaults',
     order: properties.length,
     source: 'Document',
     tags: ['Raw'],
+    tooltip: text.tooltips.rawLight,
   });
   return properties;
 }
@@ -4153,6 +4225,16 @@ function createEditorSceneInspectorValidator(
         ? { ok: true, value }
         : { ok: false, message: 'Invalid value for scene node field: camera.inspectorLanguage.' };
     }
+    if (path === 'light.inspectorLanguage') {
+      return value === 'zh' || value === 'en'
+        ? { ok: true, value }
+        : { ok: false, message: 'Invalid value for scene node field: light.inspectorLanguage.' };
+    }
+    if (isDirectionalLightAnglePath(path)) {
+      return typeof value === 'number' && Number.isFinite(value)
+        ? { ok: true, value }
+        : { ok: false, message: `Invalid value for scene node field: ${path}.` };
+    }
     const schema = resolveSceneNodeFieldSchema(path, nodeKind);
     if (!schema) return { ok: false, message: `Unsupported scene node field: ${path}.` };
     if (value == null && schema.allowDelete === false) {
@@ -4172,10 +4254,16 @@ function validateEditorSceneInspectorValue(
   path: string,
   value: unknown,
 ): InspectorValidationResult {
+  if (isDirectionalLightAnglePath(path) && gameObject.light?.type !== 'directional') {
+    return { ok: false, message: `Unsupported scene node field: ${path}.` };
+  }
   return createEditorSceneInspectorValidator(readEditorSceneNodeKind(gameObject), path, document)(value);
 }
 
 function normalizeEditorSceneInspectorValue(path: string, value: unknown): unknown {
+  if (isDirectionalLightAnglePath(path)) {
+    return normalizeDirectionalLightAngleValue(path, value);
+  }
   if (path === 'groundDecal.textureId' && typeof value === 'string') {
     const trimmed = value.trim();
     return trimmed ? trimmed : null;
@@ -4198,7 +4286,7 @@ export function patchEditorSceneGameObjectField(
   if (!gameObject) return document;
   const normalizedValue = normalizeEditorSceneInspectorValue(path, value);
   if (!validateEditorSceneInspectorValue(document, gameObject, path, normalizedValue).ok) return document;
-  if (isBlockedEditorSceneCameraFieldPatch(document, targetId, path, normalizedValue)) return document;
+  if (isBlockedEditorSceneSystemFieldPatch(document, targetId, path, normalizedValue)) return document;
   return {
     ...document,
     scene: {
@@ -4304,7 +4392,21 @@ function patchEditorSceneGameObject(
     delete next.groundDecal;
     delete next.primitive;
     applyJsonFieldPatch(next as unknown as Record<string, unknown>, path, value);
-    next.camera = normalizeEditorSceneCameraAfterFieldPatch(next.camera, path);
+    return next;
+  }
+  if (isDirectionalLightAnglePath(path) && typeof value === 'number' && Number.isFinite(value)) {
+    next.kind = 'transform';
+    next.transformType = 'light';
+    next.light = mergeEditorSceneLightDefaults(next.light, 'directional');
+    delete next.camera;
+    delete next.groundDecal;
+    delete next.primitive;
+    if (next.light.type !== 'directional') return next;
+    const angles = readDirectionalLightAngles(next.light.direction);
+    next.light.direction = createDirectionalLightDirectionFromAngles(
+      path === LIGHT_DIRECTION_HORIZONTAL_ANGLE_PATH ? value : angles.horizontalAngleDeg,
+      path === LIGHT_DIRECTION_ELEVATION_ANGLE_PATH ? value : angles.elevationAngleDeg,
+    );
     return next;
   }
   if (path.startsWith('light.')) {
@@ -4433,15 +4535,38 @@ function createDefaultEditorSceneSunLightGameObject(
   return {
     id,
     guid: createEditorSceneGameObjectGuid(),
-    name: 'Sun Light',
+    name: 'Directional Light',
     kind: 'transform',
     ...(rootId ? { parentId: rootId } : {}),
     active: true,
     transformType: 'light',
-    light: mergeEditorSceneLightDefaults(undefined),
+    light: mergeEditorSceneLightDefaults(undefined, 'directional'),
     components: [{
       type: 'Transform',
       position: { x: 0, y: 4, z: -3 },
+      rotation: { x: 0, y: 0, z: 0 },
+      scale: { x: 1, y: 1, z: 1 },
+    }],
+  };
+}
+
+function createDefaultEditorSceneEnvironmentLightGameObject(
+  rootId: string | undefined,
+  usedIds: Set<string>,
+): EditorSceneGameObject {
+  const id = reserveEditorSceneDefaultId(usedIds, EDITOR_SCENE_ENVIRONMENT_LIGHT_ID);
+  return {
+    id,
+    guid: createEditorSceneGameObjectGuid(),
+    name: 'Environment Light',
+    kind: 'transform',
+    ...(rootId ? { parentId: rootId } : {}),
+    active: true,
+    transformType: 'light',
+    light: mergeEditorSceneLightDefaults(undefined, 'hemispheric'),
+    components: [{
+      type: 'Transform',
+      position: { x: 0, y: 3, z: 0 },
       rotation: { x: 0, y: 0, z: 0 },
       scale: { x: 1, y: 1, z: 1 },
     }],
@@ -4467,12 +4592,16 @@ function normalizeEditorSceneCameraGameObject(gameObject: EditorSceneGameObject)
   return shallowEditorSceneGameObjectsEqual(next, gameObject) ? gameObject : next;
 }
 
-function normalizeEditorSceneLightGameObject(gameObject: EditorSceneGameObject): EditorSceneGameObject {
+function normalizeEditorSceneSystemLightGameObject(
+  gameObject: EditorSceneGameObject,
+  type: EditorSceneLight['type'],
+): EditorSceneGameObject {
   const next = ensureTransformComponent({
     ...gameObject,
+    name: type === 'hemispheric' ? 'Environment Light' : 'Directional Light',
     kind: 'transform',
     transformType: 'light',
-    light: mergeEditorSceneLightDefaults(gameObject.light),
+    light: mergeEditorSceneLightDefaults(gameObject.light, type),
   });
   delete next.camera;
   delete next.groundDecal;
@@ -4513,7 +4642,7 @@ function mergeEditorSceneCameraDefaults(
   camera: EditorSceneGameObject['camera'],
 ): EditorSceneCameraRig {
   const defaults = DEFAULT_EDITOR_SCENE_CAMERA;
-  const merged: EditorSceneCameraRig = {
+  return {
     ...defaults,
     ...(camera ?? {}),
     projection: readEditorSceneCameraProjection(camera?.projection),
@@ -4533,114 +4662,6 @@ function mergeEditorSceneCameraDefaults(
       : { ...(defaults.targetScreenOffset ?? { x: 0, y: 0 }) },
     inspectorLanguage: readEditorSceneCameraInspectorLanguage(camera?.inspectorLanguage),
   };
-  return applyEditorSceneCameraLimitDefaults(merged);
-}
-
-function applyEditorSceneCameraLimitDefaults(camera: EditorSceneCameraRig): EditorSceneCameraRig {
-  const betaLimits = resolveCameraBetaLimitDefaults(camera.beta, camera.lowerBetaLimit, camera.upperBetaLimit);
-  const radiusLimits = resolveCameraRadiusLimitDefaults(camera.radius, camera.lowerRadiusLimit, camera.upperRadiusLimit);
-  return {
-    ...camera,
-    lowerBetaLimit: betaLimits.lower,
-    upperBetaLimit: betaLimits.upper,
-    lowerRadiusLimit: radiusLimits.lower,
-    upperRadiusLimit: radiusLimits.upper,
-  };
-}
-
-function normalizeEditorSceneCameraAfterFieldPatch(
-  camera: EditorSceneCameraRig,
-  path: string,
-): EditorSceneCameraRig {
-  normalizeEditorSceneCameraRangeAfterFieldPatch(camera, path, {
-    valueField: 'beta',
-    lowerField: 'lowerBetaLimit',
-    upperField: 'upperBetaLimit',
-    minValue: Number.NEGATIVE_INFINITY,
-  });
-  normalizeEditorSceneCameraRangeAfterFieldPatch(camera, path, {
-    valueField: 'radius',
-    lowerField: 'lowerRadiusLimit',
-    upperField: 'upperRadiusLimit',
-    minValue: 0.001,
-  });
-  return camera;
-}
-
-function normalizeEditorSceneCameraRangeAfterFieldPatch(
-  camera: EditorSceneCameraRig,
-  path: string,
-  options: {
-    valueField: 'beta' | 'radius';
-    lowerField: 'lowerBetaLimit' | 'lowerRadiusLimit';
-    upperField: 'upperBetaLimit' | 'upperRadiusLimit';
-    minValue: number;
-  },
-): void {
-  const valuePath = `camera.${options.valueField}`;
-  const lowerPath = `camera.${options.lowerField}`;
-  const upperPath = `camera.${options.upperField}`;
-  let value = readFiniteNumber(camera[options.valueField], DEFAULT_EDITOR_SCENE_CAMERA[options.valueField]);
-  let lower = readFiniteNumber(camera[options.lowerField], value);
-  let upper = readFiniteNumber(camera[options.upperField], value);
-  if (Number.isFinite(options.minValue)) {
-    value = Math.max(options.minValue, value);
-    lower = Math.max(options.minValue, lower);
-    upper = Math.max(options.minValue, upper);
-  }
-  if (upper < lower) {
-    if (path === upperPath) lower = upper;
-    else upper = lower;
-  }
-  if (path === lowerPath || path === upperPath) {
-    value = Math.min(upper, Math.max(lower, value));
-  } else if (path === valuePath) {
-    if (value < lower) lower = value;
-    if (value > upper) upper = value;
-  }
-  camera[options.valueField] = value;
-  camera[options.lowerField] = lower;
-  camera[options.upperField] = upper;
-}
-
-function resolveCameraBetaLimitDefaults(
-  beta: number,
-  lower: number | undefined,
-  upper: number | undefined,
-): { lower: number; upper: number } {
-  let nextLower = Number.isFinite(lower) ? lower as number : DEFAULT_CAMERA_LOWER_BETA_LIMIT;
-  let nextUpper = Number.isFinite(upper) ? upper as number : DEFAULT_CAMERA_UPPER_BETA_LIMIT;
-  if (isLockedToCurrentValue(nextLower, nextUpper, beta)) {
-    nextLower = DEFAULT_CAMERA_LOWER_BETA_LIMIT;
-    nextUpper = DEFAULT_CAMERA_UPPER_BETA_LIMIT;
-  }
-  if (nextUpper < nextLower) [nextLower, nextUpper] = [nextUpper, nextLower];
-  if (beta < nextLower) nextLower = beta;
-  if (beta > nextUpper) nextUpper = beta;
-  return { lower: nextLower, upper: nextUpper };
-}
-
-function resolveCameraRadiusLimitDefaults(
-  radius: number,
-  lower: number | undefined,
-  upper: number | undefined,
-): { lower: number; upper: number } {
-  const defaultLower = Math.max(MIN_CAMERA_RADIUS_LIMIT, radius * DEFAULT_CAMERA_RADIUS_LIMIT_FACTOR_MIN);
-  const defaultUpper = Math.max(radius + 1, radius * DEFAULT_CAMERA_RADIUS_LIMIT_FACTOR_MAX);
-  let nextLower = Number.isFinite(lower) && (lower as number) > 0 ? lower as number : defaultLower;
-  let nextUpper = Number.isFinite(upper) && (upper as number) > 0 ? upper as number : defaultUpper;
-  if (isLockedToCurrentValue(nextLower, nextUpper, radius)) {
-    nextLower = defaultLower;
-    nextUpper = defaultUpper;
-  }
-  if (nextUpper < nextLower) [nextLower, nextUpper] = [nextUpper, nextLower];
-  if (radius < nextLower) nextLower = Math.max(MIN_CAMERA_RADIUS_LIMIT, radius);
-  if (radius > nextUpper) nextUpper = radius;
-  return { lower: nextLower, upper: nextUpper };
-}
-
-function isLockedToCurrentValue(lower: number, upper: number, value: number): boolean {
-  return Math.abs(lower - upper) <= 0.000001 && Math.abs(lower - value) <= 0.000001;
 }
 
 function readEditorSceneCameraProjection(value: unknown): SceneCameraProjection {
@@ -4648,6 +4669,10 @@ function readEditorSceneCameraProjection(value: unknown): SceneCameraProjection 
 }
 
 function readEditorSceneCameraInspectorLanguage(value: unknown): EditorSceneCameraInspectorLanguage {
+  return value === 'en' ? 'en' : 'zh';
+}
+
+function readEditorSceneLightInspectorLanguage(value: unknown): EditorSceneLightInspectorLanguage {
   return value === 'en' ? 'en' : 'zh';
 }
 
@@ -4679,21 +4704,60 @@ function hasInvalidEditorSceneCameraRelationships(camera: EditorSceneCameraRig):
   return false;
 }
 
+function readEditorSceneLightType(
+  light: EditorSceneGameObject['light'],
+  fallback: EditorSceneLight['type'],
+): EditorSceneLight['type'] {
+  if (light?.type === 'hemispheric') return 'hemispheric';
+  if (light?.type === 'directional') return 'directional';
+  return fallback;
+}
+
 function mergeEditorSceneLightDefaults(
+  light: EditorSceneGameObject['light'],
+  fallbackType: EditorSceneLight['type'] = 'directional',
+): EditorSceneLight {
+  return readEditorSceneLightType(light, fallbackType) === 'hemispheric'
+    ? mergeEditorSceneHemisphericLightDefaults(light)
+    : mergeEditorSceneDirectionalLightDefaults(light);
+}
+
+function mergeEditorSceneDirectionalLightDefaults(
   light: EditorSceneGameObject['light'],
 ): EditorSceneDirectionalLight {
   const defaults = DEFAULT_EDITOR_SCENE_SUN_LIGHT;
+  const directional = light?.type === 'directional' ? light : undefined;
   return {
     ...defaults,
-    ...(light ?? {}),
+    ...(directional ?? {}),
     type: 'directional',
     direction: {
       ...defaults.direction,
-      ...(light?.direction ?? {}),
+      ...(directional?.direction ?? {}),
     },
-    diffuseColor: light?.diffuseColor
-      ? { ...defaults.diffuseColor, ...light.diffuseColor }
+    diffuseColor: directional?.diffuseColor
+      ? { ...defaults.diffuseColor, ...directional.diffuseColor }
       : defaults.diffuseColor,
+    inspectorLanguage: readEditorSceneLightInspectorLanguage(directional?.inspectorLanguage),
+  };
+}
+
+function mergeEditorSceneHemisphericLightDefaults(
+  light: EditorSceneGameObject['light'],
+): EditorSceneHemisphericLight {
+  const defaults = DEFAULT_EDITOR_SCENE_ENVIRONMENT_LIGHT;
+  const hemispheric = light?.type === 'hemispheric' ? light : undefined;
+  return {
+    ...defaults,
+    ...(hemispheric ?? {}),
+    type: 'hemispheric',
+    diffuseColor: hemispheric?.diffuseColor
+      ? { ...defaults.diffuseColor, ...hemispheric.diffuseColor }
+      : defaults.diffuseColor,
+    groundColor: hemispheric?.groundColor
+      ? { ...defaults.groundColor, ...hemispheric.groundColor }
+      : defaults.groundColor,
+    inspectorLanguage: readEditorSceneLightInspectorLanguage(hemispheric?.inspectorLanguage),
   };
 }
 
@@ -4704,7 +4768,7 @@ function shallowEditorSceneGameObjectsEqual(
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
-function isBlockedEditorSceneCameraFieldPatch(
+function isBlockedEditorSceneSystemFieldPatch(
   document: EditorSceneDocument,
   targetId: string,
   path: string,
@@ -4713,16 +4777,24 @@ function isBlockedEditorSceneCameraFieldPatch(
   const target = findEditorSceneGameObject(document, targetId);
   if (!target) return false;
   const targetIsCamera = isEditorSceneCameraGameObject(target);
+  const targetIsLight = isEditorSceneLightGameObject(target);
+  const targetIsProtectedSystem = isEditorSceneProtectedSystemGameObject(target);
+  if (path.startsWith('transform.') && targetIsProtectedSystem) return true;
   if (path.startsWith('camera.') && !targetIsCamera) return true;
   if (path.startsWith('camera.') && targetIsCamera) {
     const patchedCameraHost = { camera: mergeEditorSceneCameraDefaults(target.camera) };
     applyJsonFieldPatch(patchedCameraHost as unknown as Record<string, unknown>, path, value);
-    patchedCameraHost.camera = normalizeEditorSceneCameraAfterFieldPatch(patchedCameraHost.camera, path);
     if (hasInvalidEditorSceneCameraRelationships(patchedCameraHost.camera)) return true;
   }
-  if (path.startsWith('light.') && !isEditorSceneLightGameObject(target)) return true;
+  if (path.startsWith('light.') && !targetIsLight) return true;
+  if (path === 'light.type') {
+    if (target.id === EDITOR_SCENE_ENVIRONMENT_LIGHT_ID && value !== 'hemispheric') return true;
+    if (target.id === EDITOR_SCENE_SUN_LIGHT_ID && value !== 'directional') return true;
+  }
   if (path === 'transformType') {
     if (targetIsCamera && value !== 'camera') return true;
+    if (targetIsLight && value !== 'light') return true;
+    if (!targetIsLight && value === 'light') return true;
     if (value === 'camera' && !targetIsCamera && hasEditorSceneCamera(document, targetId)) return true;
   }
   return false;
@@ -4813,6 +4885,7 @@ function createEditorScenePropertyDescriptors(
   const transform = findEditorSceneTransform(gameObject);
   if (transform) {
     const rootTransform = isEditorSceneRootGameObject(gameObject);
+    const protectedTransform = rootTransform || isEditorSceneProtectedSystemGameObject(gameObject);
     const displayTransform = rootTransform ? EDITOR_SCENE_ROOT_TRANSFORM : transform;
     for (const vectorName of ['position', 'rotation', 'scale'] as const) {
       for (const axis of ['x', 'y', 'z'] as const) {
@@ -4820,12 +4893,12 @@ function createEditorScenePropertyDescriptors(
           path: `transform.${vectorName}.${axis}`,
           label: `${vectorName}.${axis}`,
           valueType: 'number',
-          readOnly: rootTransform,
+          readOnly: protectedTransform,
           getValue: () => {
             const value = readTransformVector(displayTransform, vectorName)[axis];
             return vectorName === 'rotation' ? roundForInspector(radiansToDegrees(value)) : value;
           },
-          ...(rootTransform
+          ...(protectedTransform
             ? {}
             : {
                 setValue: (document, value, context) => {
@@ -4931,6 +5004,86 @@ function degreesToRadians(value: number): number {
 
 function roundForInspector(value: number): number {
   return Math.round(value * 1000000) / 1000000;
+}
+
+function clampNumber(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+function normalizeAngleDegrees(value: number): number {
+  const normalized = ((((value + 180) % 360) + 360) % 360) - 180;
+  return normalized === -180 ? 180 : normalized;
+}
+
+function readFiniteInspectorNumber(value: unknown): number | null {
+  const numeric = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+function normalizeDirectionalLightAngleValue(path: string, value: unknown): unknown {
+  const numeric = readFiniteInspectorNumber(value);
+  if (numeric == null) return value;
+  if (path === LIGHT_DIRECTION_HORIZONTAL_ANGLE_PATH) return Math.round(normalizeAngleDegrees(numeric));
+  if (path === LIGHT_DIRECTION_ELEVATION_ANGLE_PATH) {
+    return Math.round(clampNumber(
+      numeric,
+      LIGHT_DIRECTION_ELEVATION_MIN_DEG,
+      LIGHT_DIRECTION_ELEVATION_MAX_DEG,
+    ));
+  }
+  return value;
+}
+
+function normalizeDirectionVector(direction: EditorSceneVec3 | undefined): EditorSceneVec3 {
+  const fallback = DEFAULT_EDITOR_SCENE_SUN_LIGHT.direction;
+  const candidate = direction && isVec3(direction) ? direction : fallback;
+  const length = Math.hypot(candidate.x, candidate.y, candidate.z);
+  if (!Number.isFinite(length) || length <= 0.000001) {
+    const fallbackLength = Math.hypot(fallback.x, fallback.y, fallback.z) || 1;
+    return {
+      x: fallback.x / fallbackLength,
+      y: fallback.y / fallbackLength,
+      z: fallback.z / fallbackLength,
+    };
+  }
+  return {
+    x: candidate.x / length,
+    y: candidate.y / length,
+    z: candidate.z / length,
+  };
+}
+
+function readDirectionalLightAngles(direction: EditorSceneVec3 | undefined): {
+  horizontalAngleDeg: number;
+  elevationAngleDeg: number;
+} {
+  const normalized = normalizeDirectionVector(direction);
+  return {
+    horizontalAngleDeg: Math.round(normalizeAngleDegrees(radiansToDegrees(Math.atan2(normalized.z, normalized.x)))),
+    elevationAngleDeg: Math.round(radiansToDegrees(Math.asin(clampNumber(-normalized.y, -1, 1)))),
+  };
+}
+
+function createDirectionalLightDirectionFromAngles(
+  horizontalAngleDeg: number,
+  elevationAngleDeg: number,
+): EditorSceneVec3 {
+  const horizontal = degreesToRadians(normalizeAngleDegrees(horizontalAngleDeg));
+  const elevation = degreesToRadians(clampNumber(
+    elevationAngleDeg,
+    LIGHT_DIRECTION_ELEVATION_MIN_DEG,
+    LIGHT_DIRECTION_ELEVATION_MAX_DEG,
+  ));
+  const horizontalLength = Math.cos(elevation);
+  return {
+    x: roundForInspector(horizontalLength * Math.cos(horizontal)),
+    y: roundForInspector(-Math.sin(elevation)),
+    z: roundForInspector(horizontalLength * Math.sin(horizontal)),
+  };
+}
+
+function isDirectionalLightAnglePath(path: string): boolean {
+  return path === LIGHT_DIRECTION_HORIZONTAL_ANGLE_PATH || path === LIGHT_DIRECTION_ELEVATION_ANGLE_PATH;
 }
 
 function createEditorSceneAssetFromLibraryItem(assetItem: EditorSceneAssetLibraryItem): EditorSceneAsset {
@@ -5050,16 +5203,10 @@ function getEditorScenePrimitiveDisplayName(shape: ScenePrimitiveShape): string 
   return shape[0]!.toUpperCase() + shape.slice(1);
 }
 
-function createDefaultEditorScenePrimitiveTransform(shape: ScenePrimitiveShape): EditorTransformSnapshot {
-  return {
-    position: { x: 0, y: 0, z: 0 },
-    rotation: { x: 0, y: 0, z: 0 },
-    scale: getEditorScenePrimitiveDefaultScale(shape),
-  };
-}
-
-function getEditorScenePrimitiveDefaultScale(_shape: ScenePrimitiveShape): EditorSceneVec3 {
-  return { x: 1, y: 1, z: 1 };
+function getEditorScenePrimitiveDefaultScale(shape: ScenePrimitiveShape): EditorSceneVec3 {
+  return shape === 'plane'
+    ? { x: 10, y: 1, z: 10 }
+    : { x: 1, y: 1, z: 1 };
 }
 
 function createUniqueEditorSceneId(existingIds: string[], preferredId: string): string {

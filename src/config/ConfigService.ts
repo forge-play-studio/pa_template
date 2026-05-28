@@ -15,7 +15,9 @@ import type {
   SceneCameraRigConfig,
   SceneCameraProjection,
   SceneDirectionalLightConfig,
+  SceneHemisphericLightConfig,
   SceneInstanceNode,
+  SceneLightConfig,
   ScenePrimitiveNode,
   SceneMaterialScope,
   SceneNodeVisualOverrides,
@@ -45,11 +47,6 @@ const DEFAULT_WORLD_BOUNDS: WorldBoundsConfig = {
   minZ: -10,
   maxZ: 10,
 };
-const DEFAULT_CAMERA_LOWER_BETA_LIMIT = 0.1;
-const DEFAULT_CAMERA_UPPER_BETA_LIMIT = 1.45;
-const DEFAULT_CAMERA_RADIUS_LIMIT_FACTOR_MIN = 0.25;
-const DEFAULT_CAMERA_RADIUS_LIMIT_FACTOR_MAX = 4;
-const MIN_CAMERA_RADIUS_LIMIT = 0.1;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value);
@@ -173,59 +170,7 @@ function normalizeSceneCameraRigConfig(value: unknown): SceneCameraRigConfig | u
   const targetScreenOffset = normalizeCameraScreenOffset(value.targetScreenOffset);
   if (targetScreenOffset) normalized.targetScreenOffset = targetScreenOffset;
 
-  return applyCameraLimitDefaults(normalized);
-}
-
-function applyCameraLimitDefaults(camera: SceneCameraRigConfig): SceneCameraRigConfig {
-  const betaLimits = resolveCameraBetaLimitDefaults(camera.beta, camera.lowerBetaLimit, camera.upperBetaLimit);
-  const radiusLimits = resolveCameraRadiusLimitDefaults(camera.radius, camera.lowerRadiusLimit, camera.upperRadiusLimit);
-  return {
-    ...camera,
-    lowerBetaLimit: betaLimits.lower,
-    upperBetaLimit: betaLimits.upper,
-    lowerRadiusLimit: radiusLimits.lower,
-    upperRadiusLimit: radiusLimits.upper,
-  };
-}
-
-function resolveCameraBetaLimitDefaults(
-  beta: number,
-  lower: number | undefined,
-  upper: number | undefined,
-): { lower: number; upper: number } {
-  let nextLower = Number.isFinite(lower) ? lower as number : DEFAULT_CAMERA_LOWER_BETA_LIMIT;
-  let nextUpper = Number.isFinite(upper) ? upper as number : DEFAULT_CAMERA_UPPER_BETA_LIMIT;
-  if (isLockedToCurrentValue(nextLower, nextUpper, beta)) {
-    nextLower = DEFAULT_CAMERA_LOWER_BETA_LIMIT;
-    nextUpper = DEFAULT_CAMERA_UPPER_BETA_LIMIT;
-  }
-  if (nextUpper < nextLower) [nextLower, nextUpper] = [nextUpper, nextLower];
-  if (beta < nextLower) nextLower = beta;
-  if (beta > nextUpper) nextUpper = beta;
-  return { lower: nextLower, upper: nextUpper };
-}
-
-function resolveCameraRadiusLimitDefaults(
-  radius: number,
-  lower: number | undefined,
-  upper: number | undefined,
-): { lower: number; upper: number } {
-  const defaultLower = Math.max(MIN_CAMERA_RADIUS_LIMIT, radius * DEFAULT_CAMERA_RADIUS_LIMIT_FACTOR_MIN);
-  const defaultUpper = Math.max(radius + 1, radius * DEFAULT_CAMERA_RADIUS_LIMIT_FACTOR_MAX);
-  let nextLower = Number.isFinite(lower) && (lower as number) > 0 ? lower as number : defaultLower;
-  let nextUpper = Number.isFinite(upper) && (upper as number) > 0 ? upper as number : defaultUpper;
-  if (isLockedToCurrentValue(nextLower, nextUpper, radius)) {
-    nextLower = defaultLower;
-    nextUpper = defaultUpper;
-  }
-  if (nextUpper < nextLower) [nextLower, nextUpper] = [nextUpper, nextLower];
-  if (radius < nextLower) nextLower = Math.max(MIN_CAMERA_RADIUS_LIMIT, radius);
-  if (radius > nextUpper) nextUpper = radius;
-  return { lower: nextLower, upper: nextUpper };
-}
-
-function isLockedToCurrentValue(lower: number, upper: number, value: number): boolean {
-  return Math.abs(lower - upper) <= 0.000001 && Math.abs(lower - value) <= 0.000001;
+  return normalized;
 }
 
 function normalizeSceneDirectionalLightConfig(value: unknown): SceneDirectionalLightConfig | undefined {
@@ -241,6 +186,25 @@ function normalizeSceneDirectionalLightConfig(value: unknown): SceneDirectionalL
     direction,
     ...(diffuseColor ? { diffuseColor } : {}),
   };
+}
+
+function normalizeSceneHemisphericLightConfig(value: unknown): SceneHemisphericLightConfig | undefined {
+  if (!isRecord(value)) return undefined;
+  if (value.type !== 'hemispheric') return undefined;
+  if (!isNonNegativeFiniteNumber(value.intensity)) return undefined;
+  const diffuseColor = normalizeColorRGB(value.diffuseColor);
+  const groundColor = normalizeColorRGB(value.groundColor);
+  return {
+    type: 'hemispheric',
+    intensity: value.intensity,
+    ...(diffuseColor ? { diffuseColor } : {}),
+    ...(groundColor ? { groundColor } : {}),
+  };
+}
+
+function normalizeSceneLightConfig(value: unknown): SceneLightConfig | undefined {
+  return normalizeSceneHemisphericLightConfig(value)
+    ?? normalizeSceneDirectionalLightConfig(value);
 }
 
 function normalizeSceneAssetMaterialMode(value: unknown): SceneAssetMaterialMode | undefined {
@@ -554,7 +518,7 @@ export class ConfigService {
     }
 
     if (node.transformType === 'light' || (node.transformType == null && node.light)) {
-      const light = normalizeSceneDirectionalLightConfig(node.light);
+      const light = normalizeSceneLightConfig(node.light);
       if (light) node.light = light;
       else delete node.light;
     } else {
@@ -632,15 +596,34 @@ export class ConfigService {
     return node?.camera;
   }
 
-  getSceneDirectionalLight(): SceneDirectionalLightConfig | undefined {
+  getSceneDirectionalLightNode(): SceneTransformNode | undefined {
     const nodes = this.ensureSceneSection().nodes;
-    const node = nodes.find((item): item is SceneTransformNode => (
+    return nodes.find((item): item is SceneTransformNode => (
       item.kind === 'transform'
       && !!item.light
       && (item.transformType === 'light' || item.transformType == null)
       && item.light.type === 'directional'
     ));
-    return node?.light;
+  }
+
+  getSceneDirectionalLight(): SceneDirectionalLightConfig | undefined {
+    const node = this.getSceneDirectionalLightNode();
+    return node?.light?.type === 'directional' ? node.light : undefined;
+  }
+
+  getSceneHemisphericLightNode(): SceneTransformNode | undefined {
+    const nodes = this.ensureSceneSection().nodes;
+    return nodes.find((item): item is SceneTransformNode => (
+      item.kind === 'transform'
+      && !!item.light
+      && (item.transformType === 'light' || item.transformType == null)
+      && item.light.type === 'hemispheric'
+    ));
+  }
+
+  getSceneHemisphericLight(): SceneHemisphericLightConfig | undefined {
+    const node = this.getSceneHemisphericLightNode();
+    return node?.light?.type === 'hemispheric' ? node.light : undefined;
   }
 
   getRenderConfig(): Record<string, unknown> {

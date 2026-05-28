@@ -11,6 +11,7 @@ import type {
   BabylonEditorProjectionImportContext,
   BabylonEditorProjectionImportResult,
   BabylonEditorProjectionNode,
+  BabylonSceneCameraPreviewRig,
 } from '@fps-games/editor-babylon';
 import { createBabylonEditorInfiniteGrid } from '@fps-games/editor-babylon';
 import baseSceneConfig from '../config/scene.json';
@@ -62,12 +63,9 @@ import {
   saveSceneMainSource,
 } from '../fps-game-editor-adapter/scene-main-source-driver';
 import { compileEditorSceneDocumentToSceneConfig } from '../fps-game-editor-adapter/editor-scene-compiler';
+import { resolveEditorLightingPreviewProfile } from '../fps-game-editor-adapter/editor-lighting-preview-profile';
 
 type BabylonModule = Record<string, any>;
-
-type MainCameraPreviewRig = {
-  settings: typeof DEFAULT_EDITOR_SCENE_CAMERA;
-};
 
 export interface LocalEditorModeSwitcherOptions {
   root?: HTMLElement;
@@ -157,14 +155,15 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
   const authoringHost = createProjectAuthoringHost({
     drivers: [sceneMainSourceDriver],
   });
-  const mainCameraPreviewDocumentAdapter = {
-    getMainCameraPreviewRig: createMainCameraPreviewRig,
-  };
+  const editorLightingPreviewAdapter = {
+    getWorldAppearance: resolveEditorLightingPreviewProfile,
+  } as Record<string, unknown>;
   const harness: LocalEditorHarness<EditorSceneDocument> = createLocalEditorHarness<EditorSceneDocument, EditorSceneDocumentPatch, EditorSceneAssetLibraryItem>({
     root: options.root,
     localTestActions: window.parent === window,
     authoringHost,
     documentAdapter: {
+      ...editorLightingPreviewAdapter,
       prepareDocument: (document, assets) => normalizeEditorSceneHierarchyDocument(
         ensureEditorSceneEnvironmentDefaults(enrichEditorSceneDocumentAssets(document, assets)),
       ),
@@ -180,7 +179,7 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
         const gameObject = document.scene.gameObjects.find((entry) => entry.id === id);
         return gameObject ? createProjectionNode(document, gameObject) : null;
       },
-      ...mainCameraPreviewDocumentAdapter,
+      getSceneCameraPreviewRig: createSceneCameraPreviewRig,
       isSelectable: (_document, id) => id !== 'root',
       isLocked: () => false,
       createPatchFromAsset: (assetItem, input) => ({
@@ -266,9 +265,6 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
       cameraTarget: { x: 0, y: 0.6, z: 0 },
       cameraRadius: 12,
       clearColor: { r: 0.055, g: 0.07, b: 0.09, a: 1 },
-      sky: {
-        preset: 'simple',
-      },
       useRightHandedSystem: true,
     },
     createGrid: createEditorGrid,
@@ -281,18 +277,11 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
     editorLoadingOverlay.show(EDITOR_LOADING_OVERLAY_CONTENT.enter);
     let entered = false;
     try {
-      await waitForEditorLoadingOverlayPaint();
       await rawEnterEditor();
       entered = true;
-      harness.render();
-      await waitForEditorLoadingOverlayPaint();
     } finally {
       editorLoadingOverlay.hide();
-      if (entered) {
-        (harness as LocalEditorHarness<EditorSceneDocument> & {
-          notifyViewportRevealed?: (reason?: string) => void;
-        }).notifyViewportRevealed?.('editor-loading-overlay-hidden');
-      }
+      if (entered) harness.notifyViewportRevealed?.('editor-loading-overlay-hidden');
     }
   };
   const showLoadingOverlayIfNeeded = (content: EditorLoadingOverlayContent): void => {
@@ -441,17 +430,11 @@ function waitForMilliseconds(milliseconds: number): Promise<void> {
   return new Promise(resolve => window.setTimeout(resolve, milliseconds));
 }
 
-function createEditorGrid(
-  BABYLON: BabylonModule,
-  scene: any,
-  camera?: any,
-  context?: { getCamera?: () => any },
-) {
+function createEditorGrid(BABYLON: BabylonModule, scene: any, camera?: any) {
   return createBabylonEditorInfiniteGrid({
     babylon: BABYLON,
     scene,
     camera,
-    getCamera: () => context?.getCamera?.() ?? camera ?? scene?.activeCamera ?? null,
     name: 'pa-template-editor-grid',
     halfLineCount: 96,
   });
@@ -492,7 +475,7 @@ function createProjectionNode(
     ...(isEditorSceneRootProjectionNode(gameObject) ? { helperKind: 'root' as const } : {}),
     ...(runtimeKind ? { runtimeKind } : {}),
     ...(gameObject.camera ? { camera: structuredClone(gameObject.camera) } : {}),
-    ...(gameObject.light ? { light: structuredClone(gameObject.light) } : {}),
+    ...(gameObject.light ? { light: structuredClone(gameObject.light) as any } : {}),
     transform: transform && worldTransform
       ? {
           position: worldTransform.position,
@@ -531,12 +514,13 @@ function createProjectionNode(
   };
 }
 
-function createMainCameraPreviewRig(
+function createSceneCameraPreviewRig(
   editorScene: EditorSceneDocument,
-): MainCameraPreviewRig | null {
+): BabylonSceneCameraPreviewRig | null {
   const camera = editorScene.scene.gameObjects.find(isEditorSceneCameraGameObject);
   if (!camera || camera.active === false) return null;
   return {
+    target: { x: 0, y: 0, z: 0 },
     settings: {
       ...DEFAULT_EDITOR_SCENE_CAMERA,
       ...(camera.camera ?? {}),

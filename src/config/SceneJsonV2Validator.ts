@@ -128,7 +128,7 @@ export function validateSceneJsonV2(
     }
     if (node.kind === 'transform') {
       validateCameraRig(node.camera, `${path}.camera`, add);
-      validateDirectionalLight(node.light, `${path}.light`, add);
+      validateSceneLight(node.light, `${path}.light`, add);
     }
     if (strictNodes.has(node.id)) assertNoRuntimeOnlyFields(node, path, add);
   });
@@ -408,18 +408,21 @@ function validateCameraRig(value: unknown, path: string, add: (path: string, mes
   }
 }
 
-function validateDirectionalLight(value: unknown, path: string, add: (path: string, message: string) => void): void {
+function validateSceneLight(value: unknown, path: string, add: (path: string, message: string) => void): void {
   if (value == null) return;
   if (!isRecord(value)) {
     add(path, 'light must be an object');
     return;
   }
-  if (value.type !== 'directional') add(`${path}.type`, 'light.type must be directional');
+  if (value.type !== 'directional' && value.type !== 'hemispheric') {
+    add(`${path}.type`, 'light.type must be directional or hemispheric');
+  }
   if (typeof value.intensity !== 'number' || !Number.isFinite(value.intensity) || value.intensity < 0) {
     add(`${path}.intensity`, 'light intensity must be a non-negative finite number');
   }
-  validateVec3(value.direction, `${path}.direction`, add);
+  if (value.type === 'directional') validateVec3(value.direction, `${path}.direction`, add);
   validateColor(value.diffuseColor, `${path}.diffuseColor`, add);
+  validateColor(value.groundColor, `${path}.groundColor`, add);
 }
 
 function validateOutline(value: unknown, path: string, add: (path: string, message: string) => void): void {

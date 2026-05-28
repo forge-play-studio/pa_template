@@ -23,7 +23,7 @@ import type {
   SceneConfig,
   SceneAssetConfig,
   SceneCameraRigConfig,
-  SceneDirectionalLightConfig,
+  SceneLightConfig,
   SceneGroupNode,
   SceneInstanceNode,
   SceneNodeConfig,
@@ -1608,7 +1608,7 @@ export interface ProjectEditorCreateSceneNodeArgs {
   transformType?: SceneTransformNode['transformType'];
   groundDecal?: SceneTransformNode['groundDecal'];
   camera?: SceneCameraRigConfig;
-  light?: SceneDirectionalLightConfig;
+  light?: SceneLightConfig;
 }
 
 export interface ProjectEditorPatchSceneNodeArgs {

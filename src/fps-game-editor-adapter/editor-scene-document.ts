@@ -5,6 +5,7 @@ import type {
   SceneAssetMaterialMode,
   SceneCameraRigConfig,
   SceneDirectionalLightConfig,
+  SceneHemisphericLightConfig,
   SceneNodeConfig,
   ScenePrimitiveShape,
   SceneNodeVisualOverrides,
@@ -64,6 +65,7 @@ export interface EditorScenePrimitiveRenderer {
 }
 
 export type EditorSceneCameraInspectorLanguage = 'zh' | 'en';
+export type EditorSceneLightInspectorLanguage = 'zh' | 'en';
 
 export interface EditorSceneCameraRig extends SceneCameraRigConfig {
   inspectorLanguage?: EditorSceneCameraInspectorLanguage;
@@ -72,7 +74,18 @@ export interface EditorSceneCameraRig extends SceneCameraRigConfig {
 export interface EditorSceneDirectionalLight extends Omit<SceneDirectionalLightConfig, 'direction' | 'diffuseColor'> {
   direction: EditorSceneVec3;
   diffuseColor?: ColorRGB;
+  inspectorLanguage?: EditorSceneLightInspectorLanguage;
 }
+
+export interface EditorSceneHemisphericLight extends Omit<SceneHemisphericLightConfig, 'diffuseColor' | 'groundColor'> {
+  diffuseColor?: ColorRGB;
+  groundColor?: ColorRGB;
+  inspectorLanguage?: EditorSceneLightInspectorLanguage;
+}
+
+export type EditorSceneLight =
+  | EditorSceneHemisphericLight
+  | EditorSceneDirectionalLight;
 
 export type EditorSceneComponent =
   | EditorSceneTransformComponent
@@ -87,7 +100,7 @@ export interface EditorSceneGameObject {
   active?: boolean;
   transformType?: SceneTransformNode['transformType'];
   camera?: EditorSceneCameraRig;
-  light?: EditorSceneDirectionalLight;
+  light?: EditorSceneLight;
   primitive?: EditorScenePrimitiveRenderer;
   groundDecal?: SceneTransformNode['groundDecal'];
   overrides?: SceneNodeVisualOverrides;

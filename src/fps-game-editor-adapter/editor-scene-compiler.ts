@@ -3,6 +3,7 @@ import type {
   EditorSceneCameraRig,
   EditorSceneDocument,
   EditorSceneGameObject,
+  EditorSceneLight,
 } from './editor-scene-document';
 import {
   findEditorSceneModelRenderer,
@@ -25,7 +26,6 @@ import { getEditorSceneAuthoringSourceRef } from './editor-authoring-source';
 
 const EDITOR_SCENE_COMPILER_ID = 'pa_template.editor-scene.compiler';
 const EDITOR_SCENE_COMPILER_VERSION = '1';
-const EDITOR_SCENE_WORLD_ORIGIN_ID = 'root';
 
 export interface CompiledEditorSceneSummary {
   assetCount: number;
@@ -58,7 +58,7 @@ export function compileEditorSceneDocumentToSceneConfig(
   };
   const rootId = previousScene?.rootId || 'root';
   const compiledGameObjects = editorDocument.scene.gameObjects
-    .filter((gameObject) => gameObject.id !== rootId && gameObject.id !== EDITOR_SCENE_WORLD_ORIGIN_ID);
+    .filter((gameObject) => gameObject.id !== rootId);
   nextSceneConfig.scene = {
     rootId,
     assets: editorDocument.assets.map(compileAsset),
@@ -145,7 +145,7 @@ function compileGameObject(
         kind: 'transform',
         ...(gameObject.transformType ? { transformType: gameObject.transformType } : {}),
         ...(gameObject.camera ? { camera: compileEditorSceneCamera(gameObject.camera) } : {}),
-        ...(gameObject.light ? { light: structuredClone(gameObject.light) } : {}),
+        ...(gameObject.light ? { light: compileEditorSceneLight(gameObject.light) } : {}),
         ...(gameObject.groundDecal ? { groundDecal: structuredClone(gameObject.groundDecal) } : {}),
         ...(visualOverrides ? { overrides: visualOverrides } : {}),
       } satisfies SceneTransformNode;
@@ -168,6 +168,12 @@ function compileGameObject(
 
 function compileEditorSceneCamera(camera: EditorSceneCameraRig): SceneTransformNode['camera'] {
   const compiled = structuredClone(camera) as EditorSceneCameraRig;
+  delete compiled.inspectorLanguage;
+  return compiled;
+}
+
+function compileEditorSceneLight(light: EditorSceneLight): SceneTransformNode['light'] {
+  const compiled = structuredClone(light) as EditorSceneLight;
   delete compiled.inspectorLanguage;
   return compiled;
 }

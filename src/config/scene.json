@@ -90,6 +90,52 @@
         }
       },
       {
+        "id": "environment_light",
+        "name": "Environment Light",
+        "parentId": "root",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 4,
+          "objectGuid": "go_environment_light_default",
+          "objectId": "environment_light",
+          "component": "Transform"
+        },
+        "transform": {
+          "position": {
+            "x": 0,
+            "y": 3,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "transform",
+        "transformType": "light",
+        "light": {
+          "type": "hemispheric",
+          "intensity": 0.8,
+          "diffuseColor": {
+            "r": 1,
+            "g": 1,
+            "b": 1
+          },
+          "groundColor": {
+            "r": 0.48,
+            "g": 0.52,
+            "b": 0.62
+          }
+        }
+      },
+      {
         "id": "sun_light",
         "name": "Sun Light",
         "parentId": "root",

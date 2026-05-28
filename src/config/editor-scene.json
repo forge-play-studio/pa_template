@@ -92,6 +92,49 @@
         "guid": "go_2406b122-d63b-4971-bf66-7d78a8776543"
       },
       {
+        "id": "environment_light",
+        "name": "Environment Light",
+        "kind": "transform",
+        "parentId": "root",
+        "active": true,
+        "transformType": "light",
+        "light": {
+          "type": "hemispheric",
+          "intensity": 0.8,
+          "diffuseColor": {
+            "r": 1,
+            "g": 1,
+            "b": 1
+          },
+          "groundColor": {
+            "r": 0.48,
+            "g": 0.52,
+            "b": 0.62
+          }
+        },
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": 0,
+              "y": 3,
+              "z": 0
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          }
+        ],
+        "guid": "go_environment_light_default"
+      },
+      {
         "id": "sun_light",
         "name": "Sun Light",
         "kind": "transform",

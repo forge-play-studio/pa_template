@@ -40,6 +40,7 @@ import {
   type SceneCameraProjection,
   type SceneCameraRigConfig,
   type SceneDirectionalLightConfig,
+  type SceneHemisphericLightConfig,
   type SceneInstanceNode,
   type ScenePrimitiveNode,
   type SceneSharedMaterialConfig,
@@ -57,11 +58,6 @@ import {
 } from '@fps-games/editor-babylon';
 
 const DEFAULT_CAMERA_FOV = 0.85;
-const DEFAULT_CAMERA_LOWER_BETA_LIMIT = 0.1;
-const DEFAULT_CAMERA_UPPER_BETA_LIMIT = 1.45;
-const DEFAULT_CAMERA_RADIUS_LIMIT_FACTOR_MIN = 0.25;
-const DEFAULT_CAMERA_RADIUS_LIMIT_FACTOR_MAX = 4;
-const MIN_CAMERA_RADIUS_LIMIT = 0.1;
 
 /** 场景环境构建结果 */
 export interface SceneEnvironment {
@@ -141,7 +137,7 @@ export class SceneBuilder {
 
   private createCamera(): ArcRotateCamera {
     const cameraNode = configService.getSceneCameraNode();
-    const cameraRig = applyCameraRigLimitDefaults(cloneCameraRig(cameraNode?.camera ?? this.resolveFallbackCameraRig()));
+    const cameraRig = cloneCameraRig(cameraNode?.camera ?? this.resolveFallbackCameraRig());
     this.selectedCameraRig = cloneCameraRig(cameraRig);
     const target = this.getCameraRigTarget(cameraRig);
 
@@ -183,7 +179,7 @@ export class SceneBuilder {
   }
 
   applyCameraRig(camera: ArcRotateCamera, cameraRig: SceneCameraRigConfig, target?: Vector3): void {
-    const nextRig = applyCameraRigLimitDefaults(cloneCameraRig(cameraRig));
+    const nextRig = cloneCameraRig(cameraRig);
     this.selectedCameraRig = cloneCameraRig(nextRig);
     this.relaxCameraLimitsForRigAssignment(camera);
     this.applyCameraRuntimeProperties(camera, nextRig, target ?? camera.target.clone());
@@ -207,18 +203,16 @@ export class SceneBuilder {
   }
 
   private applyCameraRuntimeProperties(camera: ArcRotateCamera, cameraRig: SceneCameraRigConfig, target: Vector3): void {
-    const betaLimits = resolveCameraBetaLimitDefaults(cameraRig.beta, cameraRig.lowerBetaLimit, cameraRig.upperBetaLimit);
-    const radiusLimits = resolveCameraRadiusLimitDefaults(cameraRig.radius, cameraRig.lowerRadiusLimit, cameraRig.upperRadiusLimit);
-    camera.target = target;
     camera.alpha = cameraRig.alpha;
     camera.beta = cameraRig.beta;
     camera.radius = cameraRig.radius;
+    camera.target = target;
     camera.lowerAlphaLimit = cameraRig.alpha;
     camera.upperAlphaLimit = cameraRig.alpha;
-    camera.lowerBetaLimit = betaLimits.lower;
-    camera.upperBetaLimit = betaLimits.upper;
-    camera.lowerRadiusLimit = radiusLimits.lower;
-    camera.upperRadiusLimit = radiusLimits.upper;
+    camera.lowerBetaLimit = cameraRig.lowerBetaLimit ?? cameraRig.beta;
+    camera.upperBetaLimit = cameraRig.upperBetaLimit ?? cameraRig.beta;
+    camera.lowerRadiusLimit = cameraRig.lowerRadiusLimit ?? cameraRig.radius;
+    camera.upperRadiusLimit = cameraRig.upperRadiusLimit ?? cameraRig.radius;
     camera.minZ = cameraRig.minZ ?? 1;
     camera.maxZ = cameraRig.maxZ ?? 10000;
     camera.inertia = cameraRig.inertia ?? 0.9;
@@ -246,24 +240,27 @@ export class SceneBuilder {
   }
 
   private createLights(): { hemisphericLight: HemisphericLight; directionalLight: DirectionalLight } {
-    const lightsCfg = (renderingConfig as any).globalVolume?.lights ?? {};
-
+    const hemispheric = this.resolveHemisphericLightSource();
     const hemi = new HemisphericLight('hemiLight', new Vector3(0, 1, 0), this.scene);
-    hemi.intensity = lightsCfg.hemispheric?.intensity ?? 0.8;
-    const hemiDiffuse = lightsCfg.hemispheric?.diffuseColor ?? lightsCfg.hemispheric?.skyLightColor;
-    if (hemiDiffuse) {
-      hemi.diffuse = new Color3(hemiDiffuse.r, hemiDiffuse.g, hemiDiffuse.b);
+    hemi.intensity = hemispheric.light.intensity;
+    hemi.setEnabled(hemispheric.enabled);
+    if (hemispheric.light.diffuseColor) {
+      hemi.diffuse = new Color3(hemispheric.light.diffuseColor.r, hemispheric.light.diffuseColor.g, hemispheric.light.diffuseColor.b);
+    }
+    if (hemispheric.light.groundColor) {
+      hemi.groundColor = new Color3(hemispheric.light.groundColor.r, hemispheric.light.groundColor.g, hemispheric.light.groundColor.b);
     }
 
-    const sun = this.resolveDirectionalLight();
+    const sun = this.resolveDirectionalLightSource();
     const dir = new DirectionalLight(
       'dirLight',
-      new Vector3(sun.direction.x, sun.direction.y, sun.direction.z),
+      new Vector3(sun.light.direction.x, sun.light.direction.y, sun.light.direction.z),
       this.scene,
     );
-    dir.intensity = sun.intensity;
-    if (sun.diffuseColor) {
-      dir.diffuse = new Color3(sun.diffuseColor.r, sun.diffuseColor.g, sun.diffuseColor.b);
+    dir.intensity = sun.light.intensity;
+    dir.setEnabled(sun.enabled);
+    if (sun.light.diffuseColor) {
+      dir.diffuse = new Color3(sun.light.diffuseColor.r, sun.light.diffuseColor.g, sun.light.diffuseColor.b);
     }
 
     return { hemisphericLight: hemi, directionalLight: dir };
@@ -290,7 +287,7 @@ export class SceneBuilder {
   private resolveFallbackCameraRig(): SceneCameraRigConfig {
     const camCfg = (renderingConfig as any).globalVolume?.camera ?? {};
     const target = readPosition3D(camCfg.target);
-    return applyCameraRigLimitDefaults({
+    return {
       projection: readCameraProjection(camCfg.projection),
       alpha: readFiniteNumber(camCfg.alpha, Math.PI / 4),
       beta: readFiniteNumber(camCfg.beta, Math.PI / 4),
@@ -306,7 +303,7 @@ export class SceneBuilder {
       upperRadiusLimit: readOptionalPositiveFiniteNumber(camCfg.upperRadiusLimit) ?? readPositiveFiniteNumber(camCfg.radius, 14),
       inertia: readOptionalUnitNumber(camCfg.inertia) ?? 0.9,
       targetScreenOffset: readPosition2D(camCfg.targetScreenOffset) ?? { x: 0, y: 0 },
-    });
+    };
   }
 
   private resolveFallbackCameraTarget(): Vector3 {
@@ -316,8 +313,45 @@ export class SceneBuilder {
     return new Vector3(target.x, target.y, target.z);
   }
 
-  private resolveDirectionalLight(): SceneDirectionalLightConfig {
-    return configService.getSceneDirectionalLight() ?? this.resolveFallbackDirectionalLight();
+  private resolveDirectionalLightSource(): { light: SceneDirectionalLightConfig; enabled: boolean } {
+    const node = configService.getSceneDirectionalLightNode();
+    if (node?.light?.type === 'directional') {
+      return {
+        light: node.light,
+        enabled: node.enabled !== false,
+      };
+    }
+    return {
+      light: this.resolveFallbackDirectionalLight(),
+      enabled: true,
+    };
+  }
+
+  private resolveHemisphericLightSource(): { light: SceneHemisphericLightConfig; enabled: boolean } {
+    const node = configService.getSceneHemisphericLightNode();
+    if (node?.light?.type === 'hemispheric') {
+      return {
+        light: node.light,
+        enabled: node.enabled !== false,
+      };
+    }
+    return {
+      light: this.resolveFallbackHemisphericLight(),
+      enabled: true,
+    };
+  }
+
+  private resolveFallbackHemisphericLight(): SceneHemisphericLightConfig {
+    const lightsCfg = (renderingConfig as any).globalVolume?.lights ?? {};
+    const hemispheric = lightsCfg.hemispheric ?? {};
+    const diffuseColor = readColorRGB(hemispheric.diffuseColor ?? hemispheric.skyLightColor);
+    const groundColor = readColorRGB(hemispheric.groundColor);
+    return {
+      type: 'hemispheric',
+      intensity: readNonNegativeFiniteNumber(hemispheric.intensity, 0.8),
+      ...(diffuseColor ? { diffuseColor } : {}),
+      ...(groundColor ? { groundColor } : {}),
+    };
   }
 
   private resolveFallbackDirectionalLight(): SceneDirectionalLightConfig {
@@ -382,22 +416,14 @@ export class SceneBuilder {
   async loadSceneFromDocument(): Promise<void> {
     this.clearSceneRuntime();
     this.syncSceneAssetIndex();
-    const rootId = configService.getSceneRootId();
-    this.attachSceneNodeMetadata(this.root, rootId);
-    this.root.name = rootId;
-    this.root.id = rootId;
+    this.attachSceneNodeMetadata(this.root, configService.getSceneRootId());
+    this.root.name = configService.getSceneRootId();
+    this.root.id = configService.getSceneRootId();
     this.root.setEnabled(true);
-    this.sceneNodeRuntimes.set(rootId, this.root);
-    this.sceneNodeCleanup.set(rootId, null);
+    this.sceneNodeRuntimes.set(configService.getSceneRootId(), this.root);
+    this.sceneNodeCleanup.set(configService.getSceneRootId(), null);
 
-    const nodes = configService.getSceneNodes().filter((nodeConfig) => {
-      if (!this.isSceneRootConfigNode(nodeConfig)) return true;
-      console.warn('[SceneBuilder] Ignoring scene.nodes entry that matches scene.rootId', {
-        id: nodeConfig.id,
-        rootId,
-      });
-      return false;
-    });
+    const nodes = configService.getSceneNodes();
     if (nodes.length === 0) return;
 
     await this.buildSceneNodePass(nodes);
@@ -414,7 +440,6 @@ export class SceneBuilder {
    * 至少需要让这个方法在自己的 SceneBuilder 上成立。
    */
   addSceneNodeFromConfig(nodeConfig: SceneNodeConfig, parent?: TransformNode | null): TransformNode | null {
-    if (this.isSceneRootConfigNode(nodeConfig)) return null;
     return this.buildSceneNodeRuntime(nodeConfig, 'sync', parent ?? undefined);
   }
 
@@ -487,7 +512,6 @@ export class SceneBuilder {
     mode: 'async' | 'sync',
     parentOverride?: TransformNode | null,
   ): Promise<TransformNode | null> | TransformNode | null {
-    if (this.isSceneRootConfigNode(nodeConfig)) return null;
     const parent = parentOverride ?? this.resolveParentRuntime(nodeConfig.parentId);
     if (!parent) return null;
 
@@ -524,11 +548,6 @@ export class SceneBuilder {
     }
 
     return this.attachInstanceAssetSync(nodeConfig, runtimeNode);
-  }
-
-  private isSceneRootConfigNode(nodeConfig: SceneNodeConfig): boolean {
-    const rootId = configService.getSceneRootId();
-    return !!rootId && nodeConfig.id === rootId;
   }
 
   private createRuntimeNode(nodeConfig: SceneNodeConfig): TransformNode {
@@ -1312,58 +1331,6 @@ function cloneCameraRig(cameraRig: SceneCameraRigConfig): SceneCameraRigConfig {
     ...(cameraRig.targetOffset ? { targetOffset: { ...cameraRig.targetOffset } } : {}),
     ...(cameraRig.targetScreenOffset ? { targetScreenOffset: { ...cameraRig.targetScreenOffset } } : {}),
   };
-}
-
-function applyCameraRigLimitDefaults(cameraRig: SceneCameraRigConfig): SceneCameraRigConfig {
-  const betaLimits = resolveCameraBetaLimitDefaults(cameraRig.beta, cameraRig.lowerBetaLimit, cameraRig.upperBetaLimit);
-  const radiusLimits = resolveCameraRadiusLimitDefaults(cameraRig.radius, cameraRig.lowerRadiusLimit, cameraRig.upperRadiusLimit);
-  return {
-    ...cameraRig,
-    lowerBetaLimit: betaLimits.lower,
-    upperBetaLimit: betaLimits.upper,
-    lowerRadiusLimit: radiusLimits.lower,
-    upperRadiusLimit: radiusLimits.upper,
-  };
-}
-
-function resolveCameraBetaLimitDefaults(
-  beta: number,
-  lower: number | undefined,
-  upper: number | undefined,
-): { lower: number; upper: number } {
-  let nextLower = Number.isFinite(lower) ? lower as number : DEFAULT_CAMERA_LOWER_BETA_LIMIT;
-  let nextUpper = Number.isFinite(upper) ? upper as number : DEFAULT_CAMERA_UPPER_BETA_LIMIT;
-  if (isLockedToCurrentValue(nextLower, nextUpper, beta)) {
-    nextLower = DEFAULT_CAMERA_LOWER_BETA_LIMIT;
-    nextUpper = DEFAULT_CAMERA_UPPER_BETA_LIMIT;
-  }
-  if (nextUpper < nextLower) [nextLower, nextUpper] = [nextUpper, nextLower];
-  if (beta < nextLower) nextLower = beta;
-  if (beta > nextUpper) nextUpper = beta;
-  return { lower: nextLower, upper: nextUpper };
-}
-
-function resolveCameraRadiusLimitDefaults(
-  radius: number,
-  lower: number | undefined,
-  upper: number | undefined,
-): { lower: number; upper: number } {
-  const defaultLower = Math.max(MIN_CAMERA_RADIUS_LIMIT, radius * DEFAULT_CAMERA_RADIUS_LIMIT_FACTOR_MIN);
-  const defaultUpper = Math.max(radius + 1, radius * DEFAULT_CAMERA_RADIUS_LIMIT_FACTOR_MAX);
-  let nextLower = Number.isFinite(lower) && (lower as number) > 0 ? lower as number : defaultLower;
-  let nextUpper = Number.isFinite(upper) && (upper as number) > 0 ? upper as number : defaultUpper;
-  if (isLockedToCurrentValue(nextLower, nextUpper, radius)) {
-    nextLower = defaultLower;
-    nextUpper = defaultUpper;
-  }
-  if (nextUpper < nextLower) [nextLower, nextUpper] = [nextUpper, nextLower];
-  if (radius < nextLower) nextLower = Math.max(MIN_CAMERA_RADIUS_LIMIT, radius);
-  if (radius > nextUpper) nextUpper = radius;
-  return { lower: nextLower, upper: nextUpper };
-}
-
-function isLockedToCurrentValue(lower: number, upper: number, value: number): boolean {
-  return Math.abs(lower - upper) <= 0.000001 && Math.abs(lower - value) <= 0.000001;
 }
 
 function readNonNegativeFiniteNumber(value: unknown, fallback: number): number {

@@ -87,6 +87,15 @@ export interface SceneDirectionalLightConfig {
   diffuseColor?: ColorRGB;
 }
 
+export interface SceneHemisphericLightConfig {
+  type: 'hemispheric';
+  intensity: number;
+  diffuseColor?: ColorRGB;
+  groundColor?: ColorRGB;
+}
+
+export type SceneLightConfig = SceneHemisphericLightConfig | SceneDirectionalLightConfig;
+
 // ============================================================
 // World Bounds
 // ============================================================
@@ -298,7 +307,7 @@ export interface SceneTransformNode extends SceneNodeBase {
     emissiveTextureLevel?: number;
   };
   camera?: SceneCameraRigConfig;
-  light?: SceneDirectionalLightConfig;
+  light?: SceneLightConfig;
 }
 
 export type SceneNodeConfig = SceneGroupNode | SceneInstanceNode | SceneTransformNode | ScenePrimitiveNode;

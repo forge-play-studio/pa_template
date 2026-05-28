@@ -49,13 +49,17 @@ function isCameraProjection(value: unknown): value is 'orthographic' | 'perspect
   return value === 'orthographic' || value === 'perspective';
 }
 
+function isLightType(value: unknown): value is 'hemispheric' | 'directional' {
+  return value === 'hemispheric' || value === 'directional';
+}
+
 function isScale(value: unknown): value is number | Scale3D {
-  if (isFiniteNumber(value)) return value >= 0;
+  if (isFiniteNumber(value)) return value > 0;
   if (!value || typeof value !== 'object') return false;
   const record = value as Record<string, unknown>;
-  return isFiniteNumber(record.x) && record.x >= 0
-    && isFiniteNumber(record.y) && record.y >= 0
-    && isFiniteNumber(record.z) && record.z >= 0;
+  return isFiniteNumber(record.x) && record.x > 0
+    && isFiniteNumber(record.y) && record.y > 0
+    && isFiniteNumber(record.z) && record.z > 0;
 }
 
 function isColor(value: unknown): value is ColorRGB {
@@ -127,7 +131,7 @@ function transformAxisPath(
     ...(vectorName === 'scale' ? { allowDelete: false } : {}),
     validate: (value) => value == null || (
       vectorName === 'scale'
-        ? isNonNegativeFiniteNumber(value)
+        ? isPositiveFiniteNumber(value)
         : isFiniteNumber(value)
     ),
   };
@@ -173,12 +177,14 @@ export const SCENE_NODE_FIELD_SCHEMA: ReadonlyArray<SceneNodeFieldSchemaEntry> =
   { path: 'camera.targetScreenOffset', appliesTo: ['transform'], validate: (value) => value == null || isVec2(value) },
   { path: 'camera.targetScreenOffset.x', appliesTo: ['transform'], validate: isFiniteNumber, allowDelete: false },
   { path: 'camera.targetScreenOffset.y', appliesTo: ['transform'], validate: isFiniteNumber, allowDelete: false },
+  { path: 'light.type', appliesTo: ['transform'], validate: isLightType, allowDelete: false },
   { path: 'light.intensity', appliesTo: ['transform'], validate: isNonNegativeFiniteNumber, allowDelete: false },
   { path: 'light.direction', appliesTo: ['transform'], validate: isVec3, allowDelete: false },
   { path: 'light.direction.x', appliesTo: ['transform'], validate: isFiniteNumber, allowDelete: false },
   { path: 'light.direction.y', appliesTo: ['transform'], validate: isFiniteNumber, allowDelete: false },
   { path: 'light.direction.z', appliesTo: ['transform'], validate: isFiniteNumber, allowDelete: false },
   { path: 'light.diffuseColor', appliesTo: ['transform'], validate: (value) => value == null || isColor(value) },
+  { path: 'light.groundColor', appliesTo: ['transform'], validate: (value) => value == null || isColor(value) },
   { path: 'groundDecal.size', appliesTo: ['transform'], validate: (value) => value == null || isPositiveSize(value) },
   { path: 'groundDecal.size.width', appliesTo: ['transform'], validate: (value) => value == null || (isFiniteNumber(value) && value > 0), allowDelete: false },
   { path: 'groundDecal.size.depth', appliesTo: ['transform'], validate: (value) => value == null || (isFiniteNumber(value) && value > 0), allowDelete: false },
