@@ -8,10 +8,10 @@
     "generatedFrom": {
       "sourceId": "scene.main",
       "sourceType": "scene",
-      "revision": 4,
+      "revision": 5,
       "compilerId": "pa_template.editor-scene.compiler",
       "compilerVersion": "1",
-      "compiledAt": "2026-05-26T15:59:16.204Z"
+      "compiledAt": "2026-05-27T10:06:27.965Z"
     }
   },
   "gameplay": {
@@ -40,7 +40,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 4,
+          "revision": 5,
           "objectGuid": "go_2406b122-d63b-4971-bf66-7d78a8776543",
           "objectId": "main_camera",
           "component": "Transform"
@@ -65,10 +65,28 @@
         "kind": "transform",
         "transformType": "camera",
         "camera": {
+          "projection": "orthographic",
           "alpha": 0.7854,
           "beta": 0.7854,
           "radius": 17,
-          "orthoSize": 2
+          "orthoSize": 2,
+          "fov": 0.85,
+          "targetOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "minZ": 1,
+          "maxZ": 10000,
+          "lowerBetaLimit": 0.1,
+          "upperBetaLimit": 1.45,
+          "lowerRadiusLimit": 3.5,
+          "upperRadiusLimit": 56,
+          "inertia": 0.9,
+          "targetScreenOffset": {
+            "x": 0,
+            "y": 0
+          }
         }
       },
       {
@@ -78,7 +96,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 4,
+          "revision": 5,
           "objectGuid": "go_7017d029-9d69-4381-91ac-75093053caa9",
           "objectId": "sun_light",
           "component": "Transform"
@@ -124,16 +142,16 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 4,
+          "revision": 5,
           "objectGuid": "go_3e3578c4-1e4a-41df-8160-013bdcd02aa5",
           "objectId": "plane",
           "component": "PrimitiveRenderer"
         },
         "transform": {
           "position": {
-            "x": -3.6,
-            "y": 0,
-            "z": 1.8
+            "x": -3.5999999046325684,
+            "y": -0.14123278856277466,
+            "z": 1.7999999523162842
           },
           "rotation": {
             "z": 0,
@@ -156,6 +174,6 @@
     "textures": []
   },
   "render": {},
-  "version": 3,
-  "updatedAt": "2026-05-26T15:59:16.204Z"
+  "version": 4,
+  "updatedAt": "2026-05-27T10:06:27.967Z"
 }

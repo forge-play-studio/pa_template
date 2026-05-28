@@ -5,7 +5,7 @@
     "authoringSource": {
       "sourceId": "scene.main",
       "sourceType": "scene",
-      "revision": 4
+      "revision": 5
     }
   },
   "assets": [],
@@ -45,10 +45,29 @@
         "active": true,
         "transformType": "camera",
         "camera": {
+          "projection": "orthographic",
           "alpha": 0.7854,
           "beta": 0.7854,
           "radius": 17,
-          "orthoSize": 2
+          "orthoSize": 2,
+          "fov": 0.85,
+          "targetOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "minZ": 1,
+          "maxZ": 10000,
+          "lowerBetaLimit": 0.1,
+          "upperBetaLimit": 1.45,
+          "lowerRadiusLimit": 3.5,
+          "upperRadiusLimit": 56,
+          "inertia": 0.9,
+          "targetScreenOffset": {
+            "x": 0,
+            "y": 0
+          },
+          "inspectorLanguage": "zh"
         },
         "components": [
           {
@@ -128,9 +147,9 @@
           {
             "type": "Transform",
             "position": {
-              "x": -3.6,
-              "y": 0,
-              "z": 1.8
+              "x": -3.5999999046325684,
+              "y": -0.14123278856277466,
+              "z": 1.7999999523162842
             },
             "rotation": {
               "z": 0,
