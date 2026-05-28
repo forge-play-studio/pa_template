@@ -5,7 +5,7 @@
     "authoringSource": {
       "sourceId": "scene.main",
       "sourceType": "scene",
-      "revision": 5
+      "revision": 8
     }
   },
   "assets": [],
@@ -100,17 +100,18 @@
         "transformType": "light",
         "light": {
           "type": "hemispheric",
-          "intensity": 0.8,
+          "intensity": 0.75,
           "diffuseColor": {
             "r": 1,
             "g": 1,
             "b": 1
           },
           "groundColor": {
-            "r": 0.48,
-            "g": 0.52,
-            "b": 0.62
-          }
+            "r": 0.5607843137254902,
+            "g": 0.6078431372549019,
+            "b": 0.7176470588235294
+          },
+          "inspectorLanguage": "zh"
         },
         "components": [
           {
@@ -136,24 +137,25 @@
       },
       {
         "id": "sun_light",
-        "name": "Sun Light",
+        "name": "Directional Light",
         "kind": "transform",
         "parentId": "root",
         "active": true,
         "transformType": "light",
         "light": {
           "type": "directional",
-          "intensity": 2,
+          "intensity": 1.8,
           "direction": {
-            "x": -0.3,
-            "y": -1,
-            "z": -0.2
+            "x": 0.3045578654998147,
+            "y": -0.8290376338767504,
+            "z": -0.46897879288752087
           },
           "diffuseColor": {
             "r": 1,
-            "g": 1,
-            "b": 1
-          }
+            "g": 0.9490196078431372,
+            "b": 0.8470588235294118
+          },
+          "inspectorLanguage": "zh"
         },
         "components": [
           {
@@ -207,6 +209,37 @@
           }
         ],
         "guid": "go_3e3578c4-1e4a-41df-8160-013bdcd02aa5"
+      },
+      {
+        "id": "cube",
+        "guid": "go_ac4a2824-3625-468c-aeee-d7c75dedc814",
+        "name": "Cube",
+        "kind": "primitive",
+        "parentId": "root",
+        "active": true,
+        "primitive": {
+          "shape": "cube"
+        },
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": 3.4570541381835938,
+              "y": 1.9539925233402755e-14,
+              "z": 0.6587640047073364
+            },
+            "rotation": {
+              "z": 0,
+              "x": 0,
+              "y": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          }
+        ]
       }
     ]
   }

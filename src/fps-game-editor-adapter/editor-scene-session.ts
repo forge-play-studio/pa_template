@@ -64,6 +64,19 @@ import {
 } from './editor-scene-document';
 import { mergeEditorSceneAssetWithLibraryItem } from './editor-asset-library';
 import { resolveSceneNodeFieldSchema } from './scene-node-field-schema';
+import {
+  DEFAULT_DIRECTIONAL_LIGHT_DIRECTION,
+  LIGHT_DIRECTION_ELEVATION_ANGLE_PATH,
+  LIGHT_DIRECTION_ELEVATION_MAX_DEG,
+  LIGHT_DIRECTION_ELEVATION_MIN_DEG,
+  LIGHT_DIRECTION_HORIZONTAL_ANGLE_PATH,
+  LIGHT_DIRECTION_HORIZONTAL_MAX_DEG,
+  LIGHT_DIRECTION_HORIZONTAL_MIN_DEG,
+  createDirectionalLightDirectionFromAngles,
+  isDirectionalLightAnglePath,
+  normalizeDirectionalLightAngleValue,
+  readDirectionalLightAngles,
+} from './editor-lighting-utils';
 
 export type EditorSceneDocumentPatch =
   | ({ kind: 'serialized-property' } & SerializedPropertyPatch)
@@ -169,7 +182,7 @@ export const DEFAULT_EDITOR_SCENE_CAMERA: EditorSceneCameraRig = {
 export const DEFAULT_EDITOR_SCENE_SUN_LIGHT: EditorSceneDirectionalLight = {
   type: 'directional',
   intensity: 2,
-  direction: { x: -0.3, y: -1, z: -0.2 },
+  direction: { ...DEFAULT_DIRECTIONAL_LIGHT_DIRECTION },
   diffuseColor: { r: 1, g: 1, b: 1 },
   inspectorLanguage: 'zh',
 };
@@ -363,12 +376,6 @@ const LIGHT_INSPECTOR_TEXT: Record<EditorSceneLightInspectorLanguage, LightInspe
 };
 
 const LIGHT_LANGUAGE_OPTIONS = CAMERA_LANGUAGE_OPTIONS;
-const LIGHT_DIRECTION_HORIZONTAL_ANGLE_PATH = 'light.directionHorizontalAngleDeg';
-const LIGHT_DIRECTION_ELEVATION_ANGLE_PATH = 'light.directionElevationAngleDeg';
-const LIGHT_DIRECTION_HORIZONTAL_MIN_DEG = -180;
-const LIGHT_DIRECTION_HORIZONTAL_MAX_DEG = 180;
-const LIGHT_DIRECTION_ELEVATION_MIN_DEG = -90;
-const LIGHT_DIRECTION_ELEVATION_MAX_DEG = 90;
 
 function getLightInspectorText(language: EditorSceneLightInspectorLanguage): LightInspectorText {
   return LIGHT_INSPECTOR_TEXT[language] ?? LIGHT_INSPECTOR_TEXT.zh;
@@ -5004,86 +5011,6 @@ function degreesToRadians(value: number): number {
 
 function roundForInspector(value: number): number {
   return Math.round(value * 1000000) / 1000000;
-}
-
-function clampNumber(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
-}
-
-function normalizeAngleDegrees(value: number): number {
-  const normalized = ((((value + 180) % 360) + 360) % 360) - 180;
-  return normalized === -180 ? 180 : normalized;
-}
-
-function readFiniteInspectorNumber(value: unknown): number | null {
-  const numeric = typeof value === 'number' ? value : Number(value);
-  return Number.isFinite(numeric) ? numeric : null;
-}
-
-function normalizeDirectionalLightAngleValue(path: string, value: unknown): unknown {
-  const numeric = readFiniteInspectorNumber(value);
-  if (numeric == null) return value;
-  if (path === LIGHT_DIRECTION_HORIZONTAL_ANGLE_PATH) return Math.round(normalizeAngleDegrees(numeric));
-  if (path === LIGHT_DIRECTION_ELEVATION_ANGLE_PATH) {
-    return Math.round(clampNumber(
-      numeric,
-      LIGHT_DIRECTION_ELEVATION_MIN_DEG,
-      LIGHT_DIRECTION_ELEVATION_MAX_DEG,
-    ));
-  }
-  return value;
-}
-
-function normalizeDirectionVector(direction: EditorSceneVec3 | undefined): EditorSceneVec3 {
-  const fallback = DEFAULT_EDITOR_SCENE_SUN_LIGHT.direction;
-  const candidate = direction && isVec3(direction) ? direction : fallback;
-  const length = Math.hypot(candidate.x, candidate.y, candidate.z);
-  if (!Number.isFinite(length) || length <= 0.000001) {
-    const fallbackLength = Math.hypot(fallback.x, fallback.y, fallback.z) || 1;
-    return {
-      x: fallback.x / fallbackLength,
-      y: fallback.y / fallbackLength,
-      z: fallback.z / fallbackLength,
-    };
-  }
-  return {
-    x: candidate.x / length,
-    y: candidate.y / length,
-    z: candidate.z / length,
-  };
-}
-
-function readDirectionalLightAngles(direction: EditorSceneVec3 | undefined): {
-  horizontalAngleDeg: number;
-  elevationAngleDeg: number;
-} {
-  const normalized = normalizeDirectionVector(direction);
-  return {
-    horizontalAngleDeg: Math.round(normalizeAngleDegrees(radiansToDegrees(Math.atan2(normalized.z, normalized.x)))),
-    elevationAngleDeg: Math.round(radiansToDegrees(Math.asin(clampNumber(-normalized.y, -1, 1)))),
-  };
-}
-
-function createDirectionalLightDirectionFromAngles(
-  horizontalAngleDeg: number,
-  elevationAngleDeg: number,
-): EditorSceneVec3 {
-  const horizontal = degreesToRadians(normalizeAngleDegrees(horizontalAngleDeg));
-  const elevation = degreesToRadians(clampNumber(
-    elevationAngleDeg,
-    LIGHT_DIRECTION_ELEVATION_MIN_DEG,
-    LIGHT_DIRECTION_ELEVATION_MAX_DEG,
-  ));
-  const horizontalLength = Math.cos(elevation);
-  return {
-    x: roundForInspector(horizontalLength * Math.cos(horizontal)),
-    y: roundForInspector(-Math.sin(elevation)),
-    z: roundForInspector(horizontalLength * Math.sin(horizontal)),
-  };
-}
-
-function isDirectionalLightAnglePath(path: string): boolean {
-  return path === LIGHT_DIRECTION_HORIZONTAL_ANGLE_PATH || path === LIGHT_DIRECTION_ELEVATION_ANGLE_PATH;
 }
 
 function createEditorSceneAssetFromLibraryItem(assetItem: EditorSceneAssetLibraryItem): EditorSceneAsset {

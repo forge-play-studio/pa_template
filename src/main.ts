@@ -23,6 +23,9 @@ let localEditorModeSwitcher: LocalEditorModeSwitcher | null = null;
 /** DEV-only runtime camera debug panel */
 let cameraDebugPanel: { dispose(): void } | null = null;
 
+/** DEV-only runtime lighting debug panel */
+let lightingDebugPanel: { dispose(): void } | null = null;
+
 async function registerRuntimeEditorBridge(): Promise<void> {
   const editorModule = await import('./fps-game-editor-adapter/runtime');
   editorModule.registerProjectFpsGameEditorRuntimeBridge();
@@ -36,6 +39,11 @@ function disposeLocalEditorModeSwitcher(): void {
 function disposeCameraDebugPanel(): void {
   cameraDebugPanel?.dispose();
   cameraDebugPanel = null;
+}
+
+function disposeLightingDebugPanel(): void {
+  lightingDebugPanel?.dispose();
+  lightingDebugPanel = null;
 }
 
 // ============================================================
@@ -90,12 +98,24 @@ async function init(): Promise<void> {
         })
         .catch((error) => console.warn('[camera-debug-panel] mount failed', error));
 
+      void import('./debug/runtime-lighting-debug-panel')
+        .then(({ mountRuntimeLightingDebugPanel }) => {
+          disposeLightingDebugPanel();
+          lightingDebugPanel = mountRuntimeLightingDebugPanel({
+            root: document.body,
+            getGame: () => game,
+          });
+        })
+        .catch((error) => console.warn('[runtime-lighting-debug-panel] mount failed', error));
+
       void import('./debug/local-editor-mode-switcher')
         .then(({ mountLocalEditorModeSwitcher }) => {
           disposeLocalEditorModeSwitcher();
           localEditorModeSwitcher = mountLocalEditorModeSwitcher({
             root: document.body,
             disposeGameWorld: () => {
+              disposeLightingDebugPanel();
+              disposeCameraDebugPanel();
               game?.dispose();
               game = null;
               window.gameInstance = null;
@@ -133,9 +153,14 @@ if (import.meta.env.DEV) {
   const disposeDevTools = () => {
     disposeLocalEditorModeSwitcher();
     disposeCameraDebugPanel();
+    disposeLightingDebugPanel();
+  };
+  const disposeDevToolsForHotReload = () => {
+    window.removeEventListener('beforeunload', disposeDevTools);
+    disposeDevTools();
   };
   window.addEventListener('beforeunload', disposeDevTools);
-  import.meta.hot?.dispose(disposeDevTools);
+  import.meta.hot?.dispose(disposeDevToolsForHotReload);
 }
 
 // ============================================================

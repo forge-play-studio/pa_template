@@ -8,10 +8,10 @@
     "generatedFrom": {
       "sourceId": "scene.main",
       "sourceType": "scene",
-      "revision": 5,
+      "revision": 8,
       "compilerId": "pa_template.editor-scene.compiler",
       "compilerVersion": "1",
-      "compiledAt": "2026-05-27T10:06:27.965Z"
+      "compiledAt": "2026-05-28T16:02:33.151Z"
     }
   },
   "gameplay": {
@@ -40,7 +40,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 5,
+          "revision": 8,
           "objectGuid": "go_2406b122-d63b-4971-bf66-7d78a8776543",
           "objectId": "main_camera",
           "component": "Transform"
@@ -96,7 +96,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 4,
+          "revision": 8,
           "objectGuid": "go_environment_light_default",
           "objectId": "environment_light",
           "component": "Transform"
@@ -122,27 +122,27 @@
         "transformType": "light",
         "light": {
           "type": "hemispheric",
-          "intensity": 0.8,
+          "intensity": 0.75,
           "diffuseColor": {
             "r": 1,
             "g": 1,
             "b": 1
           },
           "groundColor": {
-            "r": 0.48,
-            "g": 0.52,
-            "b": 0.62
+            "r": 0.5607843137254902,
+            "g": 0.6078431372549019,
+            "b": 0.7176470588235294
           }
         }
       },
       {
         "id": "sun_light",
-        "name": "Sun Light",
+        "name": "Directional Light",
         "parentId": "root",
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 5,
+          "revision": 8,
           "objectGuid": "go_7017d029-9d69-4381-91ac-75093053caa9",
           "objectId": "sun_light",
           "component": "Transform"
@@ -168,16 +168,16 @@
         "transformType": "light",
         "light": {
           "type": "directional",
-          "intensity": 2,
+          "intensity": 1.8,
           "direction": {
-            "x": -0.3,
-            "y": -1,
-            "z": -0.2
+            "x": 0.3045578654998147,
+            "y": -0.8290376338767504,
+            "z": -0.46897879288752087
           },
           "diffuseColor": {
             "r": 1,
-            "g": 1,
-            "b": 1
+            "g": 0.9490196078431372,
+            "b": 0.8470588235294118
           }
         }
       },
@@ -188,7 +188,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 5,
+          "revision": 8,
           "objectGuid": "go_3e3578c4-1e4a-41df-8160-013bdcd02aa5",
           "objectId": "plane",
           "component": "PrimitiveRenderer"
@@ -214,12 +214,46 @@
         "primitive": {
           "shape": "plane"
         }
+      },
+      {
+        "id": "cube",
+        "name": "Cube",
+        "parentId": "root",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 8,
+          "objectGuid": "go_ac4a2824-3625-468c-aeee-d7c75dedc814",
+          "objectId": "cube",
+          "component": "PrimitiveRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 3.4570541381835938,
+            "y": 1.9539925233402755e-14,
+            "z": 0.6587640047073364
+          },
+          "rotation": {
+            "z": 0,
+            "x": 0,
+            "y": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "primitive",
+        "primitive": {
+          "shape": "cube"
+        }
       }
     ],
     "materials": [],
     "textures": []
   },
   "render": {},
-  "version": 4,
-  "updatedAt": "2026-05-27T10:06:27.967Z"
+  "version": 7,
+  "updatedAt": "2026-05-28T16:02:33.151Z"
 }

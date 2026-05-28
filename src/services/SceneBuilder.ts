@@ -68,6 +68,12 @@ export interface SceneEnvironment {
   shadowService: ShadowService;
 }
 
+export interface SceneRuntimeLightState<TLightConfig extends SceneHemisphericLightConfig | SceneDirectionalLightConfig> {
+  light: TLightConfig;
+  enabled: boolean;
+  source?: SceneRuntimeSourceBinding;
+}
+
 export class SceneBuilder {
   private scene: Scene;
   private assetLoader: AssetLoader;
@@ -78,6 +84,14 @@ export class SceneBuilder {
   private sceneNodeCleanup = new Map<string, (() => void) | null>();
   private sceneAssetConfigs = new Map<string, SceneAssetConfig>();
   private selectedCameraRig: SceneCameraRigConfig | null = null;
+  private hemisphericLight: HemisphericLight | null = null;
+  private directionalLight: DirectionalLight | null = null;
+  private selectedHemisphericLight: SceneHemisphericLightConfig | null = null;
+  private selectedDirectionalLight: SceneDirectionalLightConfig | null = null;
+  private selectedHemisphericLightEnabled = true;
+  private selectedDirectionalLightEnabled = true;
+  private hemisphericLightSource: SceneRuntimeSourceBinding | undefined;
+  private directionalLightSource: SceneRuntimeSourceBinding | undefined;
 
   constructor(scene: Scene, assetLoader: AssetLoader, modelPool?: ModelPool) {
     this.scene = scene;
@@ -195,6 +209,64 @@ export class SceneBuilder {
     return cameraRig.orthoSize;
   }
 
+  getRuntimeHemisphericLight(): HemisphericLight | null {
+    return this.hemisphericLight;
+  }
+
+  getRuntimeDirectionalLight(): DirectionalLight | null {
+    return this.directionalLight;
+  }
+
+  getSelectedHemisphericLightState(): SceneRuntimeLightState<SceneHemisphericLightConfig> {
+    const fallback = this.resolveHemisphericLightSource();
+    return {
+      light: cloneSceneHemisphericLight(this.selectedHemisphericLight ?? fallback.light),
+      enabled: this.selectedHemisphericLight == null ? fallback.enabled : this.selectedHemisphericLightEnabled,
+      ...(this.hemisphericLightSource ? { source: structuredClone(this.hemisphericLightSource) } : {}),
+    };
+  }
+
+  getSelectedDirectionalLightState(): SceneRuntimeLightState<SceneDirectionalLightConfig> {
+    const fallback = this.resolveDirectionalLightSource();
+    return {
+      light: cloneSceneDirectionalLight(this.selectedDirectionalLight ?? fallback.light),
+      enabled: this.selectedDirectionalLight == null ? fallback.enabled : this.selectedDirectionalLightEnabled,
+      ...(this.directionalLightSource ? { source: structuredClone(this.directionalLightSource) } : {}),
+    };
+  }
+
+  applyHemisphericLight(light: SceneHemisphericLightConfig, options: { enabled?: boolean } = {}): void {
+    const nextLight = cloneSceneHemisphericLight(light);
+    this.selectedHemisphericLight = nextLight;
+    if (options.enabled !== undefined) this.selectedHemisphericLightEnabled = options.enabled;
+
+    const runtimeLight = this.hemisphericLight;
+    if (!runtimeLight) return;
+    runtimeLight.intensity = nextLight.intensity;
+    runtimeLight.setEnabled(this.selectedHemisphericLightEnabled);
+    if (nextLight.diffuseColor) {
+      runtimeLight.diffuse = toColor3(nextLight.diffuseColor);
+    }
+    if (nextLight.groundColor) {
+      runtimeLight.groundColor = toColor3(nextLight.groundColor);
+    }
+  }
+
+  applyDirectionalLight(light: SceneDirectionalLightConfig, options: { enabled?: boolean } = {}): void {
+    const nextLight = cloneSceneDirectionalLight(light);
+    this.selectedDirectionalLight = nextLight;
+    if (options.enabled !== undefined) this.selectedDirectionalLightEnabled = options.enabled;
+
+    const runtimeLight = this.directionalLight;
+    if (!runtimeLight) return;
+    runtimeLight.intensity = nextLight.intensity;
+    runtimeLight.direction = new Vector3(nextLight.direction.x, nextLight.direction.y, nextLight.direction.z);
+    runtimeLight.setEnabled(this.selectedDirectionalLightEnabled);
+    if (nextLight.diffuseColor) {
+      runtimeLight.diffuse = toColor3(nextLight.diffuseColor);
+    }
+  }
+
   private getCameraRigTarget(cameraRig: SceneCameraRigConfig, fallback?: Vector3): Vector3 {
     const targetOffset = getCameraTargetOffset(cameraRig);
     if (targetOffset) return new Vector3(targetOffset.x, targetOffset.y, targetOffset.z);
@@ -241,27 +313,28 @@ export class SceneBuilder {
 
   private createLights(): { hemisphericLight: HemisphericLight; directionalLight: DirectionalLight } {
     const hemispheric = this.resolveHemisphericLightSource();
+    this.selectedHemisphericLight = cloneSceneHemisphericLight(hemispheric.light);
+    this.selectedHemisphericLightEnabled = hemispheric.enabled;
+    this.hemisphericLightSource = hemispheric.source ? structuredClone(hemispheric.source) : undefined;
+
     const hemi = new HemisphericLight('hemiLight', new Vector3(0, 1, 0), this.scene);
-    hemi.intensity = hemispheric.light.intensity;
-    hemi.setEnabled(hemispheric.enabled);
-    if (hemispheric.light.diffuseColor) {
-      hemi.diffuse = new Color3(hemispheric.light.diffuseColor.r, hemispheric.light.diffuseColor.g, hemispheric.light.diffuseColor.b);
-    }
-    if (hemispheric.light.groundColor) {
-      hemi.groundColor = new Color3(hemispheric.light.groundColor.r, hemispheric.light.groundColor.g, hemispheric.light.groundColor.b);
-    }
+    this.hemisphericLight = hemi;
+    this.attachRuntimeLightMetadata(hemi, 'hemispheric', hemispheric.source);
+    this.applyHemisphericLight(hemispheric.light, { enabled: hemispheric.enabled });
 
     const sun = this.resolveDirectionalLightSource();
+    this.selectedDirectionalLight = cloneSceneDirectionalLight(sun.light);
+    this.selectedDirectionalLightEnabled = sun.enabled;
+    this.directionalLightSource = sun.source ? structuredClone(sun.source) : undefined;
+
     const dir = new DirectionalLight(
       'dirLight',
       new Vector3(sun.light.direction.x, sun.light.direction.y, sun.light.direction.z),
       this.scene,
     );
-    dir.intensity = sun.light.intensity;
-    dir.setEnabled(sun.enabled);
-    if (sun.light.diffuseColor) {
-      dir.diffuse = new Color3(sun.light.diffuseColor.r, sun.light.diffuseColor.g, sun.light.diffuseColor.b);
-    }
+    this.directionalLight = dir;
+    this.attachRuntimeLightMetadata(dir, 'directional', sun.source);
+    this.applyDirectionalLight(sun.light, { enabled: sun.enabled });
 
     return { hemisphericLight: hemi, directionalLight: dir };
   }
@@ -280,6 +353,25 @@ export class SceneBuilder {
         ...(source.objectGuid ? { objectGuid: source.objectGuid } : {}),
         ...(source.objectId ? { objectId: source.objectId } : {}),
         propertyPath: 'camera',
+      },
+    };
+  }
+
+  private attachRuntimeLightMetadata(
+    light: HemisphericLight | DirectionalLight,
+    lightType: SceneHemisphericLightConfig['type'] | SceneDirectionalLightConfig['type'],
+    source?: SceneRuntimeSourceBinding,
+  ): void {
+    if (!source) return;
+    const metadata = light.metadata && typeof light.metadata === 'object' ? light.metadata : {};
+    light.metadata = {
+      ...metadata,
+      __fpsEditor: {
+        sourceId: source.sourceId,
+        ...(source.objectGuid ? { objectGuid: source.objectGuid } : {}),
+        ...(source.objectId ? { objectId: source.objectId } : {}),
+        propertyPath: 'light',
+        lightType,
       },
     };
   }
@@ -313,12 +405,13 @@ export class SceneBuilder {
     return new Vector3(target.x, target.y, target.z);
   }
 
-  private resolveDirectionalLightSource(): { light: SceneDirectionalLightConfig; enabled: boolean } {
+  private resolveDirectionalLightSource(): SceneRuntimeLightState<SceneDirectionalLightConfig> {
     const node = configService.getSceneDirectionalLightNode();
     if (node?.light?.type === 'directional') {
       return {
         light: node.light,
         enabled: node.enabled !== false,
+        ...(node.source ? { source: node.source } : {}),
       };
     }
     return {
@@ -327,12 +420,13 @@ export class SceneBuilder {
     };
   }
 
-  private resolveHemisphericLightSource(): { light: SceneHemisphericLightConfig; enabled: boolean } {
+  private resolveHemisphericLightSource(): SceneRuntimeLightState<SceneHemisphericLightConfig> {
     const node = configService.getSceneHemisphericLightNode();
     if (node?.light?.type === 'hemispheric') {
       return {
         light: node.light,
         enabled: node.enabled !== false,
+        ...(node.source ? { source: node.source } : {}),
       };
     }
     return {
@@ -1331,6 +1425,26 @@ function cloneCameraRig(cameraRig: SceneCameraRigConfig): SceneCameraRigConfig {
     ...(cameraRig.targetOffset ? { targetOffset: { ...cameraRig.targetOffset } } : {}),
     ...(cameraRig.targetScreenOffset ? { targetScreenOffset: { ...cameraRig.targetScreenOffset } } : {}),
   };
+}
+
+function cloneSceneDirectionalLight(light: SceneDirectionalLightConfig): SceneDirectionalLightConfig {
+  return {
+    ...light,
+    direction: { ...light.direction },
+    ...(light.diffuseColor ? { diffuseColor: { ...light.diffuseColor } } : {}),
+  };
+}
+
+function cloneSceneHemisphericLight(light: SceneHemisphericLightConfig): SceneHemisphericLightConfig {
+  return {
+    ...light,
+    ...(light.diffuseColor ? { diffuseColor: { ...light.diffuseColor } } : {}),
+    ...(light.groundColor ? { groundColor: { ...light.groundColor } } : {}),
+  };
+}
+
+function toColor3(color: ColorRGB): Color3 {
+  return new Color3(color.r, color.g, color.b);
 }
 
 function readNonNegativeFiniteNumber(value: unknown, fallback: number): number {
