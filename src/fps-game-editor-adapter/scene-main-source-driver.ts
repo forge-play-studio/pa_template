@@ -15,6 +15,12 @@ import {
   type EditorSceneRuntimeInputDrift,
 } from './editor-authoring-source';
 import { compileEditorSceneDocumentToSceneConfig } from './editor-scene-compiler';
+import {
+  getActiveRenderingConfig,
+  isRenderingProfileDirty,
+  markActiveRenderingConfigSaved,
+  setActiveRenderingConfigError,
+} from '../rendering/editor-rendering-profile-store';
 
 const PROJECT_AUTHORING_API_BASE = '/__fps_editor_authoring';
 
@@ -33,11 +39,13 @@ export type SceneMainSourceSaveMode = 'local-commit-save' | 'prepare-platform-sa
 
 export interface SceneMainSourceSaveOptions {
   mode?: SceneMainSourceSaveMode;
+  renderingConfig?: Record<string, unknown> | null;
 }
 
 export interface SceneMainSourceSaveResult extends AuthoringSourceSaveResult<EditorSceneDocument> {
   compiledArtifact?: CompiledArtifact;
   expectedVersion?: number;
+  renderingConfig?: Record<string, unknown>;
   sceneJsonText?: string;
 }
 
@@ -68,7 +76,15 @@ export function createSceneMainSourceDriver(
       return validateSceneMainDocument(document, source);
     },
     async save({ document }) {
-      const saved = await saveSceneMainSource(request, document);
+      const renderingConfig = isRenderingProfileDirty() ? getActiveRenderingConfig() : null;
+      let saved: SceneMainSourceSaveResult;
+      try {
+        saved = await saveSceneMainSource(request, document, { renderingConfig });
+      } catch (error) {
+        if (renderingConfig) setActiveRenderingConfigError(error);
+        throw error;
+      }
+      if (renderingConfig) markActiveRenderingConfigSaved(saved.renderingConfig ?? renderingConfig);
       lastCompiledArtifact = saved.compiledArtifact ?? null;
       return {
         source: saved.source,
@@ -130,6 +146,7 @@ export async function saveSceneMainSource(
     body: JSON.stringify({
       editorScene,
       mode: options?.mode ?? 'local-commit-save',
+      ...(options?.renderingConfig ? { renderingConfig: options.renderingConfig } : {}),
     }),
   });
   const document = readEditorScene(saved.editorScene) ?? editorScene;
@@ -140,6 +157,7 @@ export async function saveSceneMainSource(
     summary: summarizeSaveResult(saved),
     compiledArtifact: readCompiledRuntimeSceneArtifact(saved, source),
     expectedVersion: typeof saved.expectedVersion === 'number' ? saved.expectedVersion : undefined,
+    renderingConfig: readRecord(saved.renderingConfig) ?? undefined,
     sceneJsonText: typeof saved.sceneJsonText === 'string' ? saved.sceneJsonText : undefined,
   };
 }
@@ -203,6 +221,12 @@ function readEditorScene(value: unknown): EditorSceneDocument | null {
 
 function readString(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim() ? value : undefined;
+}
+
+function readRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
 }
 
 function readEditorAssetLibrary(value: unknown): EditorSceneAssetLibraryItem[] {

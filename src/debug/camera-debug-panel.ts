@@ -909,6 +909,10 @@ export function mountCameraDebugPanel(options: CameraDebugPanelOptions): CameraD
     if (!scene) throw new Error('Camera debug target marker requires an active scene.');
 
     const rootNode = new TransformNode('cameraDebugTargetMarker', scene);
+    rootNode.metadata = {
+      ...(rootNode.metadata && typeof rootNode.metadata === 'object' ? rootNode.metadata : {}),
+      disablePlanarShadow: true,
+    };
     const material = new StandardMaterial('cameraDebugTargetMarker.material', scene);
     material.diffuseColor = new Color3(1, 0.04, 0.03);
     material.emissiveColor = new Color3(1, 0.04, 0.03);
@@ -928,6 +932,10 @@ export function mountCameraDebugPanel(options: CameraDebugPanelOptions): CameraD
       arm.material = material;
       arm.isPickable = false;
       arm.renderingGroupId = 2;
+      arm.metadata = {
+        ...(arm.metadata && typeof arm.metadata === 'object' ? arm.metadata : {}),
+        disablePlanarShadow: true,
+      };
     };
 
     const centerDistance = CAMERA_DEBUG_TARGET_MARKER_ARM_GAP + CAMERA_DEBUG_TARGET_MARKER_ARM_LENGTH / 2;

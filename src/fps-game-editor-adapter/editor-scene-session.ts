@@ -74,9 +74,11 @@ import {
   LIGHT_DIRECTION_HORIZONTAL_MIN_DEG,
   createDirectionalLightDirectionFromAngles,
   isDirectionalLightAnglePath,
+  normalizeDirectionVector,
   normalizeDirectionalLightAngleValue,
   readDirectionalLightAngles,
 } from './editor-lighting-utils';
+import { getActiveRenderingProfile } from '../rendering/editor-rendering-profile-store';
 
 export type EditorSceneDocumentPatch =
   | ({ kind: 'serialized-property' } & SerializedPropertyPatch)
@@ -302,6 +304,14 @@ type LightInspectorText = {
   lightColor: string;
   horizontalAngle: string;
   elevationAngle: string;
+  shadowsTitle: string;
+  shadowsSummary: string;
+  shadowSystem: string;
+  shadowEnabled: string;
+  shadowOpacity: string;
+  shadowLength: string;
+  shadowFollowDirectional: string;
+  openShadows: string;
   rawLight: string;
   tooltips: {
     language: string;
@@ -312,6 +322,11 @@ type LightInspectorText = {
     lightColor: string;
     horizontalAngle: string;
     elevationAngle: string;
+    shadowSystem: string;
+    shadowEnabled: string;
+    shadowOpacity: string;
+    shadowLength: string;
+    openShadows: string;
     rawLight: string;
   };
 };
@@ -332,6 +347,14 @@ const LIGHT_INSPECTOR_TEXT: Record<EditorSceneLightInspectorLanguage, LightInspe
     lightColor: '光照颜色',
     horizontalAngle: '水平角',
     elevationAngle: '高度角',
+    shadowsTitle: '阴影',
+    shadowsSummary: 'Planar Main / 跟随直射光',
+    shadowSystem: '系统',
+    shadowEnabled: '启用',
+    shadowOpacity: '不透明度',
+    shadowLength: '阴影长度',
+    shadowFollowDirectional: 'Planar Main / 跟随直射光',
+    openShadows: '打开阴影设置',
     rawLight: '原始光源数据',
     tooltips: {
       language: '切换此光源检查器的属性显示语言。该字段只用于编辑器，不会导出到运行时。',
@@ -342,6 +365,11 @@ const LIGHT_INSPECTOR_TEXT: Record<EditorSceneLightInspectorLanguage, LightInspe
       lightColor: '直射光颜色，对应 BabylonJS DirectionalLight.diffuse。',
       horizontalAngle: '直射光在 XZ 平面内的朝向角度。编辑器会把它转换为 BabylonJS DirectionalLight.direction。',
       elevationAngle: '直射光相对地平线的高度角；90 度表示从正上方照下。编辑器会把它转换为 BabylonJS DirectionalLight.direction。',
+      shadowSystem: '阴影系统只读摘要。Planar 阴影方向来自当前直射光，完整参数在 Rendering 面板调整。',
+      shadowEnabled: '当前项目级 Planar 阴影是否启用。这里仅显示摘要，不在光源 Inspector 中编辑。',
+      shadowOpacity: '当前项目级 Planar 阴影不透明度。完整参数在 Rendering 面板调整。',
+      shadowLength: '根据直射光方向估算的平面阴影长度倍率；高度角越低，阴影越长。',
+      openShadows: '切换到右侧 Rendering 面板，编辑项目级阴影设置。',
       rawLight: '编辑器文档中的光源原始数据，只读显示。',
     },
   },
@@ -360,6 +388,14 @@ const LIGHT_INSPECTOR_TEXT: Record<EditorSceneLightInspectorLanguage, LightInspe
     lightColor: 'Light Color',
     horizontalAngle: 'Horizontal Angle',
     elevationAngle: 'Elevation Angle',
+    shadowsTitle: 'Shadows',
+    shadowsSummary: 'Planar Main / Follow Directional Light',
+    shadowSystem: 'System',
+    shadowEnabled: 'Enabled',
+    shadowOpacity: 'Opacity',
+    shadowLength: 'Shadow Length',
+    shadowFollowDirectional: 'Planar Main / Follow Directional Light',
+    openShadows: 'Open Shadows',
     rawLight: 'Raw Light Data',
     tooltips: {
       language: 'Switches the display language for this light inspector. This editor-only field is not exported to runtime.',
@@ -370,6 +406,11 @@ const LIGHT_INSPECTOR_TEXT: Record<EditorSceneLightInspectorLanguage, LightInspe
       lightColor: 'Directional light color. Maps to BabylonJS DirectionalLight.diffuse.',
       horizontalAngle: 'Directional light heading in the XZ plane. The editor converts it to BabylonJS DirectionalLight.direction.',
       elevationAngle: 'Directional light elevation above the horizon; 90 degrees points straight down. The editor converts it to BabylonJS DirectionalLight.direction.',
+      shadowSystem: 'Read-only shadow system summary. Planar shadow direction follows this Directional Light; edit full settings in Rendering.',
+      shadowEnabled: 'Whether the project-level planar shadow system is enabled. This is summary-only in the light Inspector.',
+      shadowOpacity: 'Current project-level planar shadow opacity. Edit full settings in Rendering.',
+      shadowLength: 'Estimated planar shadow length multiplier from this light direction. Lower elevation makes longer shadows.',
+      openShadows: 'Switches the right dock to the Rendering panel for project-level shadow settings.',
       rawLight: 'Read-only raw light data from the editor document.',
     },
   },
@@ -2908,6 +2949,10 @@ function createEditorSceneInspectorSections(
       collapsedByDefault: false,
       properties: createLightInspectorProperties(nodeKind, light),
     });
+    if (light.type === 'directional') {
+      const shadowSummarySection = createDirectionalLightShadowSummaryInspectorSection(light, lightText);
+      if (shadowSummarySection) sections.push(shadowSummarySection);
+    }
   }
   if (nodeKind === 'instance' || nodeKind === 'primitive' || (nodeKind === 'transform' && !isEditorSceneCameraGameObject(gameObject) && !isEditorSceneLightGameObject(gameObject))) {
     sections.push(...createMaterialOverrideInspectorSections(nodeKind, gameObject.overrides?.material));
@@ -3611,6 +3656,100 @@ function createLightInspectorProperties(
     tooltip: text.tooltips.rawLight,
   });
   return properties;
+}
+
+function createDirectionalLightShadowSummaryInspectorSection(
+  light: EditorSceneDirectionalLight,
+  text: LightInspectorText,
+): InspectorSection<EditorSceneDocument> | null {
+  const planar = getActiveRenderingProfile().shadows.planar;
+  return createEditorSceneReadonlyInspectorSection({
+    id: 'lightShadows',
+    title: text.shadowsTitle,
+    order: 46,
+    summary: text.shadowsSummary,
+    collapsedByDefault: false,
+    tags: ['Rendering', 'Derived'],
+    properties: [
+      createEditorSceneReadonlyInspectorProperty({
+        path: 'rendering.shadows.summary.system',
+        label: text.shadowSystem,
+        value: text.shadowFollowDirectional,
+        order: 0,
+        source: 'Document',
+        tags: ['Rendering'],
+        tooltip: text.tooltips.shadowSystem,
+        effect: 'derived',
+      }),
+      createEditorSceneReadonlyInspectorProperty({
+        path: 'rendering.shadows.summary.enabled',
+        label: text.shadowEnabled,
+        value: planar.enabled,
+        order: 1,
+        source: 'Document',
+        tags: ['Rendering'],
+        tooltip: text.tooltips.shadowEnabled,
+        effect: 'derived',
+      }),
+      createEditorSceneReadonlyInspectorProperty({
+        path: 'rendering.shadows.summary.opacity',
+        label: text.shadowOpacity,
+        value: roundForInspector(planar.appearance.color.a),
+        order: 2,
+        source: 'Document',
+        tags: ['Rendering'],
+        tooltip: text.tooltips.shadowOpacity,
+        effect: 'derived',
+      }),
+      createEditorSceneReadonlyInspectorProperty({
+        path: 'rendering.shadows.summary.length',
+        label: text.shadowLength,
+        value: formatShadowLengthMultiplier(readDirectionalShadowLengthMultiplier(light.direction)),
+        order: 3,
+        source: 'Document',
+        tags: ['Rendering'],
+        tooltip: text.tooltips.shadowLength,
+        effect: 'derived',
+      }),
+      createOpenRenderingPanelInspectorProperty(text),
+    ],
+  });
+}
+
+function createOpenRenderingPanelInspectorProperty(
+  text: LightInspectorText,
+): InspectorProperty<EditorSceneDocument> {
+  return {
+    path: 'rendering.shadows.summary.open',
+    label: text.openShadows,
+    valueType: 'string',
+    control: 'custom',
+    customControl: 'open-right-dock-tab',
+    controlOptions: {
+      targetTab: 'rendering',
+      label: text.openShadows,
+      icon: 'world',
+    },
+    value: text.openShadows,
+    readOnly: true,
+    persistence: 'readonly',
+    commitMode: 'immediate',
+    order: 4,
+    tags: ['Rendering'],
+    tooltip: text.tooltips.openShadows,
+    effect: 'active',
+  };
+}
+
+function readDirectionalShadowLengthMultiplier(direction: EditorSceneVec3 | undefined): number {
+  const normalized = normalizeDirectionVector(direction, DEFAULT_DIRECTIONAL_LIGHT_DIRECTION);
+  const vertical = Math.abs(normalized.y);
+  if (vertical <= 0.000001) return 999;
+  return Math.min(999, Math.hypot(normalized.x, normalized.z) / vertical);
+}
+
+function formatShadowLengthMultiplier(value: number): string {
+  return `x${roundForInspector(value)}`;
 }
 
 function createMaterialOverrideInspectorSections(

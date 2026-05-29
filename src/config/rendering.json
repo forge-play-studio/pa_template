@@ -1,22 +1,31 @@
 {
   "globalVolume": {
     "imageProcessing": {
-      "exposure": 1.0,
-      "contrast": 1.0
+      "exposure": 1,
+      "contrast": 1
     },
     "environment": {
-      "intensity": 1.0,
-      "iblIntensity": 1.0,
+      "intensity": 1,
+      "iblIntensity": 1,
       "useCocosIBL": false
     },
     "lights": {
       "hemispheric": {
         "intensity": 0.8,
-        "skyLightColor": { "r": 1, "g": 1, "b": 1, "a": 1 }
+        "skyLightColor": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        }
       },
       "directional": {
         "intensity": 1.2,
-        "direction": { "x": -0.3, "y": -1.0, "z": -0.2 }
+        "direction": {
+          "x": -0.3,
+          "y": -1,
+          "z": -0.2
+        }
       }
     },
     "rendering": {
@@ -39,10 +48,13 @@
     "camera": {
       "fov": 0.85,
       "radius": null,
-      "target": { "x": 0, "y": 0, "z": 0 }
+      "target": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      }
     }
   },
-
   "shadows": {
     "enabled": false,
     "useCsm": false,
@@ -56,12 +68,16 @@
       "useBlurExponentialShadowMap": true,
       "shadowMinZ": 1,
       "shadowMaxZ": 60,
-      "shadowColor": { "r": 0, "g": 0, "b": 0 }
+      "shadowColor": {
+        "r": 0,
+        "g": 0,
+        "b": 0
+      }
     },
     "blobSettings": {
       "opacity": 0.2,
       "yOffset": 0.02,
-      "sizeMultiplier": 1.0,
+      "sizeMultiplier": 1,
       "minSize": 0.25
     },
     "shadowRange": {
@@ -83,12 +99,25 @@
     "planar": {
       "enabled": true,
       "plane": {
-        "normal": { "x": 0, "y": 1, "z": 0 },
-        "height": 0.05,
+        "normal": {
+          "x": 0,
+          "y": 1,
+          "z": 0
+        },
+        "height": 0,
+        "heightMode": "receiver",
         "bias": 0.4
       },
       "appearance": {
-        "color": { "r": 0, "g": 0, "b": 0, "a": 0.35 }
+        "color": {
+          "r": 0.050980392156862744,
+          "g": 0.050980392156862744,
+          "b": 0.050980392156862744,
+          "a": 0.35
+        }
+      },
+      "projection": {
+        "footprintScale": 1
       },
       "stencil": {
         "enabled": true,
@@ -105,13 +134,11 @@
       }
     }
   },
-
   "shadowMeshes": {
     "shadowReceivers": [],
     "shadowCasters": [],
     "excludeFromShadow": []
   },
-
   "materials": {
     "sceneMaterials": {},
     "plantMaterials": {}

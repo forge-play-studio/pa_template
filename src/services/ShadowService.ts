@@ -16,12 +16,18 @@ import {
   createPlanarShadowSystem,
   type PlanarShadowOptions,
 } from '@fps-games/babylon-renderer';
+import {
+  createPlanarShadowOptionsFromRenderingProfile,
+  normalizeRenderingProfile,
+  type NormalizedRenderingProfile,
+} from '../rendering/rendering-profile';
 
 // 副作用导入：注册阴影场景组件
 import '@babylonjs/core/Lights/Shadows/shadowGeneratorSceneComponent';
 
 // 导入配置
 import renderingConfig from '../config/rendering.json';
+import { configService } from '../config/ConfigService';
 
 // ============================================================
 // 类型定义
@@ -52,17 +58,6 @@ interface CSMSettings {
   stabilizeCascades: boolean;
 }
 
-interface PlanarShadowConfig {
-  enabled?: boolean;
-  plane?: Partial<PlanarShadowOptions['plane']>;
-  appearance?: {
-    color?: Partial<PlanarShadowOptions['appearance']['color']>;
-  };
-  stencil?: Partial<NonNullable<PlanarShadowOptions['stencil']>>;
-  casters?: Partial<NonNullable<PlanarShadowOptions['casters']>>;
-  receivers?: Partial<NonNullable<PlanarShadowOptions['receivers']>>;
-}
-
 interface ShadowOrtho {
   left: number;
   right: number;
@@ -87,7 +82,7 @@ interface ShadowsConfig {
   };
   shadowOrtho: ShadowOrtho;
   csm: CSMSettings;
-  planar?: PlanarShadowConfig;
+  planar: NormalizedRenderingProfile['shadows']['planar'];
 }
 
 interface ShadowMeshesConfig {
@@ -122,6 +117,7 @@ export class ShadowService {
   private light: DirectionalLight;
   private shadowGenerator: ShadowGenerator | null = null;
   private planarShadowSystem: RuntimePlanarShadowSystem | null = null;
+  private renderingProfile: NormalizedRenderingProfile;
   private config: ShadowsConfig;
   private meshConfig: ShadowMeshesConfig;
   private shadowReceivers: string[];
@@ -134,8 +130,9 @@ export class ShadowService {
     this.scene = scene;
     this.light = light;
     this.camera = camera || null;
-    this.config = renderingConfig.shadows as ShadowsConfig;
-    this.meshConfig = renderingConfig.shadowMeshes as ShadowMeshesConfig;
+    this.renderingProfile = normalizeRenderingProfile(renderingConfig);
+    this.config = this.renderingProfile.shadows;
+    this.meshConfig = this.renderingProfile.shadowMeshes;
     this.shadowReceivers = this.meshConfig.shadowReceivers || [];
     this.shadowCasters = this.meshConfig.shadowCasters || [];
     this.excluded = this.meshConfig.excludeFromShadow || [];
@@ -411,54 +408,19 @@ export class ShadowService {
   }
 
   private createPlanarShadowOptions(): Partial<PlanarShadowOptions> {
-    const planar = this.config.planar ?? {};
-    const plane = planar.plane ?? {};
-    const appearance = planar.appearance ?? {};
-    const stencil = planar.stencil ?? {};
-    const casters = planar.casters ?? {};
-    const receivers = planar.receivers ?? {};
-    return {
-      enabled: readBoolean(planar.enabled, true) && this.light.isEnabled(),
-      plane: {
-        normal: readVec3(plane.normal, { x: 0, y: 1, z: 0 }),
-        height: readFiniteNumber(plane.height, 0.05),
-        bias: readFiniteNumber(plane.bias, 0.4),
-      },
-      appearance: {
-        color: readColorRgba(appearance.color, { r: 0, g: 0, b: 0, a: 0.35 }),
-      },
-      direction: { mode: 'follow-light' },
-      stencil: {
-        enabled: readBoolean(stencil.enabled, true),
-        receiverRenderingGroup: readFiniteNumber(stencil.receiverRenderingGroup, 0),
-        shadowRenderingGroup: readFiniteNumber(stencil.shadowRenderingGroup, 1),
-      },
-      casters: {
-        autoDetectAll: readBoolean(casters.autoDetectAll, true),
-        includePatterns: readStringList(casters.includePatterns),
-        excludePatterns: [
-          ...DEFAULT_PLANAR_SHADOW_EXCLUDE_PATTERNS,
-          ...this.excluded,
-          ...readStringList(casters.excludePatterns),
-        ],
-        rootBoundaryPatterns: [
-          'scene_builder_root',
-          ...readStringList(casters.rootBoundaryPatterns),
-        ],
-        minVolume: readFiniteNumber(casters.minVolume, 0.001),
-      },
-      receivers: {
-        patterns: [
-          ...DEFAULT_PLANAR_SHADOW_RECEIVER_PATTERNS,
-          ...this.shadowReceivers,
-          ...readStringList(receivers.patterns),
-        ],
-      },
-    };
+    const sceneRootId = configService.getSceneRootId();
+    return createPlanarShadowOptionsFromRenderingProfile(this.renderingProfile, {
+      enabled: this.light.isEnabled(),
+      autoDetectAllCasters: false,
+      additionalCasterIncludePatterns: [sceneRootId, 'scene_builder_root'],
+      additionalExcludePatterns: this.excluded,
+      additionalReceiverPatterns: this.shadowReceivers,
+      additionalRootBoundaryPatterns: [sceneRootId, 'scene_builder_root'],
+    });
   }
 
   private isPlanarEnabled(): boolean {
-    return readBoolean(this.config.planar?.enabled, false);
+    return this.renderingProfile.shadows.planar.enabled;
   }
 
   // ============================================================
@@ -485,60 +447,4 @@ export class ShadowService {
     }
 
   }
-}
-
-const DEFAULT_PLANAR_SHADOW_RECEIVER_PATTERNS = ['ground', 'Ground', 'plane', 'Plane', '地面', '地块', '地台'];
-const DEFAULT_PLANAR_SHADOW_EXCLUDE_PATTERNS = [
-  'editor',
-  'grid',
-  'gizmo',
-  'helper',
-  'camera',
-  'light',
-  'decal',
-  'texture',
-  'trigger',
-  'collision',
-  'ui',
-  '_shadow',
-  '_planarShadow',
-];
-
-function readRecord(value: unknown): Record<string, unknown> {
-  return value && typeof value === 'object' && !Array.isArray(value)
-    ? value as Record<string, unknown>
-    : {};
-}
-
-function readVec3(value: unknown, fallback: { x: number; y: number; z: number }) {
-  const record = readRecord(value);
-  return {
-    x: readFiniteNumber(record.x, fallback.x),
-    y: readFiniteNumber(record.y, fallback.y),
-    z: readFiniteNumber(record.z, fallback.z),
-  };
-}
-
-function readColorRgba(value: unknown, fallback: { r: number; g: number; b: number; a: number }) {
-  const record = readRecord(value);
-  return {
-    r: readFiniteNumber(record.r, fallback.r),
-    g: readFiniteNumber(record.g, fallback.g),
-    b: readFiniteNumber(record.b, fallback.b),
-    a: readFiniteNumber(record.a, fallback.a),
-  };
-}
-
-function readStringList(value: unknown): string[] {
-  return Array.isArray(value)
-    ? value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
-    : [];
-}
-
-function readBoolean(value: unknown, fallback: boolean): boolean {
-  return typeof value === 'boolean' ? value : fallback;
-}
-
-function readFiniteNumber(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 }

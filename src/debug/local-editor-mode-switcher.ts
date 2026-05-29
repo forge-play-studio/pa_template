@@ -64,7 +64,14 @@ import {
 } from '../fps-game-editor-adapter/scene-main-source-driver';
 import { compileEditorSceneDocumentToSceneConfig } from '../fps-game-editor-adapter/editor-scene-compiler';
 import { resolveEditorLightingPreviewProfile } from '../fps-game-editor-adapter/editor-lighting-preview-profile';
-import { resolveEditorWorldRenderingProfile } from '../fps-game-editor-adapter/editor-shadow-preview-profile';
+import {
+  applyEditorRenderingAction,
+  applyEditorRenderingPropertyChange,
+  getEditorRenderingPanelState,
+  hasEditorRenderingDraftChanges,
+  resetEditorRenderingDraft,
+  resolveEditorWorldRenderingProfile,
+} from '../fps-game-editor-adapter/editor-rendering-profile';
 
 type BabylonModule = Record<string, any>;
 
@@ -159,6 +166,9 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
   const editorLightingPreviewAdapter = {
     getWorldAppearance: resolveEditorLightingPreviewProfile,
     getWorldRendering: resolveEditorWorldRenderingProfile,
+    getRenderingPanelState: getEditorRenderingPanelState,
+    onRenderingAction: applyEditorRenderingAction,
+    onRenderingPropertyChange: applyEditorRenderingPropertyChange,
   } as Record<string, unknown>;
   const harness: LocalEditorHarness<EditorSceneDocument> = createLocalEditorHarness<EditorSceneDocument, EditorSceneDocumentPatch, EditorSceneAssetLibraryItem>({
     root: options.root,
@@ -309,6 +319,7 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
     showLoadingOverlayIfNeeded(EDITOR_LOADING_OVERLAY_CONTENT.discardAndRunGame);
     try {
       await waitForEditorLoadingOverlayPaint();
+      resetEditorRenderingDraft();
       await rawDiscardAndRunGame();
     } catch (error) {
       editorLoadingOverlay.hide();
@@ -1016,7 +1027,8 @@ function installForgePlayModeBridge(
 
         if (options.save === true) {
           const platformCommitAlreadySaved = saveState.preparedRevision > 0
-            && saveState.preparedRevision === saveState.committedRevision;
+            && saveState.preparedRevision === saveState.committedRevision
+            && !hasEditorRenderingDraftChanges();
           if (!platformCommitAlreadySaved) {
             const saved = await harness.saveScene();
             if (!saved) {

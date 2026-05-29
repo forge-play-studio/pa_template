@@ -257,6 +257,7 @@ function projectAuthoringApiPlugin() {
           && !route.startsWith('/commit')
           && !route.startsWith('/editor-scene')
           && !route.startsWith('/editor-asset-library')
+          && !route.startsWith('/rendering-profile')
           && !route.startsWith('/save-editor-scene')
           && !route.startsWith('/file')
           && !route.startsWith('/exec')
@@ -323,12 +324,57 @@ function projectAuthoringApiPlugin() {
             return;
           }
 
+          if (req.method === 'GET' && route.startsWith('/rendering-profile')) {
+            const renderingConfigPath = resolve(__dirname, 'src/config/rendering.json');
+            const renderingConfig = existsSync(renderingConfigPath)
+              ? JSON.parse(readFileSync(renderingConfigPath, 'utf8') || '{}')
+              : {};
+            const { normalizeRenderingProfile } = await server.ssrLoadModule('/src/rendering/rendering-profile.ts');
+            const normalized = normalizeRenderingProfile(renderingConfig);
+            sendJson(res, 200, {
+              ok: true,
+              renderingConfigPath,
+              renderingConfig,
+              normalized,
+              summary: summarizeRenderingProfile(normalized),
+            });
+            return;
+          }
+
           if (req.method !== 'POST') {
             sendJson(res, 405, { ok: false, error: 'method_not_allowed' });
             return;
           }
 
           const body = await readJsonBody(req);
+          if (route.startsWith('/rendering-profile')) {
+            const renderingConfigPath = resolve(__dirname, 'src/config/rendering.json');
+            const renderingConfig = readOptionalRecord(body.renderingConfig);
+            if (!renderingConfig) {
+              sendJson(res, 400, { ok: false, error: 'missing_rendering_config' });
+              return;
+            }
+            const { normalizeRenderingProfile } = await server.ssrLoadModule('/src/rendering/rendering-profile.ts');
+            const normalized = normalizeRenderingProfile(renderingConfig);
+            await mkdir(path.dirname(renderingConfigPath), { recursive: true });
+            await writeFile(renderingConfigPath, `${JSON.stringify(renderingConfig, null, 2)}\n`, 'utf8');
+            invalidateViteFileModules(server, [
+              renderingConfigPath,
+              resolve(__dirname, 'src/rendering/rendering-profile.ts'),
+              resolve(__dirname, 'src/fps-game-editor-adapter/editor-rendering-profile.ts'),
+              resolve(__dirname, 'src/fps-game-editor-adapter/editor-shadow-preview-profile.ts'),
+              resolve(__dirname, 'src/services/ShadowService.ts'),
+            ]);
+            sendJson(res, 200, {
+              ok: true,
+              renderingConfigPath,
+              renderingConfig,
+              normalized,
+              summary: summarizeRenderingProfile(normalized),
+            });
+            return;
+          }
+
           if (route.startsWith('/file')) {
             const targetPath = normalizeTransportPath(String(body.path ?? ''));
             if (!targetPath) {
@@ -376,19 +422,23 @@ function projectAuthoringApiPlugin() {
 
           if (route.startsWith('/save-editor-scene')) {
             const rawEditorScene = body.editorScene;
+            const renderingConfig = readOptionalRecord(body.renderingConfig);
             const saveMode = body.mode === 'prepare-platform-save'
               ? 'prepare-platform-save'
               : 'local-commit-save';
             const editorScenePath = resolve(__dirname, 'src/config/editor-scene.json');
             const scenePath = resolve(__dirname, 'src/config/scene.json');
+            const renderingConfigPath = resolve(__dirname, 'src/config/rendering.json');
             const previousSceneConfig = existsSync(scenePath)
               ? JSON.parse(readFileSync(scenePath, 'utf8') || '{}')
               : {};
             const { compileEditorSceneDocumentToSceneConfig } = await server.ssrLoadModule('/src/fps-game-editor-adapter/editor-scene-compiler.ts');
             const { enrichEditorSceneDocumentAssets } = await server.ssrLoadModule('/src/fps-game-editor-adapter/editor-asset-library.ts');
             const { bumpEditorSceneAuthoringSourceRevision, ensureEditorSceneAuthoringSource } = await server.ssrLoadModule('/src/fps-game-editor-adapter/editor-authoring-source.ts');
+            const { normalizeRenderingProfile } = await server.ssrLoadModule('/src/rendering/rendering-profile.ts');
             const { assertSceneJsonV2 } = await import('./scripts/platform-sim/lib/scene-json-v2-schema.mjs');
             assertEditorSceneDocument(rawEditorScene);
+            const normalizedRenderingConfig = renderingConfig ? normalizeRenderingProfile(renderingConfig) : null;
             const editorScene = bumpEditorSceneAuthoringSourceRevision(
               enrichEditorSceneDocumentAssets(ensureEditorSceneAuthoringSource(rawEditorScene), await listEditorAssetLibrary(server)),
             );
@@ -410,11 +460,24 @@ function projectAuthoringApiPlugin() {
             await writeFile(editorScenePath, savedEditorSceneText, 'utf8');
             if (saveMode === 'local-commit-save') {
               await writeFile(scenePath, savedSceneJsonText, 'utf8');
+              if (renderingConfig) {
+                await writeFile(renderingConfigPath, `${JSON.stringify(renderingConfig, null, 2)}\n`, 'utf8');
+              }
             }
-            invalidateViteFileModules(
-              server,
-              saveMode === 'local-commit-save' ? [editorScenePath, scenePath] : [editorScenePath],
-            );
+            const invalidationFiles = saveMode === 'local-commit-save'
+              ? [
+                  editorScenePath,
+                  scenePath,
+                  ...(renderingConfig ? [
+                    renderingConfigPath,
+                    resolve(__dirname, 'src/rendering/rendering-profile.ts'),
+                    resolve(__dirname, 'src/fps-game-editor-adapter/editor-rendering-profile.ts'),
+                    resolve(__dirname, 'src/fps-game-editor-adapter/editor-shadow-preview-profile.ts'),
+                    resolve(__dirname, 'src/services/ShadowService.ts'),
+                  ] : []),
+                ]
+              : [editorScenePath];
+            invalidateViteFileModules(server, invalidationFiles);
 
             sendJson(res, 200, {
               ok: true,
@@ -424,6 +487,10 @@ function projectAuthoringApiPlugin() {
               expectedVersion: previousVersion,
               ...(saveMode === 'local-commit-save' ? { version, updatedAt } : {}),
               editorScene,
+              ...(renderingConfig && saveMode === 'local-commit-save' ? {
+                renderingConfig,
+                renderingSummary: summarizeRenderingProfile(normalizedRenderingConfig),
+              } : {}),
               sceneJsonText: savedSceneJsonText,
               summary: {
                 editorScene: summarizeEditorScene(editorScene),
@@ -459,6 +526,18 @@ async function readJsonBody(req: any): Promise<Record<string, any>> {
   const chunks: Buffer[] = [];
   for await (const chunk of req) chunks.push(Buffer.from(chunk));
   return JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}') as Record<string, any>;
+}
+
+function readRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+}
+
+function readOptionalRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
 }
 
 function normalizePayloadPath(value: string): string {
@@ -542,6 +621,16 @@ function summarizeEditorScene(value: any): Record<string, unknown> {
     revision: value?.meta?.authoringSource?.revision ?? null,
     assets: Array.isArray(value?.assets) ? value.assets.length : 0,
     gameObjects: Array.isArray(value?.scene?.gameObjects) ? value.scene.gameObjects.length : 0,
+  };
+}
+
+function summarizeRenderingProfile(value: any): Record<string, unknown> {
+  return {
+    planarEnabled: value?.shadows?.planar?.enabled ?? null,
+    planarOpacity: value?.shadows?.planar?.appearance?.color?.a ?? null,
+    planeHeight: value?.shadows?.planar?.plane?.height ?? null,
+    planeBias: value?.shadows?.planar?.plane?.bias ?? null,
+    stencilEnabled: value?.shadows?.planar?.stencil?.enabled ?? null,
   };
 }
 
