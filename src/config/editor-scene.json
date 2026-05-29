@@ -5,7 +5,7 @@
     "authoringSource": {
       "sourceId": "scene.main",
       "sourceType": "scene",
-      "revision": 20
+      "revision": 21
     }
   },
   "assets": [],
@@ -181,6 +181,7 @@
       },
       {
         "id": "plane",
+        "guid": "go_20efbb4a-c323-4ea3-911c-23c72827d7b9",
         "name": "Plane",
         "kind": "primitive",
         "parentId": "root",
@@ -192,9 +193,9 @@
           {
             "type": "Transform",
             "position": {
-              "x": -3.5999999046325684,
-              "y": 0,
-              "z": 1.7999999523162842
+              "x": -3.078279733657837,
+              "y": 7.105427357601002e-15,
+              "z": 0.0016481704078614712
             },
             "rotation": {
               "z": 0,
@@ -203,12 +204,16 @@
             },
             "scale": {
               "x": 20,
-              "y": 1,
+              "y": 20,
               "z": 20
             }
           }
         ],
-        "guid": "go_3e3578c4-1e4a-41df-8160-013bdcd02aa5"
+        "overrides": {
+          "materialBinding": {
+            "materialAssetId": "mat_lumber_order_upgrade_glow"
+          }
+        }
       },
       {
         "id": "cube",
@@ -302,6 +307,280 @@
             }
           }
         ]
+      }
+    ],
+    "materialAssets": [
+      {
+        "id": "mat_default_pbr",
+        "name": "Default PBR Material",
+        "materialKind": "pbr",
+        "system": {
+          "readonly": true,
+          "preset": "default-pbr"
+        },
+        "profile": {
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 1,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_default_standard",
+        "name": "Default Standard Material",
+        "materialKind": "standard",
+        "system": {
+          "readonly": true,
+          "preset": "default-standard"
+        },
+        "profile": {
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_lumber_order_fresh_wood",
+        "name": "Lumber Order - Fresh Wood",
+        "profile": {
+          "baseColor": {
+            "color": {
+              "r": 0.9607843137254902,
+              "g": 0.47058823529411764,
+              "b": 0.0392156862745098
+            },
+            "brightness": 1,
+            "saturation": 1.08,
+            "contrast": 1,
+            "texture": {
+              "url": "/src/assets/imported/textures/texture_79af58d28dfe40bba5cd2422a40a4635.png?v=1780033863251.6653"
+            }
+          },
+          "metallic": 0,
+          "roughness": 0.82,
+          "emission": {
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_lumber_order_dark_plank",
+        "name": "Lumber Order - Dark Plank",
+        "profile": {
+          "baseColor": {
+            "color": {
+              "r": 0.36,
+              "g": 0.21,
+              "b": 0.11
+            },
+            "brightness": 0.92,
+            "saturation": 1.15,
+            "contrast": 1.1
+          },
+          "metallic": 0,
+          "roughness": 0.88,
+          "emission": {
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_lumber_order_upgrade_glow",
+        "name": "Lumber Order - Upgrade Glow",
+        "profile": {
+          "baseColor": {
+            "color": {
+              "r": 0.95,
+              "g": 0.78,
+              "b": 0.22
+            },
+            "brightness": 1.1,
+            "saturation": 1.2,
+            "contrast": 1.05,
+            "texture": {
+              "url": "/src/assets/imported/textures/texture_4c92ba888f9e43a9b68ac55de347e43b.png?v=1780025963008.571"
+            }
+          },
+          "metallic": 0,
+          "roughness": 0.45,
+          "emission": {
+            "color": {
+              "r": 1,
+              "g": 0.74,
+              "b": 0.22
+            },
+            "intensity": 0.35
+          }
+        }
+      },
+      {
+        "id": "mat_axe_and_bear_weapon_wood",
+        "name": "Axe and Bear - Weapon Wood",
+        "profile": {
+          "baseColor": {
+            "color": {
+              "r": 0.72,
+              "g": 0.46,
+              "b": 0.23
+            },
+            "brightness": 1,
+            "saturation": 1.05,
+            "contrast": 1.08,
+            "texture": {
+              "url": "/src/assets/imported/textures/texture_97ce653a39fe4fd1be45ba61acd7aa39.png"
+            }
+          },
+          "metallic": 0,
+          "roughness": 0.72,
+          "emission": {
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_axe_and_bear_fence_wood",
+        "name": "Axe and Bear - Fence Wood",
+        "profile": {
+          "baseColor": {
+            "color": {
+              "r": 0.5,
+              "g": 0.32,
+              "b": 0.18
+            },
+            "brightness": 0.95,
+            "saturation": 1.1,
+            "contrast": 1.12,
+            "texture": {
+              "url": "/src/assets/imported/textures/texture_2b5cefbad1ab4f858427650fbab48c91.png"
+            }
+          },
+          "metallic": 0,
+          "roughness": 0.86,
+          "emission": {
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_axe_and_bear_ground_moss",
+        "name": "Axe and Bear - Ground Moss",
+        "profile": {
+          "baseColor": {
+            "color": {
+              "r": 0.36,
+              "g": 0.6,
+              "b": 0.32
+            },
+            "brightness": 0.9,
+            "saturation": 1.15,
+            "contrast": 1,
+            "texture": {
+              "url": "/src/assets/imported/textures/texture_d77b8872bf7f4f2ab2e3ae1035c0d76b.jpg"
+            }
+          },
+          "metallic": 0,
+          "roughness": 0.95,
+          "emission": {
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_axe_and_bear_foot_glow",
+        "name": "Axe and Bear - Foot Glow",
+        "profile": {
+          "baseColor": {
+            "color": {
+              "r": 0.12,
+              "g": 0.26,
+              "b": 0.16
+            },
+            "brightness": 1,
+            "saturation": 1.25,
+            "contrast": 1.05,
+            "texture": {
+              "url": "/src/assets/imported/textures/texture_03caa4754ebb4725a4f77470214d0bc7.png"
+            }
+          },
+          "metallic": 0,
+          "roughness": 0.38,
+          "emission": {
+            "color": {
+              "r": 0.25,
+              "g": 1,
+              "b": 0.55
+            },
+            "intensity": 0.75,
+            "maskTexture": {
+              "url": "/src/assets/imported/textures/texture_b2badd5637c34786b0031178c8034523.png"
+            }
+          }
+        }
+      },
+      {
+        "id": "mat_lumber_order_yellow_ground",
+        "name": "Lumber Order - Yellow Ground",
+        "profile": {
+          "baseColor": {
+            "color": {
+              "r": 0.8823529411764706,
+              "g": 0.796078431372549,
+              "b": 0.5372549019607843
+            },
+            "brightness": 1.05,
+            "saturation": 1.08,
+            "contrast": 1,
+            "texture": {
+              "url": "/src/assets/imported/textures/texture_b2badd5637c34786b0031178c8034523.png?v=1780033862192.892"
+            }
+          },
+          "metallic": 0,
+          "roughness": 0.58,
+          "emission": {
+            "color": {
+              "r": 1,
+              "g": 0.78,
+              "b": 0.22
+            },
+            "intensity": 0.18,
+            "maskTexture": {
+              "url": "/src/assets/imported/textures/texture_79af58d28dfe40bba5cd2422a40a4635.png"
+            }
+          }
+        }
       }
     ]
   }

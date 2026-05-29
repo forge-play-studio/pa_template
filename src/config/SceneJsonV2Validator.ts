@@ -19,6 +19,8 @@ const PRIMITIVE_SHAPES = new Set(sceneJsonV2Rules.primitiveShapes);
 const ASSET_TYPES = new Set(sceneJsonV2Rules.assetTypes);
 const MATERIAL_MODES = new Set(sceneJsonV2Rules.materialModes);
 const MATERIAL_SCOPES = new Set(sceneJsonV2Rules.materialScopes);
+const MATERIAL_ASSET_KINDS = new Set(sceneJsonV2Rules.materialAssetKinds);
+const MATERIAL_ASSET_SYSTEM_PRESETS = new Set(sceneJsonV2Rules.materialAssetSystemPresets);
 const TRANSFORM_TYPES = new Set(sceneJsonV2Rules.transformTypes);
 const HIERARCHY_PARENT_TARGETS = new Set(sceneJsonV2Rules.hierarchy.parentTargets);
 const RUNTIME_ONLY_TOKENS = sceneJsonV2Rules.runtimeOnlyTokens;
@@ -55,11 +57,13 @@ export function validateSceneJsonV2(
   if (!nonEmptyString(scene.rootId)) add('$.scene.rootId', 'rootId must be a non-empty string');
   if (!Array.isArray(scene.assets)) add('$.scene.assets', 'assets must be an array');
   if (!Array.isArray(scene.nodes)) add('$.scene.nodes', 'nodes must be an array');
+  if (!Array.isArray(scene.materialAssets)) add('$.scene.materialAssets', 'materialAssets must be an array');
   if (!Array.isArray(scene.materials)) add('$.scene.materials', 'materials must be an array');
   if (!Array.isArray(scene.textures)) add('$.scene.textures', 'textures must be an array');
   if (errors.length > 0) return errors;
 
   const assetIds = new Set<string>();
+  const materialAssetIds = new Set<string>();
   const nodeIds = new Set<string>();
   const nodeKinds = new Map<string, string>();
 
@@ -98,6 +102,25 @@ export function validateSceneJsonV2(
       if (typeof node.kind === 'string') nodeKinds.set(node.id, node.kind);
     }
     if (!NODE_KINDS.has(node.kind)) add(`${path}.kind`, 'node.kind must be group, instance, transform, or primitive');
+  });
+
+  const materialAssets = scene.materialAssets as unknown[];
+  materialAssets.forEach((materialAsset, index) => {
+    const path = `$.scene.materialAssets[${index}]`;
+    if (!isRecord(materialAsset)) {
+      add(path, 'material asset must be an object');
+      return;
+    }
+    if (!nonEmptyString(materialAsset.id)) add(`${path}.id`, 'material asset id must be a non-empty string');
+    else if (materialAssetIds.has(materialAsset.id)) add(`${path}.id`, `duplicate material asset id: ${materialAsset.id}`);
+    else materialAssetIds.add(materialAsset.id);
+    if (!nonEmptyString(materialAsset.name)) add(`${path}.name`, 'material asset name must be a non-empty string');
+    if (materialAsset.materialKind != null && !MATERIAL_ASSET_KINDS.has(materialAsset.materialKind)) {
+      add(`${path}.materialKind`, 'materialKind must be pbr or standard');
+    }
+    validateArtistMaterialProfile(materialAsset.profile, `${path}.profile`, add);
+    validateMaterialAssetSystem(materialAsset.system, `${path}.system`, add);
+    validateMaterialAssetSystemKindConsistency(materialAsset, path, add);
   });
 
   scene.nodes.forEach((node, index) => {
@@ -162,6 +185,82 @@ export function validateSceneJsonV2(
   });
 
   return errors;
+}
+
+function validateArtistMaterialProfile(
+  profile: unknown,
+  path: string,
+  add: (path: string, message: string) => void,
+): void {
+  if (!isRecord(profile)) {
+    add(path, 'material asset profile must be an object');
+    return;
+  }
+  if (profile.baseColor != null) {
+    if (!isRecord(profile.baseColor)) add(`${path}.baseColor`, 'baseColor must be an object');
+    else {
+      validateColor(profile.baseColor.color, `${path}.baseColor.color`, add);
+      validateMaterialTextureRef(profile.baseColor.texture, `${path}.baseColor.texture`, add);
+      for (const key of ['brightness', 'saturation', 'contrast', 'hue']) {
+        if (profile.baseColor[key] != null && !isFiniteNumber(profile.baseColor[key])) add(`${path}.baseColor.${key}`, `${key} must be a finite number`);
+      }
+    }
+  }
+  for (const key of ['metallic', 'roughness']) {
+    if (profile[key] != null && !isFiniteNumber(profile[key])) add(`${path}.${key}`, `${key} must be a finite number`);
+  }
+  if (profile.emission != null) {
+    if (!isRecord(profile.emission)) add(`${path}.emission`, 'emission must be an object');
+    else {
+      validateColor(profile.emission.color, `${path}.emission.color`, add);
+      if (profile.emission.intensity != null && !isFiniteNumber(profile.emission.intensity)) add(`${path}.emission.intensity`, 'emission intensity must be a finite number');
+      validateMaterialTextureRef(profile.emission.maskTexture, `${path}.emission.maskTexture`, add);
+    }
+  }
+}
+
+function validateMaterialTextureRef(
+  texture: unknown,
+  path: string,
+  add: (path: string, message: string) => void,
+): void {
+  if (texture == null) return;
+  if (!isRecord(texture)) {
+    add(path, 'texture ref must be an object');
+    return;
+  }
+  if (texture.url != null && !nonEmptyString(texture.url)) add(`${path}.url`, 'texture url must be non-empty when present');
+  if (texture.textureAssetId != null && !nonEmptyString(texture.textureAssetId)) add(`${path}.textureAssetId`, 'textureAssetId must be non-empty when present');
+}
+
+function validateMaterialAssetSystem(
+  system: unknown,
+  path: string,
+  add: (path: string, message: string) => void,
+): void {
+  if (system == null) return;
+  if (!isRecord(system)) {
+    add(path, 'material asset system must be an object');
+    return;
+  }
+  if (system.readonly != null && typeof system.readonly !== 'boolean') add(`${path}.readonly`, 'readonly must be boolean');
+  if (system.preset != null && !MATERIAL_ASSET_SYSTEM_PRESETS.has(system.preset)) {
+    add(`${path}.preset`, 'preset must be default-pbr or default-standard');
+  }
+}
+
+function validateMaterialAssetSystemKindConsistency(
+  materialAsset: Record<string, any>,
+  path: string,
+  add: (path: string, message: string) => void,
+): void {
+  const preset = isRecord(materialAsset.system) ? materialAsset.system.preset : undefined;
+  if (preset === 'default-pbr' && materialAsset.materialKind != null && materialAsset.materialKind !== 'pbr') {
+    add(`${path}.materialKind`, 'default-pbr material assets must use materialKind pbr');
+  }
+  if (preset === 'default-standard' && materialAsset.materialKind != null && materialAsset.materialKind !== 'standard') {
+    add(`${path}.materialKind`, 'default-standard material assets must use materialKind standard');
+  }
 }
 
 function validateNodeParentTarget(

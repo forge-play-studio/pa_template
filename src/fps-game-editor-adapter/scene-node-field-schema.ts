@@ -113,6 +113,27 @@ function materialTextureUrlPath(path: string): SceneNodeFieldSchemaEntry {
   return { path, appliesTo: VISUAL_NODE_KIND, validate: isOptionalNonEmptyString };
 }
 
+function materialBindingSchemaPathFromDynamicPath(path: string): string | null {
+  const prefix = 'overrides.childMaterialBindings.';
+  if (!path.startsWith(prefix)) return null;
+  const remainder = path.slice(prefix.length);
+  const marker = '.override.';
+  const markerIndex = remainder.lastIndexOf(marker);
+  if (markerIndex >= 0) {
+    const ownerNodePath = remainder.slice(0, markerIndex);
+    const suffix = remainder.slice(markerIndex + marker.length);
+    if (!ownerNodePath || !suffix) return null;
+    return `overrides.materialBinding.override.${suffix}`;
+  }
+  const materialAssetSuffix = '.materialAssetId';
+  if (remainder.endsWith(materialAssetSuffix)) {
+    const ownerNodePath = remainder.slice(0, -materialAssetSuffix.length);
+    if (!ownerNodePath) return null;
+    return 'overrides.materialBinding.materialAssetId';
+  }
+  return null;
+}
+
 function transformVectorPath(vectorName: typeof TRANSFORM_VECTOR_NAMES[number]): SceneNodeFieldSchemaEntry {
   return {
     path: `transform.${vectorName}`,
@@ -232,6 +253,24 @@ export const SCENE_NODE_FIELD_SCHEMA: ReadonlyArray<SceneNodeFieldSchemaEntry> =
   materialColorPath('overrides.material.standard.emissiveColor'),
   materialColorPath('overrides.material.standard.ambientColor'),
   materialBooleanPath('overrides.material.standard.useSpecularOverAlpha'),
+  { path: 'overrides.materialBinding.materialAssetId', appliesTo: VISUAL_NODE_KIND, validate: isOptionalNonEmptyString },
+  materialColorPath('overrides.materialBinding.override.baseColor.color'),
+  { path: 'overrides.materialBinding.override.baseColor.color.r', appliesTo: VISUAL_NODE_KIND, validate: (value) => value == null || isFiniteNumber(value), allowDelete: false },
+  { path: 'overrides.materialBinding.override.baseColor.color.g', appliesTo: VISUAL_NODE_KIND, validate: (value) => value == null || isFiniteNumber(value), allowDelete: false },
+  { path: 'overrides.materialBinding.override.baseColor.color.b', appliesTo: VISUAL_NODE_KIND, validate: (value) => value == null || isFiniteNumber(value), allowDelete: false },
+  materialTextureUrlPath('overrides.materialBinding.override.baseColor.texture.url'),
+  materialNumberPath('overrides.materialBinding.override.baseColor.brightness'),
+  materialNumberPath('overrides.materialBinding.override.baseColor.saturation'),
+  materialNumberPath('overrides.materialBinding.override.baseColor.contrast'),
+  materialNumberPath('overrides.materialBinding.override.baseColor.hue'),
+  materialNumberPath('overrides.materialBinding.override.metallic'),
+  materialNumberPath('overrides.materialBinding.override.roughness'),
+  materialColorPath('overrides.materialBinding.override.emission.color'),
+  { path: 'overrides.materialBinding.override.emission.color.r', appliesTo: VISUAL_NODE_KIND, validate: (value) => value == null || isFiniteNumber(value), allowDelete: false },
+  { path: 'overrides.materialBinding.override.emission.color.g', appliesTo: VISUAL_NODE_KIND, validate: (value) => value == null || isFiniteNumber(value), allowDelete: false },
+  { path: 'overrides.materialBinding.override.emission.color.b', appliesTo: VISUAL_NODE_KIND, validate: (value) => value == null || isFiniteNumber(value), allowDelete: false },
+  materialNumberPath('overrides.materialBinding.override.emission.intensity'),
+  materialTextureUrlPath('overrides.materialBinding.override.emission.maskTexture.url'),
   { path: 'overrides.outline.renderOutline', appliesTo: VISUAL_NODE_KIND, validate: (value) => value == null || typeof value === 'boolean' },
   materialNumberPath('overrides.outline.outlineWidth'),
   { path: 'overrides.outline.outlineColor', appliesTo: VISUAL_NODE_KIND, validate: (value) => value == null || isColor(value) },
@@ -241,7 +280,8 @@ export const SCENE_NODE_FIELD_SCHEMA: ReadonlyArray<SceneNodeFieldSchemaEntry> =
 ];
 
 export function resolveSceneNodeFieldSchema(path: string, nodeKind: SceneNodeConfig['kind']): SceneNodeFieldSchemaEntry | null {
-  const entry = SCENE_NODE_FIELD_SCHEMA.find((item) => item.path === path) ?? null;
+  const schemaPath = materialBindingSchemaPathFromDynamicPath(path) ?? path;
+  const entry = SCENE_NODE_FIELD_SCHEMA.find((item) => item.path === schemaPath) ?? null;
   if (!entry || !entry.appliesTo.includes(nodeKind)) return null;
-  return entry;
+  return schemaPath === path ? entry : { ...entry, path };
 }

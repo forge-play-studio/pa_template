@@ -40,6 +40,7 @@ function ensureSceneNodes(sceneConfig: SceneConfig): SceneNodeConfig[] {
       rootId: 'root',
       assets: [],
       nodes: [],
+      materialAssets: [],
       materials: [],
       textures: [],
     };

@@ -201,6 +201,54 @@ export interface MaterialTextureOverrideConfig {
   url?: string;
 }
 
+export interface ArtistMaterialTextureRef {
+  url?: string;
+  textureAssetId?: string;
+}
+
+export interface ArtistBaseColorProfile {
+  color?: ColorRGB;
+  texture?: ArtistMaterialTextureRef;
+  brightness?: number;
+  saturation?: number;
+  contrast?: number;
+  hue?: number;
+}
+
+export interface ArtistEmissionProfile {
+  color?: ColorRGB;
+  intensity?: number;
+  maskTexture?: ArtistMaterialTextureRef;
+}
+
+export interface ArtistMaterialProfile {
+  baseColor?: ArtistBaseColorProfile;
+  metallic?: number;
+  roughness?: number;
+  emission?: ArtistEmissionProfile;
+}
+
+export type SceneMaterialAssetKind = 'pbr' | 'standard';
+export type SceneMaterialAssetSystemPreset = 'default-pbr' | 'default-standard';
+
+export interface SceneMaterialAssetSystemConfig {
+  readonly?: boolean;
+  preset?: SceneMaterialAssetSystemPreset;
+}
+
+export interface SceneMaterialAssetConfig {
+  id: string;
+  name: string;
+  profile: ArtistMaterialProfile;
+  materialKind?: SceneMaterialAssetKind;
+  system?: SceneMaterialAssetSystemConfig;
+}
+
+export interface SceneNodeMaterialBindingConfig {
+  materialAssetId?: string;
+  override?: ArtistMaterialProfile;
+}
+
 export interface PbrMaterialLightingOverrideConfig {
   albedoColor?: ColorRGB;
   baseWeight?: number;
@@ -268,6 +316,8 @@ export interface OutlineOverrideConfig {
 }
 
 export interface SceneNodeVisualOverrides {
+  materialBinding?: SceneNodeMaterialBindingConfig;
+  childMaterialBindings?: Record<string, SceneNodeMaterialBindingConfig>;
   material?: MaterialOverrideConfig;
   childMaterials?: Record<string, MaterialOverrideConfig>;
   childTransforms?: Record<string, TransformConfig>;
@@ -316,6 +366,7 @@ export interface SceneDocumentScene {
   rootId: string;
   assets: SceneAssetConfig[];
   nodes: SceneNodeConfig[];
+  materialAssets?: SceneMaterialAssetConfig[];
   materials: SceneSharedMaterialConfig[];
   textures: Record<string, unknown>[];
 }

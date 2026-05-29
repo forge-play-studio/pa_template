@@ -5,6 +5,8 @@
   "assetTypes": ["glb"],
   "materialScopes": ["sharedAsset", "nodeMaterial"],
   "materialModes": ["shared", "instance"],
+  "materialAssetKinds": ["pbr", "standard"],
+  "materialAssetSystemPresets": ["default-pbr", "default-standard"],
   "hierarchy": {
     "parentTargets": ["root", "sceneNode"]
   },

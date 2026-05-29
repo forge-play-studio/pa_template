@@ -378,6 +378,7 @@ function ensureSceneNodes(sceneConfig: SceneConfig): SceneNodeConfig[] {
       rootId: 'root',
       assets: [],
       nodes: [],
+      materialAssets: [],
       materials: [],
       textures: [],
     };
@@ -394,6 +395,7 @@ function ensureSceneSection(sceneConfig: SceneConfig): NonNullable<SceneConfig['
       rootId: 'root',
       assets: [],
       nodes: [],
+      materialAssets: [],
       materials: [],
       textures: [],
     };
@@ -406,6 +408,9 @@ function ensureSceneSection(sceneConfig: SceneConfig): NonNullable<SceneConfig['
   }
   if (!Array.isArray(sceneConfig.scene.materials)) {
     sceneConfig.scene.materials = [];
+  }
+  if (!Array.isArray(sceneConfig.scene.materialAssets)) {
+    sceneConfig.scene.materialAssets = [];
   }
   if (!Array.isArray(sceneConfig.scene.textures)) {
     sceneConfig.scene.textures = [];
@@ -706,6 +711,19 @@ function cleanupSceneNodeOverrides(value: VisualOverrideContainer): void {
   const overrides = value.overrides;
   if (!overrides) return;
 
+  const materialBinding = pruneMaterialBindingSnapshot(overrides.materialBinding ?? null);
+  if (materialBinding) overrides.materialBinding = materialBinding;
+  else delete overrides.materialBinding;
+
+  for (const [key, childMaterialBinding] of Object.entries(overrides.childMaterialBindings ?? {})) {
+    const normalized = pruneMaterialBindingSnapshot(childMaterialBinding);
+    if (normalized) overrides.childMaterialBindings![key] = normalized;
+    else delete overrides.childMaterialBindings![key];
+  }
+  if (overrides.childMaterialBindings && Object.keys(overrides.childMaterialBindings).length === 0) {
+    delete overrides.childMaterialBindings;
+  }
+
   const material = pruneMaterialSnapshot(overrides.material ?? null);
   if (material) overrides.material = material;
   else delete overrides.material;
@@ -725,9 +743,52 @@ function cleanupSceneNodeOverrides(value: VisualOverrideContainer): void {
     delete overrides.childOutlines;
   }
 
-  if (!overrides.material && !overrides.outline && !overrides.childMaterials && !overrides.childTransforms && !overrides.childOutlines) {
+  if (
+    !overrides.materialBinding
+    && !overrides.childMaterialBindings
+    && !overrides.material
+    && !overrides.outline
+    && !overrides.childMaterials
+    && !overrides.childTransforms
+    && !overrides.childOutlines
+  ) {
     delete value.overrides;
   }
+}
+
+function pruneMaterialBindingSnapshot(
+  binding: SceneNodeVisualOverrides['materialBinding'] | null | undefined,
+): SceneNodeVisualOverrides['materialBinding'] | null {
+  if (!binding || typeof binding !== 'object') return null;
+  const next = cloneJson(binding);
+  if (typeof next.materialAssetId === 'string') {
+    const materialAssetId = next.materialAssetId.trim();
+    if (materialAssetId) next.materialAssetId = materialAssetId;
+    else delete next.materialAssetId;
+  }
+  const override = next.override;
+  if (override && typeof override === 'object') {
+    if (override.baseColor && typeof override.baseColor === 'object') {
+      const texture = override.baseColor.texture;
+      if (texture && typeof texture === 'object') {
+        const url = typeof texture.url === 'string' ? texture.url.trim() : '';
+        if (url) texture.url = url;
+        else delete override.baseColor.texture;
+      }
+      if (isEmptyObject(override.baseColor)) delete override.baseColor;
+    }
+    if (override.emission && typeof override.emission === 'object') {
+      const maskTexture = override.emission.maskTexture;
+      if (maskTexture && typeof maskTexture === 'object') {
+        const url = typeof maskTexture.url === 'string' ? maskTexture.url.trim() : '';
+        if (url) maskTexture.url = url;
+        else delete override.emission.maskTexture;
+      }
+      if (isEmptyObject(override.emission)) delete override.emission;
+    }
+    if (isEmptyObject(override)) delete next.override;
+  }
+  return next.materialAssetId || next.override ? next : null;
 }
 
 function ensureChildMaterials(value: VisualOverrideContainer): Record<string, MaterialOverrideConfig> {
@@ -1868,7 +1929,7 @@ export function addProjectEditorSceneNode(
 }
 
 function applyJsonFieldPatch(target: Record<string, any>, patch: SceneNodeFieldPatch): void {
-  const segments = patch.path.split('.').filter(Boolean);
+  const segments = splitSceneNodePatchPath(patch.path);
   if (segments.length === 0) throw new Error('[ProjectEditor][Document] empty patch path');
   let cursor: Record<string, any> = target;
   for (const segment of segments.slice(0, -1)) {
@@ -1896,6 +1957,32 @@ function applyJsonFieldPatch(target: Record<string, any>, patch: SceneNodeFieldP
   cursor[leaf] = cloneJson(patch.value);
 }
 
+function splitSceneNodePatchPath(path: string): string[] {
+  const childMaterialBinding = splitChildMaterialBindingPatchPath(path);
+  return childMaterialBinding ?? path.split('.').filter(Boolean);
+}
+
+function splitChildMaterialBindingPatchPath(path: string): string[] | null {
+  const prefix = 'overrides.childMaterialBindings.';
+  if (!path.startsWith(prefix)) return null;
+  const remainder = path.slice(prefix.length);
+  const overrideMarker = '.override.';
+  const overrideMarkerIndex = remainder.lastIndexOf(overrideMarker);
+  if (overrideMarkerIndex >= 0) {
+    const ownerNodePath = remainder.slice(0, overrideMarkerIndex);
+    const suffix = remainder.slice(overrideMarkerIndex + overrideMarker.length);
+    if (!ownerNodePath || !suffix) return null;
+    return ['overrides', 'childMaterialBindings', ownerNodePath, 'override', ...suffix.split('.').filter(Boolean)];
+  }
+  const materialAssetSuffix = '.materialAssetId';
+  if (remainder.endsWith(materialAssetSuffix)) {
+    const ownerNodePath = remainder.slice(0, -materialAssetSuffix.length);
+    if (!ownerNodePath) return null;
+    return ['overrides', 'childMaterialBindings', ownerNodePath, 'materialAssetId'];
+  }
+  return null;
+}
+
 function isTransformScaleAxisPath(segments: readonly string[]): boolean {
   return segments.length === 3
     && segments[0] === 'transform'
@@ -1908,12 +1995,19 @@ function normalizeSceneNodePatchValue(path: string, value: unknown): unknown {
     'overrides.material.albedoTexture.url',
     'overrides.material.normalTexture.url',
     'overrides.material.metallicTexture.url',
-  ].includes(path)) {
+  ].includes(path) || isArtistMaterialTexturePath(path)) {
     if (typeof value !== 'string') return value;
     const trimmed = value.trim();
     return trimmed ? trimmed : null;
   }
   return value;
+}
+
+function isArtistMaterialTexturePath(path: string): boolean {
+  return path === 'overrides.materialBinding.override.emission.maskTexture.url'
+    || path === 'overrides.materialBinding.override.baseColor.texture.url'
+    || /^overrides\.childMaterialBindings\..+\.override\.emission\.maskTexture\.url$/.test(path)
+    || /^overrides\.childMaterialBindings\..+\.override\.baseColor\.texture\.url$/.test(path);
 }
 
 export function patchProjectEditorSceneNode(

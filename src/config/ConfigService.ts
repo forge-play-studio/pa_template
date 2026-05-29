@@ -16,6 +16,8 @@ import type {
   SceneCameraProjection,
   SceneDirectionalLightConfig,
   SceneHemisphericLightConfig,
+  SceneMaterialAssetConfig,
+  SceneNodeMaterialBindingConfig,
   SceneInstanceNode,
   SceneLightConfig,
   ScenePrimitiveNode,
@@ -23,6 +25,8 @@ import type {
   SceneNodeVisualOverrides,
   MaterialOverrideConfig,
   MaterialTextureOverrideConfig,
+  ArtistMaterialProfile,
+  ArtistMaterialTextureRef,
   PbrMaterialLightingOverrideConfig,
   OutlineOverrideConfig,
   ColorRGB,
@@ -218,6 +222,119 @@ function normalizeTextureOverride(value: unknown): MaterialTextureOverrideConfig
   return { url };
 }
 
+function normalizeArtistMaterialTextureRef(value: unknown): ArtistMaterialTextureRef | undefined {
+  if (!isRecord(value)) return undefined;
+  const url = typeof value.url === 'string' ? value.url.trim() : '';
+  const textureAssetId = typeof value.textureAssetId === 'string' ? value.textureAssetId.trim() : '';
+  if (!url && !textureAssetId) return undefined;
+  return {
+    ...(url ? { url } : {}),
+    ...(textureAssetId ? { textureAssetId } : {}),
+  };
+}
+
+function normalizeArtistBaseColorProfile(value: unknown): ArtistMaterialProfile['baseColor'] | undefined {
+  if (!isRecord(value)) return undefined;
+  const normalized: NonNullable<ArtistMaterialProfile['baseColor']> = {};
+  const color = normalizeColorRGB(value.color);
+  if (color) normalized.color = color;
+  const texture = normalizeArtistMaterialTextureRef(value.texture);
+  if (texture) normalized.texture = texture;
+  if (isFiniteNumber(value.brightness)) normalized.brightness = value.brightness;
+  if (isFiniteNumber(value.saturation)) normalized.saturation = value.saturation;
+  if (isFiniteNumber(value.contrast)) normalized.contrast = value.contrast;
+  if (isFiniteNumber(value.hue)) normalized.hue = value.hue;
+  return Object.keys(normalized).length > 0 ? normalized : undefined;
+}
+
+function normalizeArtistEmissionProfile(value: unknown): ArtistMaterialProfile['emission'] | undefined {
+  if (!isRecord(value)) return undefined;
+  const normalized: NonNullable<ArtistMaterialProfile['emission']> = {};
+  const color = normalizeColorRGB(value.color);
+  if (color) normalized.color = color;
+  if (isFiniteNumber(value.intensity)) normalized.intensity = value.intensity;
+  const maskTexture = normalizeArtistMaterialTextureRef(value.maskTexture);
+  if (maskTexture) normalized.maskTexture = maskTexture;
+  return Object.keys(normalized).length > 0 ? normalized : undefined;
+}
+
+function normalizeArtistMaterialProfile(value: unknown): ArtistMaterialProfile | undefined {
+  if (!isRecord(value)) return undefined;
+  const normalized: ArtistMaterialProfile = {};
+  const baseColor = normalizeArtistBaseColorProfile(value.baseColor);
+  if (baseColor) normalized.baseColor = baseColor;
+  if (isFiniteNumber(value.metallic)) normalized.metallic = value.metallic;
+  if (isFiniteNumber(value.roughness)) normalized.roughness = value.roughness;
+  const emission = normalizeArtistEmissionProfile(value.emission);
+  if (emission) normalized.emission = emission;
+  return Object.keys(normalized).length > 0 ? normalized : undefined;
+}
+
+function normalizeSceneMaterialAssetKind(value: unknown): SceneMaterialAssetConfig['materialKind'] | undefined {
+  return value === 'pbr' || value === 'standard' ? value : undefined;
+}
+
+function normalizeSceneMaterialAssetSystemConfig(value: unknown): SceneMaterialAssetConfig['system'] | undefined {
+  if (!isRecord(value)) return undefined;
+  const readonly = value.readonly === true;
+  const preset = value.preset === 'default-pbr' || value.preset === 'default-standard'
+    ? value.preset
+    : undefined;
+  if (!readonly && !preset) return undefined;
+  return {
+    ...(readonly ? { readonly } : {}),
+    ...(preset ? { preset } : {}),
+  };
+}
+
+function inferSceneMaterialAssetKindFromSystemPreset(
+  preset: unknown,
+): SceneMaterialAssetConfig['materialKind'] | undefined {
+  if (preset === 'default-pbr') return 'pbr';
+  if (preset === 'default-standard') return 'standard';
+  return undefined;
+}
+
+function normalizeSceneMaterialAsset(value: unknown): SceneMaterialAssetConfig | undefined {
+  if (!isRecord(value)) return undefined;
+  const id = typeof value.id === 'string' ? value.id.trim() : '';
+  const name = typeof value.name === 'string' ? value.name.trim() : '';
+  const profile = normalizeArtistMaterialProfile(value.profile);
+  if (!id || !name || !profile) return undefined;
+  const system = normalizeSceneMaterialAssetSystemConfig(value.system);
+  const materialKind = normalizeSceneMaterialAssetKind(value.materialKind);
+  const presetKind = inferSceneMaterialAssetKindFromSystemPreset(system?.preset);
+  if (materialKind && presetKind && materialKind !== presetKind) return undefined;
+  return {
+    id,
+    name,
+    profile,
+    ...(materialKind ?? presetKind ? { materialKind: materialKind ?? presetKind } : {}),
+    ...(system ? { system } : {}),
+  };
+}
+
+function normalizeSceneNodeMaterialBinding(value: unknown): SceneNodeMaterialBindingConfig | undefined {
+  if (!isRecord(value)) return undefined;
+  const materialAssetId = typeof value.materialAssetId === 'string' ? value.materialAssetId.trim() : '';
+  const override = normalizeArtistMaterialProfile(value.override);
+  if (!materialAssetId && !override) return undefined;
+  return {
+    ...(materialAssetId ? { materialAssetId } : {}),
+    ...(override ? { override } : {}),
+  };
+}
+
+function normalizeSceneNodeMaterialBindingMap(value: unknown): Record<string, SceneNodeMaterialBindingConfig> | undefined {
+  if (!isRecord(value)) return undefined;
+  const normalized = Object.fromEntries(
+    Object.entries(value)
+      .map(([ownerNodePath, binding]) => [ownerNodePath.trim(), normalizeSceneNodeMaterialBinding(binding)] as const)
+      .filter((entry): entry is [string, SceneNodeMaterialBindingConfig] => !!entry[0] && !!entry[1]),
+  );
+  return Object.keys(normalized).length > 0 ? normalized : undefined;
+}
+
 function normalizePbrMaterialLightingOverride(value: unknown): PbrMaterialLightingOverrideConfig | undefined {
   if (!isRecord(value)) return undefined;
 
@@ -358,6 +475,10 @@ function normalizeSceneNodeOverrides(value: unknown): SceneNodeVisualOverrides |
   if (!isRecord(value)) return undefined;
 
   const normalized: SceneNodeVisualOverrides = {};
+  const materialBinding = normalizeSceneNodeMaterialBinding(value.materialBinding);
+  if (materialBinding) normalized.materialBinding = materialBinding;
+  const childMaterialBindings = normalizeSceneNodeMaterialBindingMap(value.childMaterialBindings);
+  if (childMaterialBindings) normalized.childMaterialBindings = childMaterialBindings;
   const material = normalizeMaterialOverride(value.material);
   if (material) normalized.material = material;
   const childMaterials = normalizeMaterialOverrideMap(value.childMaterials);
@@ -440,6 +561,7 @@ export class ConfigService {
         rootId: 'root',
         assets: [],
         nodes: [],
+        materialAssets: [],
         materials: [],
         textures: [],
       };
@@ -451,8 +573,12 @@ export class ConfigService {
     }
     if (!Array.isArray(scene.assets)) scene.assets = [];
     if (!Array.isArray(scene.nodes)) scene.nodes = [];
+    if (!Array.isArray(scene.materialAssets)) scene.materialAssets = [];
     if (!Array.isArray(scene.materials)) scene.materials = [];
     if (!Array.isArray(scene.textures)) scene.textures = [];
+    scene.materialAssets = scene.materialAssets
+      .map((materialAsset) => normalizeSceneMaterialAsset(materialAsset))
+      .filter((materialAsset): materialAsset is SceneMaterialAssetConfig => !!materialAsset);
     for (const asset of scene.assets) {
       this.normalizeSceneAssetConfig(asset);
     }

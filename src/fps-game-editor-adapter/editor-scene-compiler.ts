@@ -63,6 +63,9 @@ export function compileEditorSceneDocumentToSceneConfig(
     rootId,
     assets: editorDocument.assets.map(compileAsset),
     nodes: compiledGameObjects.map((gameObject) => compileGameObject(gameObject, sourceRef)),
+    materialAssets: editorDocument.scene.materialAssets
+      ? structuredClone(editorDocument.scene.materialAssets)
+      : previousScene?.materialAssets ?? [],
     materials: previousScene?.materials ?? [],
     textures: previousScene?.textures ?? [],
   };

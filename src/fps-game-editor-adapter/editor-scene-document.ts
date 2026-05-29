@@ -6,6 +6,7 @@ import type {
   SceneCameraRigConfig,
   SceneDirectionalLightConfig,
   SceneHemisphericLightConfig,
+  SceneMaterialAssetConfig,
   SceneNodeConfig,
   ScenePrimitiveShape,
   SceneNodeVisualOverrides,
@@ -118,6 +119,7 @@ export interface EditorSceneDocument {
   assets: EditorSceneAsset[];
   scene: {
     gameObjects: EditorSceneGameObject[];
+    materialAssets?: SceneMaterialAssetConfig[];
   };
 }
 

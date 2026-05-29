@@ -94,6 +94,7 @@ function assertAliasFilesExist(aliasFiles: ReadonlyArray<readonly [string, strin
 
 function createLocalEditorSourceAliases(repoRoot: string): Array<{ find: string | RegExp; replacement: string }> {
   const aliasFiles = [
+    ['@fps-games/babylon-renderer', resolve(repoRoot, 'packages/babylon-renderer/src/index.ts')],
     ['@fps-games/editor-babylon/legacy-runtime', resolve(repoRoot, 'packages/editor-babylon/src/legacy-runtime.ts')],
     ['@fps-games/babylon-renderer', resolve(repoRoot, 'packages/babylon-renderer/src/index.ts')],
     ['@fps-games/editor-babylon', resolve(repoRoot, 'packages/editor-babylon/src/index.ts')],
@@ -114,6 +115,7 @@ function createLocalEditorSourceAliases(repoRoot: string): Array<{ find: string 
 
 function createBundledEditorAliases(): Array<{ find: string | RegExp; replacement: string }> {
   const aliasFiles = [
+    ['@fps-games/babylon-renderer', resolve(bundledEditorPackagesRoot, 'babylon-renderer/dist/index.js')],
     ['@fps-games/editor-babylon/legacy-runtime', resolve(bundledEditorPackagesRoot, 'editor-babylon/dist/legacy-runtime.js')],
     ['@fps-games/editor-babylon', resolve(bundledEditorPackagesRoot, 'editor-babylon/dist/index.js')],
     ['@fps-games/editor-browser', resolve(bundledEditorPackagesRoot, 'editor-browser/dist/index.js')],
