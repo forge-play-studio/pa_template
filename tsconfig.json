@@ -19,6 +19,7 @@
     "baseUrl": ".",
     "paths": {
       "@fps-games/editor-babylon/legacy-runtime": ["node_modules/@fps-games/editor/node_modules/@fps-games/editor-babylon/dist/legacy-runtime.d.ts"],
+      "@fps-games/babylon-renderer": ["../../packages/babylon-renderer/src/index.ts"],
       "@fps-games/editor-babylon": ["node_modules/@fps-games/editor/node_modules/@fps-games/editor-babylon/dist/index.d.ts"],
       "@fps-games/editor-browser": ["node_modules/@fps-games/editor/node_modules/@fps-games/editor-browser/dist/index.d.ts"],
       "@fps-games/editor-core": ["node_modules/@fps-games/editor/node_modules/@fps-games/editor-core/dist/index.d.ts"],

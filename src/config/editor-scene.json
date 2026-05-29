@@ -5,7 +5,7 @@
     "authoringSource": {
       "sourceId": "scene.main",
       "sourceType": "scene",
-      "revision": 8
+      "revision": 9
     }
   },
   "assets": [],
@@ -144,11 +144,11 @@
         "transformType": "light",
         "light": {
           "type": "directional",
-          "intensity": 1.8,
+          "intensity": 2,
           "direction": {
-            "x": 0.3045578654998147,
-            "y": -0.8290376338767504,
-            "z": -0.46897879288752087
+            "x": 0.35944184840597154,
+            "y": -0.8290376503546882,
+            "z": -0.42836681933697457
           },
           "diffuseColor": {
             "r": 1,

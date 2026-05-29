@@ -79,6 +79,30 @@
       "lambda": 0.5,
       "cascadeBlendPercentage": 0.1,
       "stabilizeCascades": true
+    },
+    "planar": {
+      "enabled": true,
+      "plane": {
+        "normal": { "x": 0, "y": 1, "z": 0 },
+        "height": 0.05,
+        "bias": 0.4
+      },
+      "appearance": {
+        "color": { "r": 0, "g": 0, "b": 0, "a": 0.35 }
+      },
+      "stencil": {
+        "enabled": true,
+        "receiverRenderingGroup": 0,
+        "shadowRenderingGroup": 1
+      },
+      "casters": {
+        "excludePatterns": [],
+        "rootBoundaryPatterns": [],
+        "minVolume": 0.001
+      },
+      "receivers": {
+        "patterns": []
+      }
     }
   },
 

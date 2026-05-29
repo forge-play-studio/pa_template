@@ -34,6 +34,7 @@ const localFpsGameEditorRepo = process.env.FPS_GAME_EDITOR_REPO
   ? resolve(process.env.FPS_GAME_EDITOR_REPO)
   : null;
 const bundledEditorPackagesRoot = resolve(__dirname, 'node_modules/@fps-games/editor/node_modules/@fps-games');
+const directBabylonRendererPackageRoot = resolve(__dirname, 'node_modules/@fps-games/babylon-renderer');
 const fpsEditorPackageJsonPath = localFpsGameEditorRepo
   ? resolve(localFpsGameEditorRepo, 'packages/editor/package.json')
   : resolve(__dirname, 'node_modules/@fps-games/editor/package.json');
@@ -41,6 +42,7 @@ const allowedThirdPartyPackages = [
   '@babylonjs/core',
   '@babylonjs/loaders',
   '@fps-games/editor',
+  '@fps-games/babylon-renderer',
   '@fps-games/editor-babylon',
   '@fps-games/editor-browser',
   '@fps-games/editor-core',
@@ -51,6 +53,7 @@ const allowedThirdPartyPackages = [
 
 const editorPackageIds = [
   '@fps-games/editor',
+  '@fps-games/babylon-renderer',
   '@fps-games/editor-babylon',
   '@fps-games/editor-browser',
   '@fps-games/editor-core',
@@ -92,6 +95,7 @@ function assertAliasFilesExist(aliasFiles: ReadonlyArray<readonly [string, strin
 function createLocalEditorSourceAliases(repoRoot: string): Array<{ find: string | RegExp; replacement: string }> {
   const aliasFiles = [
     ['@fps-games/editor-babylon/legacy-runtime', resolve(repoRoot, 'packages/editor-babylon/src/legacy-runtime.ts')],
+    ['@fps-games/babylon-renderer', resolve(repoRoot, 'packages/babylon-renderer/src/index.ts')],
     ['@fps-games/editor-babylon', resolve(repoRoot, 'packages/editor-babylon/src/index.ts')],
     ['@fps-games/editor-browser', resolve(repoRoot, 'packages/editor-browser/src/index.ts')],
     ['@fps-games/editor-core', resolve(repoRoot, 'packages/editor-core/src/index.ts')],
@@ -123,7 +127,21 @@ function createBundledEditorAliases(): Array<{ find: string | RegExp; replacemen
     'The bundled @fps-games/editor packages are missing. Run npm install or pnpm install before starting Vite.',
   );
 
-  return aliasFiles.map(([pkg, file]) => editorPackageAlias(packageIdRegex(pkg), file));
+  const aliases = aliasFiles.map(([pkg, file]) => editorPackageAlias(packageIdRegex(pkg), file));
+  const rendererAliasFile = resolveBundledBabylonRendererAliasFile();
+  if (rendererAliasFile) {
+    aliases.unshift(editorPackageAlias(packageIdRegex('@fps-games/babylon-renderer'), rendererAliasFile));
+  }
+  return aliases;
+}
+
+function resolveBundledBabylonRendererAliasFile(): string | null {
+  const candidates = [
+    resolve(directBabylonRendererPackageRoot, 'src/index.ts'),
+    resolve(directBabylonRendererPackageRoot, 'dist/index.js'),
+    resolve(bundledEditorPackagesRoot, 'babylon-renderer/dist/index.js'),
+  ];
+  return candidates.find(candidate => existsSync(candidate)) ?? null;
 }
 
 const editorPackageAliases = localFpsGameEditorRepo

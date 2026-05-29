@@ -64,6 +64,7 @@ import {
 } from '../fps-game-editor-adapter/scene-main-source-driver';
 import { compileEditorSceneDocumentToSceneConfig } from '../fps-game-editor-adapter/editor-scene-compiler';
 import { resolveEditorLightingPreviewProfile } from '../fps-game-editor-adapter/editor-lighting-preview-profile';
+import { resolveEditorWorldRenderingProfile } from '../fps-game-editor-adapter/editor-shadow-preview-profile';
 
 type BabylonModule = Record<string, any>;
 
@@ -157,6 +158,7 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
   });
   const editorLightingPreviewAdapter = {
     getWorldAppearance: resolveEditorLightingPreviewProfile,
+    getWorldRendering: resolveEditorWorldRenderingProfile,
   } as Record<string, unknown>;
   const harness: LocalEditorHarness<EditorSceneDocument> = createLocalEditorHarness<EditorSceneDocument, EditorSceneDocumentPatch, EditorSceneAssetLibraryItem>({
     root: options.root,

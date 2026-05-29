@@ -6,6 +6,7 @@ import {
   LIGHT_DIRECTION_ELEVATION_MAX_DEG,
   LIGHT_DIRECTION_ELEVATION_MIN_DEG,
   createDirectionalLightDirectionFromAngles,
+  normalizeDirectionVector,
   readDirectionalLightAngles,
 } from '../fps-game-editor-adapter/editor-lighting-utils';
 
@@ -35,7 +36,13 @@ interface RuntimeLightSnapshot<TLight extends SceneHemisphericLightConfig | Scen
 interface LightingDebugSnapshot {
   environment: RuntimeLightSnapshot<SceneHemisphericLightConfig>;
   directional: RuntimeLightSnapshot<SceneDirectionalLightConfig>;
+  shadow: {
+    mode: RuntimeShadowMode;
+    projectedLengthMultiplier: number;
+  };
 }
+
+type RuntimeShadowMode = 'none' | 'legacy' | 'planar' | 'unknown';
 
 type LightingDebugText = Record<
   | 'title'
@@ -52,6 +59,11 @@ type LightingDebugText = Record<
   | 'elevationAngle'
   | 'lightColor'
   | 'rawDirection'
+  | 'shadowReadout'
+  | 'shadowPlanarFollow'
+  | 'shadowLegacy'
+  | 'shadowNone'
+  | 'shadowUnknown'
   | 'reset'
   | 'save'
   | 'resetStatus'
@@ -74,6 +86,7 @@ type LightingDebugTooltipText = Record<
   | 'elevationAngle'
   | 'lightColor'
   | 'rawDirection'
+  | 'shadowReadout'
   | 'reset'
   | 'save',
   string
@@ -115,6 +128,11 @@ const LIGHTING_DEBUG_TEXT: Record<LightingDebugLanguage, LightingDebugText> = {
     elevationAngle: '高度角',
     lightColor: '光照颜色',
     rawDirection: '原始方向',
+    shadowReadout: '阴影',
+    shadowPlanarFollow: 'Planar / 跟随直射光',
+    shadowLegacy: 'Legacy ShadowGenerator',
+    shadowNone: 'Off',
+    shadowUnknown: 'Unknown',
     reset: '重置参数',
     save: '保存参数',
     resetStatus: '已重置为初始运行时光照。',
@@ -138,6 +156,11 @@ const LIGHTING_DEBUG_TEXT: Record<LightingDebugLanguage, LightingDebugText> = {
     elevationAngle: 'Elevation Angle',
     lightColor: 'Light Color',
     rawDirection: 'Raw Direction',
+    shadowReadout: 'Shadow',
+    shadowPlanarFollow: 'Planar / Follow Directional Light',
+    shadowLegacy: 'Legacy ShadowGenerator',
+    shadowNone: 'Off',
+    shadowUnknown: 'Unknown',
     reset: 'Reset',
     save: 'Save Lights',
     resetStatus: 'Reset to initial runtime lighting.',
@@ -161,6 +184,7 @@ const LIGHTING_DEBUG_TOOLTIPS: Record<LightingDebugLanguage, LightingDebugToolti
     elevationAngle: '直射光相对地平线的高度角；90 度表示从正上方照下。',
     lightColor: '直射光漫反射颜色。',
     rawDirection: '只读方向向量，用于排查运行时转换结果。',
+    shadowReadout: '只读阴影状态；planar 阴影跟随当前直射光角度。',
     reset: '恢复为打开运行时时读取到的初始光照参数。',
     save: '通过编辑器保存链路写回 Environment Light 与 Directional Light，然后重新加载运行时。',
   },
@@ -176,6 +200,7 @@ const LIGHTING_DEBUG_TOOLTIPS: Record<LightingDebugLanguage, LightingDebugToolti
     elevationAngle: 'Directional elevation above the horizon; 90 degrees points straight down.',
     lightColor: 'Directional diffuse color.',
     rawDirection: 'Read-only direction vector for checking runtime conversion.',
+    shadowReadout: 'Read-only shadow status; planar shadows follow the current Directional Light angles.',
     reset: 'Restore the lighting captured when runtime opened.',
     save: 'Save Environment Light and Directional Light through the editor authoring pipeline, then reload runtime.',
   },
@@ -307,6 +332,8 @@ export function mountRuntimeLightingDebugPanel(options: RuntimeLightingDebugPane
     'line-height:1.35',
     'white-space:normal',
   ].join(';');
+  const shadowStatus = ownerDocument.createElement('div');
+  shadowStatus.style.cssText = rawDirection.style.cssText;
   directionalGrid.append(
     createLabel(ownerDocument), directionalEnabled,
     createLabel(ownerDocument), directionalIntensity,
@@ -314,6 +341,7 @@ export function mountRuntimeLightingDebugPanel(options: RuntimeLightingDebugPane
     createLabel(ownerDocument), directionalElevationAngle,
     createLabel(ownerDocument), directionalDiffuseColor,
     createLabel(ownerDocument), rawDirection,
+    createLabel(ownerDocument), shadowStatus,
   );
   directionalSection.append(directionalTitle, directionalGrid);
 
@@ -332,17 +360,20 @@ export function mountRuntimeLightingDebugPanel(options: RuntimeLightingDebugPane
   container.append(panel, toggleButton);
   root.append(container);
 
+  const lightGridChildren = directionalGrid.children;
+  const gridShadowLabel = lightGridChildren[12] as HTMLLabelElement;
   const labelRows = {
     environmentEnabled: environmentGrid.children[0] as HTMLLabelElement,
     environmentIntensity: environmentGrid.children[2] as HTMLLabelElement,
     environmentDiffuseColor: environmentGrid.children[4] as HTMLLabelElement,
     environmentGroundColor: environmentGrid.children[6] as HTMLLabelElement,
-    directionalEnabled: directionalGrid.children[0] as HTMLLabelElement,
-    directionalIntensity: directionalGrid.children[2] as HTMLLabelElement,
-    directionalHorizontalAngle: directionalGrid.children[4] as HTMLLabelElement,
-    directionalElevationAngle: directionalGrid.children[6] as HTMLLabelElement,
-    directionalDiffuseColor: directionalGrid.children[8] as HTMLLabelElement,
-    rawDirection: directionalGrid.children[10] as HTMLLabelElement,
+    directionalEnabled: lightGridChildren[0] as HTMLLabelElement,
+    directionalIntensity: lightGridChildren[2] as HTMLLabelElement,
+    directionalHorizontalAngle: lightGridChildren[4] as HTMLLabelElement,
+    directionalElevationAngle: lightGridChildren[6] as HTMLLabelElement,
+    directionalDiffuseColor: lightGridChildren[8] as HTMLLabelElement,
+    rawDirection: lightGridChildren[10] as HTMLLabelElement,
+    shadowReadout: gridShadowLabel,
   };
 
   const numberInputs = new Map<NumberField, HTMLInputElement>([
@@ -512,6 +543,7 @@ export function mountRuntimeLightingDebugPanel(options: RuntimeLightingDebugPane
   function readInputs(fallback: LightingDebugSnapshot): LightingDebugSnapshot {
     const horizontalAngle = readNumberInput('directionalHorizontalAngle', readDirectionalLightAngles(fallback.directional.light.direction).horizontalAngleDeg);
     const elevationAngle = readNumberInput('directionalElevationAngle', readDirectionalLightAngles(fallback.directional.light.direction).elevationAngleDeg);
+    const direction = createDirectionalLightDirectionFromAngles(horizontalAngle, elevationAngle);
     return {
       environment: {
         ...fallback.environment,
@@ -529,9 +561,13 @@ export function mountRuntimeLightingDebugPanel(options: RuntimeLightingDebugPane
         light: {
           type: 'directional',
           intensity: Math.max(0, readNumberInput('directionalIntensity', fallback.directional.light.intensity)),
-          direction: createDirectionalLightDirectionFromAngles(horizontalAngle, elevationAngle),
+          direction,
           diffuseColor: readColorInput('directionalDiffuseColor', fallback.directional.light.diffuseColor ?? { r: 1, g: 1, b: 1 }),
         },
+      },
+      shadow: {
+        ...fallback.shadow,
+        projectedLengthMultiplier: readProjectedLengthMultiplier(direction),
       },
     };
   }
@@ -582,6 +618,15 @@ export function mountRuntimeLightingDebugPanel(options: RuntimeLightingDebugPane
   function syncReadout(snapshot: LightingDebugSnapshot): void {
     const direction = snapshot.directional.light.direction;
     rawDirection.textContent = `x ${formatNumber(direction.x)}  y ${formatNumber(direction.y)}  z ${formatNumber(direction.z)}`;
+    shadowStatus.textContent = `${formatShadowMode(snapshot.shadow.mode)}\nshadow length x${formatNumber(snapshot.shadow.projectedLengthMultiplier)}`;
+  }
+
+  function formatShadowMode(mode: RuntimeShadowMode): string {
+    const copy = text();
+    if (mode === 'planar') return copy.shadowPlanarFollow;
+    if (mode === 'legacy') return copy.shadowLegacy;
+    if (mode === 'none') return copy.shadowNone;
+    return copy.shadowUnknown;
   }
 
   function renderOpenState(): void {
@@ -611,6 +656,7 @@ export function mountRuntimeLightingDebugPanel(options: RuntimeLightingDebugPane
     labelRows.directionalElevationAngle.textContent = copy.elevationAngle;
     labelRows.directionalDiffuseColor.textContent = copy.lightColor;
     labelRows.rawDirection.textContent = copy.rawDirection;
+    labelRows.shadowReadout.textContent = copy.shadowReadout;
 
     setDebugTooltip(environmentEnabled, hints.enabled);
     setDebugTooltip(labelRows.environmentEnabled, hints.enabled);
@@ -632,10 +678,13 @@ export function mountRuntimeLightingDebugPanel(options: RuntimeLightingDebugPane
     setDebugTooltip(directionalDiffuseColor, hints.lightColor);
     setDebugTooltip(labelRows.rawDirection, hints.rawDirection);
     setDebugTooltip(rawDirection, hints.rawDirection);
+    setDebugTooltip(labelRows.shadowReadout, hints.shadowReadout);
+    setDebugTooltip(shadowStatus, hints.shadowReadout);
     resetButton.textContent = copy.reset;
     setDebugTooltip(resetButton, hints.reset);
     saveButton.textContent = copy.save;
     setDebugTooltip(saveButton, hints.save);
+    if (latestSnapshot) syncReadout(latestSnapshot);
   }
 
   function setDebugTooltip(element: HTMLElement, message: string): void {
@@ -775,6 +824,11 @@ function readSnapshot(game: Game | null): LightingDebugSnapshot | null {
   const environmentLight = sceneBuilder.getRuntimeHemisphericLight();
   const directionalLight = sceneBuilder.getRuntimeDirectionalLight();
   if (!environmentLight || !directionalLight) return null;
+  const direction = {
+    x: readFiniteNumber(directionalLight.direction?.x, directionalState.light.direction.x),
+    y: readFiniteNumber(directionalLight.direction?.y, directionalState.light.direction.y),
+    z: readFiniteNumber(directionalLight.direction?.z, directionalState.light.direction.z),
+  };
   return {
     environment: {
       enabled: environmentLight.isEnabled?.() ?? environmentState.enabled,
@@ -791,14 +845,14 @@ function readSnapshot(game: Game | null): LightingDebugSnapshot | null {
       light: {
         type: 'directional',
         intensity: readFiniteNumber(directionalLight.intensity, directionalState.light.intensity),
-        direction: {
-          x: readFiniteNumber(directionalLight.direction?.x, directionalState.light.direction.x),
-          y: readFiniteNumber(directionalLight.direction?.y, directionalState.light.direction.y),
-          z: readFiniteNumber(directionalLight.direction?.z, directionalState.light.direction.z),
-        },
+        direction,
         diffuseColor: color3ToColor(directionalLight.diffuse, directionalState.light.diffuseColor ?? { r: 1, g: 1, b: 1 }),
       },
       binding: readLightEditorBinding(directionalLight.metadata, 'directional'),
+    },
+    shadow: {
+      mode: readRuntimeShadowMode(game),
+      projectedLengthMultiplier: readProjectedLengthMultiplier(direction),
     },
   };
 }
@@ -823,6 +877,18 @@ function readLightEditorBinding(metadata: unknown, expectedType: SceneHemispheri
 
 function canSaveSnapshot(snapshot: LightingDebugSnapshot): boolean {
   return !!snapshot.environment.binding && !!snapshot.directional.binding;
+}
+
+function readRuntimeShadowMode(game: Game | null): RuntimeShadowMode {
+  const mode = game?.getShadowService()?.getShadowMode?.();
+  return mode === 'planar' || mode === 'legacy' || mode === 'none' ? mode : 'unknown';
+}
+
+function readProjectedLengthMultiplier(direction: SceneDirectionalLightConfig['direction']): number {
+  const normalized = normalizeDirectionVector(direction);
+  const vertical = Math.abs(normalized.y);
+  if (vertical <= 0.000001) return 999;
+  return Math.min(999, Math.hypot(normalized.x, normalized.z) / vertical);
 }
 
 function toRuntimeLightingPatches(snapshot: LightingDebugSnapshot): RuntimeLightingPatch[] {
@@ -863,6 +929,7 @@ function cloneSnapshot(snapshot: LightingDebugSnapshot): LightingDebugSnapshot {
         ...(snapshot.directional.light.diffuseColor ? { diffuseColor: { ...snapshot.directional.light.diffuseColor } } : {}),
       },
     },
+    shadow: { ...snapshot.shadow },
   };
 }
 

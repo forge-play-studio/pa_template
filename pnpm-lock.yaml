@@ -14,6 +14,9 @@ importers:
       '@babylonjs/loaders':
         specifier: 8.52.1
         version: 8.52.1(@babylonjs/core@8.52.1)(babylonjs-gltf2interface@8.46.2)
+      '@fps-games/babylon-renderer':
+        specifier: link:../../packages/babylon-renderer
+        version: link:../../packages/babylon-renderer
       '@fps-games/editor':
         specifier: 0.1.1-beta.11
         version: 0.1.1-beta.11

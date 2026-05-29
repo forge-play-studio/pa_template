@@ -377,6 +377,10 @@ export class Game {
     return this.sceneBuilder;
   }
 
+  getShadowService(): ShadowService | null {
+    return this.shadowService;
+  }
+
   getInputService(): InputService | null {
     return this.inputService;
   }
