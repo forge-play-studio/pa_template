@@ -39,6 +39,12 @@ import {
   createEditorSceneFieldInspectorValidator as createPlayableEditorSceneFieldInspectorValidator,
   createEditorSceneGroupSelectionPatch as createPlayableEditorSceneGroupSelectionPatch,
   createEditorSceneHierarchyMovePatch as createPlayableEditorSceneHierarchyMovePatch,
+  createEditorSceneDuplicateMaterialAssetForBindingPatch as createPlayableEditorSceneDuplicateMaterialAssetForBindingPatch,
+  createEditorSceneDuplicateMaterialAssetValue as createPlayableEditorSceneDuplicateMaterialAssetValue,
+  createEditorSceneMaterialAssetFieldInspectorPropertyInput as createPlayableEditorSceneMaterialAssetFieldInspectorPropertyInput,
+  createEditorSceneMaterialAssetPreview as createPlayableEditorSceneMaterialAssetPreview,
+  createEditorSceneMaterialBindingSummary as createPlayableEditorSceneMaterialBindingSummary,
+  createEditorSceneMaterialPickerControlOptions as createPlayableEditorSceneMaterialPickerControlOptions,
   createEditorSceneReadonlyInspectorProperty as createPlayableEditorSceneReadonlyInspectorProperty,
   createEditorSceneReadonlyInspectorSection as createPlayableEditorSceneReadonlyInspectorSection,
   createEditorSceneReadonlyVector3Properties as createPlayableEditorSceneReadonlyVector3Properties,
@@ -48,19 +54,34 @@ import {
   createEditorSceneRuntimeInspectorSections as createPlayableEditorSceneRuntimeInspectorSections,
   createEditorSceneSerializedMultiObject as createPlayableEditorSceneSerializedMultiObject,
   createEditorSceneSerializedObject as createPlayableEditorSceneSerializedObject,
+  createEditorSceneTextureAssetPreview as createPlayableEditorSceneTextureAssetPreview,
+  createEditorSceneTexturePickerControlOptions as createPlayableEditorSceneTexturePickerControlOptions,
   degreesToEditorSceneRadians as degreesToPlayableEditorSceneRadians,
   describeEditorSceneRuntimeObject as describePlayableEditorSceneRuntimeObject,
   ensureEditorSceneGameObjectGuids as ensurePlayableEditorSceneGameObjectGuids,
   getEditorSceneGameObjectWorldTransform as getPlayableEditorSceneGameObjectWorldTransform,
+  getEditorSceneMaterialAssetDisplayMeta as getPlayableEditorSceneMaterialAssetDisplayMeta,
+  getEditorSceneMaterialAssetDisplayName as getPlayableEditorSceneMaterialAssetDisplayName,
   getEditorSceneHierarchyItems as getPlayableEditorSceneHierarchyItems,
+  findEditorSceneMaterialAsset as findPlayableEditorSceneMaterialAsset,
+  findEditorSceneInspectorTextureAsset as findPlayableEditorSceneInspectorTextureAsset,
   isEditorSceneCameraGameObject as isPlayableEditorSceneCameraGameObject,
+  isEditorSceneArtistMaterialPatchPath as isPlayableEditorSceneArtistMaterialPatchPath,
   isEditorSceneGroupLikeGameObject as isPlayableEditorSceneGroupLikeGameObject,
   isEditorSceneLightGameObject as isPlayableEditorSceneLightGameObject,
+  isEditorSceneMaterialBindingPath as isPlayableEditorSceneMaterialBindingPath,
+  isEditorSceneMaterialAssetReadonlyForInspector as isPlayableEditorSceneMaterialAssetReadonlyForInspector,
   isEditorSceneRootGameObject as isPlayableEditorSceneRootGameObject,
   isEditorSceneRootGameObjectId as isPlayableEditorSceneRootGameObjectId,
   normalizeEditorSceneFieldInspectorValue as normalizePlayableEditorSceneFieldInspectorValue,
   normalizeEditorSceneHierarchyDocument as normalizePlayableEditorSceneHierarchyDocument,
+  normalizeEditorSceneMaterialAssetValue as normalizePlayableEditorSceneMaterialAssetValue,
   radiansToEditorSceneDegrees as radiansToPlayableEditorSceneDegrees,
+  parseEditorSceneDuplicateMaterialAssetValue as parsePlayableEditorSceneDuplicateMaterialAssetValue,
+  parseEditorSceneMaterialAssetFieldPath as parsePlayableEditorSceneMaterialAssetFieldPath,
+  patchEditorSceneMaterialAssetField as patchPlayableEditorSceneMaterialAssetField,
+  collectEditorSceneChildMaterialSlots as collectPlayableEditorSceneChildMaterialSlots,
+  collectEditorSceneMaterialAssetBindingIds as collectPlayableEditorSceneMaterialAssetBindingIds,
   readEditorSceneInspectorVec3 as readPlayableEditorSceneInspectorVec3,
   readEditorSceneRuntimeBoolean as readPlayableEditorSceneRuntimeBoolean,
   readEditorSceneRuntimeClassName as readPlayableEditorSceneRuntimeClassName,
@@ -69,12 +90,14 @@ import {
   readEditorSceneRuntimeValue as readPlayableEditorSceneRuntimeValue,
   readEditorSceneTransformVector as readPlayableEditorSceneTransformVector,
   reduceEditorSceneDocumentMutation as reducePlayableEditorSceneDocumentMutation,
+  resolveEditorSceneMaterialAssetKind as resolvePlayableEditorSceneMaterialAssetKind,
   roundEditorSceneInspectorNumber as roundPlayableEditorSceneInspectorNumber,
   applyEditorSceneJsonFieldPatch as applyPlayableEditorSceneJsonFieldPatch,
   toEditorSceneLocalTransformFromWorld as toPlayableEditorSceneLocalTransformFromWorld,
   toEditorSceneInspectorSafeValue as toPlayableEditorSceneInspectorSafeValue,
   applyEditorSceneSerializedPropertyPatch as applyPlayableEditorSceneSerializedPropertyPatch,
   patchEditorSceneGameObjectField as patchPlayableEditorSceneGameObjectField,
+  validateEditorSceneMaterialAssetFieldValue as validatePlayableEditorSceneMaterialAssetFieldValue,
   validateEditorSceneFieldInspectorValue as validatePlayableEditorSceneFieldInspectorValue,
   validateEditorSceneGroupSelection as validatePlayableEditorSceneGroupSelection,
   validateEditorSceneHierarchyMove as validatePlayableEditorSceneHierarchyMove,
@@ -239,7 +262,6 @@ const EDITOR_SCENE_ROOT_TRANSFORM = createIdentityEditorTransform();
 const EDITOR_SCENE_GAME_OBJECT_GUID_PREFIX = 'go_';
 const CREATE_CHILD_MATERIAL_SLOT_PATH = 'overrides.childMaterialBindings.$create.ownerNodePath';
 const MATERIAL_ASSET_FIELD_PATH_PREFIX = 'scene.materialAssets.';
-const DUPLICATE_MATERIAL_ASSET_VALUE_PREFIX = '__fps_duplicate_material_asset__:';
 const DEFAULT_PBR_MATERIAL_ASSET_ID = 'mat_default_pbr';
 const DEFAULT_STANDARD_MATERIAL_ASSET_ID = 'mat_default_standard';
 const DEFAULT_ARTIST_MATERIAL_ASSET_ID = DEFAULT_PBR_MATERIAL_ASSET_ID;
@@ -1648,21 +1670,22 @@ function createEditorSceneDuplicateMaterialAssetForBindingPatch(
   bindingPath: string,
   sourceMaterialAssetId: string,
 ): { patch: EditorSceneDocumentPatch; label: string; changedId: string; changedIds: string[]; reprojectIds?: string[] } | null {
+  const result = createPlayableEditorSceneDuplicateMaterialAssetForBindingPatch({
+    document,
+    gameObject,
+    bindingPath,
+    sourceMaterialAssetId,
+    isBindingPathAllowed: path => !!resolveSceneNodeFieldSchema(path, readEditorSceneNodeKind(gameObject)),
+  });
+  if (!result) return null;
   const sourceMaterialAsset = findEditorSceneMaterialAsset(document, sourceMaterialAssetId);
-  if (!sourceMaterialAsset) return null;
-  if (!resolveSceneNodeFieldSchema(bindingPath, readEditorSceneNodeKind(gameObject))) return null;
-  const materialAsset = createEditorSceneDuplicatedMaterialAsset(document, gameObject, sourceMaterialAsset);
+  const materialAsset = result.patch.materialAsset as SceneMaterialAssetConfig;
   return {
-    label: `Duplicate material ${sourceMaterialAsset.name} for ${gameObject.name ?? gameObject.id}`,
-    patch: {
-      kind: 'scene.material-asset.duplicate-and-bind',
-      targetId: gameObject.id,
-      bindingPath,
-      materialAsset,
-    },
-    changedId: gameObject.id,
-    changedIds: [gameObject.id],
-    reprojectIds: [gameObject.id],
+    label: `Duplicate material ${sourceMaterialAsset?.name ?? sourceMaterialAssetId} for ${gameObject.name ?? gameObject.id}`,
+    patch: result.patch as EditorSceneDocumentPatch,
+    changedId: result.changedId,
+    changedIds: result.changedIds,
+    reprojectIds: result.reprojectIds,
   };
 }
 
@@ -1670,17 +1693,7 @@ function collectEditorSceneMaterialAssetBindingIds(
   document: EditorSceneDocument,
   materialAssetId: string,
 ): string[] {
-  const ids: string[] = [];
-  for (const gameObject of document.scene.gameObjects) {
-    if (gameObject.overrides?.materialBinding?.materialAssetId === materialAssetId) {
-      ids.push(gameObject.id);
-      continue;
-    }
-    if (Object.values(gameObject.overrides?.childMaterialBindings ?? {}).some(binding => binding?.materialAssetId === materialAssetId)) {
-      ids.push(gameObject.id);
-    }
-  }
-  return ids;
+  return collectPlayableEditorSceneMaterialAssetBindingIds(document, materialAssetId);
 }
 
 function isEditorTransformSnapshot(value: unknown): value is EditorTransformSnapshot {
@@ -2344,9 +2357,10 @@ function createArtistMaterialBindingSummary(
   materialAsset: SceneMaterialAssetConfig | null,
   text: ArtistMaterialInspectorText,
 ): string {
-  if (materialAsset) return text.summaryAsset(materialAsset.name);
-  if (binding?.materialAssetId) return text.summaryMissingAsset;
-  if (binding?.override) return text.summaryLegacyData;
+  const summary = createPlayableEditorSceneMaterialBindingSummary(binding, materialAsset);
+  if (summary.state === 'asset' && summary.materialAsset) return text.summaryAsset(summary.materialAsset.name ?? summary.materialAsset.id);
+  if (summary.state === 'missing-asset') return text.summaryMissingAsset;
+  if (summary.state === 'override') return text.summaryLegacyData;
   return text.summaryInherit;
 }
 
@@ -2409,61 +2423,7 @@ function collectEditorSceneChildMaterialSlots(
   document: EditorSceneDocument,
   gameObject: EditorSceneGameObject,
 ): EditorSceneChildMaterialSlot[] {
-  const slots = new Map<string, EditorSceneChildMaterialSlot>();
-  for (const slot of readEditorSceneAssetMaterialSlots(document, gameObject)) {
-    slots.set(slot.ownerNodePath, slot);
-  }
-  for (const ownerNodePath of Object.keys(gameObject.overrides?.childMaterialBindings ?? {})) {
-    if (!slots.has(ownerNodePath)) slots.set(ownerNodePath, { ownerNodePath });
-  }
-  for (const ownerNodePath of Object.keys(gameObject.overrides?.childMaterials ?? {})) {
-    if (!slots.has(ownerNodePath)) slots.set(ownerNodePath, { ownerNodePath });
-  }
-  return [...slots.values()].sort((left, right) => left.ownerNodePath.localeCompare(right.ownerNodePath));
-}
-
-function readEditorSceneAssetMaterialSlots(
-  document: EditorSceneDocument,
-  gameObject: EditorSceneGameObject,
-): EditorSceneChildMaterialSlot[] {
-  const renderer = findEditorSceneModelRenderer(gameObject);
-  if (!renderer) return [];
-  const asset = document.assets.find((entry) => entry.id === renderer.assetId);
-  const rawSlots = asset?.metadata?.materialSlots;
-  if (!Array.isArray(rawSlots)) return [];
-  const slots: EditorSceneChildMaterialSlot[] = [];
-  for (const rawSlot of rawSlots) {
-    const slot = readEditorSceneMaterialSlotDescriptor(rawSlot);
-    if (slot) slots.push(slot);
-  }
-  return slots;
-}
-
-function readEditorSceneMaterialSlotDescriptor(value: unknown): EditorSceneChildMaterialSlot | null {
-  if (typeof value === 'string') {
-    const ownerNodePath = normalizeEditorSceneMaterialSlotOwnerPath(value);
-    return ownerNodePath ? { ownerNodePath } : null;
-  }
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
-  const record = value as Record<string, unknown>;
-  const ownerNodePath = normalizeEditorSceneMaterialSlotOwnerPath(
-    typeof record.ownerNodePath === 'string'
-      ? record.ownerNodePath
-      : typeof record.path === 'string'
-        ? record.path
-        : typeof record.name === 'string'
-          ? record.name
-          : '',
-  );
-  if (!ownerNodePath) return null;
-  const label = typeof record.label === 'string' && record.label.trim()
-    ? record.label.trim()
-    : ownerNodePath;
-  return { ownerNodePath, label };
-}
-
-function normalizeEditorSceneMaterialSlotOwnerPath(value: string): string {
-  return value.trim().replace(/^\/+|\/+$/g, '');
+  return collectPlayableEditorSceneChildMaterialSlots(document, gameObject) as EditorSceneChildMaterialSlot[];
 }
 
 function formatEditorSceneMaterialSlotLabel(
@@ -2574,38 +2534,14 @@ function createMaterialAssetPickerControlOptions(
   text: ArtistMaterialInspectorText,
   currentValue: string,
 ): Record<string, unknown> {
-  const currentDefaultPreset = getDefaultEditorSceneMaterialPreset(currentAsset);
   return {
-    pickerKind: 'material',
-    pickerTitle: text.materialPickerTitle,
-    actionLabel: text.replace,
-    copyActionLabel: currentAsset ? text.duplicateForObject : '',
-    copyActionValue: currentAsset ? createDuplicateMaterialAssetValue(currentAsset.id) : '',
-    copyActionTooltip: currentAsset ? text.tooltips.duplicateForObject : '',
-    placeholder: currentValue ? text.summaryMissingAsset : text.inheritNone,
-    currentLabel: currentAsset
-      ? getEditorSceneMaterialAssetDisplayName(currentAsset, text)
-      : (currentValue ? currentValue : text.inheritNone),
-    currentMeta: currentAsset
-      ? (currentDefaultPreset ? getEditorSceneMaterialAssetMeta(currentAsset, text) : `Material - ${currentAsset.id}`)
-      : text.summaryInherit,
-    currentPreview: currentAsset ? createEditorSceneMaterialPreview(currentAsset.profile) : undefined,
-    candidates: [
-      {
-        label: text.inheritNone,
-        value: '',
-        meta: text.summaryInherit,
-      },
-      ...(document.scene.materialAssets ?? []).map(materialAsset => ({
-        label: getEditorSceneMaterialAssetDisplayName(materialAsset, text),
-        value: materialAsset.id,
-        meta: getDefaultEditorSceneMaterialPreset(materialAsset)
-          ? getEditorSceneMaterialAssetMeta(materialAsset, text)
-          : `Material - ${materialAsset.id}`,
-        kind: 'material',
-        preview: createEditorSceneMaterialPreview(materialAsset.profile),
-      })),
-    ],
+    ...createPlayableEditorSceneMaterialPickerControlOptions({
+      materialAssets: document.scene.materialAssets ?? [],
+      currentAsset,
+      currentValue,
+      pickerText: createEditorSceneMaterialPickerText(text),
+      displayText: createEditorSceneMaterialDisplayText(text),
+    }),
   };
 }
 
@@ -2613,110 +2549,46 @@ function getEditorSceneMaterialAssetDisplayName(
   materialAsset: SceneMaterialAssetConfig,
   text: ArtistMaterialInspectorText,
 ): string {
-  const preset = getDefaultEditorSceneMaterialPreset(materialAsset);
-  if (preset === 'default-pbr') return text.defaultMaterial;
-  if (preset === 'default-standard') return text.defaultStandardMaterial;
-  return materialAsset.name || materialAsset.id;
+  return getPlayableEditorSceneMaterialAssetDisplayName(
+    materialAsset,
+    createEditorSceneMaterialDisplayText(text),
+  );
 }
 
 function getEditorSceneMaterialAssetMeta(
   materialAsset: SceneMaterialAssetConfig,
   text: ArtistMaterialInspectorText,
 ): string {
-  const preset = getDefaultEditorSceneMaterialPreset(materialAsset);
-  if (preset === 'default-pbr') return text.defaultMaterialMeta;
-  if (preset === 'default-standard') return text.defaultStandardMaterialMeta;
-  return `Material - ${materialAsset.id}`;
+  return getPlayableEditorSceneMaterialAssetDisplayMeta(
+    materialAsset,
+    createEditorSceneMaterialDisplayText(text),
+  );
+}
+
+function createEditorSceneMaterialPickerText(text: ArtistMaterialInspectorText) {
+  return {
+    materialPickerTitle: text.materialPickerTitle,
+    replace: text.replace,
+    duplicateForObject: text.duplicateForObject,
+    duplicateForObjectTooltip: text.tooltips.duplicateForObject,
+    summaryMissingAsset: text.summaryMissingAsset,
+    summaryInherit: text.summaryInherit,
+    inheritNone: text.inheritNone,
+  };
+}
+
+function createEditorSceneMaterialDisplayText(text: ArtistMaterialInspectorText) {
+  return {
+    defaultMaterial: text.defaultMaterial,
+    defaultStandardMaterial: text.defaultStandardMaterial,
+    defaultMaterialMeta: text.defaultMaterialMeta,
+    defaultStandardMaterialMeta: text.defaultStandardMaterialMeta,
+    formatMaterialMeta: (materialAssetId: string) => `Material - ${materialAssetId}`,
+  };
 }
 
 function createEditorSceneMaterialPreview(profile: ArtistMaterialProfile): Record<string, unknown> {
-  return {
-    kind: 'material-sphere',
-    baseColor: transformEditorSceneMaterialPreviewBaseColor(profile),
-    metallic: clampEditorSceneMaterialPreview01(profile.metallic ?? 0),
-    roughness: clampEditorSceneMaterialPreview01(profile.roughness ?? 1),
-    emissionColor: profile.emission?.color,
-    emissionIntensity: profile.emission?.intensity ?? 0,
-    textureUrl: profile.baseColor?.texture?.url,
-  };
-}
-
-function transformEditorSceneMaterialPreviewBaseColor(profile: ArtistMaterialProfile): { r: number; g: number; b: number } {
-  const baseColor = profile.baseColor ?? {};
-  const source = baseColor.color ?? { r: 0.78, g: 0.78, b: 0.78 };
-  const brightness = Number.isFinite(baseColor.brightness) ? baseColor.brightness! : 1;
-  const contrast = Number.isFinite(baseColor.contrast) ? baseColor.contrast! : 1;
-  const saturation = Number.isFinite(baseColor.saturation) ? baseColor.saturation! : 1;
-  const hue = Number.isFinite(baseColor.hue) ? baseColor.hue! : 0;
-
-  let r = clampEditorSceneMaterialPreview01(source.r * Math.max(0, brightness));
-  let g = clampEditorSceneMaterialPreview01(source.g * Math.max(0, brightness));
-  let b = clampEditorSceneMaterialPreview01(source.b * Math.max(0, brightness));
-
-  r = clampEditorSceneMaterialPreview01((r - 0.5) * contrast + 0.5);
-  g = clampEditorSceneMaterialPreview01((g - 0.5) * contrast + 0.5);
-  b = clampEditorSceneMaterialPreview01((b - 0.5) * contrast + 0.5);
-
-  const hsl = rgbToEditorSceneMaterialPreviewHsl(r, g, b);
-  hsl.h = normalizeEditorSceneMaterialPreviewHue(hsl.h + hue);
-  hsl.s = clampEditorSceneMaterialPreview01(hsl.s * Math.max(0, saturation));
-  return hslToEditorSceneMaterialPreviewRgb(hsl.h, hsl.s, hsl.l);
-}
-
-function rgbToEditorSceneMaterialPreviewHsl(r: number, g: number, b: number): { h: number; s: number; l: number } {
-  const max = Math.max(r, g, b);
-  const min = Math.min(r, g, b);
-  const l = (max + min) / 2;
-  if (max === min) return { h: 0, s: 0, l };
-
-  const d = max - min;
-  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-  let h = 0;
-  switch (max) {
-    case r:
-      h = (g - b) / d + (g < b ? 6 : 0);
-      break;
-    case g:
-      h = (b - r) / d + 2;
-      break;
-    default:
-      h = (r - g) / d + 4;
-      break;
-  }
-  return { h: h * 60, s, l };
-}
-
-function hslToEditorSceneMaterialPreviewRgb(h: number, s: number, l: number): { r: number; g: number; b: number } {
-  if (s === 0) return { r: l, g: l, b: l };
-
-  const hueToRgb = (p: number, q: number, t: number): number => {
-    let nextT = t;
-    if (nextT < 0) nextT += 1;
-    if (nextT > 1) nextT -= 1;
-    if (nextT < 1 / 6) return p + (q - p) * 6 * nextT;
-    if (nextT < 1 / 2) return q;
-    if (nextT < 2 / 3) return p + (q - p) * (2 / 3 - nextT) * 6;
-    return p;
-  };
-
-  const normalizedHue = normalizeEditorSceneMaterialPreviewHue(h) / 360;
-  const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-  const p = 2 * l - q;
-  return {
-    r: clampEditorSceneMaterialPreview01(hueToRgb(p, q, normalizedHue + 1 / 3)),
-    g: clampEditorSceneMaterialPreview01(hueToRgb(p, q, normalizedHue)),
-    b: clampEditorSceneMaterialPreview01(hueToRgb(p, q, normalizedHue - 1 / 3)),
-  };
-}
-
-function normalizeEditorSceneMaterialPreviewHue(value: number): number {
-  const result = value % 360;
-  return result < 0 ? result + 360 : result;
-}
-
-function clampEditorSceneMaterialPreview01(value: number): number {
-  if (!Number.isFinite(value)) return 0;
-  return Math.min(1, Math.max(0, value));
+  return createPlayableEditorSceneMaterialAssetPreview(profile);
 }
 
 function createArtistMaterialAssetInspectorProperties(
@@ -2811,9 +2683,7 @@ function createReadonlyArtistMaterialAssetIdentityProperties(
 }
 
 function resolveEditorSceneMaterialAssetKind(materialAsset: SceneMaterialAssetConfig): 'pbr' | 'standard' {
-  if (materialAsset.materialKind === 'standard') return 'standard';
-  if (materialAsset.system?.preset === 'default-standard') return 'standard';
-  return 'pbr';
+  return resolvePlayableEditorSceneMaterialAssetKind(materialAsset);
 }
 
 function getEditorSceneMaterialKindLabel(
@@ -2824,7 +2694,11 @@ function getEditorSceneMaterialKindLabel(
 }
 
 function isReadonlyEditorSceneMaterialAsset(materialAsset: SceneMaterialAssetConfig): boolean {
-  return materialAsset.system?.readonly === true || isDefaultEditorSceneMaterialAsset(materialAsset);
+  return isDefaultEditorSceneMaterialAsset(materialAsset)
+    || isPlayableEditorSceneMaterialAssetReadonlyForInspector(materialAsset, [
+      DEFAULT_PBR_MATERIAL_ASSET_ID,
+      DEFAULT_STANDARD_MATERIAL_ASSET_ID,
+    ]);
 }
 
 function createMaterialTexturePickerInspectorProperty(input: {
@@ -2867,27 +2741,12 @@ function createTexturePickerControlOptions(
   currentTexture: EditorSceneInspectorTextureAsset | null,
 ): Record<string, unknown> {
   return {
-    pickerKind: 'texture',
-    pickerTitle: text.texturePickerTitle,
-    actionLabel: text.replace,
-    placeholder: text.inheritNone,
-    currentLabel: currentTexture?.label ?? (currentValue ? currentValue : text.inheritNone),
-    currentMeta: currentTexture?.meta ?? (currentValue ? currentValue : text.summaryInherit),
-    currentPreview: currentTexture ? createTextureAssetPreview(currentTexture) : undefined,
-    candidates: [
-      {
-        label: text.inheritNone,
-        value: '',
-        meta: text.summaryInherit,
-      },
-      ...(context.textureAssets ?? []).map(texture => ({
-        label: texture.label,
-        value: texture.url,
-        meta: texture.meta ?? texture.id,
-        kind: 'texture',
-        preview: createTextureAssetPreview(texture),
-      })),
-    ],
+    ...createPlayableEditorSceneTexturePickerControlOptions({
+      textureAssets: context.textureAssets,
+      currentTexture,
+      currentValue,
+      pickerText: createEditorSceneTexturePickerText(text),
+    }),
   };
 }
 
@@ -2895,17 +2754,21 @@ function findEditorSceneInspectorTextureAsset(
   context: EditorSceneInspectorContext,
   value: string,
 ): EditorSceneInspectorTextureAsset | null {
-  const normalized = value.trim();
-  if (!normalized) return null;
-  return context.textureAssets?.find(texture => texture.url === normalized || texture.id === normalized) ?? null;
+  return findPlayableEditorSceneInspectorTextureAsset(context.textureAssets, value) as EditorSceneInspectorTextureAsset | null;
 }
 
 function createTextureAssetPreview(texture: EditorSceneInspectorTextureAsset): Record<string, unknown> {
   return {
-    kind: 'image',
-    url: texture.url,
-    alt: texture.label,
-    fit: 'contain',
+    ...createPlayableEditorSceneTextureAssetPreview(texture),
+  };
+}
+
+function createEditorSceneTexturePickerText(text: ArtistMaterialInspectorText) {
+  return {
+    texturePickerTitle: text.texturePickerTitle,
+    replace: text.replace,
+    inheritNone: text.inheritNone,
+    summaryInherit: text.summaryInherit,
   };
 }
 
@@ -2941,20 +2804,20 @@ function createMaterialAssetFieldInspectorProperty(
   commitMode: InspectorProperty<EditorSceneDocument>['commitMode'],
   tooltip?: string,
 ): InspectorProperty<EditorSceneDocument> {
-  const path = `${MATERIAL_ASSET_FIELD_PATH_PREFIX}${materialAsset.id}.${fieldPath}`;
   return {
-    path,
-    label,
-    valueType,
-    control,
-    value,
-    readOnly: false,
-    persistence: 'document',
-    commitMode,
-    order,
-    tooltip,
-    tags: ['ArtistMaterial', 'MaterialAsset'],
-    document,
+    ...createPlayableEditorSceneMaterialAssetFieldInspectorPropertyInput({
+      document,
+      materialAsset,
+      fieldPath,
+      label,
+      value,
+      order,
+      valueType,
+      control,
+      commitMode,
+      tooltip,
+      pathPrefix: MATERIAL_ASSET_FIELD_PATH_PREFIX,
+    }),
     validate: (inputValue) => {
       const normalizedValue = normalizeEditorSceneMaterialAssetValue(fieldPath, inputValue);
       return validateEditorSceneMaterialAssetFieldValue(fieldPath, normalizedValue)
@@ -3133,78 +2996,23 @@ function createEditorSceneInspectorValidator(
 }
 
 function isMaterialAssetBindingPath(path: string): boolean {
-  return path === 'overrides.materialBinding.materialAssetId'
-    || /^overrides\.childMaterialBindings\..+\.materialAssetId$/.test(path);
+  return isPlayableEditorSceneMaterialBindingPath(path);
 }
 
 function isEditorSceneArtistMaterialPatchPath(path: string): boolean {
-  return path === 'overrides.materialBinding.materialAssetId'
-    || path.startsWith('overrides.materialBinding.override.')
-    || /^overrides\.childMaterialBindings\..+\.materialAssetId$/.test(path)
-    || /^overrides\.childMaterialBindings\..+\.override\./.test(path);
+  return isPlayableEditorSceneArtistMaterialPatchPath(path);
 }
 
 function parseEditorSceneMaterialAssetFieldPath(path: string): { materialAssetId: string; fieldPath: string } | null {
-  if (!path.startsWith(MATERIAL_ASSET_FIELD_PATH_PREFIX)) return null;
-  const body = path.slice(MATERIAL_ASSET_FIELD_PATH_PREFIX.length);
-  if (!body) return null;
-  if (body.endsWith('.name')) {
-    const materialAssetId = body.slice(0, -'.name'.length);
-    return materialAssetId ? { materialAssetId, fieldPath: 'name' } : null;
-  }
-  const marker = '.profile.';
-  const markerIndex = body.lastIndexOf(marker);
-  if (markerIndex < 0) return null;
-  const materialAssetId = body.slice(0, markerIndex);
-  const profilePath = body.slice(markerIndex + marker.length);
-  if (!materialAssetId || !profilePath) return null;
-  return { materialAssetId, fieldPath: `profile.${profilePath}` };
+  return parsePlayableEditorSceneMaterialAssetFieldPath(path, MATERIAL_ASSET_FIELD_PATH_PREFIX);
 }
 
 function normalizeEditorSceneMaterialAssetValue(path: string, value: unknown): unknown {
-  if (path === 'name' && typeof value === 'string') {
-    return value.trim();
-  }
-  if (path === 'profile.emission.maskTexture.url' && typeof value === 'string') {
-    const trimmed = value.trim();
-    return trimmed ? trimmed : null;
-  }
-  if (path === 'profile.baseColor.texture.url' && typeof value === 'string') {
-    const trimmed = value.trim();
-    return trimmed ? trimmed : null;
-  }
-  return value;
+  return normalizePlayableEditorSceneMaterialAssetValue(path, value);
 }
 
 function validateEditorSceneMaterialAssetFieldValue(path: string, value: unknown): boolean {
-  const normalizedValue = normalizeEditorSceneMaterialAssetValue(path, value);
-  if (path === 'name') return typeof normalizedValue === 'string' && normalizedValue.length > 0;
-  if (path === 'profile.baseColor.color' || path === 'profile.emission.color') {
-    return normalizedValue == null || isEditorSceneColorRgb(normalizedValue);
-  }
-  if (
-    path === 'profile.baseColor.brightness'
-    || path === 'profile.baseColor.saturation'
-    || path === 'profile.baseColor.contrast'
-    || path === 'profile.baseColor.hue'
-    || path === 'profile.metallic'
-    || path === 'profile.roughness'
-    || path === 'profile.emission.intensity'
-  ) {
-    return normalizedValue == null || (typeof normalizedValue === 'number' && Number.isFinite(normalizedValue));
-  }
-  if (path === 'profile.baseColor.texture.url' || path === 'profile.emission.maskTexture.url') {
-    return normalizedValue == null || (typeof normalizedValue === 'string' && normalizedValue.trim().length > 0);
-  }
-  return false;
-}
-
-function isEditorSceneColorRgb(value: unknown): value is { r: number; g: number; b: number } {
-  if (!value || typeof value !== 'object') return false;
-  const candidate = value as Record<string, unknown>;
-  return typeof candidate.r === 'number' && Number.isFinite(candidate.r)
-    && typeof candidate.g === 'number' && Number.isFinite(candidate.g)
-    && typeof candidate.b === 'number' && Number.isFinite(candidate.b);
+  return validatePlayableEditorSceneMaterialAssetFieldValue(path, value);
 }
 
 function hasEditorSceneMaterialAsset(document: EditorSceneDocument, materialAssetId: string): boolean {
@@ -3212,63 +3020,22 @@ function hasEditorSceneMaterialAsset(document: EditorSceneDocument, materialAsse
 }
 
 function createDuplicateMaterialAssetValue(materialAssetId: string): string {
-  return `${DUPLICATE_MATERIAL_ASSET_VALUE_PREFIX}${materialAssetId}`;
+  return createPlayableEditorSceneDuplicateMaterialAssetValue(materialAssetId);
 }
 
 function parseDuplicateMaterialAssetValue(value: unknown): string | null {
-  if (typeof value !== 'string' || !value.startsWith(DUPLICATE_MATERIAL_ASSET_VALUE_PREFIX)) return null;
-  const materialAssetId = value.slice(DUPLICATE_MATERIAL_ASSET_VALUE_PREFIX.length).trim();
-  return materialAssetId || null;
+  return parsePlayableEditorSceneDuplicateMaterialAssetValue(value);
 }
 
 function isEditorSceneMaterialBindingPath(path: string): boolean {
-  return path === 'overrides.materialBinding.materialAssetId'
-    || /^overrides\.childMaterialBindings\..+\.materialAssetId$/.test(path);
+  return isPlayableEditorSceneMaterialBindingPath(path);
 }
 
 function findEditorSceneMaterialAsset(
   document: EditorSceneDocument,
   materialAssetId: string,
 ): SceneMaterialAssetConfig | null {
-  if (!materialAssetId) return null;
-  return document.scene.materialAssets?.find((materialAsset) => materialAsset.id === materialAssetId) ?? null;
-}
-
-function createEditorSceneDuplicatedMaterialAsset(
-  document: EditorSceneDocument,
-  gameObject: EditorSceneGameObject,
-  sourceMaterialAsset: SceneMaterialAssetConfig,
-): SceneMaterialAssetConfig {
-  const displayName = gameObject.name?.trim() || gameObject.id;
-  const sourceName = sourceMaterialAsset.name?.trim() || sourceMaterialAsset.id;
-  const materialKind = resolveEditorSceneMaterialAssetKind(sourceMaterialAsset);
-  return {
-    id: createUniqueEditorSceneMaterialAssetId(document, `${displayName}_${sourceName}`),
-    name: `${displayName} - ${sourceName}`,
-    materialKind,
-    profile: structuredClone(sourceMaterialAsset.profile ?? {}),
-  };
-}
-
-function createUniqueEditorSceneMaterialAssetId(document: EditorSceneDocument, seed: string): string {
-  const existingIds = new Set((document.scene.materialAssets ?? []).map((materialAsset) => materialAsset.id));
-  const base = `mat_${sanitizeEditorSceneMaterialAssetIdPart(seed) || 'material'}`;
-  let candidate = base;
-  let suffix = 2;
-  while (existingIds.has(candidate)) {
-    candidate = `${base}_${suffix}`;
-    suffix += 1;
-  }
-  return candidate;
-}
-
-function sanitizeEditorSceneMaterialAssetIdPart(value: string): string {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '')
-    .slice(0, 48);
+  return findPlayableEditorSceneMaterialAsset(document, materialAssetId) as SceneMaterialAssetConfig | null;
 }
 
 function validateEditorSceneInspectorValue(
@@ -3386,22 +3153,12 @@ function patchEditorSceneMaterialAssetField(
   path: string,
   value: unknown,
 ): EditorSceneDocument {
-  const materialAssets = document.scene.materialAssets ?? [];
-  let changed = false;
-  const nextMaterialAssets = materialAssets.map((materialAsset) => {
-    if (materialAsset.id !== materialAssetId) return materialAsset;
-    const next = patchEditorSceneMaterialAsset(materialAsset, path, normalizeEditorSceneMaterialAssetValue(path, value));
-    changed = changed || next !== materialAsset;
-    return next;
-  });
-  if (!changed) return document;
-  return {
-    ...document,
-    scene: {
-      ...document.scene,
-      materialAssets: nextMaterialAssets,
-    },
-  };
+  return patchPlayableEditorSceneMaterialAssetField(
+    document,
+    materialAssetId,
+    path,
+    value,
+  ) as EditorSceneDocument;
 }
 
 function addEditorSceneMaterialAssetAndBind(
@@ -3420,49 +3177,6 @@ function addEditorSceneMaterialAssetAndBind(
   };
   return patchEditorSceneGameObjectField(withAsset, targetId, bindingPath, materialAsset.id);
 }
-
-function patchEditorSceneMaterialAsset(
-  materialAsset: SceneMaterialAssetConfig,
-  path: string,
-  value: unknown,
-): SceneMaterialAssetConfig {
-  if (materialAsset.system?.readonly === true) return materialAsset;
-  if (!validateEditorSceneMaterialAssetFieldValue(path, value)) return materialAsset;
-  const next: SceneMaterialAssetConfig = structuredClone(materialAsset);
-  if (path === 'name') {
-    if (typeof value !== 'string') return materialAsset;
-    next.name = value.trim();
-    return next.name === materialAsset.name ? materialAsset : next;
-  }
-  if (!path.startsWith('profile.')) return materialAsset;
-  const profilePath = path.slice('profile.'.length);
-  if (!profilePath) return materialAsset;
-  next.profile = structuredClone(next.profile ?? {});
-  applyJsonFieldPatch(next.profile as Record<string, unknown>, profilePath, value);
-  next.profile = pruneEditorSceneArtistMaterialProfile(next.profile);
-  return JSON.stringify(next) === JSON.stringify(materialAsset) ? materialAsset : next;
-}
-
-function pruneEditorSceneArtistMaterialProfile(profile: ArtistMaterialProfile): ArtistMaterialProfile {
-  const next: ArtistMaterialProfile = structuredClone(profile ?? {});
-  if (next.baseColor && Object.keys(next.baseColor).length === 0) delete next.baseColor;
-  if (next.baseColor?.texture) {
-    const url = next.baseColor.texture.url?.trim() ?? '';
-    if (url) next.baseColor.texture.url = url;
-    else delete next.baseColor.texture;
-    if (Object.keys(next.baseColor).length === 0) delete next.baseColor;
-  }
-  if (next.emission) {
-    if (next.emission.maskTexture) {
-      const url = next.emission.maskTexture.url?.trim() ?? '';
-      if (url) next.emission.maskTexture.url = url;
-      else delete next.emission.maskTexture;
-    }
-    if (Object.keys(next.emission).length === 0) delete next.emission;
-  }
-  return next;
-}
-
 
 function applyJsonFieldPatch(target: Record<string, unknown>, path: string, value: unknown): void {
   const segments = splitEditorSceneFieldPath(path);

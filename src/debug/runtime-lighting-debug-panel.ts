@@ -1,14 +1,38 @@
-import type { ColorRGB, SceneDirectionalLightConfig, SceneHemisphericLightConfig } from '../config';
+import type { ColorRGB } from '../config';
 import type { Game } from '../core/Game';
-import type { RuntimeLightEditorBinding, RuntimeLightingPatch } from './runtime-lighting-save';
+import type { RuntimeLightEditorBinding } from './runtime-lighting-save';
 import { saveRuntimeLightsToEditorScene } from './runtime-lighting-save';
 import {
-  LIGHT_DIRECTION_ELEVATION_MAX_DEG,
-  LIGHT_DIRECTION_ELEVATION_MIN_DEG,
-  createDirectionalLightDirectionFromAngles,
-  normalizeDirectionVector,
-  readDirectionalLightAngles,
-} from '../fps-game-editor-adapter/editor-lighting-utils';
+  canSaveEditorSceneLightingDebugSnapshot as canSaveSnapshot,
+  cloneEditorSceneLightingDebugSnapshot as cloneSnapshot,
+  colorFromEditorSceneLightingHex as hexToColor,
+  colorToEditorSceneLightingHex as colorToHex,
+  createEditorSceneDirectionalLightDirectionFromAngles as createDirectionalLightDirectionFromAngles,
+  findEditorSceneLightingDebugNumberFieldConfig as findNumberConfig,
+  formatEditorSceneLightingNumber as formatNumber,
+  formatEditorSceneLightingShadowMode,
+  readEditorSceneDirectionalLightAngles as readDirectionalLightAngles,
+  readEditorSceneLightingDebugColorSnapshotField as readColorSnapshotField,
+  readEditorSceneLightingDebugNumberSnapshotField as readNumberSnapshotField,
+  readEditorSceneLightingDebugText,
+  readEditorSceneLightingDebugTooltipText,
+  readEditorSceneLightingProjectedLengthMultiplier as readProjectedLengthMultiplier,
+  readEditorSceneRuntimeLightBinding,
+  readStoredEditorSceneLightingDebugLanguage as readStoredLanguage,
+  readStoredEditorSceneLightingDebugOpen as readStoredOpen,
+  roundEditorSceneLightingNumber as roundNumber,
+  toEditorSceneRuntimeLightingPatches as toRuntimeLightingPatches,
+  writeStoredEditorSceneLightingDebugLanguage as writeStoredLanguage,
+  writeStoredEditorSceneLightingDebugOpen as writeStoredOpen,
+  type EditorSceneLightingDebugColorField as ColorField,
+  type EditorSceneLightingDebugLanguage as LightingDebugLanguage,
+  type EditorSceneLightingDebugNumberField as NumberField,
+  type EditorSceneLightingDebugNumberFieldConfig as NumberFieldConfig,
+  type EditorSceneLightingDebugSnapshot as LightingDebugSnapshot,
+  type EditorSceneLightingDebugText as LightingDebugText,
+  type EditorSceneLightingDebugTooltipText as LightingDebugTooltipText,
+  type EditorSceneRuntimeShadowMode as RuntimeShadowMode,
+} from '@fps-games/editor/playable-sdk';
 
 export interface RuntimeLightingDebugPanelOptions {
   root?: HTMLElement;
@@ -19,192 +43,7 @@ export interface RuntimeLightingDebugPanel {
   dispose(): void;
 }
 
-type LightingDebugLanguage = 'zh' | 'en';
-type NumberField =
-  | 'environmentIntensity'
-  | 'directionalIntensity'
-  | 'directionalHorizontalAngle'
-  | 'directionalElevationAngle';
-type ColorField = 'environmentDiffuseColor' | 'environmentGroundColor' | 'directionalDiffuseColor';
-
-interface RuntimeLightSnapshot<TLight extends SceneHemisphericLightConfig | SceneDirectionalLightConfig> {
-  enabled: boolean;
-  light: TLight;
-  binding: RuntimeLightEditorBinding | null;
-}
-
-interface LightingDebugSnapshot {
-  environment: RuntimeLightSnapshot<SceneHemisphericLightConfig>;
-  directional: RuntimeLightSnapshot<SceneDirectionalLightConfig>;
-  shadow: {
-    mode: RuntimeShadowMode;
-    projectedLengthMultiplier: number;
-  };
-}
-
-type RuntimeShadowMode = 'none' | 'legacy' | 'planar' | 'unknown';
-
-type LightingDebugText = Record<
-  | 'title'
-  | 'runtime'
-  | 'languageButton'
-  | 'toggleTitle'
-  | 'environmentSection'
-  | 'directionalSection'
-  | 'enabled'
-  | 'intensity'
-  | 'skyLightColor'
-  | 'groundColor'
-  | 'horizontalAngle'
-  | 'elevationAngle'
-  | 'lightColor'
-  | 'rawDirection'
-  | 'shadowReadout'
-  | 'shadowPlanarFollow'
-  | 'shadowLegacy'
-  | 'shadowNone'
-  | 'shadowUnknown'
-  | 'reset'
-  | 'save'
-  | 'resetStatus'
-  | 'savingStatus'
-  | 'savedStatus'
-  | 'saveFailed'
-  | 'missingBindingStatus',
-  string
->;
-
-type LightingDebugTooltipText = Record<
-  | 'languageButton'
-  | 'toggleTitle'
-  | 'enabled'
-  | 'environmentIntensity'
-  | 'directionalIntensity'
-  | 'skyLightColor'
-  | 'groundColor'
-  | 'horizontalAngle'
-  | 'elevationAngle'
-  | 'lightColor'
-  | 'rawDirection'
-  | 'shadowReadout'
-  | 'reset'
-  | 'save',
-  string
->;
-
-type NumberFieldConfig = {
-  field: NumberField;
-  step: number;
-  min?: number;
-  max?: number;
-  textKey: keyof LightingDebugText;
-  tooltipKey: keyof LightingDebugTooltipText;
-};
-
-const LIGHTING_DEBUG_STORAGE_KEY = 'pa-template.lighting-debug.open';
-const LIGHTING_DEBUG_LANGUAGE_STORAGE_KEY = 'pa-template.lighting-debug.language';
 const TOOLTIP_DELAY_MS = 320;
-
-const NUMBER_FIELDS: ReadonlyArray<NumberFieldConfig> = [
-  { field: 'environmentIntensity', textKey: 'intensity', tooltipKey: 'environmentIntensity', step: 0.05, min: 0 },
-  { field: 'directionalIntensity', textKey: 'intensity', tooltipKey: 'directionalIntensity', step: 0.05, min: 0 },
-  { field: 'directionalHorizontalAngle', textKey: 'horizontalAngle', tooltipKey: 'horizontalAngle', step: 1, min: -180, max: 180 },
-  { field: 'directionalElevationAngle', textKey: 'elevationAngle', tooltipKey: 'elevationAngle', step: 1, min: LIGHT_DIRECTION_ELEVATION_MIN_DEG, max: LIGHT_DIRECTION_ELEVATION_MAX_DEG },
-];
-
-const LIGHTING_DEBUG_TEXT: Record<LightingDebugLanguage, LightingDebugText> = {
-  zh: {
-    title: '光照调试',
-    runtime: '运行时',
-    languageButton: 'EN',
-    toggleTitle: '打开光照调试面板',
-    environmentSection: '环境光',
-    directionalSection: '直射光',
-    enabled: '启用',
-    intensity: '强度',
-    skyLightColor: '天空光颜色',
-    groundColor: '地面颜色',
-    horizontalAngle: '水平角',
-    elevationAngle: '高度角',
-    lightColor: '光照颜色',
-    rawDirection: '原始方向',
-    shadowReadout: '阴影',
-    shadowPlanarFollow: 'Planar / 跟随直射光',
-    shadowLegacy: 'Legacy ShadowGenerator',
-    shadowNone: 'Off',
-    shadowUnknown: 'Unknown',
-    reset: '重置参数',
-    save: '保存参数',
-    resetStatus: '已重置为初始运行时光照。',
-    savingStatus: '正在保存光照参数...',
-    savedStatus: '已保存光照参数，正在重新加载...',
-    saveFailed: '保存失败',
-    missingBindingStatus: '缺少光源绑定，只能临时预览，不能保存。',
-  },
-  en: {
-    title: 'Lighting Debug',
-    runtime: 'Runtime',
-    languageButton: '中文',
-    toggleTitle: 'Toggle lighting debug panel',
-    environmentSection: 'Environment Light',
-    directionalSection: 'Directional Light',
-    enabled: 'Enabled',
-    intensity: 'Intensity',
-    skyLightColor: 'Sky Light Color',
-    groundColor: 'Ground Color',
-    horizontalAngle: 'Horizontal Angle',
-    elevationAngle: 'Elevation Angle',
-    lightColor: 'Light Color',
-    rawDirection: 'Raw Direction',
-    shadowReadout: 'Shadow',
-    shadowPlanarFollow: 'Planar / Follow Directional Light',
-    shadowLegacy: 'Legacy ShadowGenerator',
-    shadowNone: 'Off',
-    shadowUnknown: 'Unknown',
-    reset: 'Reset',
-    save: 'Save Lights',
-    resetStatus: 'Reset to initial runtime lighting.',
-    savingStatus: 'Saving lighting...',
-    savedStatus: 'Saved lighting. Reloading...',
-    saveFailed: 'Save failed',
-    missingBindingStatus: 'Light binding missing; preview only, saving disabled.',
-  },
-};
-
-const LIGHTING_DEBUG_TOOLTIPS: Record<LightingDebugLanguage, LightingDebugTooltipText> = {
-  zh: {
-    languageButton: '切换光照调试面板的显示语言。',
-    toggleTitle: '打开或关闭运行时光照调试面板。',
-    enabled: '启用或禁用对应的运行时光源，保存后写回编辑器场景。',
-    environmentIntensity: '环境光强度，对应 BabylonJS HemisphericLight.intensity。',
-    directionalIntensity: '直射光强度，对应 BabylonJS DirectionalLight.intensity。',
-    skyLightColor: '环境光来自天空方向的漫反射颜色。',
-    groundColor: '环境光来自地面反射方向的颜色。',
-    horizontalAngle: '直射光在 XZ 平面内的朝向角度，会转换为 DirectionalLight.direction。',
-    elevationAngle: '直射光相对地平线的高度角；90 度表示从正上方照下。',
-    lightColor: '直射光漫反射颜色。',
-    rawDirection: '只读方向向量，用于排查运行时转换结果。',
-    shadowReadout: '只读阴影状态；planar 阴影跟随当前直射光角度。',
-    reset: '恢复为打开运行时时读取到的初始光照参数。',
-    save: '通过编辑器保存链路写回 Environment Light 与 Directional Light，然后重新加载运行时。',
-  },
-  en: {
-    languageButton: 'Switch the lighting debug panel language.',
-    toggleTitle: 'Open or close the runtime lighting debug panel.',
-    enabled: 'Enable or disable the runtime light and save it back to the editor scene.',
-    environmentIntensity: 'Environment intensity. Maps to BabylonJS HemisphericLight.intensity.',
-    directionalIntensity: 'Directional intensity. Maps to BabylonJS DirectionalLight.intensity.',
-    skyLightColor: 'Diffuse sky color for the environment light.',
-    groundColor: 'Ground bounce color for the environment light.',
-    horizontalAngle: 'Directional heading in the XZ plane, converted to DirectionalLight.direction.',
-    elevationAngle: 'Directional elevation above the horizon; 90 degrees points straight down.',
-    lightColor: 'Directional diffuse color.',
-    rawDirection: 'Read-only direction vector for checking runtime conversion.',
-    shadowReadout: 'Read-only shadow status; planar shadows follow the current Directional Light angles.',
-    reset: 'Restore the lighting captured when runtime opened.',
-    save: 'Save Environment Light and Directional Light through the editor authoring pipeline, then reload runtime.',
-  },
-};
 
 export function mountRuntimeLightingDebugPanel(options: RuntimeLightingDebugPanelOptions): RuntimeLightingDebugPanel {
   const root = options.root ?? document.body;
@@ -572,23 +411,6 @@ export function mountRuntimeLightingDebugPanel(options: RuntimeLightingDebugPane
     };
   }
 
-  function readNumberSnapshotField(snapshot: LightingDebugSnapshot, field: NumberField): number {
-    switch (field) {
-      case 'environmentIntensity': return snapshot.environment.light.intensity;
-      case 'directionalIntensity': return snapshot.directional.light.intensity;
-      case 'directionalHorizontalAngle': return readDirectionalLightAngles(snapshot.directional.light.direction).horizontalAngleDeg;
-      case 'directionalElevationAngle': return readDirectionalLightAngles(snapshot.directional.light.direction).elevationAngleDeg;
-    }
-  }
-
-  function readColorSnapshotField(snapshot: LightingDebugSnapshot, field: ColorField): ColorRGB {
-    switch (field) {
-      case 'environmentDiffuseColor': return snapshot.environment.light.diffuseColor ?? { r: 1, g: 1, b: 1 };
-      case 'environmentGroundColor': return snapshot.environment.light.groundColor ?? { r: 0.48, g: 0.52, b: 0.62 };
-      case 'directionalDiffuseColor': return snapshot.directional.light.diffuseColor ?? { r: 1, g: 1, b: 1 };
-    }
-  }
-
   function setNumberInput(field: NumberField, value: number): void {
     const input = numberInputs.get(field);
     if (input) input.value = String(roundNumber(value));
@@ -618,15 +440,7 @@ export function mountRuntimeLightingDebugPanel(options: RuntimeLightingDebugPane
   function syncReadout(snapshot: LightingDebugSnapshot): void {
     const direction = snapshot.directional.light.direction;
     rawDirection.textContent = `x ${formatNumber(direction.x)}  y ${formatNumber(direction.y)}  z ${formatNumber(direction.z)}`;
-    shadowStatus.textContent = `${formatShadowMode(snapshot.shadow.mode)}\nshadow length x${formatNumber(snapshot.shadow.projectedLengthMultiplier)}`;
-  }
-
-  function formatShadowMode(mode: RuntimeShadowMode): string {
-    const copy = text();
-    if (mode === 'planar') return copy.shadowPlanarFollow;
-    if (mode === 'legacy') return copy.shadowLegacy;
-    if (mode === 'none') return copy.shadowNone;
-    return copy.shadowUnknown;
+    shadowStatus.textContent = `${formatEditorSceneLightingShadowMode(snapshot.shadow.mode, text())}\nshadow length x${formatNumber(snapshot.shadow.projectedLengthMultiplier)}`;
   }
 
   function renderOpenState(): void {
@@ -793,11 +607,11 @@ export function mountRuntimeLightingDebugPanel(options: RuntimeLightingDebugPane
   }
 
   function text(): LightingDebugText {
-    return LIGHTING_DEBUG_TEXT[language] ?? LIGHTING_DEBUG_TEXT.zh;
+    return readEditorSceneLightingDebugText(language);
   }
 
   function tooltips(): LightingDebugTooltipText {
-    return LIGHTING_DEBUG_TOOLTIPS[language] ?? LIGHTING_DEBUG_TOOLTIPS.zh;
+    return readEditorSceneLightingDebugTooltipText(language);
   }
 
   renderLanguage();
@@ -838,7 +652,7 @@ function readSnapshot(game: Game | null): LightingDebugSnapshot | null {
         diffuseColor: color3ToColor(environmentLight.diffuse, environmentState.light.diffuseColor ?? { r: 1, g: 1, b: 1 }),
         groundColor: color3ToColor(environmentLight.groundColor, environmentState.light.groundColor ?? { r: 0.48, g: 0.52, b: 0.62 }),
       },
-      binding: readLightEditorBinding(environmentLight.metadata, 'hemispheric'),
+      binding: readEditorSceneRuntimeLightBinding(environmentLight.metadata, 'hemispheric') as RuntimeLightEditorBinding | null,
     },
     directional: {
       enabled: directionalLight.isEnabled?.() ?? directionalState.enabled,
@@ -848,7 +662,7 @@ function readSnapshot(game: Game | null): LightingDebugSnapshot | null {
         direction,
         diffuseColor: color3ToColor(directionalLight.diffuse, directionalState.light.diffuseColor ?? { r: 1, g: 1, b: 1 }),
       },
-      binding: readLightEditorBinding(directionalLight.metadata, 'directional'),
+      binding: readEditorSceneRuntimeLightBinding(directionalLight.metadata, 'directional') as RuntimeLightEditorBinding | null,
     },
     shadow: {
       mode: readRuntimeShadowMode(game),
@@ -857,80 +671,9 @@ function readSnapshot(game: Game | null): LightingDebugSnapshot | null {
   };
 }
 
-function readLightEditorBinding(metadata: unknown, expectedType: SceneHemisphericLightConfig['type'] | SceneDirectionalLightConfig['type']): RuntimeLightEditorBinding | null {
-  const fpsEditor = readRecord(readRecord(metadata)?.__fpsEditor);
-  const sourceId = readNonEmptyString(fpsEditor?.sourceId);
-  const objectGuid = readNonEmptyString(fpsEditor?.objectGuid);
-  const objectId = readNonEmptyString(fpsEditor?.objectId);
-  const propertyPath = readNonEmptyString(fpsEditor?.propertyPath);
-  const lightType = readNonEmptyString(fpsEditor?.lightType);
-  if (!sourceId || propertyPath !== 'light' || (!objectGuid && !objectId)) return null;
-  if (lightType && lightType !== expectedType) return null;
-  return {
-    sourceId,
-    propertyPath: 'light',
-    lightType: expectedType,
-    ...(objectGuid ? { objectGuid } : {}),
-    ...(objectId ? { objectId } : {}),
-  };
-}
-
-function canSaveSnapshot(snapshot: LightingDebugSnapshot): boolean {
-  return !!snapshot.environment.binding && !!snapshot.directional.binding;
-}
-
 function readRuntimeShadowMode(game: Game | null): RuntimeShadowMode {
   const mode = game?.getShadowService()?.getShadowMode?.();
   return mode === 'planar' || mode === 'legacy' || mode === 'none' ? mode : 'unknown';
-}
-
-function readProjectedLengthMultiplier(direction: SceneDirectionalLightConfig['direction']): number {
-  const normalized = normalizeDirectionVector(direction);
-  const vertical = Math.abs(normalized.y);
-  if (vertical <= 0.000001) return 999;
-  return Math.min(999, Math.hypot(normalized.x, normalized.z) / vertical);
-}
-
-function toRuntimeLightingPatches(snapshot: LightingDebugSnapshot): RuntimeLightingPatch[] {
-  if (!snapshot.environment.binding || !snapshot.directional.binding) return [];
-  return [
-    {
-      binding: snapshot.environment.binding,
-      enabled: snapshot.environment.enabled,
-      light: snapshot.environment.light,
-    },
-    {
-      binding: snapshot.directional.binding,
-      enabled: snapshot.directional.enabled,
-      light: snapshot.directional.light,
-    },
-  ];
-}
-
-function cloneSnapshot(snapshot: LightingDebugSnapshot): LightingDebugSnapshot {
-  return {
-    environment: {
-      enabled: snapshot.environment.enabled,
-      binding: snapshot.environment.binding ? { ...snapshot.environment.binding } : null,
-      light: {
-        type: 'hemispheric',
-        intensity: snapshot.environment.light.intensity,
-        ...(snapshot.environment.light.diffuseColor ? { diffuseColor: { ...snapshot.environment.light.diffuseColor } } : {}),
-        ...(snapshot.environment.light.groundColor ? { groundColor: { ...snapshot.environment.light.groundColor } } : {}),
-      },
-    },
-    directional: {
-      enabled: snapshot.directional.enabled,
-      binding: snapshot.directional.binding ? { ...snapshot.directional.binding } : null,
-      light: {
-        type: 'directional',
-        intensity: snapshot.directional.light.intensity,
-        direction: { ...snapshot.directional.light.direction },
-        ...(snapshot.directional.light.diffuseColor ? { diffuseColor: { ...snapshot.directional.light.diffuseColor } } : {}),
-      },
-    },
-    shadow: { ...snapshot.shadow },
-  };
 }
 
 function createSection(ownerDocument: Document): HTMLElement {
@@ -1026,12 +769,6 @@ function createInputStyle(width: string): string {
   ].join(';');
 }
 
-function findNumberConfig(field: NumberField): NumberFieldConfig {
-  const config = NUMBER_FIELDS.find(entry => entry.field === field);
-  if (!config) throw new Error(`Missing lighting number field config: ${field}`);
-  return config;
-}
-
 function color3ToColor(value: unknown, fallback: ColorRGB): ColorRGB {
   const record = value && typeof value === 'object' ? value as Record<string, unknown> : {};
   return {
@@ -1041,78 +778,11 @@ function color3ToColor(value: unknown, fallback: ColorRGB): ColorRGB {
   };
 }
 
-function colorToHex(color: ColorRGB): string {
-  const toByte = (value: number) => Math.max(0, Math.min(255, Math.round(value * 255)));
-  return `#${[toByte(color.r), toByte(color.g), toByte(color.b)]
-    .map(value => value.toString(16).padStart(2, '0'))
-    .join('')}`;
-}
-
-function hexToColor(value: string, fallback: ColorRGB): ColorRGB {
-  const match = /^#?([0-9a-f]{6})$/i.exec(value.trim());
-  if (!match) return fallback;
-  const hex = match[1];
-  return {
-    r: parseInt(hex.slice(0, 2), 16) / 255,
-    g: parseInt(hex.slice(2, 4), 16) / 255,
-    b: parseInt(hex.slice(4, 6), 16) / 255,
-  };
-}
-
 function readFiniteNumber(value: unknown, fallback: number): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
-function roundNumber(value: number, digits = 3): number {
-  const factor = 10 ** digits;
-  return Math.round(value * factor) / factor;
-}
-
-function formatNumber(value: number, digits = 3): string {
-  return value.toFixed(digits);
 }
 
 function formatErrorMessage(error: unknown, fallback: string): string {
   const message = error instanceof Error ? error.message : String(error ?? '');
   return message ? `${fallback}: ${message}` : fallback;
-}
-
-function readStoredOpen(win: Window | null): boolean {
-  try {
-    return win?.localStorage.getItem(LIGHTING_DEBUG_STORAGE_KEY) === 'true';
-  } catch {
-    return false;
-  }
-}
-
-function writeStoredOpen(win: Window | null, value: boolean): void {
-  try {
-    win?.localStorage.setItem(LIGHTING_DEBUG_STORAGE_KEY, String(value));
-  } catch {
-    // localStorage can be unavailable in embedded previews.
-  }
-}
-
-function readStoredLanguage(win: Window | null): LightingDebugLanguage {
-  try {
-    return win?.localStorage.getItem(LIGHTING_DEBUG_LANGUAGE_STORAGE_KEY) === 'en' ? 'en' : 'zh';
-  } catch {
-    return 'zh';
-  }
-}
-
-function writeStoredLanguage(win: Window | null, value: LightingDebugLanguage): void {
-  try {
-    win?.localStorage.setItem(LIGHTING_DEBUG_LANGUAGE_STORAGE_KEY, value);
-  } catch {
-    // localStorage can be unavailable in embedded previews.
-  }
-}
-
-function readRecord(value: unknown): Record<string, unknown> {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
-}
-
-function readNonEmptyString(value: unknown): string | undefined {
-  return typeof value === 'string' && value.trim() ? value.trim() : undefined;
 }

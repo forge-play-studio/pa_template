@@ -6,6 +6,7 @@ import path from 'path';
 import { viteSingleFile } from 'vite-plugin-singlefile';
 import { visualizer } from 'rollup-plugin-visualizer';
 import {
+  handleEditorSceneRenderingProfileAuthoringRequest,
   handlePlayableAuthoringServerRequest,
   type PlayableAuthoringServerResponse,
 } from '@fps-games/editor/playable-sdk';
@@ -457,63 +458,33 @@ async function handleRenderingProfileAuthoringRoute(
   req: any,
   _route: string,
 ): Promise<PlayableAuthoringServerResponse> {
-  const method = String(req.method ?? 'GET').toUpperCase();
   const renderingConfigPath = resolve(__dirname, 'src/config/rendering.json');
-
-  if (method === 'GET') {
-    const renderingConfig = existsSync(renderingConfigPath)
-      ? JSON.parse(readFileSync(renderingConfigPath, 'utf8') || '{}')
-      : {};
-    const { normalizeRenderingProfile } = await server.ssrLoadModule('/src/rendering/rendering-profile.ts');
-    const normalized = normalizeRenderingProfile(renderingConfig);
-    return {
-      statusCode: 200,
-      body: {
-        ok: true,
-        renderingConfigPath,
+  return handleEditorSceneRenderingProfileAuthoringRequest({
+    method: req.method ?? 'GET',
+  }, {
+    readBody: () => readJsonBody(req),
+    loadConfig() {
+      const renderingConfig = existsSync(renderingConfigPath)
+        ? JSON.parse(readFileSync(renderingConfigPath, 'utf8') || '{}')
+        : {};
+      return {
         renderingConfig,
-        normalized,
-        summary: summarizeRenderingProfile(normalized),
-      },
-    };
-  }
-
-  if (method !== 'POST') {
-    return {
-      statusCode: 405,
-      body: { ok: false, error: 'method_not_allowed' },
-    };
-  }
-
-  const body = await readJsonBody(req);
-  const renderingConfig = readOptionalRecord(body.renderingConfig);
-  if (!renderingConfig) {
-    return {
-      statusCode: 400,
-      body: { ok: false, error: 'missing_rendering_config' },
-    };
-  }
-  const { normalizeRenderingProfile } = await server.ssrLoadModule('/src/rendering/rendering-profile.ts');
-  const normalized = normalizeRenderingProfile(renderingConfig);
-  await mkdir(path.dirname(renderingConfigPath), { recursive: true });
-  await writeFile(renderingConfigPath, `${JSON.stringify(renderingConfig, null, 2)}\n`, 'utf8');
-  invalidateViteFileModules(server, [
-    renderingConfigPath,
-    resolve(__dirname, 'src/rendering/rendering-profile.ts'),
-    resolve(__dirname, 'src/fps-game-editor-adapter/editor-rendering-profile.ts'),
-    resolve(__dirname, 'src/fps-game-editor-adapter/editor-shadow-preview-profile.ts'),
-    resolve(__dirname, 'src/services/ShadowService.ts'),
-  ]);
-  return {
-    statusCode: 200,
-    body: {
-      ok: true,
-      renderingConfigPath,
-      renderingConfig,
-      normalized,
-      summary: summarizeRenderingProfile(normalized),
+        response: { renderingConfigPath },
+      };
     },
-  };
+    async saveConfig({ renderingConfig }) {
+      await mkdir(path.dirname(renderingConfigPath), { recursive: true });
+      await writeFile(renderingConfigPath, `${JSON.stringify(renderingConfig, null, 2)}\n`, 'utf8');
+      invalidateViteFileModules(server, [
+        renderingConfigPath,
+        resolve(__dirname, 'src/rendering/rendering-profile.ts'),
+        resolve(__dirname, 'src/fps-game-editor-adapter/editor-rendering-profile.ts'),
+        resolve(__dirname, 'src/fps-game-editor-adapter/editor-shadow-preview-profile.ts'),
+        resolve(__dirname, 'src/services/ShadowService.ts'),
+      ]);
+      return { renderingConfigPath };
+    },
+  });
 }
 
 function readRecord(value: unknown): Record<string, unknown> {

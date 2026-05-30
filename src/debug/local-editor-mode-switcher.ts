@@ -16,6 +16,7 @@ import {
   createEditorSceneRuntimePreviewMissingAssetUrlDiagnostic,
   createEditorSceneRuntimePreviewNode,
   createEditorSceneRuntimePreviewNodes,
+  createEditorSceneMaterialBrowserAssetItems as createPlayableEditorSceneMaterialBrowserAssetItems,
   createEditorSceneSerializedMultiTransformPatch as createPlayableEditorSceneSerializedMultiTransformPatch,
   createEditorSceneTransformBatchPatch as createPlayableEditorSceneTransformBatchPatch,
   createEditorSceneTransformPatch as createPlayableEditorSceneTransformPatch,
@@ -55,9 +56,7 @@ import type {
 import { createBabylonEditorInfiniteGrid } from '@fps-games/editor-babylon';
 import baseSceneConfig from '../config/scene.json';
 import type {
-  ArtistMaterialProfile,
   SceneConfig,
-  SceneMaterialAssetKind,
   SceneNodeMaterialBindingConfig,
 } from '../config/types';
 import type { EditorSceneDocument } from '../fps-game-editor-adapter/editor-scene-document';
@@ -354,27 +353,7 @@ function createEditorGrid(BABYLON: BabylonModule, scene: any, camera?: any) {
 }
 
 function createEditorSceneBrowserAssetItems(editorScene: EditorSceneDocument) {
-  return (editorScene.scene.materialAssets ?? []).map((materialAsset) => ({
-    id: `material:${materialAsset.id}`,
-    assetId: materialAsset.id,
-    kind: 'material',
-    label: materialAsset.name || materialAsset.id,
-    meta: createEditorSceneMaterialAssetMeta(materialAsset.profile, materialAsset.id),
-    preview: createEditorSceneMaterialAssetPreview(materialAsset.profile),
-    material: {
-      id: materialAsset.id,
-      name: materialAsset.name || materialAsset.id,
-      materialKind: resolveEditorSceneBrowserMaterialKind(materialAsset),
-      readonly: materialAsset.system?.readonly === true,
-      profile: structuredClone(materialAsset.profile ?? {}),
-    },
-    placeable: false,
-  }));
-}
-
-function resolveEditorSceneBrowserMaterialKind(materialAsset: { materialKind?: string; system?: { preset?: string } }): 'pbr' | 'standard' {
-  if (materialAsset.materialKind === 'standard' || materialAsset.system?.preset === 'default-standard') return 'standard';
-  return 'pbr';
+  return createPlayableEditorSceneMaterialBrowserAssetItems(editorScene);
 }
 
 function createEditorSceneLibraryAssetPreview(asset: EditorSceneAssetLibraryItem) {
@@ -404,107 +383,6 @@ function createEditorSceneInspectorTextureAssets(
         meta: asset.assetId,
       }];
     });
-}
-
-function createEditorSceneMaterialAssetMeta(profile: ArtistMaterialProfile, id: string): string {
-  const metallic = formatEditorSceneMaterialPreviewNumber(profile.metallic ?? 0);
-  const roughness = formatEditorSceneMaterialPreviewNumber(profile.roughness ?? 1);
-  return `M ${metallic} / R ${roughness} - ${id}`;
-}
-
-function createEditorSceneMaterialAssetPreview(profile: ArtistMaterialProfile) {
-  return {
-    kind: 'material-sphere' as const,
-    baseColor: transformEditorSceneMaterialPreviewBaseColor(profile),
-    metallic: clampEditorSceneMaterialPreview01(profile.metallic ?? 0),
-    roughness: clampEditorSceneMaterialPreview01(profile.roughness ?? 1),
-    emissionColor: profile.emission?.color,
-    emissionIntensity: profile.emission?.intensity ?? 0,
-    textureUrl: profile.baseColor?.texture?.url,
-  };
-}
-
-function transformEditorSceneMaterialPreviewBaseColor(profile: ArtistMaterialProfile): { r: number; g: number; b: number } {
-  const baseColor = profile.baseColor ?? {};
-  const source = baseColor.color ?? { r: 0.78, g: 0.78, b: 0.78 };
-  const brightness = Number.isFinite(baseColor.brightness) ? baseColor.brightness! : 1;
-  const contrast = Number.isFinite(baseColor.contrast) ? baseColor.contrast! : 1;
-  const saturation = Number.isFinite(baseColor.saturation) ? baseColor.saturation! : 1;
-  const hue = Number.isFinite(baseColor.hue) ? baseColor.hue! : 0;
-
-  let r = clampEditorSceneMaterialPreview01(source.r * Math.max(0, brightness));
-  let g = clampEditorSceneMaterialPreview01(source.g * Math.max(0, brightness));
-  let b = clampEditorSceneMaterialPreview01(source.b * Math.max(0, brightness));
-
-  r = clampEditorSceneMaterialPreview01((r - 0.5) * contrast + 0.5);
-  g = clampEditorSceneMaterialPreview01((g - 0.5) * contrast + 0.5);
-  b = clampEditorSceneMaterialPreview01((b - 0.5) * contrast + 0.5);
-
-  const hsl = rgbToEditorSceneMaterialPreviewHsl(r, g, b);
-  hsl.h = normalizeEditorSceneMaterialPreviewHue(hsl.h + hue);
-  hsl.s = clampEditorSceneMaterialPreview01(hsl.s * Math.max(0, saturation));
-  return hslToEditorSceneMaterialPreviewRgb(hsl.h, hsl.s, hsl.l);
-}
-
-function rgbToEditorSceneMaterialPreviewHsl(r: number, g: number, b: number): { h: number; s: number; l: number } {
-  const max = Math.max(r, g, b);
-  const min = Math.min(r, g, b);
-  const l = (max + min) / 2;
-  if (max === min) return { h: 0, s: 0, l };
-
-  const d = max - min;
-  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-  let h = 0;
-  switch (max) {
-    case r:
-      h = (g - b) / d + (g < b ? 6 : 0);
-      break;
-    case g:
-      h = (b - r) / d + 2;
-      break;
-    default:
-      h = (r - g) / d + 4;
-      break;
-  }
-  return { h: h * 60, s, l };
-}
-
-function hslToEditorSceneMaterialPreviewRgb(h: number, s: number, l: number): { r: number; g: number; b: number } {
-  if (s === 0) return { r: l, g: l, b: l };
-
-  const hueToRgb = (p: number, q: number, t: number): number => {
-    let nextT = t;
-    if (nextT < 0) nextT += 1;
-    if (nextT > 1) nextT -= 1;
-    if (nextT < 1 / 6) return p + (q - p) * 6 * nextT;
-    if (nextT < 1 / 2) return q;
-    if (nextT < 2 / 3) return p + (q - p) * (2 / 3 - nextT) * 6;
-    return p;
-  };
-
-  const normalizedHue = normalizeEditorSceneMaterialPreviewHue(h) / 360;
-  const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-  const p = 2 * l - q;
-  return {
-    r: clampEditorSceneMaterialPreview01(hueToRgb(p, q, normalizedHue + 1 / 3)),
-    g: clampEditorSceneMaterialPreview01(hueToRgb(p, q, normalizedHue)),
-    b: clampEditorSceneMaterialPreview01(hueToRgb(p, q, normalizedHue - 1 / 3)),
-  };
-}
-
-function normalizeEditorSceneMaterialPreviewHue(value: number): number {
-  const result = value % 360;
-  return result < 0 ? result + 360 : result;
-}
-
-function clampEditorSceneMaterialPreview01(value: number): number {
-  if (!Number.isFinite(value)) return 0;
-  return Math.min(1, Math.max(0, value));
-}
-
-function formatEditorSceneMaterialPreviewNumber(value: number): string {
-  if (!Number.isFinite(value)) return '0';
-  return Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
 }
 
 function createProjectionNodes(editorScene: EditorSceneDocument): BabylonEditorProjectionNode[] {

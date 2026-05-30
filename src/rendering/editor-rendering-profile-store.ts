@@ -1,74 +1,60 @@
 import renderingConfig from '../config/rendering.json';
 import {
+  createEditorSceneRenderingProfileDraftState,
+  isEditorSceneRenderingProfileDraftDirty,
+  markEditorSceneRenderingProfileDraftSaved,
+  resetEditorSceneRenderingProfileDraft,
+  setEditorSceneRenderingProfileDraftConfig,
+  setEditorSceneRenderingProfileDraftError,
+  type EditorSceneRenderingProfileDraftState,
+} from '@fps-games/editor/playable-sdk';
+import {
   normalizeRenderingProfile,
   type NormalizedRenderingProfile,
 } from './rendering-profile';
 
-let savedRenderingConfig = cloneConfig(renderingConfig);
-let draftRenderingConfig = cloneConfig(savedRenderingConfig);
-let lastRenderingError: string | null = null;
+const renderingProfileState = createEditorSceneRenderingProfileDraftState(renderingConfig);
 
-export interface EditorRenderingProfileState {
-  savedConfig: Record<string, unknown>;
-  draftConfig: Record<string, unknown>;
-  dirty: boolean;
-  lastError: string | null;
-}
+export interface EditorRenderingProfileState extends EditorSceneRenderingProfileDraftState {}
 
 export function getActiveRenderingConfig(): Record<string, unknown> {
-  return draftRenderingConfig;
+  return renderingProfileState.draftConfig;
 }
 
 export function getSavedRenderingConfig(): Record<string, unknown> {
-  return savedRenderingConfig;
+  return renderingProfileState.savedConfig;
 }
 
 export function getEditorRenderingProfileState(): EditorRenderingProfileState {
-  return {
-    savedConfig: savedRenderingConfig,
-    draftConfig: draftRenderingConfig,
-    dirty: isRenderingProfileDirty(),
-    lastError: lastRenderingError,
-  };
+  renderingProfileState.dirty = isRenderingProfileDirty();
+  return renderingProfileState;
 }
 
 export function setActiveRenderingConfig(config: unknown): void {
-  draftRenderingConfig = cloneConfig(config);
-  lastRenderingError = null;
+  setEditorSceneRenderingProfileDraftConfig(renderingProfileState, config);
 }
 
-export function markActiveRenderingConfigSaved(config: unknown = draftRenderingConfig): void {
-  savedRenderingConfig = cloneConfig(config);
-  draftRenderingConfig = cloneConfig(savedRenderingConfig);
-  lastRenderingError = null;
+export function markActiveRenderingConfigSaved(config: unknown = renderingProfileState.draftConfig): void {
+  markEditorSceneRenderingProfileDraftSaved(renderingProfileState, config);
 }
 
 export function resetActiveRenderingConfigDraft(): void {
-  draftRenderingConfig = cloneConfig(savedRenderingConfig);
-  lastRenderingError = null;
+  resetEditorSceneRenderingProfileDraft(renderingProfileState);
 }
 
 export function setActiveRenderingConfigError(error: unknown): void {
-  lastRenderingError = error instanceof Error ? error.message : String(error);
+  setEditorSceneRenderingProfileDraftError(renderingProfileState, error);
 }
 
 export function isRenderingProfileDirty(): boolean {
-  return !configsEqual(savedRenderingConfig, draftRenderingConfig);
+  renderingProfileState.dirty = isEditorSceneRenderingProfileDraftDirty(renderingProfileState);
+  return renderingProfileState.dirty;
 }
 
 export function getActiveRenderingProfile(): NormalizedRenderingProfile {
-  return normalizeRenderingProfile(draftRenderingConfig);
+  return normalizeRenderingProfile(renderingProfileState.draftConfig);
 }
 
 export function getSavedRenderingProfile(): NormalizedRenderingProfile {
-  return normalizeRenderingProfile(savedRenderingConfig);
-}
-
-function cloneConfig(value: unknown): Record<string, unknown> {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
-  return JSON.parse(JSON.stringify(value)) as Record<string, unknown>;
-}
-
-function configsEqual(left: unknown, right: unknown): boolean {
-  return JSON.stringify(left ?? {}) === JSON.stringify(right ?? {});
+  return normalizeRenderingProfile(renderingProfileState.savedConfig);
 }
