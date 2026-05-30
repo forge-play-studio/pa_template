@@ -83,9 +83,17 @@ import * as editorAssets from '../assets';
 
 type BabylonModule = Record<string, any>;
 
+type ProjectGameRestartContext = {
+  reason?: string;
+};
+
+type ProjectGameRestartWindow = Window & {
+  __restartProjectGame?: (context?: ProjectGameRestartContext) => Promise<void> | void;
+};
+
 export interface LocalEditorModeSwitcherOptions {
   root?: HTMLElement;
-  disposeGameWorld: () => void;
+  disposeGameWorld: () => void | Promise<void>;
   onBeforeReload?: () => void;
 }
 
@@ -255,7 +263,12 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
         };
       },
       loadAssets: loadEditorAssetLibrary,
-      runGame() {
+      async runGame(context?: ProjectGameRestartContext) {
+        const restartProjectGame = (window as ProjectGameRestartWindow).__restartProjectGame;
+        if (typeof restartProjectGame === 'function') {
+          await restartProjectGame(context);
+          return;
+        }
         options.onBeforeReload?.();
         window.location.reload();
       },
