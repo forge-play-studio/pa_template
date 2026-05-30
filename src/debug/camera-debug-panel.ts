@@ -4,8 +4,41 @@ import { Color3 } from '@babylonjs/core/Maths/math.color';
 import { Matrix, Vector3 } from '@babylonjs/core/Maths/math.vector';
 import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
 import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
+import {
+  canHandleEditorSceneCameraDebugPanKey,
+  clampEditorSceneCameraDebugNumber,
+  cloneEditorSceneCameraDebugSnapshot,
+  cloneEditorSceneCameraDebugTarget,
+  createEditorSceneCameraDebugPanelNumberFields,
+  createEditorSceneCameraDebugPanelRangeFieldEnds,
+  createEditorSceneCameraDebugPanelRangeFieldPairs,
+  createEditorSceneCameraDebugSnapshot,
+  createEditorSceneCameraPanMovement,
+  formatEditorSceneCameraDebugCoordinate,
+  formatEditorSceneCameraDebugErrorMessage,
+  getEditorSceneCameraDebugText,
+  getEditorSceneCameraDebugTooltips,
+  isEditorSceneCameraDebugPanelFieldVisible,
+  isEditorSceneCameraDebugPanKey,
+  readEditorSceneCameraDebugPanelInputSnapshot,
+  readEditorSceneCameraDebugProjectionSelectValue,
+  readEditorSceneCameraDebugSnapshotField,
+  readEditorSceneCameraDebugStoredLanguage,
+  readEditorSceneCameraDebugStoredOpen,
+  roundEditorSceneCameraDebugNumber,
+  toEditorSceneCameraRig,
+  writeEditorSceneCameraDebugStoredLanguage,
+  writeEditorSceneCameraDebugStoredOpen,
+  type EditorSceneCameraRig,
+  type EditorSceneCameraDebugNumberField,
+  type EditorSceneCameraDebugLanguage,
+  type EditorSceneCameraDebugPanelNumberFieldConfig,
+  type EditorSceneCameraDebugText,
+  type EditorSceneCameraDebugTooltipText,
+  type EditorSceneCameraDebugSnapshot as PlayableEditorSceneCameraDebugSnapshot,
+} from '@fps-games/editor/playable-sdk';
 import type { Game } from '../core/Game';
-import type { SceneCameraProjection, SceneCameraRigConfig } from '../config';
+import type { SceneCameraRigConfig } from '../config';
 import {
   saveRuntimeCameraRigToEditorScene,
   type RuntimeCameraEditorBinding,
@@ -20,250 +53,23 @@ export interface CameraDebugPanel {
   dispose(): void;
 }
 
-type CameraDebugLanguage = 'zh' | 'en';
+type CameraDebugLanguage = EditorSceneCameraDebugLanguage;
 
-type CameraNumberField =
-  | 'alpha'
-  | 'beta'
-  | 'radius'
-  | 'orthoSize'
-  | 'fovDeg'
-  | 'minZ'
-  | 'maxZ'
-  | 'lowerBetaLimit'
-  | 'upperBetaLimit'
-  | 'lowerRadiusLimit'
-  | 'upperRadiusLimit'
-  | 'inertia'
-  | 'targetScreenOffsetX'
-  | 'targetScreenOffsetY';
+type CameraNumberField = EditorSceneCameraDebugNumberField;
+type CameraDebugText = EditorSceneCameraDebugText;
+type CameraDebugTooltipText = EditorSceneCameraDebugTooltipText;
 
-interface CameraDebugSnapshot extends SceneCameraRigConfig {
-  projection: SceneCameraProjection;
-  fov: number;
-  target: { x: number; y: number; z: number };
+type CameraDebugSnapshot = PlayableEditorSceneCameraDebugSnapshot & {
   binding: RuntimeCameraEditorBinding;
-}
-
-type CameraDebugText = Record<
-  | 'title'
-  | 'runtime'
-  | 'languageButton'
-  | 'toggleTitle'
-  | 'projection'
-  | 'orthographic'
-  | 'perspective'
-  | 'alpha'
-  | 'beta'
-  | 'radius'
-  | 'orthoSize'
-  | 'fov'
-  | 'nearClip'
-  | 'farClip'
-  | 'minBeta'
-  | 'maxBeta'
-  | 'betaRange'
-  | 'minRadius'
-  | 'maxRadius'
-  | 'radiusRange'
-  | 'inertia'
-  | 'screenOffsetX'
-  | 'screenOffsetY'
-  | 'panHint'
-  | 'reset'
-  | 'save'
-  | 'worldPosition'
-  | 'resetStatus'
-  | 'savingStatus'
-  | 'savedStatus'
-  | 'saveFailed',
-  string
->;
-
-type CameraDebugTooltipText = Record<
-  | 'languageButton'
-  | 'toggleTitle'
-  | 'projection'
-  | 'alpha'
-  | 'beta'
-  | 'radius'
-  | 'orthoSize'
-  | 'fov'
-  | 'nearClip'
-  | 'farClip'
-  | 'minBeta'
-  | 'maxBeta'
-  | 'betaRange'
-  | 'minRadius'
-  | 'maxRadius'
-  | 'radiusRange'
-  | 'inertia'
-  | 'screenOffsetX'
-  | 'screenOffsetY'
-  | 'panHint'
-  | 'reset'
-  | 'save',
-  string
->;
+};
 
 const CAMERA_DEBUG_STORAGE_KEY = 'pa-template.camera-debug.open';
 const CAMERA_DEBUG_LANGUAGE_STORAGE_KEY = 'pa-template.camera-debug.language';
-const CAMERA_DEBUG_PAN_KEYS = new Set(['w', 'a', 's', 'd']);
-const CAMERA_DEBUG_TEXT: Record<CameraDebugLanguage, CameraDebugText> = {
-  zh: {
-    title: '摄像机调试',
-    runtime: '运行时',
-    languageButton: 'EN',
-    toggleTitle: '打开摄像机调试面板',
-    projection: '投影模式',
-    orthographic: '正交',
-    perspective: '透视',
-    alpha: '水平环绕角',
-    beta: '俯仰角',
-    radius: '跟随距离',
-    orthoSize: '正交视野高度',
-    fov: '透视视野角',
-    nearClip: '近裁面距离',
-    farClip: '远裁面距离',
-    minBeta: '最小俯仰角',
-    maxBeta: '最大俯仰角',
-    betaRange: '俯仰角范围',
-    minRadius: '最小跟随距离',
-    maxRadius: '最大跟随距离',
-    radiusRange: '跟随距离范围',
-    inertia: '平滑惯性',
-    screenOffsetX: '画面偏移 X',
-    screenOffsetY: '画面偏移 Y',
-    panHint: 'W/S 前进 / 后退 · A/D 左 / 右 · 十字准星 = 预览目标',
-    reset: '重置参数',
-    save: '保存参数',
-    worldPosition: '世界坐标',
-    resetStatus: '已重置为初始运行时摄像机。',
-    savingStatus: '正在保存摄像机参数...',
-    savedStatus: '已保存摄像机参数，正在重新加载...',
-    saveFailed: '保存失败',
-  },
-  en: {
-    title: 'Camera Debug',
-    runtime: 'Runtime',
-    languageButton: '中文',
-    toggleTitle: 'Toggle camera debug panel',
-    projection: 'Projection',
-    orthographic: 'Orthographic',
-    perspective: 'Perspective',
-    alpha: 'Alpha',
-    beta: 'Beta',
-    radius: 'Radius',
-    orthoSize: 'Ortho Size',
-    fov: 'FOV',
-    nearClip: 'Near Clip',
-    farClip: 'Far Clip',
-    minBeta: 'Min Beta',
-    maxBeta: 'Max Beta',
-    betaRange: 'Pitch Range',
-    minRadius: 'Min Radius',
-    maxRadius: 'Max Radius',
-    radiusRange: 'Follow Distance Range',
-    inertia: 'Inertia',
-    screenOffsetX: 'Screen Offset X',
-    screenOffsetY: 'Screen Offset Y',
-    panHint: 'W/S Forward / Back · A/D Left / Right · crosshair = preview target',
-    reset: 'Reset',
-    save: 'Save Rig',
-    worldPosition: 'World',
-    resetStatus: 'Reset to initial runtime camera.',
-    savingStatus: 'Saving rig...',
-    savedStatus: 'Saved rig. Reloading...',
-    saveFailed: 'Save failed',
-  },
-};
+type CameraNumberFieldConfig = EditorSceneCameraDebugPanelNumberFieldConfig;
 
-const CAMERA_DEBUG_TOOLTIPS: Record<CameraDebugLanguage, CameraDebugTooltipText> = {
-  zh: {
-    languageButton: '切换摄像机调试面板的显示语言。',
-    toggleTitle: '打开或关闭运行时摄像机调试面板。',
-    projection: '切换主摄像机的正交或透视投影模式。',
-    alpha: 'ArcRotate 水平环绕角，单位为弧度。',
-    beta: 'ArcRotate 垂直俯仰角，单位为弧度。',
-    radius: '摄像机到观察目标的距离。',
-    orthoSize: '正交模式下的视野高度，数值越大看到的范围越大。',
-    fov: '透视模式下的垂直视野角；界面用角度显示，保存为弧度。',
-    nearClip: '小于该距离的内容不会被摄像机渲染。',
-    farClip: '大于该距离的内容不会被摄像机渲染。',
-    minBeta: '限制运行时可用的最小俯仰角。',
-    maxBeta: '限制运行时可用的最大俯仰角。',
-    betaRange: '运行时允许的俯仰角范围，左侧为最小值，右侧为最大值。',
-    minRadius: '限制摄像机可接近目标的最小距离。',
-    maxRadius: '限制摄像机可远离目标的最大距离。',
-    radiusRange: '运行时允许的跟随距离范围，左侧为最小值，右侧为最大值。',
-    inertia: '摄像机输入或跟随的平滑惯性，0 最灵敏，1 最平滑。',
-    screenOffsetX: '将观察目标在画面中水平偏移。',
-    screenOffsetY: '将观察目标在画面中垂直偏移。',
-    panHint: '面板打开时可用 W/A/S/D 移动预览目标；关闭面板会恢复目标位置。',
-    reset: '恢复为打开运行时时读取到的初始摄像机参数。',
-    save: '通过编辑器保存链路写回 Main Camera，并在保存成功后重新加载运行时。',
-  },
-  en: {
-    languageButton: 'Switch the camera debug panel language.',
-    toggleTitle: 'Open or close the runtime camera debug panel.',
-    projection: 'Switch the Main Camera between orthographic and perspective projection.',
-    alpha: 'ArcRotate horizontal orbit angle, in radians.',
-    beta: 'ArcRotate vertical pitch angle, in radians.',
-    radius: 'Distance from the camera to the look target.',
-    orthoSize: 'Orthographic view height. Larger values show a wider area.',
-    fov: 'Perspective vertical field of view. The UI uses degrees; saved data uses radians.',
-    nearClip: 'Content closer than this distance is not rendered.',
-    farClip: 'Content farther than this distance is not rendered.',
-    minBeta: 'Minimum allowed runtime pitch angle.',
-    maxBeta: 'Maximum allowed runtime pitch angle.',
-    betaRange: 'Allowed runtime pitch range. Left is minimum; right is maximum.',
-    minRadius: 'Minimum allowed camera distance from the target.',
-    maxRadius: 'Maximum allowed camera distance from the target.',
-    radiusRange: 'Allowed runtime follow distance range. Left is minimum; right is maximum.',
-    inertia: 'Camera input/follow smoothing. 0 is most responsive; 1 is smoothest.',
-    screenOffsetX: 'Moves the look target horizontally in screen space.',
-    screenOffsetY: 'Moves the look target vertically in screen space.',
-    panHint: 'When the panel is open, use W/A/S/D to move the preview target; closing the panel restores it.',
-    reset: 'Restore the camera parameters captured when runtime opened.',
-    save: 'Save back to the Main Camera through the editor authoring pipeline, then reload runtime.',
-  },
-};
-
-type CameraNumberFieldConfig = {
-  field: CameraNumberField;
-  textKey: keyof CameraDebugText;
-  step: number;
-  min?: number;
-  max?: number;
-  projection?: SceneCameraProjection;
-};
-
-const CAMERA_NUMBER_FIELDS: ReadonlyArray<CameraNumberFieldConfig> = [
-  { field: 'alpha', textKey: 'alpha', step: 0.01 },
-  { field: 'beta', textKey: 'beta', step: 0.01 },
-  { field: 'radius', textKey: 'radius', step: 0.1, min: 0.001 },
-  { field: 'orthoSize', textKey: 'orthoSize', step: 0.1, min: 0.001, projection: 'orthographic' },
-  { field: 'fovDeg', textKey: 'fov', step: 1, min: 1, max: 179, projection: 'perspective' },
-  { field: 'minZ', textKey: 'nearClip', step: 0.1, min: 0.001 },
-  { field: 'maxZ', textKey: 'farClip', step: 1, min: 0.001 },
-  { field: 'lowerBetaLimit', textKey: 'minBeta', step: 0.01 },
-  { field: 'upperBetaLimit', textKey: 'maxBeta', step: 0.01 },
-  { field: 'lowerRadiusLimit', textKey: 'minRadius', step: 0.1, min: 0.001 },
-  { field: 'upperRadiusLimit', textKey: 'maxRadius', step: 0.1, min: 0.001 },
-  { field: 'inertia', textKey: 'inertia', step: 0.05, min: 0, max: 1 },
-  { field: 'targetScreenOffsetX', textKey: 'screenOffsetX', step: 0.01 },
-  { field: 'targetScreenOffsetY', textKey: 'screenOffsetY', step: 0.01 },
-];
-const CAMERA_DEBUG_RANGE_FIELD_PAIRS: ReadonlyArray<{
-  labelKey: keyof CameraDebugText;
-  tooltipKey: keyof CameraDebugTooltipText;
-  lower: CameraNumberField;
-  upper: CameraNumberField;
-}> = [
-  { labelKey: 'betaRange', tooltipKey: 'betaRange', lower: 'lowerBetaLimit', upper: 'upperBetaLimit' },
-  { labelKey: 'radiusRange', tooltipKey: 'radiusRange', lower: 'lowerRadiusLimit', upper: 'upperRadiusLimit' },
-];
-const CAMERA_DEBUG_RANGE_FIELD_ENDS = new Set(CAMERA_DEBUG_RANGE_FIELD_PAIRS.map(pair => pair.upper));
+const CAMERA_NUMBER_FIELDS = createEditorSceneCameraDebugPanelNumberFields();
+const CAMERA_DEBUG_RANGE_FIELD_PAIRS = createEditorSceneCameraDebugPanelRangeFieldPairs();
+const CAMERA_DEBUG_RANGE_FIELD_ENDS = createEditorSceneCameraDebugPanelRangeFieldEnds();
 const CAMERA_DEBUG_TOOLTIP_DELAY_MS = 140;
 const CAMERA_DEBUG_TARGET_MARKER_Y_OFFSET = 0.32;
 const CAMERA_DEBUG_TARGET_MARKER_ARM_LENGTH = 0.16;
@@ -275,8 +81,8 @@ const CAMERA_DEBUG_TARGET_LABEL_MAX_GAP_PX = 20;
 export function mountCameraDebugPanel(options: CameraDebugPanelOptions): CameraDebugPanel {
   const root = options.root ?? document.body;
   const ownerDocument = root.ownerDocument;
-  let open = readStoredOpen(ownerDocument.defaultView);
-  let language = readStoredLanguage(ownerDocument.defaultView);
+  let open = readEditorSceneCameraDebugStoredOpen(ownerDocument.defaultView, CAMERA_DEBUG_STORAGE_KEY);
+  let language = readEditorSceneCameraDebugStoredLanguage(ownerDocument.defaultView, CAMERA_DEBUG_LANGUAGE_STORAGE_KEY);
   let disposed = false;
   let saving = false;
   let initialSnapshot: CameraDebugSnapshot | null = null;
@@ -480,7 +286,7 @@ export function mountCameraDebugPanel(options: CameraDebugPanelOptions): CameraD
 
   toggleButton.addEventListener('click', () => {
     open = !open;
-    writeStoredOpen(ownerDocument.defaultView, open);
+    writeEditorSceneCameraDebugStoredOpen(ownerDocument.defaultView, CAMERA_DEBUG_STORAGE_KEY, open);
     renderOpenState();
   });
   container.addEventListener('pointerover', handleDebugTooltipPointerOver);
@@ -490,7 +296,7 @@ export function mountCameraDebugPanel(options: CameraDebugPanelOptions): CameraD
   container.addEventListener('click', hideDebugTooltip);
   languageButton.addEventListener('click', () => {
     language = language === 'zh' ? 'en' : 'zh';
-    writeStoredLanguage(ownerDocument.defaultView, language);
+    writeEditorSceneCameraDebugStoredLanguage(ownerDocument.defaultView, CAMERA_DEBUG_LANGUAGE_STORAGE_KEY, language);
     renderLanguage();
     syncVisibleFields(latestSnapshot?.projection ?? readProjectionSelectValue());
   });
@@ -498,7 +304,7 @@ export function mountCameraDebugPanel(options: CameraDebugPanelOptions): CameraD
     if (!initialSnapshot || saving) return;
     setInputs(initialSnapshot);
     applySnapshot(initialSnapshot, { restoreTarget: true });
-    cameraPanRestoreTarget = cloneTarget(initialSnapshot.target);
+    cameraPanRestoreTarget = cloneEditorSceneCameraDebugTarget(initialSnapshot.target);
     updateTargetMarker(initialSnapshot.target);
     showStatus(text().resetStatus);
   });
@@ -516,7 +322,7 @@ export function mountCameraDebugPanel(options: CameraDebugPanelOptions): CameraD
       .catch((error) => {
         console.error('[CameraDebugPanel] Save rig failed', error);
         saving = false;
-        showStatus(formatErrorMessage(error, text().saveFailed), { sticky: true, tone: 'error' });
+        showStatus(formatEditorSceneCameraDebugErrorMessage(error, text().saveFailed), { sticky: true, tone: 'error' });
         syncPanel(latestSnapshot);
       });
   });
@@ -535,8 +341,8 @@ export function mountCameraDebugPanel(options: CameraDebugPanelOptions): CameraD
       initialSnapshot = null;
       latestSnapshot = null;
     } else {
-      if (!initialSnapshot) initialSnapshot = cloneSnapshot(snapshot);
-      latestSnapshot = cloneSnapshot(snapshot);
+      if (!initialSnapshot) initialSnapshot = cloneEditorSceneCameraDebugSnapshot(snapshot) as CameraDebugSnapshot;
+      latestSnapshot = cloneEditorSceneCameraDebugSnapshot(snapshot) as CameraDebugSnapshot;
     }
     syncPanel(snapshot);
     applyCameraPan(deltaSeconds);
@@ -582,21 +388,21 @@ export function mountCameraDebugPanel(options: CameraDebugPanelOptions): CameraD
       toCameraRig(snapshot),
       applyOptions.restoreTarget ? new Vector3(snapshot.target.x, snapshot.target.y, snapshot.target.z) : undefined,
     );
-    latestSnapshot = cloneSnapshot(snapshot);
+    latestSnapshot = cloneEditorSceneCameraDebugSnapshot(snapshot) as CameraDebugSnapshot;
     if (applyOptions.restoreTarget) updateTargetMarker(snapshot.target);
   }
 
   function setInputs(snapshot: CameraDebugSnapshot): void {
     projectionSelect.value = snapshot.projection;
     for (const config of CAMERA_NUMBER_FIELDS) {
-      setInputValue(config.field, readSnapshotField(snapshot, config.field));
+      setInputValue(config.field, readEditorSceneCameraDebugSnapshotField(snapshot, config.field));
     }
   }
 
   function setInputValue(field: CameraNumberField, value: number | undefined): void {
     const input = fields.get(field);
     if (!input) return;
-    input.value = value == null ? '' : String(roundNumber(value));
+    input.value = value == null ? '' : String(roundEditorSceneCameraDebugNumber(value));
   }
 
   function syncInputsExceptActive(snapshot: CameraDebugSnapshot): void {
@@ -605,36 +411,20 @@ export function mountCameraDebugPanel(options: CameraDebugPanelOptions): CameraD
     for (const config of CAMERA_NUMBER_FIELDS) {
       const input = fields.get(config.field);
       if (!input || active === input) continue;
-      setInputValue(config.field, readSnapshotField(snapshot, config.field));
+      setInputValue(config.field, readEditorSceneCameraDebugSnapshotField(snapshot, config.field));
     }
   }
 
   function readInputs(fallback: CameraDebugSnapshot): CameraDebugSnapshot {
-    const projection = readProjectionSelectValue();
-    const next: CameraDebugSnapshot = {
-      ...fallback,
-      projection,
-      alpha: readInputNumber('alpha', fallback.alpha),
-      beta: readInputNumber('beta', fallback.beta),
-      radius: Math.max(0.001, readInputNumber('radius', fallback.radius)),
-      orthoSize: Math.max(0.001, readInputNumber('orthoSize', fallback.orthoSize)),
-      fov: degreesToRadians(clamp(readInputNumber('fovDeg', radiansToDegrees(fallback.fov)), 1, 179)),
-      minZ: Math.max(0.001, readInputNumber('minZ', fallback.minZ ?? 1)),
-      maxZ: Math.max(0.001, readInputNumber('maxZ', fallback.maxZ ?? 10000)),
-      lowerBetaLimit: readInputNumber('lowerBetaLimit', fallback.lowerBetaLimit ?? fallback.beta),
-      upperBetaLimit: readInputNumber('upperBetaLimit', fallback.upperBetaLimit ?? fallback.beta),
-      lowerRadiusLimit: Math.max(0.001, readInputNumber('lowerRadiusLimit', fallback.lowerRadiusLimit ?? fallback.radius)),
-      upperRadiusLimit: Math.max(0.001, readInputNumber('upperRadiusLimit', fallback.upperRadiusLimit ?? fallback.radius)),
-      inertia: clamp(readInputNumber('inertia', fallback.inertia ?? 0.9), 0, 1),
-      targetScreenOffset: {
-        x: readInputNumber('targetScreenOffsetX', fallback.targetScreenOffset?.x ?? 0),
-        y: readInputNumber('targetScreenOffsetY', fallback.targetScreenOffset?.y ?? 0),
-      },
+    const values: Record<string, string> = {
+      projection: projectionSelect.value,
     };
-    const minZ = next.minZ ?? 0.001;
-    if ((next.maxZ ?? minZ + 0.001) <= minZ) next.maxZ = minZ + 0.001;
-    normalizeInteractiveCameraRanges(next, readActiveNumberField());
-    return next;
+    for (const [field, input] of fields) {
+      values[field] = input.value;
+    }
+    return readEditorSceneCameraDebugPanelInputSnapshot(fallback, values, {
+      activeField: readActiveNumberField(),
+    }) as CameraDebugSnapshot;
   }
 
   function readActiveNumberField(): CameraNumberField | null {
@@ -645,61 +435,8 @@ export function mountCameraDebugPanel(options: CameraDebugPanelOptions): CameraD
     return null;
   }
 
-  function normalizeInteractiveCameraRanges(snapshot: CameraDebugSnapshot, activeField: CameraNumberField | null): void {
-    normalizeInteractiveNumberRange(snapshot, {
-      valueField: 'beta',
-      lowerField: 'lowerBetaLimit',
-      upperField: 'upperBetaLimit',
-      activeField,
-      minValue: Number.NEGATIVE_INFINITY,
-    });
-    normalizeInteractiveNumberRange(snapshot, {
-      valueField: 'radius',
-      lowerField: 'lowerRadiusLimit',
-      upperField: 'upperRadiusLimit',
-      activeField,
-      minValue: 0.001,
-    });
-  }
-
-  function normalizeInteractiveNumberRange(
-    snapshot: CameraDebugSnapshot,
-    options: {
-      valueField: 'beta' | 'radius';
-      lowerField: 'lowerBetaLimit' | 'lowerRadiusLimit';
-      upperField: 'upperBetaLimit' | 'upperRadiusLimit';
-      activeField: CameraNumberField | null;
-      minValue: number;
-    },
-  ): void {
-    let value = snapshot[options.valueField];
-    let lower = snapshot[options.lowerField] ?? value;
-    let upper = snapshot[options.upperField] ?? value;
-    if (upper < lower) {
-      if (options.activeField === options.upperField) lower = upper;
-      else upper = lower;
-    }
-    if (options.activeField === options.lowerField || options.activeField === options.upperField) {
-      value = clamp(value, lower, upper);
-      if (Number.isFinite(options.minValue)) value = Math.max(options.minValue, value);
-    } else {
-      if (value < lower) lower = value;
-      if (value > upper) upper = value;
-    }
-    snapshot[options.valueField] = value;
-    snapshot[options.lowerField] = Number.isFinite(options.minValue) ? Math.max(options.minValue, lower) : lower;
-    snapshot[options.upperField] = Number.isFinite(options.minValue) ? Math.max(options.minValue, upper) : upper;
-  }
-
-  function readInputNumber(field: CameraNumberField, fallback: number): number {
-    const input = fields.get(field);
-    if (!input) return fallback;
-    const value = Number(input.value);
-    return Number.isFinite(value) ? value : fallback;
-  }
-
-  function readProjectionSelectValue(): SceneCameraProjection {
-    return projectionSelect.value === 'perspective' ? 'perspective' : 'orthographic';
+  function readProjectionSelectValue(): CameraDebugSnapshot['projection'] {
+    return readEditorSceneCameraDebugProjectionSelectValue(projectionSelect.value);
   }
 
   function createCameraNumberInput(
@@ -728,14 +465,14 @@ export function mountCameraDebugPanel(options: CameraDebugPanelOptions): CameraD
     return input;
   }
 
-  function syncVisibleFields(projection: SceneCameraProjection): void {
+  function syncVisibleFields(projection: CameraDebugSnapshot['projection']): void {
     for (const { label, input, config } of fieldRows.values()) {
-      const visible = !config.projection || config.projection === projection;
+      const visible = isEditorSceneCameraDebugPanelFieldVisible(config, projection);
       label.style.display = visible ? '' : 'none';
       input.style.display = visible ? '' : 'none';
     }
     for (const { label, wrapper, lowerConfig, upperConfig } of rangeRows) {
-      const visible = [lowerConfig, upperConfig].every(config => !config.projection || config.projection === projection);
+      const visible = [lowerConfig, upperConfig].every(config => isEditorSceneCameraDebugPanelFieldVisible(config, projection));
       label.style.display = visible ? '' : 'none';
       wrapper.style.display = visible ? 'grid' : 'none';
     }
@@ -804,7 +541,7 @@ export function mountCameraDebugPanel(options: CameraDebugPanelOptions): CameraD
   }
 
   function startCameraPanMode(snapshot: CameraDebugSnapshot): void {
-    if (!cameraPanRestoreTarget) cameraPanRestoreTarget = cloneTarget(snapshot.target);
+    if (!cameraPanRestoreTarget) cameraPanRestoreTarget = cloneEditorSceneCameraDebugTarget(snapshot.target);
     updateTargetMarker(snapshot.target);
   }
 
@@ -824,7 +561,7 @@ export function mountCameraDebugPanel(options: CameraDebugPanelOptions): CameraD
       new Vector3(restoreTarget.x, restoreTarget.y, restoreTarget.z),
     );
     const snapshot = readSnapshot(game);
-    latestSnapshot = snapshot ? cloneSnapshot(snapshot) : null;
+    latestSnapshot = snapshot ? cloneEditorSceneCameraDebugSnapshot(snapshot) as CameraDebugSnapshot : null;
   }
 
   function handlePanKeyDown(event: KeyboardEvent): void {
@@ -837,7 +574,7 @@ export function mountCameraDebugPanel(options: CameraDebugPanelOptions): CameraD
 
   function handlePanKeyUp(event: KeyboardEvent): void {
     const key = event.key.toLowerCase();
-    if (!CAMERA_DEBUG_PAN_KEYS.has(key)) return;
+    if (!isEditorSceneCameraDebugPanKey(key)) return;
     pressedPanKeys.delete(key);
     if (!isCameraPanModeActive() || isEditableElement(event.target)) return;
     event.preventDefault();
@@ -845,12 +582,15 @@ export function mountCameraDebugPanel(options: CameraDebugPanelOptions): CameraD
   }
 
   function canHandlePanKey(event: KeyboardEvent, key: string): boolean {
-    return isCameraPanModeActive()
-      && CAMERA_DEBUG_PAN_KEYS.has(key)
-      && !event.metaKey
-      && !event.ctrlKey
-      && !event.altKey
-      && !isEditableElement(event.target);
+    return canHandleEditorSceneCameraDebugPanKey({
+      key,
+      active: isCameraPanModeActive(),
+      saving,
+      editable: isEditableElement(event.target),
+      metaKey: event.metaKey,
+      ctrlKey: event.ctrlKey,
+      altKey: event.altKey,
+    });
   }
 
   function isCameraPanModeActive(): boolean {
@@ -868,29 +608,23 @@ export function mountCameraDebugPanel(options: CameraDebugPanelOptions): CameraD
     const sceneBuilder = game?.getSceneBuilder();
     if (!camera || !sceneBuilder) return;
 
-    const direction = new Vector3(0, 0, 0);
-    if (pressedPanKeys.has('w')) direction.z += 1;
-    if (pressedPanKeys.has('s')) direction.z -= 1;
-    if (pressedPanKeys.has('d')) direction.x += 1;
-    if (pressedPanKeys.has('a')) direction.x -= 1;
-    if (direction.lengthSquared() === 0) return;
-
-    const forward = camera.target.subtract(camera.position);
-    forward.y = 0;
-    if (forward.lengthSquared() <= 0.000001) forward.copyFromFloats(0, 0, 1);
-    else forward.normalize();
-    const right = new Vector3(-forward.z, 0, forward.x).normalize();
     const cameraRig = sceneBuilder.getSelectedCameraRig();
-    const speed = Math.max(0.75, (cameraRig.projection === 'perspective' ? cameraRig.radius * 0.12 : cameraRig.orthoSize * 1.6));
-    const movement = forward.scale(direction.z).addInPlace(right.scale(direction.x));
-    if (movement.lengthSquared() === 0) return;
-    movement.normalize().scaleInPlace(speed * deltaSeconds);
-    const nextTarget = camera.target.add(movement);
+    const movement = createEditorSceneCameraPanMovement({
+      pressedKeys: pressedPanKeys,
+      cameraPosition: { x: camera.position.x, y: camera.position.y, z: camera.position.z },
+      cameraTarget: { x: camera.target.x, y: camera.target.y, z: camera.target.z },
+      projection: cameraRig.projection === 'perspective' ? 'perspective' : 'orthographic',
+      radius: cameraRig.radius ?? 1,
+      orthoSize: cameraRig.orthoSize ?? 10,
+      deltaSeconds,
+    });
+    if (!movement) return;
+    const nextTarget = camera.target.add(new Vector3(movement.x, movement.y, movement.z));
     sceneBuilder.applyCameraRig(camera, cameraRig, nextTarget);
     updateTargetMarker({ x: nextTarget.x, y: nextTarget.y, z: nextTarget.z });
 
     const snapshot = readSnapshot(game);
-    latestSnapshot = snapshot ? cloneSnapshot(snapshot) : null;
+    latestSnapshot = snapshot ? cloneEditorSceneCameraDebugSnapshot(snapshot) as CameraDebugSnapshot : null;
   }
 
   function updateTargetMarker(target: CameraDebugSnapshot['target']): void {
@@ -899,7 +633,7 @@ export function mountCameraDebugPanel(options: CameraDebugPanelOptions): CameraD
     if (!scene || !open) return;
     if (!targetMarker) targetMarker = createTargetMarker();
     targetMarker.position.set(target.x, target.y, target.z);
-    targetCoordinate = cloneTarget(target);
+    targetCoordinate = cloneEditorSceneCameraDebugTarget(target);
     updateTargetCoordinateLabel(target);
   }
 
@@ -1052,7 +786,7 @@ export function mountCameraDebugPanel(options: CameraDebugPanelOptions): CameraD
     const minY = Math.min(...markerScreens.map(point => point.y));
     const maxY = Math.max(...markerScreens.map(point => point.y));
     const markerHeight = Math.max(0, maxY - minY);
-    const gap = clamp(markerHeight * 0.25, CAMERA_DEBUG_TARGET_LABEL_MIN_GAP_PX, CAMERA_DEBUG_TARGET_LABEL_MAX_GAP_PX);
+    const gap = clampEditorSceneCameraDebugNumber(markerHeight * 0.25, CAMERA_DEBUG_TARGET_LABEL_MIN_GAP_PX, CAMERA_DEBUG_TARGET_LABEL_MAX_GAP_PX);
     return {
       x: (minX + maxX) / 2,
       y: minY - gap,
@@ -1075,7 +809,8 @@ export function mountCameraDebugPanel(options: CameraDebugPanelOptions): CameraD
   }
 
   function formatTargetCoordinateLabel(target: CameraDebugSnapshot['target']): string {
-    return `position: (${formatCoordinate(target.x)}, ${formatCoordinate(target.y)}, ${formatCoordinate(target.z)})`;
+    const copy = text();
+    return `${copy.worldPosition}  X ${formatEditorSceneCameraDebugCoordinate(target.x)}  Y ${formatEditorSceneCameraDebugCoordinate(target.y)}  Z ${formatEditorSceneCameraDebugCoordinate(target.z)}`;
   }
 
   function setDebugTooltip(element: HTMLElement, message: string): void {
@@ -1181,11 +916,11 @@ export function mountCameraDebugPanel(options: CameraDebugPanelOptions): CameraD
   }
 
   function text(): CameraDebugText {
-    return CAMERA_DEBUG_TEXT[language] ?? CAMERA_DEBUG_TEXT.zh;
+    return getEditorSceneCameraDebugText(language);
   }
 
   function tooltips(): CameraDebugTooltipText {
-    return CAMERA_DEBUG_TOOLTIPS[language] ?? CAMERA_DEBUG_TOOLTIPS.zh;
+    return getEditorSceneCameraDebugTooltips(language);
   }
 
   renderLanguage();
@@ -1226,122 +961,25 @@ function createPanelButton(ownerDocument: Document): HTMLButtonElement {
 function readSnapshot(game: Game | null): CameraDebugSnapshot | null {
   const camera = game?.getCamera();
   if (!camera) return null;
-  const binding = readCameraEditorBinding(camera.metadata);
-  if (!binding) return null;
   const sceneBuilder = game?.getSceneBuilder();
-  const cameraRig = sceneBuilder?.getSelectedCameraRig() ?? {
-    projection: readCameraProjectionFromRuntime(camera.mode),
-    alpha: camera.alpha,
-    beta: camera.beta,
-    radius: camera.radius,
-    orthoSize: readCameraOrthoSize(camera),
-    fov: readPositiveNumber(camera.fov, 0.85),
-  };
+  const snapshot = createEditorSceneCameraDebugSnapshot({
+    camera,
+    selectedRig: (sceneBuilder?.getSelectedCameraRig() ?? null) as EditorSceneCameraRig | null,
+    perspectiveMode: Camera.PERSPECTIVE_CAMERA,
+  });
+  if (!snapshot) return null;
   return {
-    projection: readCameraProjectionFromRuntime(camera.mode),
-    alpha: roundNumber(camera.alpha),
-    beta: roundNumber(camera.beta),
-    radius: roundNumber(camera.radius),
-    orthoSize: roundNumber(cameraRig.orthoSize ?? readCameraOrthoSize(camera)),
-    fov: readPositiveNumber(camera.fov, cameraRig.fov ?? 0.85),
-    ...(cameraRig.targetOffset ? { targetOffset: { ...cameraRig.targetOffset } } : {}),
-    minZ: readPositiveNumber(camera.minZ, cameraRig.minZ ?? 1),
-    maxZ: readPositiveNumber(camera.maxZ, cameraRig.maxZ ?? 10000),
-    lowerBetaLimit: readFiniteNumber(camera.lowerBetaLimit, cameraRig.lowerBetaLimit ?? camera.beta),
-    upperBetaLimit: readFiniteNumber(camera.upperBetaLimit, cameraRig.upperBetaLimit ?? camera.beta),
-    lowerRadiusLimit: readPositiveNumber(camera.lowerRadiusLimit, cameraRig.lowerRadiusLimit ?? camera.radius),
-    upperRadiusLimit: readPositiveNumber(camera.upperRadiusLimit, cameraRig.upperRadiusLimit ?? camera.radius),
-    inertia: clamp(readFiniteNumber(camera.inertia, cameraRig.inertia ?? 0.9), 0, 1),
-    targetScreenOffset: {
-      x: readFiniteNumber(camera.targetScreenOffset?.x, cameraRig.targetScreenOffset?.x ?? 0),
-      y: readFiniteNumber(camera.targetScreenOffset?.y, cameraRig.targetScreenOffset?.y ?? 0),
-    },
+    ...snapshot,
     target: {
-      x: roundNumber(camera.target.x),
-      y: roundNumber(camera.target.y),
-      z: roundNumber(camera.target.z),
+      x: roundEditorSceneCameraDebugNumber(snapshot.target.x),
+      y: roundEditorSceneCameraDebugNumber(snapshot.target.y),
+      z: roundEditorSceneCameraDebugNumber(snapshot.target.z),
     },
-    binding,
-  };
-}
-
-function readCameraEditorBinding(metadata: unknown): RuntimeCameraEditorBinding | null {
-  const fpsEditor = readRecord(readRecord(metadata)?.__fpsEditor);
-  const sourceId = readNonEmptyString(fpsEditor?.sourceId);
-  const objectGuid = readNonEmptyString(fpsEditor?.objectGuid);
-  const objectId = readNonEmptyString(fpsEditor?.objectId);
-  const propertyPath = readNonEmptyString(fpsEditor?.propertyPath);
-  if (!sourceId || propertyPath !== 'camera' || (!objectGuid && !objectId)) return null;
-  return {
-    sourceId,
-    propertyPath: 'camera',
-    ...(objectGuid ? { objectGuid } : {}),
-    ...(objectId ? { objectId } : {}),
-  };
+  } as CameraDebugSnapshot;
 }
 
 function toCameraRig(snapshot: CameraDebugSnapshot): SceneCameraRigConfig {
-  return {
-    projection: snapshot.projection,
-    alpha: snapshot.alpha,
-    beta: snapshot.beta,
-    radius: snapshot.radius,
-    orthoSize: snapshot.orthoSize,
-    fov: snapshot.fov,
-    ...(snapshot.targetOffset ? { targetOffset: { ...snapshot.targetOffset } } : {}),
-    minZ: snapshot.minZ,
-    maxZ: snapshot.maxZ,
-    lowerBetaLimit: snapshot.lowerBetaLimit,
-    upperBetaLimit: snapshot.upperBetaLimit,
-    lowerRadiusLimit: snapshot.lowerRadiusLimit,
-    upperRadiusLimit: snapshot.upperRadiusLimit,
-    inertia: snapshot.inertia,
-    ...(snapshot.targetScreenOffset ? { targetScreenOffset: { ...snapshot.targetScreenOffset } } : {}),
-  };
-}
-
-function readSnapshotField(snapshot: CameraDebugSnapshot, field: CameraNumberField): number | undefined {
-  switch (field) {
-    case 'alpha': return snapshot.alpha;
-    case 'beta': return snapshot.beta;
-    case 'radius': return snapshot.radius;
-    case 'orthoSize': return snapshot.orthoSize;
-    case 'fovDeg': return radiansToDegrees(snapshot.fov);
-    case 'minZ': return snapshot.minZ;
-    case 'maxZ': return snapshot.maxZ;
-    case 'lowerBetaLimit': return snapshot.lowerBetaLimit;
-    case 'upperBetaLimit': return snapshot.upperBetaLimit;
-    case 'lowerRadiusLimit': return snapshot.lowerRadiusLimit;
-    case 'upperRadiusLimit': return snapshot.upperRadiusLimit;
-    case 'inertia': return snapshot.inertia;
-    case 'targetScreenOffsetX': return snapshot.targetScreenOffset?.x;
-    case 'targetScreenOffsetY': return snapshot.targetScreenOffset?.y;
-  }
-}
-
-function readCameraProjectionFromRuntime(mode: number): SceneCameraProjection {
-  return mode === Camera.PERSPECTIVE_CAMERA ? 'perspective' : 'orthographic';
-}
-
-function readCameraOrthoSize(camera: { orthoTop?: number | null; orthoBottom?: number | null }): number {
-  const top = typeof camera.orthoTop === 'number' ? camera.orthoTop : null;
-  const bottom = typeof camera.orthoBottom === 'number' ? camera.orthoBottom : null;
-  if (top == null || bottom == null) return 10;
-  return Math.max(0.001, Math.abs(top - bottom) / 2);
-}
-
-function cloneSnapshot(snapshot: CameraDebugSnapshot): CameraDebugSnapshot {
-  return {
-    ...snapshot,
-    ...(snapshot.targetOffset ? { targetOffset: { ...snapshot.targetOffset } } : {}),
-    ...(snapshot.targetScreenOffset ? { targetScreenOffset: { ...snapshot.targetScreenOffset } } : {}),
-    target: { ...snapshot.target },
-    binding: { ...snapshot.binding },
-  };
-}
-
-function cloneTarget(target: CameraDebugSnapshot['target']): CameraDebugSnapshot['target'] {
-  return { x: target.x, y: target.y, z: target.z };
+  return toEditorSceneCameraRig(snapshot) as unknown as SceneCameraRigConfig;
 }
 
 function isEditableElement(target: EventTarget | null): boolean {
@@ -1350,79 +988,4 @@ function isEditableElement(target: EventTarget | null): boolean {
     || target instanceof HTMLTextAreaElement
     || target instanceof HTMLSelectElement
     || target.isContentEditable;
-}
-
-function readRecord(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === 'object' && !Array.isArray(value)
-    ? value as Record<string, unknown>
-    : null;
-}
-
-function readNonEmptyString(value: unknown): string | null {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
-
-function formatErrorMessage(error: unknown, prefix: string): string {
-  const message = error instanceof Error ? error.message : String(error);
-  return message ? `${prefix}: ${message}` : `${prefix}.`;
-}
-
-function roundNumber(value: number): number {
-  return Number.isFinite(value) ? Number(value.toFixed(4)) : 0;
-}
-
-function formatCoordinate(value: number): string {
-  return roundNumber(value).toFixed(1);
-}
-
-function readFiniteNumber(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
-function readPositiveNumber(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : fallback;
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
-}
-
-function radiansToDegrees(value: number): number {
-  return (value * 180) / Math.PI;
-}
-
-function degreesToRadians(value: number): number {
-  return (value * Math.PI) / 180;
-}
-
-function readStoredOpen(win: Window | null): boolean {
-  try {
-    return win?.localStorage.getItem(CAMERA_DEBUG_STORAGE_KEY) === 'true';
-  } catch {
-    return false;
-  }
-}
-
-function writeStoredOpen(win: Window | null, value: boolean): void {
-  try {
-    win?.localStorage.setItem(CAMERA_DEBUG_STORAGE_KEY, String(value));
-  } catch {
-    // localStorage can be unavailable in embedded previews.
-  }
-}
-
-function readStoredLanguage(win: Window | null): CameraDebugLanguage {
-  try {
-    return win?.localStorage.getItem(CAMERA_DEBUG_LANGUAGE_STORAGE_KEY) === 'en' ? 'en' : 'zh';
-  } catch {
-    return 'zh';
-  }
-}
-
-function writeStoredLanguage(win: Window | null, value: CameraDebugLanguage): void {
-  try {
-    win?.localStorage.setItem(CAMERA_DEBUG_LANGUAGE_STORAGE_KEY, value);
-  } catch {
-    // localStorage can be unavailable in embedded previews.
-  }
 }

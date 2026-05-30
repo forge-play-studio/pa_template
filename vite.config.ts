@@ -6,6 +6,10 @@ import path from 'path';
 import { viteSingleFile } from 'vite-plugin-singlefile';
 import { visualizer } from 'rollup-plugin-visualizer';
 import {
+  handlePlayableAuthoringServerRequest,
+  type PlayableAuthoringServerResponse,
+} from '@fps-games/editor/playable-sdk';
+import {
   bridgePlugin,
   glbGzipPlugin,
   inspectorPlugin,
@@ -43,6 +47,7 @@ const allowedThirdPartyPackages = [
   '@babylonjs/loaders',
   '@fps-games/editor',
   '@fps-games/babylon-renderer',
+  '@fps-games/editor-playable-sdk',
   '@fps-games/editor-babylon',
   '@fps-games/editor-browser',
   '@fps-games/editor-core',
@@ -54,6 +59,8 @@ const allowedThirdPartyPackages = [
 const editorPackageIds = [
   '@fps-games/editor',
   '@fps-games/babylon-renderer',
+  '@fps-games/editor/playable-sdk',
+  '@fps-games/editor-playable-sdk',
   '@fps-games/editor-babylon',
   '@fps-games/editor-browser',
   '@fps-games/editor-core',
@@ -94,7 +101,8 @@ function assertAliasFilesExist(aliasFiles: ReadonlyArray<readonly [string, strin
 
 function createLocalEditorSourceAliases(repoRoot: string): Array<{ find: string | RegExp; replacement: string }> {
   const aliasFiles = [
-    ['@fps-games/babylon-renderer', resolve(repoRoot, 'packages/babylon-renderer/src/index.ts')],
+    ['@fps-games/editor/playable-sdk', resolve(repoRoot, 'packages/editor/src/playable-sdk.ts')],
+    ['@fps-games/editor-playable-sdk', resolve(repoRoot, 'packages/editor-playable-sdk/src/index.ts')],
     ['@fps-games/editor-babylon/legacy-runtime', resolve(repoRoot, 'packages/editor-babylon/src/legacy-runtime.ts')],
     ['@fps-games/babylon-renderer', resolve(repoRoot, 'packages/babylon-renderer/src/index.ts')],
     ['@fps-games/editor-babylon', resolve(repoRoot, 'packages/editor-babylon/src/index.ts')],
@@ -247,64 +255,63 @@ function projectAuthoringApiPlugin() {
         const pathname = requestUrl.pathname;
         const isProjectAuthoringRoute = pathname.startsWith('/__fps_editor_authoring');
         const isLegacyMockRoute = pathname.startsWith('/__mock_platform_assets');
-        if (!isProjectAuthoringRoute && !isLegacyMockRoute) {
-          next();
-          return;
-        }
-        const route = pathname
-          .replace(/^\/__fps_editor_authoring/, '')
-          .replace(/^\/__mock_platform_assets/, '') || '/';
-        if (
-          !route.startsWith('/manifest')
-          && !route.startsWith('/commit')
-          && !route.startsWith('/editor-scene')
-          && !route.startsWith('/editor-asset-library')
-          && !route.startsWith('/rendering-profile')
-          && !route.startsWith('/save-editor-scene')
-          && !route.startsWith('/file')
-          && !route.startsWith('/exec')
-        ) {
-          next();
+        const route = isProjectAuthoringRoute || isLegacyMockRoute
+          ? pathname
+              .replace(/^\/__fps_editor_authoring/, '')
+              .replace(/^\/__mock_platform_assets/, '') || '/'
+          : '/';
+
+        if ((isProjectAuthoringRoute || isLegacyMockRoute) && route.startsWith('/rendering-profile')) {
+          setProjectAuthoringCorsHeaders(res);
+          if (req.method === 'OPTIONS') {
+            res.statusCode = 204;
+            res.end();
+            return;
+          }
+
+          try {
+            const response = await handleRenderingProfileAuthoringRoute(server, req, route);
+            sendAuthoringServerResponse(res, response);
+          } catch (error) {
+            sendAuthoringServerResponse(res, {
+              statusCode: 500,
+              body: {
+                ok: false,
+                error: error instanceof Error ? error.message : String(error),
+                details: (error as any)?.details,
+              },
+            });
+          }
           return;
         }
 
-        setProjectAuthoringCorsHeaders(res);
-        if (req.method === 'OPTIONS') {
-          res.statusCode = 204;
-          res.end();
-          return;
-        }
-
-        try {
-          const { projectAssetRegistryConfig, projectTextureRegistryConfig } = await import('./scripts/asset-registry/project-asset-catalog-config.mjs');
-          const registryCore = await import('./scripts/asset-registry/core.mjs');
-          const rules = await projectAssetRegistryConfig.loadRules();
-          const errorCodes = rules.errorCodes ?? {};
-
-          if (req.method === 'GET' && route.startsWith('/manifest')) {
+        const response = await handlePlayableAuthoringServerRequest({
+          url: req.url ?? '',
+          method: req.method ?? 'GET',
+        }, {
+          readBody: () => readJsonBody(req),
+          normalizeTransportPath,
+          async loadManifest() {
+            const { projectAssetRegistryConfig, projectTextureRegistryConfig } = await import('./scripts/asset-registry/project-asset-catalog-config.mjs');
             const manifest = existsSync(projectAssetRegistryConfig.manifestPath)
               ? JSON.parse(readFileSync(projectAssetRegistryConfig.manifestPath, 'utf8'))
               : [];
             const textureManifest = existsSync(projectTextureRegistryConfig.manifestPath)
               ? JSON.parse(readFileSync(projectTextureRegistryConfig.manifestPath, 'utf8'))
               : [];
-            sendJson(res, 200, { ok: true, manifest, textureManifest });
-            return;
-          }
-
-          if (req.method === 'GET' && route.startsWith('/editor-asset-library')) {
+            return { ok: true, manifest, textureManifest };
+          },
+          async loadEditorAssetLibrary() {
             const assets = await listEditorAssetLibrary(server);
-            sendJson(res, 200, {
+            return {
               ok: true,
               assets,
               summary: {
                 assets: assets.length,
               },
-            });
-            return;
-          }
-
-          if (req.method === 'GET' && route.startsWith('/editor-scene')) {
+            };
+          },
+          async loadEditorScene() {
             const editorScenePath = resolve(__dirname, 'src/config/editor-scene.json');
             const scenePath = resolve(__dirname, 'src/config/scene.json');
             const editorScene = existsSync(editorScenePath)
@@ -315,101 +322,34 @@ function projectAuthoringApiPlugin() {
               : null;
             const { ensureEditorSceneAuthoringSource, detectEditorSceneRuntimeInputDrift } = await server.ssrLoadModule('/src/fps-game-editor-adapter/editor-authoring-source.ts');
             const normalizedEditorScene = editorScene ? ensureEditorSceneAuthoringSource(editorScene) : editorScene;
-            sendJson(res, 200, {
+            return {
               ok: true,
               editorScenePath,
               scenePath,
               editorScene: normalizedEditorScene,
               drift: normalizedEditorScene ? detectEditorSceneRuntimeInputDrift(normalizedEditorScene, runtimeScene) : null,
               summary: summarizeEditorScene(normalizedEditorScene),
-            });
-            return;
-          }
-
-          if (req.method === 'GET' && route.startsWith('/rendering-profile')) {
-            const renderingConfigPath = resolve(__dirname, 'src/config/rendering.json');
-            const renderingConfig = existsSync(renderingConfigPath)
-              ? JSON.parse(readFileSync(renderingConfigPath, 'utf8') || '{}')
-              : {};
-            const { normalizeRenderingProfile } = await server.ssrLoadModule('/src/rendering/rendering-profile.ts');
-            const normalized = normalizeRenderingProfile(renderingConfig);
-            sendJson(res, 200, {
-              ok: true,
-              renderingConfigPath,
-              renderingConfig,
-              normalized,
-              summary: summarizeRenderingProfile(normalized),
-            });
-            return;
-          }
-
-          if (req.method !== 'POST') {
-            sendJson(res, 405, { ok: false, error: 'method_not_allowed' });
-            return;
-          }
-
-          const body = await readJsonBody(req);
-          if (route.startsWith('/rendering-profile')) {
-            const renderingConfigPath = resolve(__dirname, 'src/config/rendering.json');
-            const renderingConfig = readOptionalRecord(body.renderingConfig);
-            if (!renderingConfig) {
-              sendJson(res, 400, { ok: false, error: 'missing_rendering_config' });
-              return;
-            }
-            const { normalizeRenderingProfile } = await server.ssrLoadModule('/src/rendering/rendering-profile.ts');
-            const normalized = normalizeRenderingProfile(renderingConfig);
-            await mkdir(path.dirname(renderingConfigPath), { recursive: true });
-            await writeFile(renderingConfigPath, `${JSON.stringify(renderingConfig, null, 2)}\n`, 'utf8');
-            invalidateViteFileModules(server, [
-              renderingConfigPath,
-              resolve(__dirname, 'src/rendering/rendering-profile.ts'),
-              resolve(__dirname, 'src/fps-game-editor-adapter/editor-rendering-profile.ts'),
-              resolve(__dirname, 'src/fps-game-editor-adapter/editor-shadow-preview-profile.ts'),
-              resolve(__dirname, 'src/services/ShadowService.ts'),
-            ]);
-            sendJson(res, 200, {
-              ok: true,
-              renderingConfigPath,
-              renderingConfig,
-              normalized,
-              summary: summarizeRenderingProfile(normalized),
-            });
-            return;
-          }
-
-          if (route.startsWith('/file')) {
-            const targetPath = normalizeTransportPath(String(body.path ?? ''));
-            if (!targetPath) {
-              sendJson(res, 400, { ok: false, error: 'missing_file_path' });
-              return;
-            }
-            const content = body.content;
-            const text = typeof content === 'string'
-              ? content
-              : `${JSON.stringify(content ?? {}, null, 2)}\n`;
+            };
+          },
+          async writeFile({ path: targetPath, text }) {
             await mkdir(path.dirname(targetPath), { recursive: true });
             await writeFile(targetPath, text, 'utf8');
-            sendJson(res, 200, { ok: true, path: targetPath });
-            return;
-          }
-
-          if (route.startsWith('/exec')) {
-            const cmd = String(body.cmd ?? '');
-            const payloadPath = readPayloadPathFromCommand(cmd);
-            if (!payloadPath) {
-              sendJson(res, 400, { ok: false, error: 'missing_payload_arg', cmd });
-              return;
-            }
-            const normalizedPayloadPath = normalizeTransportPath(payloadPath);
-            const payload = readAssetRegistryPayload(normalizedPayloadPath);
+            return { ok: true, path: targetPath };
+          },
+          async runCommand({ cmd, payloadPath }) {
+            const { projectAssetRegistryConfig, projectTextureRegistryConfig } = await import('./scripts/asset-registry/project-asset-catalog-config.mjs');
+            const registryCore = await import('./scripts/asset-registry/core.mjs');
+            const rules = await projectAssetRegistryConfig.loadRules();
+            const errorCodes = rules.errorCodes ?? {};
+            const payload = readAssetRegistryPayload(payloadPath);
             const registryConfig = selectAssetRegistryConfigForPayload(
               payload,
               projectAssetRegistryConfig,
               projectTextureRegistryConfig,
             );
             const result = cmd.includes('asset:unregister')
-              ? await registryCore.unregisterAsset(registryConfig, { payload: normalizedPayloadPath }, errorCodes)
-              : await registryCore.registerAsset(registryConfig, { payload: normalizedPayloadPath }, errorCodes);
+              ? await registryCore.unregisterAsset(registryConfig, { payload: payloadPath }, errorCodes)
+              : await registryCore.registerAsset(registryConfig, { payload: payloadPath }, errorCodes);
             invalidateViteFileModules(
               server,
               [
@@ -418,16 +358,10 @@ function projectAuthoringApiPlugin() {
                 typeof result?.registryPath === 'string' ? result.registryPath : registryConfig.registryPath,
               ],
             );
-            sendJson(res, 200, { ok: true, cmd, result });
-            return;
-          }
-
-          if (route.startsWith('/save-editor-scene')) {
-            const rawEditorScene = body.editorScene;
+            return { ok: true, cmd, result };
+          },
+          async saveEditorScene({ mode: saveMode, rawEditorScene, body }) {
             const renderingConfig = readOptionalRecord(body.renderingConfig);
-            const saveMode = body.mode === 'prepare-platform-save'
-              ? 'prepare-platform-save'
-              : 'local-commit-save';
             const editorScenePath = resolve(__dirname, 'src/config/editor-scene.json');
             const scenePath = resolve(__dirname, 'src/config/scene.json');
             const renderingConfigPath = resolve(__dirname, 'src/config/rendering.json');
@@ -481,7 +415,7 @@ function projectAuthoringApiPlugin() {
               : [editorScenePath];
             invalidateViteFileModules(server, invalidationFiles);
 
-            sendJson(res, 200, {
+            return {
               ok: true,
               mode: saveMode,
               editorScenePath,
@@ -498,27 +432,15 @@ function projectAuthoringApiPlugin() {
                 editorScene: summarizeEditorScene(editorScene),
                 compiled: compiled.summary,
               },
-            });
-            return;
-          }
+            };
+          },
+        });
 
-          if (route.startsWith('/commit')) {
-            sendJson(res, 410, {
-              ok: false,
-              error: 'legacy_mock_platform_commit_disabled',
-              message: 'Save through /__fps_editor_authoring/save-editor-scene so scene.main remains the authoring source of truth.',
-            });
-            return;
-          }
-
-          sendJson(res, 404, { ok: false, error: 'not_found' });
-        } catch (error) {
-          sendJson(res, 500, {
-            ok: false,
-            error: error instanceof Error ? error.message : String(error),
-            details: (error as any)?.details,
-          });
+        if (!response) {
+          next();
+          return;
         }
+        sendAuthoringServerResponse(res, response);
       });
     },
   };
@@ -528,6 +450,70 @@ async function readJsonBody(req: any): Promise<Record<string, any>> {
   const chunks: Buffer[] = [];
   for await (const chunk of req) chunks.push(Buffer.from(chunk));
   return JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}') as Record<string, any>;
+}
+
+async function handleRenderingProfileAuthoringRoute(
+  server: any,
+  req: any,
+  _route: string,
+): Promise<PlayableAuthoringServerResponse> {
+  const method = String(req.method ?? 'GET').toUpperCase();
+  const renderingConfigPath = resolve(__dirname, 'src/config/rendering.json');
+
+  if (method === 'GET') {
+    const renderingConfig = existsSync(renderingConfigPath)
+      ? JSON.parse(readFileSync(renderingConfigPath, 'utf8') || '{}')
+      : {};
+    const { normalizeRenderingProfile } = await server.ssrLoadModule('/src/rendering/rendering-profile.ts');
+    const normalized = normalizeRenderingProfile(renderingConfig);
+    return {
+      statusCode: 200,
+      body: {
+        ok: true,
+        renderingConfigPath,
+        renderingConfig,
+        normalized,
+        summary: summarizeRenderingProfile(normalized),
+      },
+    };
+  }
+
+  if (method !== 'POST') {
+    return {
+      statusCode: 405,
+      body: { ok: false, error: 'method_not_allowed' },
+    };
+  }
+
+  const body = await readJsonBody(req);
+  const renderingConfig = readOptionalRecord(body.renderingConfig);
+  if (!renderingConfig) {
+    return {
+      statusCode: 400,
+      body: { ok: false, error: 'missing_rendering_config' },
+    };
+  }
+  const { normalizeRenderingProfile } = await server.ssrLoadModule('/src/rendering/rendering-profile.ts');
+  const normalized = normalizeRenderingProfile(renderingConfig);
+  await mkdir(path.dirname(renderingConfigPath), { recursive: true });
+  await writeFile(renderingConfigPath, `${JSON.stringify(renderingConfig, null, 2)}\n`, 'utf8');
+  invalidateViteFileModules(server, [
+    renderingConfigPath,
+    resolve(__dirname, 'src/rendering/rendering-profile.ts'),
+    resolve(__dirname, 'src/fps-game-editor-adapter/editor-rendering-profile.ts'),
+    resolve(__dirname, 'src/fps-game-editor-adapter/editor-shadow-preview-profile.ts'),
+    resolve(__dirname, 'src/services/ShadowService.ts'),
+  ]);
+  return {
+    statusCode: 200,
+    body: {
+      ok: true,
+      renderingConfigPath,
+      renderingConfig,
+      normalized,
+      summary: summarizeRenderingProfile(normalized),
+    },
+  };
 }
 
 function readRecord(value: unknown): Record<string, unknown> {
@@ -550,15 +536,6 @@ function normalizePayloadPath(value: string): string {
 function normalizeTransportPath(value: string): string {
   if (!value.trim()) return '';
   return normalizePayloadPath(value);
-}
-
-function readPayloadPathFromCommand(cmd: string): string {
-  const match = cmd.match(/(?:^|\s)--payload(?:=|\s+)("[^"]+"|'[^']+'|\S+)/);
-  const value = match?.[1] ?? '';
-  if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
-    return value.slice(1, -1);
-  }
-  return value;
 }
 
 function readAssetRegistryPayload(payloadPath: string): Record<string, any> {
@@ -584,11 +561,15 @@ function isTextureAssetRegistryPayload(payload: Record<string, any>): boolean {
   return /\.(png|jpe?g|webp)(?:$|[?#])/i.test(candidate);
 }
 
-function sendJson(res: any, statusCode: number, body: Record<string, unknown>): void {
-  res.statusCode = statusCode;
+function sendAuthoringServerResponse(res: any, response: PlayableAuthoringServerResponse): void {
+  res.statusCode = response.statusCode;
   setProjectAuthoringCorsHeaders(res);
+  if (response.body == null) {
+    res.end();
+    return;
+  }
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
-  res.end(JSON.stringify(body));
+  res.end(JSON.stringify(response.body));
 }
 
 function setProjectAuthoringCorsHeaders(res: any): void {

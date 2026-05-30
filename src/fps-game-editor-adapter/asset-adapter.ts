@@ -10,8 +10,22 @@ import {
   ASSET_MANAGER_ERROR_CODES,
   planAssetRegistration,
   planAssetUnregistration,
-  type AssetTransportPlan,
 } from '../services/AssetManager';
+import {
+  createPlayableBridgeEventPayload,
+  executePlayableAssetTransportPlan,
+  readPlayableAssetImportInput,
+  readPlayableAssetRegistrationPlanInput,
+  readPlayableAssetUnregistrationPlanInput,
+  readPlayableBridgeRequestId,
+  readPlayableSceneNodeCreateInput,
+  readPlayableSceneNodePatchInput,
+  readPlayableSceneNodeRemoveInput,
+  resolvePlayablePlatformAssetRegistrationResult,
+  toPlayableBridgeCommandError,
+  type PlayablePlatformAssetExternal,
+} from '@fps-games/editor/playable-sdk';
+import type { AssetExternalRef } from '../config';
 import {
   createAssetInstance,
   removeAssetInstance,
@@ -29,49 +43,18 @@ import {
   removeProjectEditorSceneNode,
 } from './document';
 
-const PROJECT_AUTHORING_API_BASE = '/__fps_editor_authoring';
 const LOCAL_EDITOR_ASSET_BRIDGE_ACTIVE_FLAG = '__projectLocalEditorAssetBridgeActive';
 
 type CanonicalAssetRegistration = {
   guid?: string;
   assetId: string;
   assetUrl?: string;
-  external?: {
-    platformAssetId?: string;
-    assetPath?: string;
-    assetUrl?: string;
-  };
+  external?: AssetExternalRef;
 };
 
 export interface ProjectFpsGameEditorAssetAdapterOptions {
   selectRuntimeNode?: (node: unknown | null) => void;
   publishDocumentStatus?: () => void;
-}
-
-async function executeTransportPlan(plan: AssetTransportPlan): Promise<Record<string, unknown>> {
-  for (const write of plan.writes) {
-    const response = await fetch(`${PROJECT_AUTHORING_API_BASE}/file`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ path: write.path, content: write.content }),
-    });
-    if (!response.ok) throw new Error(`asset transport write failed: HTTP ${response.status}`);
-  }
-  let lastResult: Record<string, unknown> = {};
-  for (const command of plan.commands) {
-    const response = await fetch(`${PROJECT_AUTHORING_API_BASE}/exec`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cmd: command.cmd, cwd: command.cwd }),
-    });
-    const json = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      throw new Error(typeof json.error === 'string' ? json.error : `asset transport command failed: HTTP ${response.status}`);
-    }
-    const result = readRecord(json.result);
-    lastResult = Object.keys(result).length > 0 ? result : readRecord(json);
-  }
-  return lastResult;
 }
 
 function emitBridgeEvent(name: string, payload: Record<string, unknown>): void {
@@ -107,21 +90,8 @@ function optionalString(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim() ? value.trim() : undefined;
 }
 
-function readRecord(value: unknown): Record<string, unknown> {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
-}
-
-function readExternalRef(value: unknown): CanonicalAssetRegistration['external'] {
-  const record = readRecord(value);
-  const platformAssetId = optionalString(record.platformAssetId);
-  const assetPath = optionalString(record.assetPath);
-  const assetUrl = optionalString(record.assetUrl);
-  if (!platformAssetId && !assetPath && !assetUrl) return undefined;
-  return {
-    ...(platformAssetId ? { platformAssetId } : {}),
-    ...(assetPath ? { assetPath } : {}),
-    ...(assetUrl ? { assetUrl } : {}),
-  };
+function toProjectAssetExternalRef(value: PlayablePlatformAssetExternal | undefined): AssetExternalRef | undefined {
+  return value ? { ...value } : undefined;
 }
 
 function resolveCanonicalRegistration(
@@ -129,32 +99,29 @@ function resolveCanonicalRegistration(
   registered: Record<string, unknown> | null,
   fallbackAssetUrl: string | undefined,
 ): CanonicalAssetRegistration {
+  const canonical = resolvePlayablePlatformAssetRegistrationResult({
+    result: registered,
+    fallback: {
+      guid: plan.guid,
+      assetId: plan.assetId,
+      assetUrl: fallbackAssetUrl,
+      external: plan.external,
+    },
+  });
   return {
-    guid: optionalString(registered?.guid) ?? plan.guid,
-    assetId: optionalString(registered?.assetId) ?? plan.assetId,
-    assetUrl: optionalString(registered?.assetUrl) ?? fallbackAssetUrl,
-    external: readExternalRef(registered?.external) ?? plan.external,
+    ...canonical,
+    external: toProjectAssetExternalRef(canonical.external),
   };
 }
 
 function toEditorCommandError(error: unknown, fallbackCode: string): { code: string; error: string; details?: Record<string, unknown> } {
-  if (error instanceof ProjectEditorSceneNodeError) {
-    return {
-      code: error.code,
-      error: error.message,
-      ...(error.details ? { details: error.details } : {}),
-    };
-  }
-  return {
-    code: fallbackCode,
-    error: error instanceof Error ? error.message : String(error),
-  };
-}
-
-function toEventPayload(value: Record<string, unknown>): Record<string, unknown> {
-  const payload = { ...value };
-  delete payload.rootNode;
-  return payload;
+  return toPlayableBridgeCommandError(error, fallbackCode, {
+    readProjectError: value => value instanceof ProjectEditorSceneNodeError ? {
+      code: value.code,
+      error: value.message,
+      ...(value.details ? { details: value.details } : {}),
+    } : null,
+  });
 }
 
 export function createProjectFpsGameEditorAssetAdapter(
@@ -166,30 +133,14 @@ export function createProjectFpsGameEditorAssetAdapter(
     async handleCommand(name, params, context) {
       if (name === EDITOR_COMMAND_NAME.ASSET_REGISTRATION_PLAN) {
         try {
-          const plan = planAssetRegistration({
-            requestId: optionalString(params.requestId),
-            assetName: optionalString(params.assetName),
-            assetPath: optionalString(params.assetPath),
-            assetUrl: optionalString(params.assetUrl),
-            guid: optionalString(params.guid),
-            assetId: optionalString(params.projectAssetId),
-            kind: optionalString(params.assetType),
-            platformAssetId: optionalString(params.platformAssetId) ?? optionalString(params.assetId),
-            displayName: optionalString(params.displayName),
-            category: optionalString(params.category),
-            materialMode: params.materialMode as any,
-            scale: params.scale as any,
-            defaultScale: params.defaultScale as any,
-            metadata: params.metadata as Record<string, unknown> | undefined,
-            payloadPath: optionalString(params.payloadPath),
-          });
+          const planInput = readPlayableAssetRegistrationPlanInput(params);
+          const plan = planAssetRegistration(planInput as any);
           emitBridgeEvent(EDITOR_EVENT_NAME.ASSET_REGISTRATION_PLANNED, plan as unknown as Record<string, unknown>);
         } catch (error) {
           emitBridgeEvent(EDITOR_EVENT_NAME.ASSET_REGISTRATION_FAILED, {
-            requestId: optionalString(params.requestId),
+            requestId: readPlayableBridgeRequestId(params),
             ok: false,
-            error: error instanceof Error ? error.message : String(error),
-            code: (error as any)?.code ?? ASSET_MANAGER_ERROR_CODES.assetRegistrationPlanFailed,
+            ...toPlayableBridgeCommandError(error, ASSET_MANAGER_ERROR_CODES.assetRegistrationPlanFailed),
           });
         }
         return true;
@@ -197,22 +148,15 @@ export function createProjectFpsGameEditorAssetAdapter(
 
       if (name === EDITOR_COMMAND_NAME.ASSET_UNREGISTRATION_PLAN) {
         try {
-          const assetId = optionalString(params.projectAssetId) ?? optionalString(params.assetId);
-          if (assetId) assertSceneAssetUnused(assetId);
-          const plan = planAssetUnregistration({
-            requestId: optionalString(params.requestId),
-            guid: optionalString(params.guid),
-            assetId,
-            payloadPath: optionalString(params.payloadPath),
-            deleteFile: typeof params.deleteFile === 'boolean' ? params.deleteFile : undefined,
-          });
+          const planInput = readPlayableAssetUnregistrationPlanInput(params);
+          if (planInput.assetId) assertSceneAssetUnused(planInput.assetId);
+          const plan = planAssetUnregistration(planInput);
           emitBridgeEvent(EDITOR_EVENT_NAME.ASSET_UNREGISTRATION_PLANNED, plan as unknown as Record<string, unknown>);
         } catch (error) {
           emitBridgeEvent(EDITOR_EVENT_NAME.ASSET_UNREGISTRATION_FAILED, {
-            requestId: optionalString(params.requestId),
+            requestId: readPlayableBridgeRequestId(params),
             ok: false,
-            error: error instanceof Error ? error.message : String(error),
-            code: (error as any)?.code ?? ASSET_MANAGER_ERROR_CODES.assetUnregistrationPlanFailed,
+            ...toPlayableBridgeCommandError(error, ASSET_MANAGER_ERROR_CODES.assetUnregistrationPlanFailed),
           });
         }
         return true;
@@ -221,49 +165,38 @@ export function createProjectFpsGameEditorAssetAdapter(
       if (name === EDITOR_COMMAND_NAME.ASSET_IMPORT) {
         if (isLocalEditorAssetBridgeActive()) return true;
         ensureProjectEditorDocumentLoaded();
-        const rawAssetName = optionalString(params.assetName) ?? '';
+        const importInput = readPlayableAssetImportInput(params);
         const inferredAssetUrl = optionalString(params.assetUrl)?.trim()
-          || (optionalString(params.assetPath)?.trim() ? `/@fs${params.assetPath}` : '');
-        const inferredAssetPath = optionalString(params.assetPath)?.trim();
+          || (importInput.inferredAssetPath ? `/@fs${importInput.inferredAssetPath}` : '');
         const registrationPlan = planAssetRegistration({
-          requestId: optionalString(params.requestId),
-          guid: optionalString(params.guid),
-          assetId: optionalString(params.projectAssetId),
-          assetName: rawAssetName || undefined,
-          assetPath: inferredAssetPath,
+          ...importInput,
+          assetName: importInput.rawAssetName || undefined,
+          assetPath: importInput.inferredAssetPath,
           assetUrl: inferredAssetUrl,
-          kind: optionalString(params.assetType) ?? 'model',
-          platformAssetId: optionalString(params.platformAssetId) ?? optionalString(params.assetId),
-          displayName: optionalString(params.displayName),
-          category: optionalString(params.category),
-          materialMode: params.materialMode as any,
-          scale: params.scale as any,
-          defaultScale: params.defaultScale as any,
-          metadata: params.metadata as Record<string, unknown> | undefined,
-        });
-        const registered = inferredAssetPath
-          ? await executeTransportPlan(registrationPlan.transportPlan)
+        } as any);
+        const registered = importInput.inferredAssetPath
+          ? await executePlayableAssetTransportPlan(registrationPlan.transportPlan)
           : null;
         const canonical = resolveCanonicalRegistration(registrationPlan, registered, inferredAssetUrl);
 
         const result = await createAssetInstance({
-          requestId: optionalString(params.requestId),
+          requestId: importInput.requestId,
           guid: canonical.guid,
           assetId: canonical.assetId,
           external: canonical.external,
           assetUrl: canonical.assetUrl,
-          assetName: rawAssetName || undefined,
-          displayName: optionalString(params.displayName),
-          category: optionalString(params.category),
-          materialMode: params.materialMode as any,
-          scale: params.scale as any,
-          defaultScale: params.defaultScale as any,
-          instanceScale: params.instanceScale as any,
-          metadata: params.metadata as Record<string, unknown> | undefined,
-          dropSurfaceName: optionalString(params.dropSurfaceName),
-          clientX: typeof params.clientX === 'number' ? params.clientX : undefined,
-          clientY: typeof params.clientY === 'number' ? params.clientY : undefined,
-          position: params.position as any,
+          assetName: importInput.rawAssetName || undefined,
+          displayName: importInput.displayName,
+          category: importInput.category,
+          materialMode: importInput.materialMode as any,
+          scale: importInput.scale as any,
+          defaultScale: importInput.defaultScale as any,
+          instanceScale: importInput.instanceScale as any,
+          metadata: importInput.metadata,
+          dropSurfaceName: importInput.dropSurfaceName,
+          clientX: importInput.clientX,
+          clientY: importInput.clientY,
+          position: importInput.position as any,
         }, resolveProjectPluginContext(context));
 
         if (result.ok) {
@@ -271,7 +204,7 @@ export function createProjectFpsGameEditorAssetAdapter(
           notifyDocumentStatus();
         }
 
-        emitBridgeEvent(EDITOR_EVENT_NAME.ASSET_IMPORT_RESULT, toEventPayload(result as unknown as Record<string, unknown>));
+        emitBridgeEvent(EDITOR_EVENT_NAME.ASSET_IMPORT_RESULT, createPlayableBridgeEventPayload(result as unknown as Record<string, unknown>));
         return true;
       }
 
@@ -290,7 +223,7 @@ export function createProjectFpsGameEditorAssetAdapter(
           notifyDocumentStatus();
         }
         emitBridgeEvent(EDITOR_EVENT_NAME.ASSET_REMOVE_RESULT, {
-          requestId: optionalString(params.requestId),
+          requestId: readPlayableBridgeRequestId(params),
           ...result,
         });
         return true;
@@ -299,31 +232,32 @@ export function createProjectFpsGameEditorAssetAdapter(
       if (name === EDITOR_COMMAND_NAME.SCENE_NODE_CREATE) {
         ensureProjectEditorDocumentLoaded();
         try {
+          const createInput = readPlayableSceneNodeCreateInput(params);
           const created = addProjectEditorSceneNode({
-            id: optionalString(params.id),
-            name: optionalString(params.name),
-            kind: params.kind as any,
-            parentId: optionalString(params.parentId),
-            enabled: typeof params.enabled === 'boolean' ? params.enabled : undefined,
-            transform: params.transform as any,
-            instance: params.instance as any,
-            primitive: params.primitive as any,
-            transformType: params.transformType as any,
-            groundDecal: params.groundDecal as any,
-            camera: params.camera as any,
-            light: params.light as any,
+            id: createInput.id,
+            name: createInput.name,
+            kind: createInput.kind as any,
+            parentId: createInput.parentId,
+            enabled: createInput.enabled,
+            transform: createInput.transform as any,
+            instance: createInput.instance as any,
+            primitive: createInput.primitive as any,
+            transformType: createInput.transformType as any,
+            groundDecal: createInput.groundDecal as any,
+            camera: createInput.camera as any,
+            light: createInput.light as any,
           }, resolveProjectPluginContext(context));
           if (created.rootNode) options.selectRuntimeNode?.(created.rootNode);
           notifyDocumentStatus();
           emitBridgeEvent(EDITOR_EVENT_NAME.SCENE_NODE_CREATE_RESULT, {
-            requestId: optionalString(params.requestId),
+            requestId: createInput.requestId,
             ok: true,
             nodeId: created.node.id,
             node: created.node as unknown as Record<string, unknown>,
           });
         } catch (error) {
           emitBridgeEvent(EDITOR_EVENT_NAME.SCENE_NODE_CREATE_RESULT, {
-            requestId: optionalString(params.requestId),
+            requestId: readPlayableBridgeRequestId(params),
             ok: false,
             ...toEditorCommandError(error, PROJECT_EDITOR_SCENE_NODE_ERROR_CODES.sceneNodeCreateFailed),
           });
@@ -334,26 +268,24 @@ export function createProjectFpsGameEditorAssetAdapter(
       if (name === EDITOR_COMMAND_NAME.SCENE_NODE_PATCH) {
         ensureProjectEditorDocumentLoaded();
         try {
-          const patches = Array.isArray(params.patches)
-            ? params.patches
-            : (typeof params.path === 'string' ? [{ path: params.path, value: params.value }] : []);
+          const patchInput = readPlayableSceneNodePatchInput(params);
           const patched = patchProjectEditorSceneNode({
-            nodeId: optionalString(params.nodeId) ?? '',
-            patches: patches as any,
+            nodeId: patchInput.nodeId,
+            patches: patchInput.patches as any,
           }, resolveProjectPluginContext(context));
           if (patched.rootNode) options.selectRuntimeNode?.(patched.rootNode);
           notifyDocumentStatus();
           emitBridgeEvent(EDITOR_EVENT_NAME.SCENE_NODE_PATCH_RESULT, {
-            requestId: optionalString(params.requestId),
+            requestId: patchInput.requestId,
             ok: true,
             nodeId: patched.node.id,
             node: patched.node as unknown as Record<string, unknown>,
           });
         } catch (error) {
           emitBridgeEvent(EDITOR_EVENT_NAME.SCENE_NODE_PATCH_RESULT, {
-            requestId: optionalString(params.requestId),
+            requestId: readPlayableBridgeRequestId(params),
             ok: false,
-            nodeId: optionalString(params.nodeId),
+            nodeId: readPlayableSceneNodePatchInput(params).nodeId,
             ...toEditorCommandError(error, PROJECT_EDITOR_SCENE_NODE_ERROR_CODES.sceneNodePatchFailed),
           });
         }
@@ -362,16 +294,16 @@ export function createProjectFpsGameEditorAssetAdapter(
 
       if (name === EDITOR_COMMAND_NAME.SCENE_NODE_REMOVE) {
         ensureProjectEditorDocumentLoaded();
-        const nodeId = optionalString(params.nodeId);
-        const removed = nodeId ? removeProjectEditorSceneNode(nodeId, resolveProjectPluginContext(context)) : null;
+        const removeInput = readPlayableSceneNodeRemoveInput(params);
+        const removed = removeInput.nodeId ? removeProjectEditorSceneNode(removeInput.nodeId, resolveProjectPluginContext(context)) : null;
         if (removed) {
           options.selectRuntimeNode?.(null);
           notifyDocumentStatus();
         }
         emitBridgeEvent(EDITOR_EVENT_NAME.SCENE_NODE_REMOVE_RESULT, {
-          requestId: optionalString(params.requestId),
+          requestId: removeInput.requestId,
           ok: Boolean(removed),
-          nodeId,
+          nodeId: removeInput.nodeId,
           ...(removed
             ? { removedNodeId: removed.node.id }
             : {

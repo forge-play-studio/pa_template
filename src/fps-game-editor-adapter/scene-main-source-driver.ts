@@ -1,19 +1,23 @@
 import type {
-  AuthoringDiagnostic,
   AuthoringSourceDescriptor,
   AuthoringSourceDriver,
   AuthoringSourceSaveResult,
   CompiledArtifact,
   CompiledArtifactProvenance,
 } from '@fps-games/editor-core';
+import {
+  loadEditorAssetLibrary as loadPlayableEditorAssetLibrary,
+  loadSceneMainSource as loadPlayableSceneMainSource,
+  saveSceneMainSource as savePlayableSceneMainSource,
+  validateSceneMainDocument,
+  type SceneMainSourceDriverLoadResult as PlayableSceneMainSourceDriverLoadResult,
+  type SceneMainSourceSaveMode,
+  type SceneMainSourceSaveOptions as PlayableSceneMainSourceSaveOptions,
+  type SceneSourceFetchJson,
+} from '@fps-games/editor/playable-sdk';
 import baseSceneConfig from '../config/scene.json';
 import type { SceneConfig } from '../config/types';
 import type { EditorSceneAssetLibraryItem, EditorSceneDocument } from './editor-scene-document';
-import {
-  createEditorSceneAuthoringSourceDescriptor,
-  ensureEditorSceneAuthoringSource,
-  type EditorSceneRuntimeInputDrift,
-} from './editor-authoring-source';
 import { compileEditorSceneDocumentToSceneConfig } from './editor-scene-compiler';
 import {
   getActiveRenderingConfig,
@@ -21,24 +25,22 @@ import {
   markActiveRenderingConfigSaved,
   setActiveRenderingConfigError,
 } from '../rendering/editor-rendering-profile-store';
+import type { EditorSceneRuntimeInputDrift } from './editor-authoring-source';
 
-const PROJECT_AUTHORING_API_BASE = '/__fps_editor_authoring';
+export type { SceneMainSourceSaveMode };
+export { validateSceneMainDocument };
 
-export interface SceneMainSourceDriverLoadResult {
-  source: AuthoringSourceDescriptor;
-  document: EditorSceneDocument;
+export interface SceneMainSourceDriverLoadResult extends
+  PlayableSceneMainSourceDriverLoadResult<EditorSceneDocument> {
   drift: EditorSceneRuntimeInputDrift | null;
-  summary?: string;
 }
 
 export interface SceneMainSourceDriverOptions {
-  fetchJson?: (url: string, init?: RequestInit) => Promise<Record<string, unknown>>;
+  endpointBase?: string;
+  fetchJson?: SceneSourceFetchJson;
 }
 
-export type SceneMainSourceSaveMode = 'local-commit-save' | 'prepare-platform-save';
-
-export interface SceneMainSourceSaveOptions {
-  mode?: SceneMainSourceSaveMode;
+export interface SceneMainSourceSaveOptions extends PlayableSceneMainSourceSaveOptions {
   renderingConfig?: Record<string, unknown> | null;
 }
 
@@ -93,7 +95,7 @@ export function createSceneMainSourceDriver(
       };
     },
     compile({ source, document }) {
-      if (lastCompiledArtifact && isCompiledArtifactForSource(lastCompiledArtifact, source)) {
+      if (lastCompiledArtifact) {
         const artifact = lastCompiledArtifact;
         lastCompiledArtifact = null;
         return [artifact];
@@ -104,19 +106,9 @@ export function createSceneMainSourceDriver(
 }
 
 export async function loadSceneMainSource(
-  request: (url: string, init?: RequestInit) => Promise<Record<string, unknown>> = fetchJson,
+  request: SceneSourceFetchJson = fetchJson,
 ): Promise<SceneMainSourceDriverLoadResult> {
-  const json = await request(`${PROJECT_AUTHORING_API_BASE}/editor-scene`);
-  const editorScene = readEditorScene(json.editorScene);
-  if (!editorScene) throw new Error('project authoring endpoint did not return editorScene');
-  const document = ensureEditorSceneAuthoringSource(editorScene);
-  const drift = readRuntimeInputDrift(json.drift);
-  return {
-    source: createEditorSceneAuthoringSourceDescriptor(document, readString(json.editorScenePath)),
-    document,
-    drift,
-    summary: summarizeEditorSceneSource(document, drift),
-  };
+  return loadPlayableSceneMainSource<EditorSceneDocument>({ fetchJson: request });
 }
 
 export async function saveSceneMainSource(
@@ -124,81 +116,32 @@ export async function saveSceneMainSource(
   options?: SceneMainSourceSaveOptions,
 ): Promise<SceneMainSourceSaveResult>;
 export async function saveSceneMainSource(
-  request: (url: string, init?: RequestInit) => Promise<Record<string, unknown>>,
+  request: SceneSourceFetchJson,
   editorScene: EditorSceneDocument,
   options?: SceneMainSourceSaveOptions,
 ): Promise<SceneMainSourceSaveResult>;
 export async function saveSceneMainSource(
-  requestOrEditorScene: ((url: string, init?: RequestInit) => Promise<Record<string, unknown>>) | EditorSceneDocument = fetchJson,
+  requestOrEditorScene: SceneSourceFetchJson | EditorSceneDocument,
   editorSceneOrOptions?: EditorSceneDocument | SceneMainSourceSaveOptions,
   maybeOptions: SceneMainSourceSaveOptions = {},
 ): Promise<SceneMainSourceSaveResult> {
-  const request = typeof requestOrEditorScene === 'function' ? requestOrEditorScene : fetchJson;
-  const editorScene = typeof requestOrEditorScene === 'function'
-    ? editorSceneOrOptions as EditorSceneDocument
-    : requestOrEditorScene;
-  const options = typeof requestOrEditorScene === 'function'
-    ? maybeOptions
-    : editorSceneOrOptions as SceneMainSourceSaveOptions | undefined;
-  const saved = await request(`${PROJECT_AUTHORING_API_BASE}/save-editor-scene`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      editorScene,
-      mode: options?.mode ?? 'local-commit-save',
-      ...(options?.renderingConfig ? { renderingConfig: options.renderingConfig } : {}),
-    }),
-  });
-  const document = readEditorScene(saved.editorScene) ?? editorScene;
-  const source = createEditorSceneAuthoringSourceDescriptor(document, readString(saved.editorScenePath));
-  return {
-    source,
-    document,
-    summary: summarizeSaveResult(saved),
-    compiledArtifact: readCompiledRuntimeSceneArtifact(saved, source),
-    expectedVersion: typeof saved.expectedVersion === 'number' ? saved.expectedVersion : undefined,
-    renderingConfig: readRecord(saved.renderingConfig) ?? undefined,
-    sceneJsonText: typeof saved.sceneJsonText === 'string' ? saved.sceneJsonText : undefined,
-  };
+  if (typeof requestOrEditorScene === 'function') {
+    return savePlayableSceneMainSource<EditorSceneDocument>(
+      requestOrEditorScene,
+      editorSceneOrOptions as EditorSceneDocument,
+      maybeOptions,
+    );
+  }
+  return savePlayableSceneMainSource<EditorSceneDocument>(
+    requestOrEditorScene,
+    editorSceneOrOptions as SceneMainSourceSaveOptions | undefined,
+  );
 }
 
 export async function loadEditorAssetLibrary(
-  request: (url: string, init?: RequestInit) => Promise<Record<string, unknown>> = fetchJson,
+  request: SceneSourceFetchJson = fetchJson,
 ): Promise<EditorSceneAssetLibraryItem[]> {
-  const json = await request(`${PROJECT_AUTHORING_API_BASE}/editor-asset-library`);
-  return readEditorAssetLibrary(json.assets);
-}
-
-export function validateSceneMainDocument(
-  document: EditorSceneDocument,
-  source: AuthoringSourceDescriptor,
-): AuthoringDiagnostic[] {
-  const diagnostics: AuthoringDiagnostic[] = [];
-  if (document.schemaVersion !== 1) {
-    diagnostics.push({
-      severity: 'error',
-      message: 'editor-scene schemaVersion must be 1',
-      path: 'schemaVersion',
-      source: source.ref,
-    });
-  }
-  if (!Array.isArray(document.assets)) {
-    diagnostics.push({
-      severity: 'error',
-      message: 'editor-scene assets must be an array',
-      path: 'assets',
-      source: source.ref,
-    });
-  }
-  if (!Array.isArray(document.scene?.gameObjects)) {
-    diagnostics.push({
-      severity: 'error',
-      message: 'editor-scene scene.gameObjects must be an array',
-      path: 'scene.gameObjects',
-      source: source.ref,
-    });
-  }
-  return diagnostics;
+  return loadPlayableEditorAssetLibrary(request) as Promise<EditorSceneAssetLibraryItem[]>;
 }
 
 async function fetchJson(url: string, init?: RequestInit): Promise<Record<string, unknown>> {
@@ -208,125 +151,6 @@ async function fetchJson(url: string, init?: RequestInit): Promise<Record<string
     throw new Error(typeof json.error === 'string' ? json.error : `HTTP ${response.status}`);
   }
   return json as Record<string, unknown>;
-}
-
-function readEditorScene(value: unknown): EditorSceneDocument | null {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
-  const candidate = value as Partial<EditorSceneDocument>;
-  if (candidate.schemaVersion !== 1) return null;
-  if (!Array.isArray(candidate.assets)) return null;
-  if (!Array.isArray(candidate.scene?.gameObjects)) return null;
-  return candidate as EditorSceneDocument;
-}
-
-function readString(value: unknown): string | undefined {
-  return typeof value === 'string' && value.trim() ? value : undefined;
-}
-
-function readRecord(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === 'object' && !Array.isArray(value)
-    ? value as Record<string, unknown>
-    : null;
-}
-
-function readEditorAssetLibrary(value: unknown): EditorSceneAssetLibraryItem[] {
-  if (!Array.isArray(value)) return [];
-  return value.flatMap((entry) => {
-    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return [];
-    const candidate = entry as Partial<EditorSceneAssetLibraryItem>;
-    if (candidate.type !== 'glb' && candidate.type !== 'texture') return [];
-    if (typeof candidate.assetId !== 'string' || !candidate.assetId.trim()) return [];
-    const assetId = candidate.assetId.trim();
-    return [{
-      id: typeof candidate.id === 'string' && candidate.id.trim() ? candidate.id : assetId,
-      guid: typeof candidate.guid === 'string' && candidate.guid.trim() ? candidate.guid : undefined,
-      assetId,
-      type: candidate.type,
-      kind: candidate.type === 'texture' ? 'texture' : 'model',
-      displayName: typeof candidate.displayName === 'string' && candidate.displayName.trim()
-        ? candidate.displayName
-        : assetId,
-      category: typeof candidate.category === 'string' && candidate.category.trim()
-        ? candidate.category
-        : undefined,
-      materialMode: candidate.materialMode === 'shared' || candidate.materialMode === 'instance'
-        ? candidate.materialMode
-        : undefined,
-      defaults: candidate.defaults,
-      metadata: candidate.metadata && typeof candidate.metadata === 'object' && !Array.isArray(candidate.metadata)
-        ? candidate.metadata
-        : undefined,
-      external: candidate.external && typeof candidate.external === 'object' && !Array.isArray(candidate.external)
-        ? candidate.external
-        : undefined,
-      origin: 'project',
-      dedupeKey: typeof candidate.dedupeKey === 'string' && candidate.dedupeKey.trim()
-        ? candidate.dedupeKey
-        : (typeof candidate.guid === 'string' && candidate.guid.trim() ? candidate.guid : assetId),
-      placeable: candidate.placeable !== false,
-    }];
-  });
-}
-
-function summarizeEditorScene(editorScene: EditorSceneDocument): string {
-  return `editorScene assets=${editorScene.assets.length}, gameObjects=${editorScene.scene.gameObjects.length}`;
-}
-
-function summarizeEditorSceneSource(
-  editorScene: EditorSceneDocument,
-  drift: EditorSceneRuntimeInputDrift | null,
-): string {
-  const summary = summarizeEditorScene(editorScene);
-  if (!drift?.detected) return summary;
-  return `${summary} | runtime input drift detected (${drift.reason ?? 'unknown'})`;
-}
-
-function readRuntimeInputDrift(value: unknown): EditorSceneRuntimeInputDrift | null {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
-  const candidate = value as Partial<EditorSceneRuntimeInputDrift>;
-  if (typeof candidate.detected !== 'boolean') return null;
-  return {
-    detected: candidate.detected,
-    sourceId: typeof candidate.sourceId === 'string' ? candidate.sourceId : 'scene.main',
-    sourceType: typeof candidate.sourceType === 'string' ? candidate.sourceType : 'scene',
-    sourceRevision: typeof candidate.sourceRevision === 'number' ? candidate.sourceRevision : null,
-    generatedRevision: typeof candidate.generatedRevision === 'number' ? candidate.generatedRevision : null,
-    reason: candidate.reason,
-  };
-}
-
-function summarizeSaveResult(saved: Record<string, unknown>): string {
-  const summary = saved.summary as any;
-  const editorScene = summary?.editorScene;
-  const compiled = summary?.compiled;
-  if (editorScene || compiled) {
-    return [
-      `editorScene assets=${editorScene?.assets ?? 'n/a'}, gameObjects=${editorScene?.gameObjects ?? 'n/a'}`,
-      `compiled assets=${compiled?.assetCount ?? 'n/a'}, nodes=${compiled?.nodeCount ?? 'n/a'}`,
-    ].join(' | ');
-  }
-  const sceneJsonText = typeof saved.sceneJsonText === 'string' ? saved.sceneJsonText : '';
-  return sceneJsonText ? summarizeSceneJson(sceneJsonText) : 'saved';
-}
-
-function readCompiledRuntimeSceneArtifact(
-  saved: Record<string, unknown>,
-  source: AuthoringSourceDescriptor,
-): CompiledArtifact | undefined {
-  const sceneJsonText = typeof saved.sceneJsonText === 'string' ? saved.sceneJsonText : '';
-  if (!sceneJsonText.trim()) return undefined;
-  try {
-    const sceneConfig = JSON.parse(sceneJsonText) as SceneConfig;
-    return {
-      artifactType: 'runtime-scene',
-      artifactId: readString(saved.scenePath) ?? 'scene.json',
-      provenance: readCompiledArtifactProvenance(sceneConfig, source),
-      summary: summarizeSceneConfig(sceneConfig),
-      data: sceneConfig,
-    };
-  } catch {
-    return undefined;
-  }
 }
 
 function compileSceneMainRuntimeArtifact(
@@ -360,29 +184,9 @@ function readCompiledArtifactProvenance(
   };
 }
 
-function isCompiledArtifactForSource(
-  artifact: CompiledArtifact,
-  source: AuthoringSourceDescriptor,
-): boolean {
-  return artifact.provenance?.sourceId === source.ref.sourceId
-    && artifact.provenance.sourceType === source.ref.sourceType
-    && artifact.provenance.revision === source.ref.revision;
-}
-
 function summarizeSceneConfig(sceneConfig: SceneConfig): string {
   const version = (sceneConfig as { version?: unknown }).version ?? 'n/a';
   const assets = sceneConfig.scene?.assets.length ?? 0;
   const nodes = sceneConfig.scene?.nodes.length ?? 0;
   return `version=${version}, assets=${assets}, nodes=${nodes}`;
-}
-
-function summarizeSceneJson(sceneJsonText: string): string {
-  try {
-    const parsed = JSON.parse(sceneJsonText) as any;
-    const assets = Array.isArray(parsed.scene?.assets) ? parsed.scene.assets.length : 0;
-    const nodes = Array.isArray(parsed.scene?.nodes) ? parsed.scene.nodes.length : 0;
-    return `version=${parsed.version ?? 'n/a'}, assets=${assets}, nodes=${nodes}`;
-  } catch {
-    return `invalid JSON, bytes=${sceneJsonText.length}`;
-  }
 }

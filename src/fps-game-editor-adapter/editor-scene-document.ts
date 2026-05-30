@@ -12,67 +12,69 @@ import type {
   SceneNodeVisualOverrides,
   SceneTransformNode,
 } from '../config';
+import {
+  cloneEditorSceneDocument as clonePlayableEditorSceneDocument,
+  findEditorSceneModelRenderer as findPlayableEditorSceneModelRenderer,
+  findEditorSceneTransform as findPlayableEditorSceneTransform,
+  readEditorSceneNodeKind as readPlayableEditorSceneNodeKind,
+  type EditorSceneAsset as PlayableEditorSceneAsset,
+  type EditorSceneAssetLibraryItem as PlayableEditorSceneAssetLibraryItem,
+  type EditorSceneCameraInspectorLanguage,
+  type EditorSceneCameraRig as PlayableEditorSceneCameraRig,
+  type EditorSceneComponent as PlayableEditorSceneComponent,
+  type EditorSceneDirectionalLight as PlayableEditorSceneDirectionalLight,
+  type EditorSceneDocument as PlayableEditorSceneDocument,
+  type EditorSceneGameObject as PlayableEditorSceneGameObject,
+  type EditorSceneModelRendererComponent as PlayableEditorSceneModelRendererComponent,
+  type EditorScenePrimitiveRenderer as PlayableEditorScenePrimitiveRenderer,
+  type EditorSceneTransformComponent as PlayableEditorSceneTransformComponent,
+  type EditorSceneVec3 as PlayableEditorSceneVec3,
+} from '@fps-games/editor/playable-sdk';
 import type { AuthoringSourceRef } from '@fps-games/editor-core';
 
-export interface EditorSceneVec3 {
-  x: number;
-  y: number;
-  z: number;
-}
+export type { EditorSceneCameraInspectorLanguage };
 
-export interface EditorSceneAsset {
-  id: string;
-  guid?: string;
+export interface EditorSceneVec3 extends PlayableEditorSceneVec3 {}
+
+export interface EditorSceneAsset extends PlayableEditorSceneAsset<
+  SceneAssetDefaults,
+  AssetExternalRef,
+  SceneAssetMaterialMode
+> {
   type: 'glb';
-  displayName?: string;
-  category?: string;
   materialMode?: SceneAssetMaterialMode;
   defaults?: SceneAssetDefaults;
   external?: AssetExternalRef;
-  metadata?: Record<string, unknown>;
 }
 
-export interface EditorSceneAssetLibraryItem {
-  id: string;
-  guid?: string;
-  assetId: string;
+export interface EditorSceneAssetLibraryItem extends PlayableEditorSceneAssetLibraryItem<
+  SceneAssetDefaults,
+  AssetExternalRef,
+  SceneAssetMaterialMode
+> {
   type: 'glb' | 'texture';
   kind: 'model' | 'texture';
-  displayName: string;
-  category?: string;
   materialMode?: SceneAssetMaterialMode;
   defaults?: SceneAssetDefaults;
   external?: AssetExternalRef;
-  metadata?: Record<string, unknown>;
   origin: 'project';
-  dedupeKey: string;
-  placeable: boolean;
 }
 
-export interface EditorSceneTransformComponent {
-  type: 'Transform';
-  position: EditorSceneVec3;
-  rotation: EditorSceneVec3;
-  scale?: EditorSceneVec3;
-}
+export interface EditorSceneTransformComponent extends PlayableEditorSceneTransformComponent {}
 
-export interface EditorSceneModelRendererComponent {
-  type: 'ModelRenderer';
-  assetId: string;
-}
+export interface EditorSceneModelRendererComponent extends PlayableEditorSceneModelRendererComponent {}
 
-export interface EditorScenePrimitiveRenderer {
+export interface EditorScenePrimitiveRenderer extends PlayableEditorScenePrimitiveRenderer<ScenePrimitiveShape> {
   shape: ScenePrimitiveShape;
 }
 
-export type EditorSceneCameraInspectorLanguage = 'zh' | 'en';
 export type EditorSceneLightInspectorLanguage = 'zh' | 'en';
 
-export interface EditorSceneCameraRig extends SceneCameraRigConfig {
-  inspectorLanguage?: EditorSceneCameraInspectorLanguage;
-}
+export interface EditorSceneCameraRig extends SceneCameraRigConfig, PlayableEditorSceneCameraRig {}
 
-export interface EditorSceneDirectionalLight extends Omit<SceneDirectionalLightConfig, 'direction' | 'diffuseColor'> {
+export interface EditorSceneDirectionalLight extends
+  Omit<SceneDirectionalLightConfig, 'direction' | 'diffuseColor'>,
+  PlayableEditorSceneDirectionalLight {
   direction: EditorSceneVec3;
   diffuseColor?: ColorRGB;
   inspectorLanguage?: EditorSceneLightInspectorLanguage;
@@ -90,27 +92,24 @@ export type EditorSceneLight =
 
 export type EditorSceneComponent =
   | EditorSceneTransformComponent
-  | EditorSceneModelRendererComponent;
+  | EditorSceneModelRendererComponent
+  | PlayableEditorSceneComponent;
 
-export interface EditorSceneGameObject {
-  id: string;
-  guid?: string;
-  name?: string;
+export interface EditorSceneGameObject extends PlayableEditorSceneGameObject<ScenePrimitiveShape> {
   kind?: SceneNodeConfig['kind'];
-  parentId?: string;
-  active?: boolean;
   transformType?: SceneTransformNode['transformType'];
   camera?: EditorSceneCameraRig;
   light?: EditorSceneLight;
   primitive?: EditorScenePrimitiveRenderer;
   groundDecal?: SceneTransformNode['groundDecal'];
   overrides?: SceneNodeVisualOverrides;
-  metadata?: Record<string, unknown>;
   components: EditorSceneComponent[];
 }
 
-export interface EditorSceneDocument {
-  schemaVersion: 1;
+export interface EditorSceneDocument extends PlayableEditorSceneDocument<
+  EditorSceneGameObject,
+  EditorSceneAsset
+> {
   meta?: {
     name?: string;
     authoringSource?: AuthoringSourceRef;
@@ -130,23 +129,19 @@ export interface EditorSceneTransformPatch {
 }
 
 export function cloneEditorSceneDocument(document: EditorSceneDocument): EditorSceneDocument {
-  return structuredClone(document);
+  return clonePlayableEditorSceneDocument(document);
 }
 
 export function findEditorSceneTransform(
   gameObject: EditorSceneGameObject,
 ): EditorSceneTransformComponent | null {
-  return gameObject.components.find(
-    (component): component is EditorSceneTransformComponent => component.type === 'Transform',
-  ) ?? null;
+  return findPlayableEditorSceneTransform(gameObject) as EditorSceneTransformComponent | null;
 }
 
 export function findEditorSceneModelRenderer(
   gameObject: EditorSceneGameObject,
 ): EditorSceneModelRendererComponent | null {
-  return gameObject.components.find(
-    (component): component is EditorSceneModelRendererComponent => component.type === 'ModelRenderer',
-  ) ?? null;
+  return findPlayableEditorSceneModelRenderer(gameObject) as EditorSceneModelRendererComponent | null;
 }
 
 export function findEditorScenePrimitiveRenderer(
@@ -156,13 +151,7 @@ export function findEditorScenePrimitiveRenderer(
 }
 
 export function readEditorSceneNodeKind(gameObject: EditorSceneGameObject): SceneNodeConfig['kind'] {
-  if (gameObject.kind === 'group' || gameObject.kind === 'instance' || gameObject.kind === 'transform' || gameObject.kind === 'primitive') {
-    return gameObject.kind;
-  }
-  if (findEditorScenePrimitiveRenderer(gameObject)) return 'primitive';
-  if (findEditorSceneModelRenderer(gameObject)) return 'instance';
-  if (gameObject.transformType || gameObject.groundDecal) return 'transform';
-  return 'group';
+  return readPlayableEditorSceneNodeKind(gameObject) as SceneNodeConfig['kind'];
 }
 
 export function patchEditorSceneGameObjectTransform(
