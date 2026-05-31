@@ -15,7 +15,7 @@ import { CascadedShadowGenerator } from '@babylonjs/core/Lights/Shadows/cascaded
 import {
   createPlanarShadowSystem,
   type PlanarShadowOptions,
-} from '@fps-games/babylon-renderer';
+} from '@fps-games/editor/playable-sdk';
 import {
   createPlanarShadowOptionsFromRenderingProfile,
   normalizeRenderingProfile,

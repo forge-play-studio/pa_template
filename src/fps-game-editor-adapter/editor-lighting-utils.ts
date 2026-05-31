@@ -1,13 +1,14 @@
 import {
-  DEFAULT_DIRECTIONAL_LIGHT_DIRECTION,
-  LIGHT_DIRECTION_ELEVATION_MAX_DEG,
-  LIGHT_DIRECTION_ELEVATION_MIN_DEG,
-  LIGHT_DIRECTION_HORIZONTAL_MAX_DEG,
-  LIGHT_DIRECTION_HORIZONTAL_MIN_DEG,
-  createDirectionalLightDirectionFromAngles as createRendererDirectionalLightDirectionFromAngles,
-  normalizeDirectionVector as normalizeRendererDirectionVector,
-  readDirectionalLightAngles as readRendererDirectionalLightAngles,
-} from '@fps-games/babylon-renderer';
+  EDITOR_SCENE_DEFAULT_DIRECTIONAL_LIGHT_DIRECTION,
+  EDITOR_SCENE_LIGHT_DIRECTION_ELEVATION_MAX_DEG,
+  EDITOR_SCENE_LIGHT_DIRECTION_ELEVATION_MIN_DEG,
+  EDITOR_SCENE_LIGHT_DIRECTION_HORIZONTAL_MAX_DEG,
+  EDITOR_SCENE_LIGHT_DIRECTION_HORIZONTAL_MIN_DEG,
+  createEditorSceneDirectionalLightDirectionFromAngles,
+  normalizeEditorSceneLightDirectionVector,
+  normalizeEditorSceneLightingAngleDegrees,
+  readEditorSceneDirectionalLightAngles,
+} from '@fps-games/editor/playable-sdk';
 
 export interface EditorLightingVec3 {
   x: number;
@@ -15,13 +16,11 @@ export interface EditorLightingVec3 {
   z: number;
 }
 
-export {
-  DEFAULT_DIRECTIONAL_LIGHT_DIRECTION,
-  LIGHT_DIRECTION_ELEVATION_MAX_DEG,
-  LIGHT_DIRECTION_ELEVATION_MIN_DEG,
-  LIGHT_DIRECTION_HORIZONTAL_MAX_DEG,
-  LIGHT_DIRECTION_HORIZONTAL_MIN_DEG,
-};
+export const DEFAULT_DIRECTIONAL_LIGHT_DIRECTION = EDITOR_SCENE_DEFAULT_DIRECTIONAL_LIGHT_DIRECTION;
+export const LIGHT_DIRECTION_ELEVATION_MAX_DEG = EDITOR_SCENE_LIGHT_DIRECTION_ELEVATION_MAX_DEG;
+export const LIGHT_DIRECTION_ELEVATION_MIN_DEG = EDITOR_SCENE_LIGHT_DIRECTION_ELEVATION_MIN_DEG;
+export const LIGHT_DIRECTION_HORIZONTAL_MAX_DEG = EDITOR_SCENE_LIGHT_DIRECTION_HORIZONTAL_MAX_DEG;
+export const LIGHT_DIRECTION_HORIZONTAL_MIN_DEG = EDITOR_SCENE_LIGHT_DIRECTION_HORIZONTAL_MIN_DEG;
 
 export const LIGHT_DIRECTION_HORIZONTAL_ANGLE_PATH = 'light.directionHorizontalAngleDeg';
 export const LIGHT_DIRECTION_ELEVATION_ANGLE_PATH = 'light.directionElevationAngleDeg';
@@ -33,7 +32,7 @@ export function isDirectionalLightAnglePath(path: string): boolean {
 export function normalizeDirectionalLightAngleValue(path: string, value: unknown): unknown {
   const numeric = readFiniteInspectorNumber(value);
   if (numeric == null) return value;
-  if (path === LIGHT_DIRECTION_HORIZONTAL_ANGLE_PATH) return Math.round(normalizeAngleDegrees(numeric));
+  if (path === LIGHT_DIRECTION_HORIZONTAL_ANGLE_PATH) return Math.round(normalizeEditorSceneLightingAngleDegrees(numeric));
   if (path === LIGHT_DIRECTION_ELEVATION_ANGLE_PATH) {
     return Math.round(clampNumber(
       numeric,
@@ -48,21 +47,21 @@ export function normalizeDirectionVector(
   direction: EditorLightingVec3 | undefined,
   fallback: EditorLightingVec3 = DEFAULT_DIRECTIONAL_LIGHT_DIRECTION,
 ): EditorLightingVec3 {
-  return normalizeRendererDirectionVector(direction, fallback) as EditorLightingVec3;
+  return normalizeEditorSceneLightDirectionVector(direction, fallback) as EditorLightingVec3;
 }
 
 export function readDirectionalLightAngles(direction: EditorLightingVec3 | undefined): {
   horizontalAngleDeg: number;
   elevationAngleDeg: number;
 } {
-  return readRendererDirectionalLightAngles(direction);
+  return readEditorSceneDirectionalLightAngles(direction);
 }
 
 export function createDirectionalLightDirectionFromAngles(
   horizontalAngleDeg: number,
   elevationAngleDeg: number,
 ): EditorLightingVec3 {
-  return createRendererDirectionalLightDirectionFromAngles(
+  return createEditorSceneDirectionalLightDirectionFromAngles(
     horizontalAngleDeg,
     elevationAngleDeg,
   ) as EditorLightingVec3;
@@ -75,9 +74,4 @@ function readFiniteInspectorNumber(value: unknown): number | null {
 
 function clampNumber(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
-}
-
-function normalizeAngleDegrees(value: number): number {
-  const normalized = ((((value + 180) % 360) + 360) % 360) - 180;
-  return normalized === -180 ? 180 : normalized;
 }

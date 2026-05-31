@@ -1,12 +1,22 @@
+/**
+ * @deprecated Legacy Forge Play bridge for runtime-scene editing.
+ *
+ * This module provides the legacy runtime bridge path using createBabylonForgePlayEditor.
+ * New projects should use createPlayableLocalEditorHost() from @fps-games/editor/playable-sdk
+ * instead, which provides a stable manifest-driven integration surface.
+ *
+ * This path is frozen for backward compatibility only and should not be extended.
+ */
 import {
   createBabylonForgePlayEditor,
   type BabylonForgePlayEditor,
+  type BabylonRuntimeGlobal,
   type EditorAdapterContext,
   type EditorDocumentAdapter,
+  type EditorRuntime,
+  type PersistentBinding,
   type SceneAdapter,
 } from '@fps-games/editor';
-import type { BabylonRuntimeGlobal } from '@fps-games/editor-babylon';
-import type { EditorRuntime, PersistentBinding } from '@fps-games/editor-protocol';
 
 import { projectEditorPlugin } from './plugin';
 import {

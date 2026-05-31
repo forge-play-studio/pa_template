@@ -7,9 +7,10 @@ import {
   EDITOR_SCENE_SOURCE_TYPE,
   ensureEditorSceneAuthoringSource as ensurePlayableEditorSceneAuthoringSource,
   getEditorSceneAuthoringSourceRef as getPlayableEditorSceneAuthoringSourceRef,
+  type AuthoringSourceDescriptor,
+  type AuthoringSourceRef,
   type EditorSceneRuntimeInputDrift,
 } from '@fps-games/editor/playable-sdk';
-import type { AuthoringSourceDescriptor, AuthoringSourceRef } from '@fps-games/editor-core';
 import type { EditorSceneDocument } from './editor-scene-document';
 
 export {

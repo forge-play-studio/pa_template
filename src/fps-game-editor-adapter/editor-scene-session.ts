@@ -23,7 +23,7 @@ import {
   createIdentityEditorTransform,
   getTopLevelSceneGraphNodeIds,
   toEditorLocalTransformFromWorld,
-} from '@fps-games/editor-core';
+} from '@fps-games/editor/playable-sdk';
 import {
   callEditorSceneRuntimeMethod as callPlayableEditorSceneRuntimeMethod,
   addAssetLibraryItemToEditorSceneDocument as addPlayableAssetLibraryItemToEditorSceneDocument,
@@ -40,9 +40,7 @@ import {
   createEditorSceneGroupSelectionPatch as createPlayableEditorSceneGroupSelectionPatch,
   createEditorSceneHierarchyMovePatch as createPlayableEditorSceneHierarchyMovePatch,
   createEditorSceneDuplicateMaterialAssetForBindingPatch as createPlayableEditorSceneDuplicateMaterialAssetForBindingPatch,
-  createEditorSceneDuplicateMaterialAssetValue as createPlayableEditorSceneDuplicateMaterialAssetValue,
   createEditorSceneMaterialAssetFieldInspectorPropertyInput as createPlayableEditorSceneMaterialAssetFieldInspectorPropertyInput,
-  createEditorSceneMaterialAssetPreview as createPlayableEditorSceneMaterialAssetPreview,
   createEditorSceneMaterialBindingSummary as createPlayableEditorSceneMaterialBindingSummary,
   createEditorSceneMaterialPickerControlOptions as createPlayableEditorSceneMaterialPickerControlOptions,
   createEditorSceneReadonlyInspectorProperty as createPlayableEditorSceneReadonlyInspectorProperty,
@@ -54,13 +52,11 @@ import {
   createEditorSceneRuntimeInspectorSections as createPlayableEditorSceneRuntimeInspectorSections,
   createEditorSceneSerializedMultiObject as createPlayableEditorSceneSerializedMultiObject,
   createEditorSceneSerializedObject as createPlayableEditorSceneSerializedObject,
-  createEditorSceneTextureAssetPreview as createPlayableEditorSceneTextureAssetPreview,
   createEditorSceneTexturePickerControlOptions as createPlayableEditorSceneTexturePickerControlOptions,
   degreesToEditorSceneRadians as degreesToPlayableEditorSceneRadians,
   describeEditorSceneRuntimeObject as describePlayableEditorSceneRuntimeObject,
   ensureEditorSceneGameObjectGuids as ensurePlayableEditorSceneGameObjectGuids,
   getEditorSceneGameObjectWorldTransform as getPlayableEditorSceneGameObjectWorldTransform,
-  getEditorSceneMaterialAssetDisplayMeta as getPlayableEditorSceneMaterialAssetDisplayMeta,
   getEditorSceneMaterialAssetDisplayName as getPlayableEditorSceneMaterialAssetDisplayName,
   getEditorSceneHierarchyItems as getPlayableEditorSceneHierarchyItems,
   findEditorSceneMaterialAsset as findPlayableEditorSceneMaterialAsset,
@@ -68,7 +64,6 @@ import {
   isEditorSceneCameraGameObject as isPlayableEditorSceneCameraGameObject,
   isEditorSceneArtistMaterialPatchPath as isPlayableEditorSceneArtistMaterialPatchPath,
   isEditorSceneGroupLikeGameObject as isPlayableEditorSceneGroupLikeGameObject,
-  isEditorSceneLightGameObject as isPlayableEditorSceneLightGameObject,
   isEditorSceneMaterialBindingPath as isPlayableEditorSceneMaterialBindingPath,
   isEditorSceneMaterialAssetReadonlyForInspector as isPlayableEditorSceneMaterialAssetReadonlyForInspector,
   isEditorSceneRootGameObject as isPlayableEditorSceneRootGameObject,
@@ -126,8 +121,6 @@ import type {
   EditorSceneVec3,
 } from './editor-scene-document';
 import type {
-  ArtistMaterialProfile,
-  MaterialOverrideConfig,
   OutlineOverrideConfig,
   SceneCameraProjection,
   SceneMaterialAssetConfig,
@@ -145,7 +138,6 @@ import {
   findEditorSceneTransform,
   readEditorSceneNodeKind,
 } from './editor-scene-document';
-import { mergeEditorSceneAssetWithLibraryItem } from './editor-asset-library';
 import { resolveSceneNodeFieldSchema } from './scene-node-field-schema';
 import {
   DEFAULT_DIRECTIONAL_LIGHT_DIRECTION,
@@ -1679,7 +1671,6 @@ function createEditorSceneDuplicateMaterialAssetForBindingPatch(
   });
   if (!result) return null;
   const sourceMaterialAsset = findEditorSceneMaterialAsset(document, sourceMaterialAssetId);
-  const materialAsset = result.patch.materialAsset as SceneMaterialAssetConfig;
   return {
     label: `Duplicate material ${sourceMaterialAsset?.name ?? sourceMaterialAssetId} for ${gameObject.name ?? gameObject.id}`,
     patch: result.patch as EditorSceneDocumentPatch,
@@ -2555,16 +2546,6 @@ function getEditorSceneMaterialAssetDisplayName(
   );
 }
 
-function getEditorSceneMaterialAssetMeta(
-  materialAsset: SceneMaterialAssetConfig,
-  text: ArtistMaterialInspectorText,
-): string {
-  return getPlayableEditorSceneMaterialAssetDisplayMeta(
-    materialAsset,
-    createEditorSceneMaterialDisplayText(text),
-  );
-}
-
 function createEditorSceneMaterialPickerText(text: ArtistMaterialInspectorText) {
   return {
     materialPickerTitle: text.materialPickerTitle,
@@ -2585,10 +2566,6 @@ function createEditorSceneMaterialDisplayText(text: ArtistMaterialInspectorText)
     defaultStandardMaterialMeta: text.defaultStandardMaterialMeta,
     formatMaterialMeta: (materialAssetId: string) => `Material - ${materialAssetId}`,
   };
-}
-
-function createEditorSceneMaterialPreview(profile: ArtistMaterialProfile): Record<string, unknown> {
-  return createPlayableEditorSceneMaterialAssetPreview(profile);
 }
 
 function createArtistMaterialAssetInspectorProperties(
@@ -2755,12 +2732,6 @@ function findEditorSceneInspectorTextureAsset(
   value: string,
 ): EditorSceneInspectorTextureAsset | null {
   return findPlayableEditorSceneInspectorTextureAsset(context.textureAssets, value) as EditorSceneInspectorTextureAsset | null;
-}
-
-function createTextureAssetPreview(texture: EditorSceneInspectorTextureAsset): Record<string, unknown> {
-  return {
-    ...createPlayableEditorSceneTextureAssetPreview(texture),
-  };
 }
 
 function createEditorSceneTexturePickerText(text: ArtistMaterialInspectorText) {
@@ -3017,10 +2988,6 @@ function validateEditorSceneMaterialAssetFieldValue(path: string, value: unknown
 
 function hasEditorSceneMaterialAsset(document: EditorSceneDocument, materialAssetId: string): boolean {
   return document.scene.materialAssets?.some((materialAsset) => materialAsset.id === materialAssetId) ?? false;
-}
-
-function createDuplicateMaterialAssetValue(materialAssetId: string): string {
-  return createPlayableEditorSceneDuplicateMaterialAssetValue(materialAssetId);
 }
 
 function parseDuplicateMaterialAssetValue(value: unknown): string | null {

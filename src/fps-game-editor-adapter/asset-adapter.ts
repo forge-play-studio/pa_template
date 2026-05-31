@@ -1,12 +1,4 @@
 import {
-  EDITOR_COMMAND_NAME,
-  EDITOR_EVENT_NAME,
-  EDITOR_POST_MESSAGE,
-  type AssetAdapter,
-  type EditorAdapterContext,
-} from '@fps-games/editor';
-
-import {
   ASSET_MANAGER_ERROR_CODES,
   planAssetRegistration,
   planAssetUnregistration,
@@ -22,7 +14,12 @@ import {
   readPlayableSceneNodePatchInput,
   readPlayableSceneNodeRemoveInput,
   resolvePlayablePlatformAssetRegistrationResult,
+  PLAYABLE_EDITOR_COMMAND_NAME as EDITOR_COMMAND_NAME,
+  PLAYABLE_EDITOR_EVENT_NAME as EDITOR_EVENT_NAME,
+  PLAYABLE_EDITOR_POST_MESSAGE as EDITOR_POST_MESSAGE,
   toPlayableBridgeCommandError,
+  type PlayableAssetAdapter as AssetAdapter,
+  type PlayableEditorAdapterContext as EditorAdapterContext,
   type PlayablePlatformAssetExternal,
 } from '@fps-games/editor/playable-sdk';
 import type { AssetExternalRef } from '../config';

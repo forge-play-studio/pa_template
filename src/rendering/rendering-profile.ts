@@ -1,4 +1,3 @@
-import type { PlanarShadowOptions } from '@fps-games/babylon-renderer';
 import {
   EDITOR_SCENE_DEFAULT_PLANAR_SHADOW_EXCLUDE_PATTERNS,
   EDITOR_SCENE_DEFAULT_PLANAR_SHADOW_RECEIVER_PATTERNS,
@@ -8,6 +7,7 @@ import {
   isEditorSceneRenderingProfilePatchPath,
   normalizeEditorSceneRenderingProfile,
   summarizeEditorSceneRenderingProfile,
+  type EditorScenePlanarShadowPreviewSettings,
   type EditorScenePlanarShadowPreviewSettingsInput,
   type EditorScenePlanarShadowProfile,
   type EditorSceneRenderingColorRgb,
@@ -24,6 +24,7 @@ export type RenderingColorRgba = EditorSceneRenderingColorRgba;
 export type NormalizedPlanarShadowProfile = EditorScenePlanarShadowProfile;
 export type NormalizedRenderingProfile = EditorSceneRenderingProfile;
 export type PlanarShadowOptionsFromRenderingProfileInput = EditorScenePlanarShadowPreviewSettingsInput;
+export type PlanarShadowOptionsFromRenderingProfile = EditorScenePlanarShadowPreviewSettings;
 export type RenderingProfilePatchResult = EditorSceneRenderingProfilePatchResult;
 export type EditorRenderingProfileAllowedPatchPath = EditorSceneRenderingProfilePatchPath;
 
@@ -38,8 +39,8 @@ export function normalizeRenderingProfile(config: unknown): NormalizedRenderingP
 export function createPlanarShadowOptionsFromRenderingProfile(
   profile: NormalizedRenderingProfile,
   input: PlanarShadowOptionsFromRenderingProfileInput = {},
-): Partial<PlanarShadowOptions> {
-  return createEditorScenePlanarShadowPreviewSettings(profile, input) as Partial<PlanarShadowOptions>;
+): PlanarShadowOptionsFromRenderingProfile {
+  return createEditorScenePlanarShadowPreviewSettings(profile, input);
 }
 
 export function applyEditorRenderingProfilePatch(

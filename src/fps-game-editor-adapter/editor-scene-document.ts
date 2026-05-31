@@ -29,8 +29,8 @@ import {
   type EditorScenePrimitiveRenderer as PlayableEditorScenePrimitiveRenderer,
   type EditorSceneTransformComponent as PlayableEditorSceneTransformComponent,
   type EditorSceneVec3 as PlayableEditorSceneVec3,
+  type AuthoringSourceRef,
 } from '@fps-games/editor/playable-sdk';
-import type { AuthoringSourceRef } from '@fps-games/editor-core';
 
 export type { EditorSceneCameraInspectorLanguage };
 

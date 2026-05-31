@@ -31,7 +31,6 @@ import {
   writeEditorSceneCameraDebugStoredOpen,
   type EditorSceneCameraRig,
   type EditorSceneCameraDebugNumberField,
-  type EditorSceneCameraDebugLanguage,
   type EditorSceneCameraDebugPanelNumberFieldConfig,
   type EditorSceneCameraDebugText,
   type EditorSceneCameraDebugTooltipText,
@@ -52,8 +51,6 @@ export interface CameraDebugPanelOptions {
 export interface CameraDebugPanel {
   dispose(): void;
 }
-
-type CameraDebugLanguage = EditorSceneCameraDebugLanguage;
 
 type CameraNumberField = EditorSceneCameraDebugNumberField;
 type CameraDebugText = EditorSceneCameraDebugText;

@@ -5,14 +5,14 @@ import sceneJsonV2Rules from '../config/scene-json-v2-rules.json';
 import type {
   CanonicalMaterialChange,
   CanonicalOutlineChange,
-} from '@fps-games/editor-babylon';
+} from '@fps-games/editor/playable-sdk';
 import {
   applyMaterialValueToRuntimeMaterial,
   applyMaterialValueToRuntimeNode,
   applyOutlineValueToRuntimeNode,
   resolveMaterialOwnerNode,
   resolveOutlineOwnerNode,
-} from '@fps-games/editor-babylon';
+} from '@fps-games/editor/playable-sdk';
 
 import type {
   ColorRGB,

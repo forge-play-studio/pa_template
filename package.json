@@ -40,8 +40,7 @@
   "dependencies": {
     "@babylonjs/core": "8.52.1",
     "@babylonjs/loaders": "8.52.1",
-    "@fps-games/babylon-renderer": "link:../../packages/babylon-renderer",
-    "@fps-games/editor": "0.1.3-beta.4",
+    "@fps-games/editor": "link:../../packages/editor",
     "brotli-dec-wasm": "^2.3.2"
   }
 }

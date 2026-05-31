@@ -58,7 +58,7 @@ import {
   resolveMaterialRuntimeKind,
   resolveMaterialOwnerNode,
   resolveOutlineTarget,
-} from '@fps-games/editor-babylon';
+} from '@fps-games/editor/playable-sdk';
 
 const BABYLON_MATERIAL_RUNTIME = { Color3, Texture };
 

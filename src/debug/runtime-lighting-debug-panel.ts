@@ -25,7 +25,6 @@ import {
   writeStoredEditorSceneLightingDebugLanguage as writeStoredLanguage,
   writeStoredEditorSceneLightingDebugOpen as writeStoredOpen,
   type EditorSceneLightingDebugColorField as ColorField,
-  type EditorSceneLightingDebugLanguage as LightingDebugLanguage,
   type EditorSceneLightingDebugNumberField as NumberField,
   type EditorSceneLightingDebugNumberFieldConfig as NumberFieldConfig,
   type EditorSceneLightingDebugSnapshot as LightingDebugSnapshot,

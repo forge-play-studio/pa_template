@@ -18,15 +18,6 @@
     "forceConsistentCasingInFileNames": true,
     "baseUrl": ".",
     "paths": {
-      "@fps-games/editor-babylon/legacy-runtime": ["node_modules/@fps-games/editor/node_modules/@fps-games/editor-babylon/dist/legacy-runtime.d.ts"],
-      "@fps-games/babylon-renderer": ["../../packages/babylon-renderer/src/index.ts"],
-      "@fps-games/editor/playable-sdk": ["node_modules/@fps-games/editor/dist/playable-sdk.d.ts"],
-      "@fps-games/editor-playable-sdk": ["node_modules/@fps-games/editor/node_modules/@fps-games/editor-playable-sdk/dist/index.d.ts"],
-      "@fps-games/editor-babylon": ["node_modules/@fps-games/editor/node_modules/@fps-games/editor-babylon/dist/index.d.ts"],
-      "@fps-games/editor-browser": ["node_modules/@fps-games/editor/node_modules/@fps-games/editor-browser/dist/index.d.ts"],
-      "@fps-games/editor-core": ["node_modules/@fps-games/editor/node_modules/@fps-games/editor-core/dist/index.d.ts"],
-      "@fps-games/editor-forge-play": ["node_modules/@fps-games/editor/node_modules/@fps-games/editor-forge-play/dist/index.d.ts"],
-      "@fps-games/editor-protocol": ["node_modules/@fps-games/editor/node_modules/@fps-games/editor-protocol/dist/index.d.ts"],
       "@/*": ["src/*"]
     }
   },

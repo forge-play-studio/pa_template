@@ -1,16 +1,9 @@
 import {
-  createLocalEditorHarness,
-  type LocalEditorHarness,
-  type LocalEditorHarnessMultiPropertyInput,
-  type LocalEditorHarnessPropertyInput,
-  type LocalEditorHarnessTransformBatchInput,
-  type LocalEditorHarnessTransformInput,
-} from '@fps-games/editor';
-import { createProjectAuthoringHost } from '@fps-games/editor-core';
-import {
-  createPlayableLocalEditorLifecycleController,
-  createPlayableLocalEditorLoadingOverlay,
+  createPlayableLocalEditorHost,
   createPlayablePlatformAssetDropCache,
+  createPlayableBabylonEditorGrid,
+  formatPlayableEditorDoctorReport,
+  inspectPlayableEditorHostCompatibilityReport,
   createEditorSceneRuntimePreviewMainCameraRig,
   createEditorSceneRuntimePreviewImportPlan,
   createEditorSceneRuntimePreviewMissingAssetUrlDiagnostic,
@@ -20,8 +13,8 @@ import {
   createEditorSceneSerializedMultiTransformPatch as createPlayableEditorSceneSerializedMultiTransformPatch,
   createEditorSceneTransformBatchPatch as createPlayableEditorSceneTransformBatchPatch,
   createEditorSceneTransformPatch as createPlayableEditorSceneTransformPatch,
-  installPlayableForgePlayModeBridge,
   normalizePlayableForgePlayCommandName,
+  PLAYABLE_LOCAL_EDITOR_HOST_MANIFEST_VERSION,
   PLAYABLE_FORGE_PLAY_COMMAND,
   PLAYABLE_FORGE_PLAY_EVENT,
   PLAYABLE_FORGE_PLAY_PROJECT_ASSET_COMMANDS,
@@ -37,27 +30,28 @@ import {
   resolveEditorSceneRuntimePreviewAssetUrl,
   registerPlayablePlatformAssetIfNeeded as registerPlayablePlatformAssetWithSdk,
   runPlayableAuthoringCommand,
-  waitForPlayableLocalEditorPaint,
   writePlayableAuthoringFile,
+  type PlayableLocalEditorHost,
+  type PlayableLocalEditorHostCompatibilityReport,
+  type PlayableLocalEditorHostBridgeContext,
+  type PlayableLocalEditorHarnessApi,
+  type PlayableLocalEditorMultiPropertyPatchInput,
+  type PlayableLocalEditorPropertyPatchInput,
+  type PlayableLocalEditorTransformBatchPatchInput,
+  type PlayableLocalEditorTransformPatchInput,
   type PlayableForgePlaySaveState,
-  type PlayableLocalEditorLifecycleController,
+  type PlayableBabylonProjectionImportContext,
+  type PlayableBabylonProjectionImportResult,
+  type PlayableBabylonProjectionNode,
+  type PlayableBabylonSceneCameraPreviewRig,
   type PlayableLocalEditorLoadingOverlayContent,
-  type PlayableLocalEditorLoadingOverlayController,
   type PlayablePlatformAssetDropPoint,
   type PlayablePlatformAssetExternal,
   type EditorSceneRuntimePreviewGroundDecalDescriptor,
 } from '@fps-games/editor/playable-sdk';
-import type {
-  BabylonEditorProjectionImportContext,
-  BabylonEditorProjectionImportResult,
-  BabylonEditorProjectionNode,
-  BabylonSceneCameraPreviewRig,
-} from '@fps-games/editor-babylon';
-import { createBabylonEditorInfiniteGrid } from '@fps-games/editor-babylon';
 import baseSceneConfig from '../config/scene.json';
 import type {
   SceneConfig,
-  SceneNodeMaterialBindingConfig,
 } from '../config/types';
 import type { EditorSceneDocument } from '../fps-game-editor-adapter/editor-scene-document';
 import {
@@ -158,21 +152,17 @@ const EDITOR_LOADING_OVERLAY_CONTENT: Record<'enter' | 'saveScene' | 'saveAndRun
 
 export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOptions): LocalEditorModeSwitcher {
   const sceneMainSourceDriver = createSceneMainSourceDriver();
-  const editorLoadingOverlay = createPlayableLocalEditorLoadingOverlay(options.root ?? document.body);
-  let lifecycleController: PlayableLocalEditorLifecycleController | null = null;
+  let editorHost: PlayableLocalEditorHost<EditorSceneDocument> | null = null;
   const runWithAssetLoadingOverlay = async <T>(operation: () => Promise<T>): Promise<T> => {
-    return lifecycleController
-      ? lifecycleController.runWithAssetLoadingOverlay(operation)
+    return editorHost
+      ? editorHost.runWithAssetLoadingOverlay(operation)
       : operation();
   };
   const importProjectionModelWithLoading = async (
-    context: BabylonEditorProjectionImportContext,
-  ): Promise<BabylonEditorProjectionImportResult | null> => {
+    context: PlayableBabylonProjectionImportContext,
+  ): Promise<PlayableBabylonProjectionImportResult | null> => {
     return runWithAssetLoadingOverlay(() => importEditorProjectionModel(context));
   };
-  const authoringHost = createProjectAuthoringHost({
-    drivers: [sceneMainSourceDriver],
-  });
   const editorLightingPreviewAdapter = {
     getWorldAppearance: resolveEditorLightingPreviewProfile,
     getWorldRendering: resolveEditorWorldRenderingProfile,
@@ -181,75 +171,112 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
     onRenderingPropertyChange: applyEditorRenderingPropertyChange,
   } as Record<string, unknown>;
   let currentEditorAssetLibrary: EditorSceneAssetLibraryItem[] = [];
-  const harness: LocalEditorHarness<EditorSceneDocument> = createLocalEditorHarness<EditorSceneDocument, EditorSceneDocumentPatch, EditorSceneAssetLibraryItem>({
+  const platformAssetDropCache = createPlayablePlatformAssetDropCache();
+  const rememberPlatformAssetDrop = (payload: Record<string, unknown>): void => {
+    platformAssetDropCache.remember(payload);
+  };
+  const normalizeLoadedPlatformAssetPayload = (payload: Record<string, unknown>): Record<string, unknown> => {
+    return platformAssetDropCache.normalize(payload);
+  };
+
+  editorHost = createPlayableLocalEditorHost<EditorSceneDocument, EditorSceneDocumentPatch, EditorSceneAssetLibraryItem>({
+    metadata: {
+      manifestVersion: PLAYABLE_LOCAL_EDITOR_HOST_MANIFEST_VERSION,
+      projectId: 'pa_template',
+      projectName: 'PA Template',
+      compatibilityTag: 'integration/fps-game-editor-lab',
+    },
     root: options.root,
     localTestActions: window.parent === window,
-    authoringHost,
+    authoring: {
+      drivers: [sceneMainSourceDriver],
+    },
     documentAdapter: {
-      ...editorLightingPreviewAdapter,
-      prepareDocument: (document, assets) => {
-        currentEditorAssetLibrary = assets;
-        return normalizeEditorSceneHierarchyDocument(
-          ensureEditorSceneEnvironmentDefaults(enrichEditorSceneDocumentAssets(document, assets)),
-        );
-      },
       reduceDocument: reduceEditorSceneDocument,
       getSerializedObject: getEditorSceneSerializedObject,
-      getSerializedMultiObject: getEditorSceneSerializedMultiObject,
-      getInspectorObject: (document, activeId) => getEditorSceneInspectorObject(
-        document,
-        activeId,
-        { textureAssets: createEditorSceneInspectorTextureAssets(currentEditorAssetLibrary) },
-      ),
-      getInspectorMultiObject: getEditorSceneInspectorMultiObject,
-      getRuntimeInspectorSections: getEditorSceneRuntimeInspectorSections,
       getHierarchyItems: getEditorSceneHierarchyItems,
-      ...({
-        getBrowserAssetItems: createEditorSceneBrowserAssetItems,
-        createAssetActionPatch: createEditorSceneAssetActionPatch,
-      } as Record<string, unknown>),
       getProjectionNodes: createProjectionNodes,
       getProjectionNode: (document, id) => {
         const gameObject = document.scene.gameObjects.find((entry) => entry.id === id);
         return gameObject ? createProjectionNode(document, gameObject) : null;
       },
-      getSceneCameraPreviewRig: createSceneCameraPreviewRig,
-      isSelectable: (_document, id) => id !== 'root',
-      isLocked: () => false,
       createPatchFromAsset: (assetItem, input) => ({
         label: `Add ${assetItem.displayName}`,
         patch: {
           kind: 'game-object.create-from-asset',
           assetItem,
-          ...(input?.placement ? { placement: input.placement } : {}),
+          ...(input?.placement ? { placement: input.placement as any } : {}),
         },
       }),
-      createPlacedAssetPatch: createEditorScenePlacedAssetPatch,
-      findCreatedId: (beforeDocument, afterDocument) => {
-        const beforeIds = new Set(beforeDocument.scene.gameObjects.map((gameObject) => gameObject.id));
-        return afterDocument.scene.gameObjects.find((gameObject) => !beforeIds.has(gameObject.id))?.id ?? null;
-      },
       createSerializedPropertyPatch: createEditorSceneSerializedPropertyPatch,
-      createSerializedMultiPropertyPatch: createEditorSceneSerializedMultiPropertyPatch,
-      createTransformPatch: createEditorSceneTransformPatch,
-      createTransformBatchPatch: createEditorSceneTransformBatchPatch,
-      createDuplicateSelectionPatch: createEditorSceneDuplicateSelectionPatch,
-      validateSceneGraphDrop: validateEditorSceneReparent,
-      validateSceneGraphMove: validateEditorSceneHierarchyMove,
-      validateSceneGraphGroupSelection: validateEditorSceneGroupSelection,
-      createSceneGraphRenamePatch: createEditorSceneRenamePatch,
-      createSceneGraphCreateGroupPatch: createEditorSceneCreateGroupPatch,
-      createSceneGraphCreatePrimitivePatch: createEditorSceneCreatePrimitivePatch,
-      createSceneGraphDeletePatch: createEditorSceneDeleteSubtreePatch,
-      createSceneGraphDropPatch: createEditorSceneReparentPatch,
-      createSceneGraphMovePatch: createEditorSceneHierarchyMovePatch,
-      createSceneGraphGroupSelectionPatch: createEditorSceneGroupSelectionPatch,
-      summarize: summarizeEditorScene,
+    },
+    capabilities: {
+      documentLifecycle: {
+        prepareDocument: (document, assets) => {
+          currentEditorAssetLibrary = assets;
+          return normalizeEditorSceneHierarchyDocument(
+            ensureEditorSceneEnvironmentDefaults(enrichEditorSceneDocumentAssets(document, assets)),
+          );
+        },
+        summarize: summarizeEditorScene,
+      },
+      selection: {
+        isSelectable: (_document, id) => id !== 'root',
+        isLocked: () => false,
+      },
+      inspector: {
+        getSerializedMultiObject: getEditorSceneSerializedMultiObject,
+        getInspectorObject: (document, activeId) => getEditorSceneInspectorObject(
+          document,
+          activeId,
+          { textureAssets: createEditorSceneInspectorTextureAssets(currentEditorAssetLibrary) },
+        ),
+        getInspectorMultiObject: getEditorSceneInspectorMultiObject,
+        getRuntimeInspectorSections: getEditorSceneRuntimeInspectorSections,
+      },
+      assetBrowser: {
+        getBrowserAssetItems: createEditorSceneBrowserAssetItems,
+      },
+      assetActions: {
+        createAssetActionPatch: input => createEditorSceneAssetActionPatch(input as unknown as Parameters<typeof createEditorSceneAssetActionPatch>[0]),
+        createPlacedAssetPatch: createEditorScenePlacedAssetPatch,
+        findCreatedId: (beforeDocument, afterDocument) => {
+          const beforeIds = new Set(beforeDocument.scene.gameObjects.map((gameObject) => gameObject.id));
+          return afterDocument.scene.gameObjects.find((gameObject) => !beforeIds.has(gameObject.id))?.id ?? null;
+        },
+      },
+      transformCommands: {
+        createSerializedMultiPropertyPatch: createEditorSceneSerializedMultiPropertyPatch,
+        createTransformPatch: createEditorSceneTransformPatch,
+        createTransformBatchPatch: createEditorSceneTransformBatchPatch,
+        createDuplicateSelectionPatch: createEditorSceneDuplicateSelectionPatch,
+      },
+      sceneGraph: {
+        validateSceneGraphDrop: validateEditorSceneReparent,
+        validateSceneGraphMove: validateEditorSceneHierarchyMove,
+        validateSceneGraphGroupSelection: validateEditorSceneGroupSelection,
+        createSceneGraphRenamePatch: createEditorSceneRenamePatch,
+        createSceneGraphCreateGroupPatch: createEditorSceneCreateGroupPatch,
+        createSceneGraphCreatePrimitivePatch: createEditorSceneCreatePrimitivePatch,
+        createSceneGraphDeletePatch: createEditorSceneDeleteSubtreePatch,
+        createSceneGraphDropPatch: createEditorSceneReparentPatch,
+        createSceneGraphMovePatch: createEditorSceneHierarchyMovePatch,
+        createSceneGraphGroupSelectionPatch: createEditorSceneGroupSelectionPatch,
+      },
+      worldPreview: {
+        getSceneCameraPreviewRig: createSceneCameraPreviewRig,
+        getWorldAppearance: editorLightingPreviewAdapter.getWorldAppearance as (document: EditorSceneDocument) => unknown | null,
+      },
+      rendering: {
+        getWorldRendering: editorLightingPreviewAdapter.getWorldRendering as (document: EditorSceneDocument) => unknown | null,
+        getRenderingPanelState: editorLightingPreviewAdapter.getRenderingPanelState as (document: EditorSceneDocument) => unknown | null,
+        onRenderingAction: input => applyEditorRenderingAction(input as Parameters<typeof applyEditorRenderingAction>[0]),
+        onRenderingPropertyChange: input => applyEditorRenderingPropertyChange(input as Parameters<typeof applyEditorRenderingPropertyChange>[0]),
+      },
     },
     persistenceAdapter: {
       async loadAuthoringSource() {
         const loaded = await loadSceneMainSource();
-        authoringHost.registerSource(loaded.source);
         return {
           source: loaded.source,
           document: loaded.document,
@@ -268,21 +295,21 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
       },
     },
     worldAdapter: {
-      disposeGameWorld: options.disposeGameWorld,
+      disposeWorld: options.disposeGameWorld,
       getCanvas() {
         const canvas = document.getElementById('renderCanvas');
         if (!(canvas instanceof HTMLCanvasElement)) return null;
         return canvas;
       },
-      loadBabylon: () => import('@babylonjs/core') as Promise<BabylonModule>,
-      createEngine(babylon, canvas) {
+      loadPreviewEngine: () => import('@babylonjs/core') as Promise<BabylonModule>,
+      createPreviewEngine(babylon, canvas) {
         return new babylon.Engine(canvas, true, {
           preserveDrawingBuffer: true,
           stencil: true,
           antialias: true,
         });
       },
-      importProjectionModel: importProjectionModelWithLoading,
+      importPreviewAsset: importProjectionModelWithLoading,
       resolveAssetId: asset => asset.assetId,
       toBrowserAssetItem(asset) {
         return {
@@ -308,42 +335,47 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
       useRightHandedSystem: true,
     },
     createGrid: createEditorGrid,
-  });
-
-  const rawDiscardAndRunGame = harness.discardAndRunGame.bind(harness);
-  lifecycleController = createPlayableLocalEditorLifecycleController({
-    harness: {
-      enterEditor: harness.enterEditor.bind(harness),
-      saveScene: harness.saveScene.bind(harness),
-      async discardAndRunGame() {
-        resetEditorRenderingDraft();
-        await rawDiscardAndRunGame();
-      },
-      render: harness.render.bind(harness),
-      notifyViewportRevealed: harness.notifyViewportRevealed?.bind(harness),
+    lifecycle: {
+      loadingContent: EDITOR_LOADING_OVERLAY_CONTENT,
+      beforeDiscardAndRunGame: resetEditorRenderingDraft,
     },
-    loadingOverlay: editorLoadingOverlay,
-    content: EDITOR_LOADING_OVERLAY_CONTENT,
+    forgePlay: {
+      window,
+      hasUnsavedPlatformChanges: hasEditorRenderingDraftChanges,
+      handleAssetDrop: rememberPlatformAssetDrop,
+      handleProjectAssetCommand: context => handleProjectAssetCommand(context, normalizeLoadedPlatformAssetPayload),
+      exportDocument: ({ payload, saveState }) => {
+        const harness = editorHost?.harness;
+        if (!harness) throw new Error('editor_host_unavailable');
+        return exportForgePlayDocument(harness, payload, saveState);
+      },
+      reportError: error => {
+        console.error('[LocalEditorModeSwitcher] Forge Play mode change failed', error);
+      },
+    },
   });
-  harness.enterEditor = lifecycleController.enterEditor;
-  harness.saveAndRunGame = lifecycleController.saveAndRunGame;
-  harness.discardAndRunGame = lifecycleController.discardAndRunGame;
 
-  const disposeForgePlayBridge = installForgePlayModeBridge(harness, editorLoadingOverlay, runWithAssetLoadingOverlay);
+  const host = editorHost;
+  logPlayableLocalEditorHostCompatibilityReport(host.getCompatibilityReport());
+  const disposeLegacyAssetBypass = installLegacyAssetCommandBypass((name, params) => {
+    const commandName = normalizePlayableForgePlayCommandName(name) ?? name;
+    return handleLegacyProjectAssetCommand(commandName, params, normalizeLoadedPlatformAssetPayload, host);
+  });
+  setLocalEditorAssetBridgeActive(true);
 
   return {
-    enterEditor: () => lifecycleController.enterEditor(),
-    discardAndRunGame: () => lifecycleController.discardAndRunGame(),
+    enterEditor: () => host.enterEditor(),
+    discardAndRunGame: () => host.discardAndRunGame(),
     dispose() {
-      disposeForgePlayBridge();
-      editorLoadingOverlay.dispose();
-      harness.dispose();
+      disposeLegacyAssetBypass();
+      setLocalEditorAssetBridgeActive(false);
+      host.dispose();
     },
   };
 }
 
 function createEditorGrid(BABYLON: BabylonModule, scene: any, camera?: any) {
-  return createBabylonEditorInfiniteGrid({
+  return createPlayableBabylonEditorGrid({
     babylon: BABYLON,
     scene,
     camera,
@@ -354,6 +386,24 @@ function createEditorGrid(BABYLON: BabylonModule, scene: any, camera?: any) {
 
 function createEditorSceneBrowserAssetItems(editorScene: EditorSceneDocument) {
   return createPlayableEditorSceneMaterialBrowserAssetItems(editorScene);
+}
+
+function logPlayableLocalEditorHostCompatibilityReport(
+  report: PlayableLocalEditorHostCompatibilityReport,
+): void {
+  const visibleDiagnostics = report.diagnostics.filter(
+    diagnostic => diagnostic.severity === 'warning' || diagnostic.severity === 'error',
+  );
+  if (visibleDiagnostics.length === 0) return;
+  const doctorReport = inspectPlayableEditorHostCompatibilityReport({
+    diagnostics: visibleDiagnostics,
+  });
+  const formatted = formatPlayableEditorDoctorReport(doctorReport);
+  if (doctorReport.ok) {
+    console.warn(formatted);
+  } else {
+    console.error(formatted);
+  }
 }
 
 function createEditorSceneLibraryAssetPreview(asset: EditorSceneAssetLibraryItem) {
@@ -385,26 +435,26 @@ function createEditorSceneInspectorTextureAssets(
     });
 }
 
-function createProjectionNodes(editorScene: EditorSceneDocument): BabylonEditorProjectionNode[] {
-  return createEditorSceneRuntimePreviewNodes(editorScene) as unknown as BabylonEditorProjectionNode[];
+function createProjectionNodes(editorScene: EditorSceneDocument): PlayableBabylonProjectionNode[] {
+  return createEditorSceneRuntimePreviewNodes(editorScene) as unknown as PlayableBabylonProjectionNode[];
 }
 
 function createProjectionNode(
   editorScene: EditorSceneDocument,
   gameObject: EditorSceneGameObject,
-): BabylonEditorProjectionNode {
-  return createEditorSceneRuntimePreviewNode(editorScene, gameObject) as unknown as BabylonEditorProjectionNode;
+): PlayableBabylonProjectionNode {
+  return createEditorSceneRuntimePreviewNode(editorScene, gameObject) as unknown as PlayableBabylonProjectionNode;
 }
 
 function createSceneCameraPreviewRig(
   editorScene: EditorSceneDocument,
-): BabylonSceneCameraPreviewRig | null {
-  return createEditorSceneRuntimePreviewMainCameraRig(editorScene, DEFAULT_EDITOR_SCENE_CAMERA) as BabylonSceneCameraPreviewRig | null;
+): PlayableBabylonSceneCameraPreviewRig | null {
+  return createEditorSceneRuntimePreviewMainCameraRig(editorScene, DEFAULT_EDITOR_SCENE_CAMERA) as PlayableBabylonSceneCameraPreviewRig | null;
 }
 
 async function importEditorProjectionModel(
-  context: BabylonEditorProjectionImportContext,
-): Promise<BabylonEditorProjectionImportResult | null> {
+  context: PlayableBabylonProjectionImportContext,
+): Promise<PlayableBabylonProjectionImportResult | null> {
   const assetId = readEditorSceneRuntimePreviewAssetId(context.asset);
   if (!assetId) return null;
   const assetsModule = await import('../assets');
@@ -438,9 +488,9 @@ function warnProjectionAssetUrlMissing(asset: unknown, kind: 'model' | 'texture'
 }
 
 async function createGroundDecalProjectionResult(
-  context: BabylonEditorProjectionImportContext,
+  context: PlayableBabylonProjectionImportContext,
   decal: EditorSceneRuntimePreviewGroundDecalDescriptor,
-): Promise<BabylonEditorProjectionImportResult> {
+): Promise<PlayableBabylonProjectionImportResult> {
   const [{ MeshBuilder }, { StandardMaterial }, { Texture }, { Color3 }] = await Promise.all([
     import('@babylonjs/core/Meshes/meshBuilder'),
     import('@babylonjs/core/Materials/standardMaterial'),
@@ -468,13 +518,13 @@ async function createGroundDecalProjectionResult(
 }
 
 function createEditorSceneSerializedPropertyPatch(
-  input: LocalEditorHarnessPropertyInput<EditorSceneDocument>,
+  input: PlayableLocalEditorPropertyPatchInput<EditorSceneDocument>,
 ): { patch: EditorSceneDocumentPatch; label: string; changedId: string; changedIds: string[]; reprojectIds?: string[] } | null {
   return createEditorSceneInspectorPropertyPatch(input);
 }
 
 function createEditorSceneSerializedMultiPropertyPatch(
-  input: LocalEditorHarnessMultiPropertyInput<EditorSceneDocument>,
+  input: PlayableLocalEditorMultiPropertyPatchInput<EditorSceneDocument>,
 ): { patch: EditorSceneDocumentPatch; label: string; changedIds: string[] } | null {
   if (input.targetIds.some((targetId) => !createEditorSceneInspectorPropertyPatch({
     document: input.document,
@@ -491,9 +541,9 @@ function createEditorSceneSerializedMultiPropertyPatch(
 }
 
 function createEditorSceneTransformPatch(
-  input: LocalEditorHarnessTransformInput<EditorSceneDocument>,
+  input: PlayableLocalEditorTransformPatchInput<EditorSceneDocument>,
 ): { patch: EditorSceneDocumentPatch; label: string; changedId: string; changedIds: string[] } | null {
-  const result = createPlayableEditorSceneTransformPatch(input);
+  const result = createPlayableEditorSceneTransformPatch(input as any);
   if (!result) return null;
   return {
     ...result,
@@ -502,9 +552,9 @@ function createEditorSceneTransformPatch(
 }
 
 function createEditorSceneTransformBatchPatch(
-  input: LocalEditorHarnessTransformBatchInput<EditorSceneDocument>,
+  input: PlayableLocalEditorTransformBatchPatchInput<EditorSceneDocument>,
 ): { patch: EditorSceneDocumentPatch; label: string; changedIds: string[] } | null {
-  const result = createPlayableEditorSceneTransformBatchPatch(input);
+  const result = createPlayableEditorSceneTransformBatchPatch(input as any);
   if (!result) return null;
   return {
     ...result,
@@ -521,160 +571,175 @@ function postForgePlayEvent(name: string, payload: Record<string, unknown> = {})
   postPlayableForgePlayEvent(window, name, payload);
 }
 
-function installForgePlayModeBridge(
-  harness: LocalEditorHarness,
-  loadingOverlay: Pick<PlayableLocalEditorLoadingOverlayController, 'show' | 'hide' | 'isVisible'>,
-  runWithAssetLoadingOverlay: <T>(operation: () => Promise<T>) => Promise<T>,
-): () => void {
-  setLocalEditorAssetBridgeActive(true);
-  const platformAssetDropCache = createPlayablePlatformAssetDropCache();
-  let bridge: ReturnType<typeof installPlayableForgePlayModeBridge>;
-
-  function rememberPlatformAssetDrop(payload: Record<string, unknown>): void {
-    platformAssetDropCache.remember(payload);
+async function handleProjectAssetCommand(
+  context: PlayableLocalEditorHostBridgeContext<PlayableLocalEditorHarnessApi<EditorSceneDocument>>,
+  normalizeLoadedPlatformAssetPayload: (payload: Record<string, unknown>) => Record<string, unknown>,
+): Promise<void> {
+  const commandName = normalizePlayableForgePlayCommandName(context.name);
+  if (commandName === PLAYABLE_FORGE_PLAY_COMMAND.ASSET_LIBRARY_REFRESH) {
+    await refreshEditorAssetLibrary({
+      payload: context.payload,
+      harness: context.harness,
+      ensureEditorMode: context.ensureEditorMode,
+      runWithAssetLoadingOverlay: context.runWithAssetLoadingOverlay,
+    });
+    return;
   }
-
-  function normalizeLoadedPlatformAssetPayload(payload: Record<string, unknown>): Record<string, unknown> {
-    return platformAssetDropCache.normalize(payload);
+  if (commandName === PLAYABLE_FORGE_PLAY_COMMAND.ASSET_IMPORT || commandName === PLAYABLE_FORGE_PLAY_COMMAND.ASSETS_LOADED) {
+    await importPlatformAsset({
+      payload: context.payload,
+      harness: context.harness,
+      ensureEditorMode: context.ensureEditorMode,
+      runWithAssetLoadingOverlay: context.runWithAssetLoadingOverlay,
+      normalizeLoadedPlatformAssetPayload,
+    });
+    return;
   }
-
-  async function ensureEditorMode(): Promise<void> {
-    if (bridge.getMode() === 'edit') return;
-    await bridge.switchMode('edit');
+  if (commandName === PLAYABLE_FORGE_PLAY_COMMAND.EDITOR_ASSET_PLACE) {
+    await placeEditorAsset({
+      payload: context.payload,
+      harness: context.harness,
+      ensureEditorMode: context.ensureEditorMode,
+      runWithAssetLoadingOverlay: context.runWithAssetLoadingOverlay,
+      normalizeLoadedPlatformAssetPayload,
+    });
   }
+}
 
-  async function refreshEditorAssetLibrary(payload: Record<string, unknown>): Promise<void> {
-    const requestId = readOptionalString(payload.requestId);
-    try {
-      await ensureEditorMode();
-      await runWithAssetLoadingOverlay(async () => {
-        const result = await harness.reloadAssets();
-        postForgePlayEvent(PLAYABLE_FORGE_PLAY_EVENT.ASSET_LIBRARY_REFRESHED, {
-          ...(requestId ? { requestId } : {}),
-          ...result,
-        });
-      });
-    } catch (error) {
+async function handleLegacyProjectAssetCommand(
+  commandName: string,
+  payload: Record<string, unknown>,
+  normalizeLoadedPlatformAssetPayload: (payload: Record<string, unknown>) => Record<string, unknown>,
+  host: PlayableLocalEditorHost<EditorSceneDocument> | null,
+): Promise<void> {
+  if (!host) return;
+  const bridge = host.getBridge();
+  const ensureEditorMode = async (): Promise<void> => {
+    if (bridge) {
+      if (bridge.getMode() !== 'edit') await bridge.switchMode('edit');
+      return;
+    }
+    if (!host.harness.getWorkingDocument()) await host.enterEditor();
+  };
+  const context: PlayableLocalEditorHostBridgeContext<PlayableLocalEditorHarnessApi<EditorSceneDocument>> = {
+    name: commandName,
+    payload,
+    harness: host.harness,
+    ensureEditorMode,
+    runWithAssetLoadingOverlay: host.runWithAssetLoadingOverlay,
+    postEvent: postForgePlayEvent,
+    getBridge: host.getBridge,
+  };
+  await handleProjectAssetCommand(context, normalizeLoadedPlatformAssetPayload);
+}
+
+async function refreshEditorAssetLibrary(input: {
+  payload: Record<string, unknown>;
+  harness: PlayableLocalEditorHarnessApi<EditorSceneDocument>;
+  ensureEditorMode: () => Promise<void>;
+  runWithAssetLoadingOverlay: <T>(operation: () => Promise<T>) => Promise<T>;
+}): Promise<void> {
+  const requestId = readOptionalString(input.payload.requestId);
+  try {
+    await input.ensureEditorMode();
+    await input.runWithAssetLoadingOverlay(async () => {
+      const result = await input.harness.reloadAssets();
       postForgePlayEvent(PLAYABLE_FORGE_PLAY_EVENT.ASSET_LIBRARY_REFRESHED, {
         ...(requestId ? { requestId } : {}),
-        ok: false,
-        assetCount: 0,
-        status: 'Asset reload failed',
-        error: error instanceof Error ? error.message : String(error),
+        ...result,
       });
-    }
+    });
+  } catch (error) {
+    postForgePlayEvent(PLAYABLE_FORGE_PLAY_EVENT.ASSET_LIBRARY_REFRESHED, {
+      ...(requestId ? { requestId } : {}),
+      ok: false,
+      assetCount: 0,
+      status: 'Asset reload failed',
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
+}
 
-  async function importPlatformAsset(payload: Record<string, unknown>): Promise<void> {
-    const requestId = readOptionalString(payload.requestId);
-    const normalizedPayload = normalizeLoadedPlatformAssetPayload(payload);
-    try {
-      await ensureEditorMode();
-      await runWithAssetLoadingOverlay(async () => {
-        const registered = await registerPlatformAssetIfNeeded(normalizedPayload);
-        const refresh = await harness.reloadAssets();
-        const assetType = readPlayablePlatformAssetKind(normalizedPayload);
-        const created = harness.createAssetFromAssetId(registered.assetId, {
-          placement: readPlayablePlatformAssetPlacement(normalizedPayload, {
-            projectDropPoint: projectPlatformDropPointToGround,
-          }),
-        });
-        postForgePlayEvent(PLAYABLE_FORGE_PLAY_EVENT.ASSET_IMPORT_RESULT, {
-          ...(requestId ? { requestId } : {}),
-          ok: created.ok,
-          guid: registered.guid,
-          assetId: registered.assetId,
-          kind: assetType === 'texture' ? 'texture' : 'model',
-          external: registered.external,
-          nodeId: created.createdId ?? undefined,
-          assetCount: refresh.assetCount,
-          status: created.status,
-          ...(created.error ? { error: created.error } : {}),
-        });
+async function importPlatformAsset(input: {
+  payload: Record<string, unknown>;
+  harness: PlayableLocalEditorHarnessApi<EditorSceneDocument>;
+  ensureEditorMode: () => Promise<void>;
+  runWithAssetLoadingOverlay: <T>(operation: () => Promise<T>) => Promise<T>;
+  normalizeLoadedPlatformAssetPayload: (payload: Record<string, unknown>) => Record<string, unknown>;
+}): Promise<void> {
+  const requestId = readOptionalString(input.payload.requestId);
+  const normalizedPayload = input.normalizeLoadedPlatformAssetPayload(input.payload);
+  try {
+    await input.ensureEditorMode();
+    await input.runWithAssetLoadingOverlay(async () => {
+      const registered = await registerPlatformAssetIfNeeded(normalizedPayload);
+      const refresh = await input.harness.reloadAssets();
+      const assetType = readPlayablePlatformAssetKind(normalizedPayload);
+      const created = input.harness.createAssetFromAssetId(registered.assetId, {
+        placement: readPlayablePlatformAssetPlacement(normalizedPayload, {
+          projectDropPoint: projectPlatformDropPointToGround,
+        }),
       });
-    } catch (error) {
       postForgePlayEvent(PLAYABLE_FORGE_PLAY_EVENT.ASSET_IMPORT_RESULT, {
         ...(requestId ? { requestId } : {}),
-        ok: false,
-        assetId: readOptionalString(normalizedPayload.projectAssetId) ?? '',
-        external: readPlayablePlatformAssetExternal(payload),
-        error: error instanceof Error ? error.message : String(error),
+        ok: created.ok,
+        guid: registered.guid,
+        assetId: registered.assetId,
+        kind: assetType === 'texture' ? 'texture' : 'model',
+        external: registered.external,
+        nodeId: created.createdId ?? undefined,
+        assetCount: refresh.assetCount,
+        status: created.status,
+        ...(created.error ? { error: created.error } : {}),
       });
-    }
+    });
+  } catch (error) {
+    postForgePlayEvent(PLAYABLE_FORGE_PLAY_EVENT.ASSET_IMPORT_RESULT, {
+      ...(requestId ? { requestId } : {}),
+      ok: false,
+      assetId: readOptionalString(normalizedPayload.projectAssetId) ?? '',
+      external: readPlayablePlatformAssetExternal(input.payload),
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
+}
 
-  async function placeEditorAsset(payload: Record<string, unknown>): Promise<void> {
-    const requestId = readOptionalString(payload.requestId);
-    const normalizedPayload = normalizeLoadedPlatformAssetPayload(payload);
-    let assetId = readOptionalString(normalizedPayload.projectAssetId) ?? '';
-    try {
-      await ensureEditorMode();
-      await runWithAssetLoadingOverlay(async () => {
-        assetId = await resolvePlatformAssetId(normalizedPayload);
-        const created = harness.createAssetFromAssetId(assetId, {
-          placement: readPlayablePlatformAssetPlacement(normalizedPayload, {
-            projectDropPoint: projectPlatformDropPointToGround,
-          }),
-        });
-        postForgePlayEvent(PLAYABLE_FORGE_PLAY_EVENT.EDITOR_ASSET_PLACE_RESULT, {
-          ...(requestId ? { requestId } : {}),
-          ok: created.ok,
-          assetId,
-          nodeId: created.createdId ?? undefined,
-          status: created.status,
-          ...(created.error ? { error: created.error } : {}),
-        });
+async function placeEditorAsset(input: {
+  payload: Record<string, unknown>;
+  harness: PlayableLocalEditorHarnessApi<EditorSceneDocument>;
+  ensureEditorMode: () => Promise<void>;
+  runWithAssetLoadingOverlay: <T>(operation: () => Promise<T>) => Promise<T>;
+  normalizeLoadedPlatformAssetPayload: (payload: Record<string, unknown>) => Record<string, unknown>;
+}): Promise<void> {
+  const requestId = readOptionalString(input.payload.requestId);
+  const normalizedPayload = input.normalizeLoadedPlatformAssetPayload(input.payload);
+  let assetId = readOptionalString(normalizedPayload.projectAssetId) ?? '';
+  try {
+    await input.ensureEditorMode();
+    await input.runWithAssetLoadingOverlay(async () => {
+      assetId = await resolvePlatformAssetId(normalizedPayload);
+      const created = input.harness.createAssetFromAssetId(assetId, {
+        placement: readPlayablePlatformAssetPlacement(normalizedPayload, {
+          projectDropPoint: projectPlatformDropPointToGround,
+        }),
       });
-    } catch (error) {
       postForgePlayEvent(PLAYABLE_FORGE_PLAY_EVENT.EDITOR_ASSET_PLACE_RESULT, {
         ...(requestId ? { requestId } : {}),
-        ok: false,
+        ok: created.ok,
         assetId,
-        error: error instanceof Error ? error.message : String(error),
+        nodeId: created.createdId ?? undefined,
+        status: created.status,
+        ...(created.error ? { error: created.error } : {}),
       });
-    }
+    });
+  } catch (error) {
+    postForgePlayEvent(PLAYABLE_FORGE_PLAY_EVENT.EDITOR_ASSET_PLACE_RESULT, {
+      ...(requestId ? { requestId } : {}),
+      ok: false,
+      assetId,
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
-
-  async function handleProjectAssetCommand(name: string, payload: Record<string, unknown>): Promise<void> {
-    const commandName = normalizePlayableForgePlayCommandName(name);
-    if (commandName === PLAYABLE_FORGE_PLAY_COMMAND.ASSET_LIBRARY_REFRESH) {
-      await refreshEditorAssetLibrary(payload);
-      return;
-    }
-    if (commandName === PLAYABLE_FORGE_PLAY_COMMAND.ASSET_IMPORT || commandName === PLAYABLE_FORGE_PLAY_COMMAND.ASSETS_LOADED) {
-      await importPlatformAsset(payload);
-      return;
-    }
-    if (commandName === PLAYABLE_FORGE_PLAY_COMMAND.EDITOR_ASSET_PLACE) {
-      await placeEditorAsset(payload);
-    }
-  }
-
-  const disposeLegacyAssetBypass = installLegacyAssetCommandBypass((name, params) => handleProjectAssetCommand(name, params));
-  bridge = installPlayableForgePlayModeBridge({
-    window,
-    harness,
-    loadingOverlay,
-    loadingContent: {
-      saveScene: EDITOR_LOADING_OVERLAY_CONTENT.saveScene,
-      saveAndRunGame: EDITOR_LOADING_OVERLAY_CONTENT.saveAndRunGame,
-      discardAndRunGame: EDITOR_LOADING_OVERLAY_CONTENT.discardAndRunGame,
-    },
-    waitForPaint: waitForPlayableLocalEditorPaint,
-    hasUnsavedPlatformChanges: hasEditorRenderingDraftChanges,
-    handleAssetDrop: rememberPlatformAssetDrop,
-    handleProjectAssetCommand,
-    exportDocument: ({ payload, saveState }) => exportForgePlayDocument(harness, payload, saveState),
-    reportError: error => {
-      console.error('[LocalEditorModeSwitcher] Forge Play mode change failed', error);
-    },
-  });
-
-  return () => {
-    disposeLegacyAssetBypass();
-    setLocalEditorAssetBridgeActive(false);
-    bridge.dispose();
-  };
 }
 
 function installLegacyAssetCommandBypass(
@@ -813,7 +878,7 @@ function readOptionalString(value: unknown): string | undefined {
 }
 
 async function exportForgePlayDocument(
-  harness: LocalEditorHarness,
+  harness: PlayableLocalEditorHarnessApi,
   payload: Record<string, unknown>,
   saveState: PlayableForgePlaySaveState,
 ): Promise<void> {

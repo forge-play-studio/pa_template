@@ -4,7 +4,7 @@ import type {
   AuthoringSourceSaveResult,
   CompiledArtifact,
   CompiledArtifactProvenance,
-} from '@fps-games/editor-core';
+} from '@fps-games/editor/playable-sdk';
 import {
   loadEditorAssetLibrary as loadPlayableEditorAssetLibrary,
   loadSceneMainSource as loadPlayableSceneMainSource,
