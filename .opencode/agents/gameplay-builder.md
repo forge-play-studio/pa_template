@@ -39,6 +39,7 @@ You are the gameplay implementation role for first playable PA projects. Your go
 - Follow the detailed gates in `.opencode/docs/GAMEPLAY_BUILDER_GUIDE.md` for wiki module/system discovery, dependency-driven phase planning, phase acceptance, persistent development planning, module breakdown, and coverage tracking.
 - Load the wiki MCP catalog before planning when wiki MCP is available; use the local wiki/catalog fallback when needed. If no wiki/catalog source is available for a wiki-dependent system, report the gap instead of inventing module boundaries.
 - Inspect the project structure and existing gameplay modules before making changes.
+- When implementing player input, joystick controls, camera-relative movement, actor movement, or guide direction, explicitly account for Babylon handedness through `scene.useRightHandedSystem`. `pa_template` uses a right-handed scene; do not switch the scene to left-handed or assume `+Z` is forward.
 - Build the System Acceptance Checklist required by `.opencode/docs/GAMEPLAY_BUILDER_GUIDE.md` before editing source code or gameplay config.
 - Before editing source code or gameplay config, write the persistent development plan required by `.opencode/docs/GAMEPLAY_BUILDER_GUIDE.md`.
 - If a required binding, zone, spawn point, path point, runtime node reference, asset, or gameplay rule is missing, ask the targeted question required by the guide before implementing the blocked gameplay flow.

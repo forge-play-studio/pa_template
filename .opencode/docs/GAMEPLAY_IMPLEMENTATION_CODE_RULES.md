@@ -150,6 +150,22 @@ NPC/自动化：单体行为和全局工作分配要区分。
 
 这不是要求固定拆出这些系统，而是要求实现后能解释这些 gameplay 责任分别由哪些代码承担。
 
+### 5.1 3C 输入与坐标系
+
+`pa_template` 的 `Game` 强制使用 Babylon 右手坐标系：`scene.useRightHandedSystem = true`。实现或修改玩家输入、摇杆、键盘移动、镜头相对移动、引导方向或 actor 朝向时，必须把左右手坐标系作为输入转换的一部分处理。
+
+要求：
+
+```text
+不要为了修正输入方向把 scene 改成左手坐标系。
+不要默认 `+Z` 就是镜头或角色 forward。
+需要从相机推导移动方向时，先根据 `scene.useRightHandedSystem` 选择 forward 基准向量；右手场景应使用与当前项目一致的 `-Z` forward 语义。
+InputService / JoystickControl 可以保持屏幕或摇杆输入语义，但 ProjectPlayer / SimplePlayer 等移动层必须把它转换成正确的世界 X/Z 方向。
+修改输入或移动后，至少验证前、后、左、右四个方向在当前相机角度下不会镜像、反向或横向错位。
+```
+
+本地可参考 `src/editor-package/runtime-core/camera-controller.ts` 中按 `scene.useRightHandedSystem` 选择 camera forward 的做法。
+
 ## 6. 资源链规则
 
 资源链是 first playable gameplay 的主干，实现时必须保证：

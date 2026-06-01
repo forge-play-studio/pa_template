@@ -491,6 +491,8 @@ fallback 顺序如下：
 
 模块顺序必须服从 `gameplay.md` 的最小完整路径。不要为了套模板强行实现文档里没有的系统。
 
+如果实现或修改 `Player input and movement`，必须把坐标系方向作为验收点。`pa_template` 的 Babylon scene 固定为右手坐标系，输入、摇杆、相机 forward/right、玩家朝向和世界 X/Z 移动之间不能直接套用默认左手 `+Z forward` 假设。实现前应检查 `scene.useRightHandedSystem`，实现后应验证前、后、左、右四个输入方向与屏幕/相机预期一致。
+
 如果是 `pa_template` 项目，默认落地形态通常类似：
 
 ```text
