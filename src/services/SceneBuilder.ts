@@ -207,6 +207,13 @@ export class SceneBuilder {
     this.applyCameraRuntimeProperties(camera, nextRig, target ?? camera.target.clone());
   }
 
+  setSelectedCameraTargetOffset(target: Vector3): SceneCameraRigConfig {
+    const cameraRig = cloneCameraRig(this.selectedCameraRig ?? this.resolveCameraRig());
+    cameraRig.targetOffset = { x: target.x, y: target.y, z: target.z };
+    this.selectedCameraRig = cloneCameraRig(cameraRig);
+    return cloneCameraRig(cameraRig);
+  }
+
   getSelectedCameraRig(): SceneCameraRigConfig {
     const cameraRig = this.selectedCameraRig ?? this.resolveCameraRig();
     return cloneCameraRig(cameraRig);
