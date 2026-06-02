@@ -67,6 +67,7 @@ export interface GameOptions {
   canvasId: string;
   debug?: boolean;
   enableAudio?: boolean;
+  showPlayerPlaceholder?: boolean;
 }
 
 export class Game {
@@ -103,6 +104,7 @@ export class Game {
   private isPaused = false;
   private lastTime = 0;
   private enableAudio: boolean;
+  private showPlayerPlaceholder: boolean;
 
   constructor(options: GameOptions) {
     const el = document.getElementById(options.canvasId);
@@ -112,6 +114,7 @@ export class Game {
     this.canvas = el;
 
     this.enableAudio = options.enableAudio ?? false;
+    this.showPlayerPlaceholder = options.showPlayerPlaceholder ?? true;
 
     this.engine = new Engine(this.canvas, true, {
       preserveDrawingBuffer: true,
@@ -227,6 +230,7 @@ export class Game {
       position: startPos,
       speed: 4.2,
       radius: 0.35,
+      visible: this.showPlayerPlaceholder,
     });
 
     // 摄像机跟随（ArcRotateCamera：target 跟随）

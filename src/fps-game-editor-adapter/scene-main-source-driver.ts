@@ -41,7 +41,6 @@ export interface SceneMainSourceDriverOptions {
 }
 
 export interface SceneMainSourceSaveOptions extends PlayableSceneMainSourceSaveOptions {
-  renderingConfig?: Record<string, unknown> | null;
 }
 
 export interface SceneMainSourceSaveResult extends AuthoringSourceSaveResult<EditorSceneDocument> {
@@ -81,7 +80,11 @@ export function createSceneMainSourceDriver(
       const renderingConfig = isRenderingProfileDirty() ? getActiveRenderingConfig() : null;
       let saved: SceneMainSourceSaveResult;
       try {
-        saved = await saveSceneMainSource(request, document, { renderingConfig });
+        saved = await saveSceneMainSource(request, document, {
+          ...(renderingConfig
+            ? { companionConfigs: { rendering: renderingConfig } }
+            : {}),
+        });
       } catch (error) {
         if (renderingConfig) setActiveRenderingConfigError(error);
         throw error;

@@ -1,4 +1,10 @@
 import type {
+  EditorSceneMaterialAsset,
+} from '@fps-games/editor/playable-sdk';
+import {
+  resolveEditorSceneMaterialAssetIntegrity,
+} from '@fps-games/editor/playable-sdk';
+import type {
   EditorSceneAsset,
   EditorSceneCameraRig,
   EditorSceneDocument,
@@ -17,6 +23,7 @@ import type {
   SceneConfig,
   SceneGroupNode,
   SceneInstanceNode,
+  SceneMaterialAssetConfig,
   SceneNodeMaterialBindingConfig,
   SceneNodeConfig,
   SceneNodeVisualOverrides,
@@ -65,9 +72,7 @@ export function compileEditorSceneDocumentToSceneConfig(
     rootId,
     assets: editorDocument.assets.map(compileAsset),
     nodes: compiledGameObjects.map((gameObject) => compileGameObject(gameObject, sourceRef, editorDocument)),
-    materialAssets: editorDocument.scene.materialAssets
-      ? structuredClone(editorDocument.scene.materialAssets)
-      : previousScene?.materialAssets ?? [],
+    materialAssets: resolveCompiledEditorSceneMaterialAssets(editorDocument, previousScene?.materialAssets),
     materials: previousScene?.materials ?? [],
     textures: previousScene?.textures ?? [],
   };
@@ -80,6 +85,34 @@ export function compileEditorSceneDocumentToSceneConfig(
       nodeCount: nextSceneConfig.scene.nodes.length,
     },
   };
+}
+
+function resolveCompiledEditorSceneMaterialAssets(
+  editorDocument: EditorSceneDocument,
+  previousMaterialAssets: readonly SceneMaterialAssetConfig[] | undefined,
+): SceneMaterialAssetConfig[] {
+  const materialAssets: SceneMaterialAssetConfig[] = editorDocument.scene.materialAssets
+    ? structuredClone(editorDocument.scene.materialAssets)
+    : (previousMaterialAssets ?? []).map(materialAsset => structuredClone(materialAsset));
+  const materialAssetIds = new Set(materialAssets.map(materialAsset => materialAsset.id));
+  const previousMaterialAssetById = new Map(
+    (previousMaterialAssets ?? []).map(materialAsset => [materialAsset.id, materialAsset]),
+  );
+  const integrity = resolveEditorSceneMaterialAssetIntegrity({
+    ...editorDocument,
+    scene: {
+      ...editorDocument.scene,
+      materialAssets: materialAssets as EditorSceneMaterialAsset[],
+    },
+  });
+  for (const materialAssetId of integrity.missingMaterialAssetIds) {
+    if (materialAssetIds.has(materialAssetId)) continue;
+    const previousMaterialAsset = previousMaterialAssetById.get(materialAssetId);
+    if (!previousMaterialAsset) continue;
+    materialAssetIds.add(materialAssetId);
+    materialAssets.push(structuredClone(previousMaterialAsset));
+  }
+  return materialAssets;
 }
 
 function compileAsset(asset: EditorSceneAsset): SceneAssetConfig {

@@ -1,8 +1,9 @@
 {
   "globalVolume": {
+    "enabled": true,
     "imageProcessing": {
-      "exposure": 1,
-      "contrast": 1
+      "exposure": 0.82,
+      "contrast": 1.05
     },
     "environment": {
       "intensity": 1,
@@ -40,9 +41,9 @@
       "bloom": {
         "enabled": true,
         "threshold": 0.15,
-        "weight": 2,
-        "kernel": 96,
-        "scale": 0.5
+        "weight": 0.08,
+        "kernel": 32,
+        "scale": 0.35
       }
     },
     "camera": {
@@ -53,6 +54,12 @@
         "y": 0,
         "z": 0
       }
+    },
+    "antialiasing": {
+      "samples": 4
+    },
+    "toneMapping": {
+      "type": "khr-pbr-neutral"
     }
   },
   "shadows": {

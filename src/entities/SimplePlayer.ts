@@ -30,6 +30,8 @@ export interface SimplePlayerConfig {
   speed: number;
   /** 半径（视觉尺寸） */
   radius?: number;
+  /** 是否显示脚手架玩家占位体 */
+  visible?: boolean;
 }
 
 export class SimplePlayer {
@@ -59,6 +61,14 @@ export class SimplePlayer {
     mat.diffuseColor = new Color3(0.3, 0.8, 0.55);
     mat.specularColor = new Color3(0.05, 0.05, 0.05);
     mesh.material = mat;
+    if (config.visible === false) {
+      mesh.isVisible = false;
+      mesh.isPickable = false;
+      mesh.metadata = {
+        ...(mesh.metadata && typeof mesh.metadata === 'object' ? mesh.metadata : {}),
+        disablePlanarShadow: true,
+      };
+    }
 
     this.mesh = mesh;
   }

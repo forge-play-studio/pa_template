@@ -14,6 +14,7 @@ import {
   handlePlayableAuthoringServerRequest,
   inspectPlayableEditorPackageAliasPlan,
   PLAYABLE_EDITOR_PACKAGE_IDS,
+  readSceneMainSourceRenderingConfig,
   type PlayableEditorPackageAliasPlan,
   type PlayableAuthoringServerResponse,
 } from '@fps-games/editor/playable-sdk';
@@ -283,7 +284,10 @@ function projectAuthoringApiPlugin() {
               ? JSON.parse(readFileSync(scenePath, 'utf8') || '{}')
               : null;
             const { ensureEditorSceneAuthoringSource, detectEditorSceneRuntimeInputDrift } = await server.ssrLoadModule('/src/fps-game-editor-adapter/editor-authoring-source.ts');
-            const normalizedEditorScene = editorScene ? ensureEditorSceneAuthoringSource(editorScene) : editorScene;
+            const { repairEditorSceneMaterialAssetsFromSceneConfig } = await server.ssrLoadModule('/src/fps-game-editor-adapter/editor-scene-session.ts');
+            const normalizedEditorScene = editorScene
+              ? repairEditorSceneMaterialAssetsFromSceneConfig(ensureEditorSceneAuthoringSource(editorScene), runtimeScene)
+              : editorScene;
             return {
               ok: true,
               editorScenePath,
@@ -323,7 +327,7 @@ function projectAuthoringApiPlugin() {
             return { ok: true, cmd, result };
           },
           async saveEditorScene({ mode: saveMode, rawEditorScene, body }) {
-            const renderingConfig = readOptionalRecord(body.renderingConfig);
+            const renderingConfig = readSceneMainSourceRenderingConfig(body);
             const editorScenePath = resolve(__dirname, 'src/config/editor-scene.json');
             const scenePath = resolve(__dirname, 'src/config/scene.json');
             const renderingConfigPath = resolve(__dirname, 'src/config/rendering.json');
@@ -332,13 +336,20 @@ function projectAuthoringApiPlugin() {
               : {};
             const { compileEditorSceneDocumentToSceneConfig } = await server.ssrLoadModule('/src/fps-game-editor-adapter/editor-scene-compiler.ts');
             const { enrichEditorSceneDocumentAssets } = await server.ssrLoadModule('/src/fps-game-editor-adapter/editor-asset-library.ts');
+            const { repairEditorSceneMaterialAssetsFromSceneConfig, assertEditorSceneMaterialAssetIntegrity } = await server.ssrLoadModule('/src/fps-game-editor-adapter/editor-scene-session.ts');
             const { bumpEditorSceneAuthoringSourceRevision, ensureEditorSceneAuthoringSource } = await server.ssrLoadModule('/src/fps-game-editor-adapter/editor-authoring-source.ts');
             const { normalizeRenderingProfile } = await server.ssrLoadModule('/src/rendering/rendering-profile.ts');
             const { assertSceneJsonV2 } = await import('./scripts/platform-sim/lib/scene-json-v2-schema.mjs');
             assertEditorSceneDocument(rawEditorScene);
             const normalizedRenderingConfig = renderingConfig ? normalizeRenderingProfile(renderingConfig) : null;
+            const editorAssets = await listEditorAssetLibrary(server);
+            const repairedEditorScene = repairEditorSceneMaterialAssetsFromSceneConfig(
+              enrichEditorSceneDocumentAssets(ensureEditorSceneAuthoringSource(rawEditorScene), editorAssets),
+              previousSceneConfig,
+            );
+            assertEditorSceneMaterialAssetIntegrity(repairedEditorScene);
             const editorScene = bumpEditorSceneAuthoringSourceRevision(
-              enrichEditorSceneDocumentAssets(ensureEditorSceneAuthoringSource(rawEditorScene), await listEditorAssetLibrary(server)),
+              repairedEditorScene,
             );
             const compiled = compileEditorSceneDocumentToSceneConfig(editorScene, previousSceneConfig);
             assertSceneJsonV2(compiled.sceneConfig);
@@ -371,7 +382,9 @@ function projectAuthoringApiPlugin() {
                     resolve(__dirname, 'src/rendering/rendering-profile.ts'),
                     resolve(__dirname, 'src/fps-game-editor-adapter/editor-rendering-profile.ts'),
                     resolve(__dirname, 'src/fps-game-editor-adapter/editor-shadow-preview-profile.ts'),
+                    resolve(__dirname, 'src/services/RenderingService.ts'),
                     resolve(__dirname, 'src/services/ShadowService.ts'),
+                    resolve(__dirname, 'src/services/SceneBuilder.ts'),
                   ] : []),
                 ]
               : [editorScenePath];
@@ -386,6 +399,9 @@ function projectAuthoringApiPlugin() {
               ...(saveMode === 'local-commit-save' ? { version, updatedAt } : {}),
               editorScene,
               ...(renderingConfig && saveMode === 'local-commit-save' ? {
+                companionConfigs: {
+                  rendering: renderingConfig,
+                },
                 renderingConfig,
                 renderingSummary: summarizeRenderingProfile(normalizedRenderingConfig),
               } : {}),
@@ -441,7 +457,9 @@ async function handleRenderingProfileAuthoringRoute(
         resolve(__dirname, 'src/rendering/rendering-profile.ts'),
         resolve(__dirname, 'src/fps-game-editor-adapter/editor-rendering-profile.ts'),
         resolve(__dirname, 'src/fps-game-editor-adapter/editor-shadow-preview-profile.ts'),
+        resolve(__dirname, 'src/services/RenderingService.ts'),
         resolve(__dirname, 'src/services/ShadowService.ts'),
+        resolve(__dirname, 'src/services/SceneBuilder.ts'),
       ]);
       return { renderingConfigPath };
     },
@@ -452,12 +470,6 @@ function readRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' && !Array.isArray(value)
     ? value as Record<string, unknown>
     : {};
-}
-
-function readOptionalRecord(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === 'object' && !Array.isArray(value)
-    ? value as Record<string, unknown>
-    : null;
 }
 
 function normalizePayloadPath(value: string): string {
@@ -526,6 +538,10 @@ function assertEditorSceneDocument(value: any): void {
   if (!Array.isArray(gameObjects)) {
     throw new Error('editor_scene_game_objects_must_be_array');
   }
+  const materialAssets = value.scene?.materialAssets;
+  if (materialAssets != null && !Array.isArray(materialAssets)) {
+    throw new Error('editor_scene_material_assets_must_be_array');
+  }
 }
 
 function summarizeEditorScene(value: any): Record<string, unknown> {
@@ -536,11 +552,14 @@ function summarizeEditorScene(value: any): Record<string, unknown> {
     revision: value?.meta?.authoringSource?.revision ?? null,
     assets: Array.isArray(value?.assets) ? value.assets.length : 0,
     gameObjects: Array.isArray(value?.scene?.gameObjects) ? value.scene.gameObjects.length : 0,
+    materialAssets: Array.isArray(value?.scene?.materialAssets) ? value.scene.materialAssets.length : 0,
   };
 }
 
 function summarizeRenderingProfile(value: any): Record<string, unknown> {
   return {
+    postProcessEnabled: value?.postProcess?.enabled ?? value?.globalVolume?.enabled ?? null,
+    postProcessBloomEnabled: value?.postProcess?.bloom?.enabled ?? value?.globalVolume?.postProcessing?.bloom?.enabled ?? null,
     planarEnabled: value?.shadows?.planar?.enabled ?? null,
     planarOpacity: value?.shadows?.planar?.appearance?.color?.a ?? null,
     planeHeight: value?.shadows?.planar?.plane?.height ?? null,
