@@ -950,12 +950,12 @@ function describeEditorSceneAgentObject(
   const label = gameObject.name || gameObject.id;
   return {
     domainKind: `pa-template:${nodeKind}`,
-    gameplayRole: resolveEditorSceneAgentGameplayRole(gameObject),
+    domainRole: resolveEditorSceneAgentGameplayRole(gameObject),
     functionLabel: label,
     functionDescription: asset
       ? `${label} is a ${nodeKind} scene node using asset ${asset.displayName || asset.id}.`
       : `${label} is a ${nodeKind} scene node in the editable scene document.`,
-    gameplayHints: [
+    domainHints: [
       `Interpret this as a ${nodeKind} node from pa_template's scene graph.`,
       ...(asset ? [`Asset reference: ${asset.displayName || asset.id}.`] : []),
     ],
@@ -996,10 +996,10 @@ function describeEditorSceneAgentObjectSet(
   const nodeKinds = [...new Set(gameObjects.map(readEditorSceneNodeKind))];
   return {
     domainKind: 'pa-template:scene-object-set',
-    gameplayRole: 'selection',
+    domainRole: 'selection',
     functionLabel: `${gameObjects.length} selected scene nodes`,
     functionDescription: 'A multi-selection from the pa_template scene graph.',
-    gameplayHints: [
+    domainHints: [
       'Consider these nodes together before proposing scene edits or gameplay bindings.',
       `Selected node kinds: ${nodeKinds.join(', ')}.`,
     ],
@@ -1029,10 +1029,10 @@ function describeEditorSceneAgentRegionBinding(
   if (gameObjects.length === 0) return null;
   return {
     domainKind: 'pa-template:selection-region',
-    gameplayRole: 'region-binding',
+    domainRole: 'region-binding',
     functionLabel: `${gameObjects.length} nodes as gameplay region`,
     functionDescription: 'The selected scene nodes are being treated as a candidate gameplay region.',
-    gameplayHints: [
+    domainHints: [
       'Use the selected nodes as landmarks or bounds for reasoning about an editable gameplay region.',
       'Prefer suggestions that preserve the selected nodes and describe their spatial relationship.',
     ],
