@@ -8,10 +8,10 @@
     "generatedFrom": {
       "sourceId": "scene.main",
       "sourceType": "scene",
-      "revision": 23,
+      "revision": 26,
       "compilerId": "pa_template.editor-scene.compiler",
       "compilerVersion": "1",
-      "compiledAt": "2026-06-02T03:12:14.117Z"
+      "compiledAt": "2026-06-02T09:14:34.370Z"
     }
   },
   "gameplay": {
@@ -31,7 +31,134 @@
   },
   "scene": {
     "rootId": "root",
-    "assets": [],
+    "assets": [
+      {
+        "id": "asset_ff8c83040af443fe8381477634be9254",
+        "type": "glb",
+        "guid": "ff8c8304-0af4-43fe-8381-477634be9254",
+        "displayName": "Lumber Order - 松树",
+        "category": "Model",
+        "external": {
+          "platformAssetId": "lumber_order:lumber_order_pine_tree",
+          "assetPath": "src/assets/卡通低多边形常绿松树_SongShu.glb"
+        },
+        "metadata": {
+          "originalFileName": "lumber_order_pine_tree.glb",
+          "relativePath": "../imported/asset_ff8c83040af443fe8381477634be9254.glb",
+          "codeKey": "lumber_order_pine_tree",
+          "contentHash": "sha256:6dfe76a8c7c615a27d907d9cf635fcd726414d0c2cdcdd4ab3feccd6c2845d8f",
+          "byteSize": 67536
+        }
+      },
+      {
+        "id": "asset_606796e877654f96b4d3c3cf3745757a",
+        "type": "glb",
+        "guid": "606796e8-7765-4f96-b4d3-c3cf3745757a",
+        "displayName": "Lumber Order - 木板",
+        "category": "Model",
+        "external": {
+          "platformAssetId": "lumber_order:lumber_order_plank",
+          "assetPath": "src/assets/木板.glb"
+        },
+        "metadata": {
+          "originalFileName": "lumber_order_plank.glb",
+          "relativePath": "../imported/asset_606796e877654f96b4d3c3cf3745757a.glb",
+          "codeKey": "lumber_order_plank",
+          "contentHash": "sha256:bc1ed52cdc2b476516c05642b950c5d6aa1861f50741124a6a3438be0668d433",
+          "byteSize": 61072
+        }
+      },
+      {
+        "id": "asset_da31d334bdcb443a9e9f125d500d66fb",
+        "type": "glb",
+        "guid": "da31d334-bdcb-443a-9e9f-125d500d66fb",
+        "displayName": "Lumber Order - 原木",
+        "category": "Model",
+        "external": {
+          "platformAssetId": "lumber_order:lumber_order_log",
+          "assetPath": "src/assets/原木.glb"
+        },
+        "metadata": {
+          "originalFileName": "lumber_order_log.glb",
+          "relativePath": "../imported/asset_da31d334bdcb443a9e9f125d500d66fb.glb",
+          "codeKey": "lumber_order_log",
+          "contentHash": "sha256:0908be3a42e2c183a57649d5f309dcca5464c4f3fc2b871aae14f5a7f6761cbc",
+          "byteSize": 62744
+        }
+      },
+      {
+        "id": "asset_d940f34a66374c40abba0a46372028ab",
+        "type": "glb",
+        "guid": "d940f34a-6637-4c40-abba-0a46372028ab",
+        "displayName": "Lumber Order - Dark Log",
+        "category": "Model",
+        "external": {
+          "platformAssetId": "lumber_order:dark_log_model",
+          "assetPath": "src/assets/深色原木.glb"
+        },
+        "metadata": {
+          "originalFileName": "深色原木.glb",
+          "relativePath": "../imported/asset_d940f34a66374c40abba0a46372028ab.glb",
+          "codeKey": "lumber_order_dark_log_model",
+          "contentHash": "sha256:e30a872c89a615f8f72a9f43fb2ef93b050a3358134ca93ff5219be8b6f9aaf9",
+          "byteSize": 56592
+        }
+      },
+      {
+        "id": "asset_1791b38eb27c45bbabc8b986605e4de5",
+        "type": "glb",
+        "guid": "1791b38e-b27c-45bb-abc8-b986605e4de5",
+        "displayName": "Lumber Order - Conveyor Model",
+        "category": "Model",
+        "external": {
+          "platformAssetId": "lumber_order:conveyor_model",
+          "assetPath": "src/assets/传送带.glb"
+        },
+        "metadata": {
+          "originalFileName": "传送带.glb",
+          "relativePath": "../imported/asset_1791b38eb27c45bbabc8b986605e4de5.glb",
+          "codeKey": "lumber_order_conveyor_model",
+          "contentHash": "sha256:060c597299f547c89d750667c90db7f4f2cab11f3903d87c729336c57fd18a82",
+          "byteSize": 55312
+        }
+      },
+      {
+        "id": "asset_9330ffd627bb403eaca81058b0651132",
+        "type": "glb",
+        "guid": "9330ffd6-27bb-403e-aca8-1058b0651132",
+        "displayName": "Axe and Bear - Tower Building",
+        "category": "Model",
+        "external": {
+          "platformAssetId": "axe_and_bear:tower_building_model",
+          "assetPath": "src/assets/models/tower-building-model.glb"
+        },
+        "metadata": {
+          "originalFileName": "tower-building-model.glb",
+          "relativePath": "../imported/asset_9330ffd627bb403eaca81058b0651132.glb",
+          "codeKey": "axe_and_bear_tower_building_model",
+          "contentHash": "sha256:a44a6396b8c600eacf4199fbb015c37760530fa3becc861cc24426f760791e3e",
+          "byteSize": 38312
+        }
+      },
+      {
+        "id": "asset_de16bd66ee3443589e89778bae314202",
+        "type": "glb",
+        "guid": "de16bd66-ee34-4358-9e89-778bae314202",
+        "displayName": "Axe and Bear - SM 房子推车",
+        "category": "Model",
+        "external": {
+          "platformAssetId": "axe_and_bear:house_cart_model",
+          "assetPath": "src/assets/SM_房子推车.glb"
+        },
+        "metadata": {
+          "originalFileName": "SM_房子推车.glb",
+          "relativePath": "../imported/asset_de16bd66ee3443589e89778bae314202.glb",
+          "codeKey": "axe_and_bear_house_cart_model",
+          "contentHash": "sha256:2e6495192bfd35705c06420a1df2f27647dbd1722ee39f6aeeb92024d22c5989",
+          "byteSize": 841372
+        }
+      }
+    ],
     "nodes": [
       {
         "id": "main_camera",
@@ -40,7 +167,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 23,
+          "revision": 26,
           "objectGuid": "go_2406b122-d63b-4971-bf66-7d78a8776543",
           "objectId": "main_camera",
           "component": "Transform"
@@ -96,7 +223,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 23,
+          "revision": 26,
           "objectGuid": "go_environment_light_default",
           "objectId": "environment_light",
           "component": "Transform"
@@ -142,7 +269,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 23,
+          "revision": 26,
           "objectGuid": "go_7017d029-9d69-4381-91ac-75093053caa9",
           "objectId": "sun_light",
           "component": "Transform"
@@ -188,7 +315,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 23,
+          "revision": 26,
           "objectGuid": "go_20efbb4a-c323-4ea3-911c-23c72827d7b9",
           "objectId": "plane",
           "component": "PrimitiveRenderer"
@@ -227,7 +354,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 23,
+          "revision": 26,
           "objectGuid": "go_ac4a2824-3625-468c-aeee-d7c75dedc814",
           "objectId": "cube",
           "component": "PrimitiveRenderer"
@@ -272,7 +399,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 23,
+          "revision": 26,
           "objectGuid": "go_cc80f1b1-57b9-4373-baba-eed140d90c8f",
           "objectId": "sphere",
           "component": "PrimitiveRenderer"
@@ -317,7 +444,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 23,
+          "revision": 26,
           "objectGuid": "go_68778bee-9b2d-44bb-9a37-cfa42efa2846",
           "objectId": "capsule",
           "component": "PrimitiveRenderer"
@@ -362,7 +489,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 23,
+          "revision": 26,
           "objectGuid": "go_cfaa94ff-8ca2-482b-a24a-748f236b5e8f",
           "objectId": "empty",
           "component": "Transform"
@@ -394,7 +521,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 23,
+          "revision": 26,
           "objectGuid": "go_6878ee87-145f-40b5-9eaf-4cc2a57f30db",
           "objectId": "cube_2",
           "component": "PrimitiveRenderer"
@@ -428,7 +555,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 23,
+          "revision": 26,
           "objectGuid": "go_21cffc23-b664-4c23-892c-f0ad201c135f",
           "objectId": "cube_2_copy",
           "component": "PrimitiveRenderer"
@@ -462,7 +589,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 23,
+          "revision": 26,
           "objectGuid": "go_d5ccad9e-0ab6-494e-ba38-ea3fcc57ef12",
           "objectId": "cube_2_copy_2",
           "component": "PrimitiveRenderer"
@@ -496,7 +623,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 23,
+          "revision": 26,
           "objectGuid": "go_b2723960-87d5-4bfc-85dd-61b04847fa63",
           "objectId": "cube_2_copy_3",
           "component": "PrimitiveRenderer"
@@ -530,7 +657,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 23,
+          "revision": 26,
           "objectGuid": "go_59efe6d6-4b0e-4af9-9856-680e918cac51",
           "objectId": "cube_2_copy_4",
           "component": "PrimitiveRenderer"
@@ -564,7 +691,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 23,
+          "revision": 26,
           "objectGuid": "go_128f5be2-5e14-4ef1-9836-a36c73e6081b",
           "objectId": "cube_2_copy_5",
           "component": "PrimitiveRenderer"
@@ -598,7 +725,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 23,
+          "revision": 26,
           "objectGuid": "go_85b91a2b-39f4-4396-b171-d658b1b1fdfb",
           "objectId": "cube_2_copy_6",
           "component": "PrimitiveRenderer"
@@ -632,7 +759,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 23,
+          "revision": 26,
           "objectGuid": "go_49b2e186-ae84-49e3-8c61-0fbf3fb03c6c",
           "objectId": "cube_2_copy_7",
           "component": "PrimitiveRenderer"
@@ -666,7 +793,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 23,
+          "revision": 26,
           "objectGuid": "go_1b4c2594-f66a-42bb-a69a-c5d49a90293e",
           "objectId": "cube_2_copy_8",
           "component": "PrimitiveRenderer"
@@ -700,7 +827,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 23,
+          "revision": 26,
           "objectGuid": "go_0b484a77-a0a7-4636-95d5-320ef6bd01a8",
           "objectId": "cube_2_copy_9",
           "component": "PrimitiveRenderer"
@@ -734,7 +861,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 23,
+          "revision": 26,
           "objectGuid": "go_43c8ca9c-1d4c-4885-a452-53be8f5efa7f",
           "objectId": "cube_2_copy_10",
           "component": "PrimitiveRenderer"
@@ -768,7 +895,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 23,
+          "revision": 26,
           "objectGuid": "go_3417a114-eb94-425c-9490-b6acf8948620",
           "objectId": "empty_copy",
           "component": "Transform"
@@ -800,7 +927,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 23,
+          "revision": 26,
           "objectGuid": "go_95344ac7-7743-4593-ab7a-b5f449037a03",
           "objectId": "cube_2_copy_11",
           "component": "PrimitiveRenderer"
@@ -834,7 +961,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 23,
+          "revision": 26,
           "objectGuid": "go_74e1d56f-eb43-41ea-9c58-598ab57ebf8e",
           "objectId": "cube_2_copy_copy",
           "component": "PrimitiveRenderer"
@@ -868,7 +995,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 23,
+          "revision": 26,
           "objectGuid": "go_e1ff2466-8601-4b30-a7f5-cae15010e4a5",
           "objectId": "cube_2_copy_2_copy",
           "component": "PrimitiveRenderer"
@@ -902,7 +1029,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 23,
+          "revision": 26,
           "objectGuid": "go_888d3ae5-0fee-4c61-b6d5-894954707840",
           "objectId": "cube_2_copy_3_copy",
           "component": "PrimitiveRenderer"
@@ -936,7 +1063,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 23,
+          "revision": 26,
           "objectGuid": "go_e9e164c4-8adb-492f-8ffc-daebd36e1ac3",
           "objectId": "cube_2_copy_4_copy",
           "component": "PrimitiveRenderer"
@@ -970,7 +1097,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 23,
+          "revision": 26,
           "objectGuid": "go_adc9c95b-5d79-470b-880c-dd45e419e971",
           "objectId": "cube_2_copy_5_copy",
           "component": "PrimitiveRenderer"
@@ -1004,7 +1131,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 23,
+          "revision": 26,
           "objectGuid": "go_f1716e18-5648-4872-a3d0-f2a956dd4a09",
           "objectId": "cube_2_copy_6_copy",
           "component": "PrimitiveRenderer"
@@ -1038,7 +1165,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 23,
+          "revision": 26,
           "objectGuid": "go_a2e40862-e54f-485f-95dc-b19545500895",
           "objectId": "cube_2_copy_7_copy",
           "component": "PrimitiveRenderer"
@@ -1072,7 +1199,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 23,
+          "revision": 26,
           "objectGuid": "go_292f34fe-b5d4-4876-a83a-c558da75126f",
           "objectId": "cube_2_copy_8_copy",
           "component": "PrimitiveRenderer"
@@ -1106,7 +1233,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 23,
+          "revision": 26,
           "objectGuid": "go_f1a93353-e6e1-4603-becf-bcd95e61aaa9",
           "objectId": "cube_2_copy_9_copy",
           "component": "PrimitiveRenderer"
@@ -1140,7 +1267,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 23,
+          "revision": 26,
           "objectGuid": "go_ccfb94dc-e506-4560-92e9-2e10c79df75f",
           "objectId": "cube_2_copy_10_copy",
           "component": "PrimitiveRenderer"
@@ -1165,6 +1292,245 @@
         "kind": "primitive",
         "primitive": {
           "shape": "cube"
+        }
+      },
+      {
+        "id": "lumber_order",
+        "name": "Lumber Order - 松树",
+        "parentId": "root",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 26,
+          "objectGuid": "go_6697756a-c434-4b5e-b5c6-e81d8b9e5d26",
+          "objectId": "lumber_order",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": -1.8,
+            "y": 0,
+            "z": 10.8
+          },
+          "rotation": {
+            "z": 0,
+            "x": 0,
+            "y": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_ff8c83040af443fe8381477634be9254"
+        }
+      },
+      {
+        "id": "lumber_order_2",
+        "name": "Lumber Order - 木板",
+        "parentId": "root",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 26,
+          "objectGuid": "go_ccb4f13b-5147-457d-b4bd-d20b403d6d26",
+          "objectId": "lumber_order_2",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 10.8
+          },
+          "rotation": {
+            "z": 0,
+            "x": 0,
+            "y": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_606796e877654f96b4d3c3cf3745757a"
+        }
+      },
+      {
+        "id": "lumber_order_3",
+        "name": "Lumber Order - 原木",
+        "parentId": "root",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 26,
+          "objectGuid": "go_fc8d5d2f-297d-47ce-8dde-b759d7161bd2",
+          "objectId": "lumber_order_3",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 1.8000000000000003,
+            "y": 0,
+            "z": 10.8
+          },
+          "rotation": {
+            "z": 0,
+            "x": 0,
+            "y": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_da31d334bdcb443a9e9f125d500d66fb"
+        }
+      },
+      {
+        "id": "lumber_order_dark_log",
+        "name": "Lumber Order - Dark Log",
+        "parentId": "root",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 26,
+          "objectGuid": "go_13c16726-5499-4156-ae36-2e51cacdf5f0",
+          "objectId": "lumber_order_dark_log",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 3.6,
+            "y": 0,
+            "z": 10.8
+          },
+          "rotation": {
+            "z": 0,
+            "x": 0,
+            "y": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_d940f34a66374c40abba0a46372028ab"
+        }
+      },
+      {
+        "id": "lumber_order_conveyor_model",
+        "name": "Lumber Order - Conveyor Model",
+        "parentId": "root",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 26,
+          "objectGuid": "go_608ad34e-9255-4a19-a1c4-6fc9b6e29118",
+          "objectId": "lumber_order_conveyor_model",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": -3.6,
+            "y": 0,
+            "z": 12.600000000000001
+          },
+          "rotation": {
+            "z": 0,
+            "x": 0,
+            "y": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_1791b38eb27c45bbabc8b986605e4de5"
+        }
+      },
+      {
+        "id": "axe_and_bear_tower_building",
+        "name": "Axe and Bear - Tower Building",
+        "parentId": "root",
+        "enabled": false,
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 26,
+          "objectGuid": "go_0255063b-55f5-45e3-bde6-cd517384c41f",
+          "objectId": "axe_and_bear_tower_building",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": -1.8,
+            "y": 0,
+            "z": 12.600000000000001
+          },
+          "rotation": {
+            "z": 0,
+            "x": 0,
+            "y": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_9330ffd627bb403eaca81058b0651132"
+        }
+      },
+      {
+        "id": "axe_and_bear_sm",
+        "name": "Axe and Bear - SM 房子推车",
+        "parentId": "root",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 26,
+          "objectGuid": "go_ec74ca4a-2878-4628-9825-a61a5b4cf147",
+          "objectId": "axe_and_bear_sm",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 2.4843766689300537,
+            "y": 4.618527782440651e-14,
+            "z": -5.393642902374268
+          },
+          "rotation": {
+            "z": 0.3033553340192351,
+            "x": -1.2675299071261241,
+            "y": -0.8125469146852273
+          },
+          "scale": {
+            "x": 1.3614519408965957,
+            "y": 1.3264327542500223,
+            "z": 1.2226189977880333
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_de16bd66ee3443589e89778bae314202"
         }
       }
     ],
@@ -1446,6 +1812,6 @@
     "textures": []
   },
   "render": {},
-  "version": 22,
-  "updatedAt": "2026-06-02T03:12:14.118Z"
+  "version": 25,
+  "updatedAt": "2026-06-02T09:14:34.372Z"
 }

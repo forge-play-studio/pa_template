@@ -5,10 +5,137 @@
     "authoringSource": {
       "sourceId": "scene.main",
       "sourceType": "scene",
-      "revision": 23
+      "revision": 26
     }
   },
-  "assets": [],
+  "assets": [
+    {
+      "id": "asset_ff8c83040af443fe8381477634be9254",
+      "guid": "ff8c8304-0af4-43fe-8381-477634be9254",
+      "type": "glb",
+      "displayName": "Lumber Order - 松树",
+      "category": "Model",
+      "external": {
+        "platformAssetId": "lumber_order:lumber_order_pine_tree",
+        "assetPath": "src/assets/卡通低多边形常绿松树_SongShu.glb"
+      },
+      "metadata": {
+        "originalFileName": "lumber_order_pine_tree.glb",
+        "relativePath": "../imported/asset_ff8c83040af443fe8381477634be9254.glb",
+        "codeKey": "lumber_order_pine_tree",
+        "contentHash": "sha256:6dfe76a8c7c615a27d907d9cf635fcd726414d0c2cdcdd4ab3feccd6c2845d8f",
+        "byteSize": 67536
+      }
+    },
+    {
+      "id": "asset_606796e877654f96b4d3c3cf3745757a",
+      "guid": "606796e8-7765-4f96-b4d3-c3cf3745757a",
+      "type": "glb",
+      "displayName": "Lumber Order - 木板",
+      "category": "Model",
+      "external": {
+        "platformAssetId": "lumber_order:lumber_order_plank",
+        "assetPath": "src/assets/木板.glb"
+      },
+      "metadata": {
+        "originalFileName": "lumber_order_plank.glb",
+        "relativePath": "../imported/asset_606796e877654f96b4d3c3cf3745757a.glb",
+        "codeKey": "lumber_order_plank",
+        "contentHash": "sha256:bc1ed52cdc2b476516c05642b950c5d6aa1861f50741124a6a3438be0668d433",
+        "byteSize": 61072
+      }
+    },
+    {
+      "id": "asset_da31d334bdcb443a9e9f125d500d66fb",
+      "guid": "da31d334-bdcb-443a-9e9f-125d500d66fb",
+      "type": "glb",
+      "displayName": "Lumber Order - 原木",
+      "category": "Model",
+      "external": {
+        "platformAssetId": "lumber_order:lumber_order_log",
+        "assetPath": "src/assets/原木.glb"
+      },
+      "metadata": {
+        "originalFileName": "lumber_order_log.glb",
+        "relativePath": "../imported/asset_da31d334bdcb443a9e9f125d500d66fb.glb",
+        "codeKey": "lumber_order_log",
+        "contentHash": "sha256:0908be3a42e2c183a57649d5f309dcca5464c4f3fc2b871aae14f5a7f6761cbc",
+        "byteSize": 62744
+      }
+    },
+    {
+      "id": "asset_d940f34a66374c40abba0a46372028ab",
+      "guid": "d940f34a-6637-4c40-abba-0a46372028ab",
+      "type": "glb",
+      "displayName": "Lumber Order - Dark Log",
+      "category": "Model",
+      "external": {
+        "platformAssetId": "lumber_order:dark_log_model",
+        "assetPath": "src/assets/深色原木.glb"
+      },
+      "metadata": {
+        "originalFileName": "深色原木.glb",
+        "relativePath": "../imported/asset_d940f34a66374c40abba0a46372028ab.glb",
+        "codeKey": "lumber_order_dark_log_model",
+        "contentHash": "sha256:e30a872c89a615f8f72a9f43fb2ef93b050a3358134ca93ff5219be8b6f9aaf9",
+        "byteSize": 56592
+      }
+    },
+    {
+      "id": "asset_1791b38eb27c45bbabc8b986605e4de5",
+      "guid": "1791b38e-b27c-45bb-abc8-b986605e4de5",
+      "type": "glb",
+      "displayName": "Lumber Order - Conveyor Model",
+      "category": "Model",
+      "external": {
+        "platformAssetId": "lumber_order:conveyor_model",
+        "assetPath": "src/assets/传送带.glb"
+      },
+      "metadata": {
+        "originalFileName": "传送带.glb",
+        "relativePath": "../imported/asset_1791b38eb27c45bbabc8b986605e4de5.glb",
+        "codeKey": "lumber_order_conveyor_model",
+        "contentHash": "sha256:060c597299f547c89d750667c90db7f4f2cab11f3903d87c729336c57fd18a82",
+        "byteSize": 55312
+      }
+    },
+    {
+      "id": "asset_9330ffd627bb403eaca81058b0651132",
+      "guid": "9330ffd6-27bb-403e-aca8-1058b0651132",
+      "type": "glb",
+      "displayName": "Axe and Bear - Tower Building",
+      "category": "Model",
+      "external": {
+        "platformAssetId": "axe_and_bear:tower_building_model",
+        "assetPath": "src/assets/models/tower-building-model.glb"
+      },
+      "metadata": {
+        "originalFileName": "tower-building-model.glb",
+        "relativePath": "../imported/asset_9330ffd627bb403eaca81058b0651132.glb",
+        "codeKey": "axe_and_bear_tower_building_model",
+        "contentHash": "sha256:a44a6396b8c600eacf4199fbb015c37760530fa3becc861cc24426f760791e3e",
+        "byteSize": 38312
+      }
+    },
+    {
+      "id": "asset_de16bd66ee3443589e89778bae314202",
+      "guid": "de16bd66-ee34-4358-9e89-778bae314202",
+      "type": "glb",
+      "displayName": "Axe and Bear - SM 房子推车",
+      "category": "Model",
+      "external": {
+        "platformAssetId": "axe_and_bear:house_cart_model",
+        "assetPath": "src/assets/SM_房子推车.glb"
+      },
+      "metadata": {
+        "originalFileName": "SM_房子推车.glb",
+        "relativePath": "../imported/asset_de16bd66ee3443589e89778bae314202.glb",
+        "codeKey": "axe_and_bear_house_cart_model",
+        "contentHash": "sha256:2e6495192bfd35705c06420a1df2f27647dbd1722ee39f6aeeb92024d22c5989",
+        "byteSize": 841372
+      }
+    }
+  ],
   "scene": {
     "gameObjects": [
       {
@@ -1078,6 +1205,223 @@
               "y": 1,
               "z": 1
             }
+          }
+        ]
+      },
+      {
+        "id": "lumber_order",
+        "guid": "go_6697756a-c434-4b5e-b5c6-e81d8b9e5d26",
+        "name": "Lumber Order - 松树",
+        "parentId": "root",
+        "active": true,
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": -1.8,
+              "y": 0,
+              "z": 10.8
+            },
+            "rotation": {
+              "z": 0,
+              "x": 0,
+              "y": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          },
+          {
+            "type": "ModelRenderer",
+            "assetId": "asset_ff8c83040af443fe8381477634be9254"
+          }
+        ]
+      },
+      {
+        "id": "lumber_order_2",
+        "guid": "go_ccb4f13b-5147-457d-b4bd-d20b403d6d26",
+        "name": "Lumber Order - 木板",
+        "parentId": "root",
+        "active": true,
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": 0,
+              "y": 0,
+              "z": 10.8
+            },
+            "rotation": {
+              "z": 0,
+              "x": 0,
+              "y": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          },
+          {
+            "type": "ModelRenderer",
+            "assetId": "asset_606796e877654f96b4d3c3cf3745757a"
+          }
+        ]
+      },
+      {
+        "id": "lumber_order_3",
+        "guid": "go_fc8d5d2f-297d-47ce-8dde-b759d7161bd2",
+        "name": "Lumber Order - 原木",
+        "parentId": "root",
+        "active": true,
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": 1.8000000000000003,
+              "y": 0,
+              "z": 10.8
+            },
+            "rotation": {
+              "z": 0,
+              "x": 0,
+              "y": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          },
+          {
+            "type": "ModelRenderer",
+            "assetId": "asset_da31d334bdcb443a9e9f125d500d66fb"
+          }
+        ]
+      },
+      {
+        "id": "lumber_order_dark_log",
+        "guid": "go_13c16726-5499-4156-ae36-2e51cacdf5f0",
+        "name": "Lumber Order - Dark Log",
+        "parentId": "root",
+        "active": true,
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": 3.6,
+              "y": 0,
+              "z": 10.8
+            },
+            "rotation": {
+              "z": 0,
+              "x": 0,
+              "y": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          },
+          {
+            "type": "ModelRenderer",
+            "assetId": "asset_d940f34a66374c40abba0a46372028ab"
+          }
+        ]
+      },
+      {
+        "id": "lumber_order_conveyor_model",
+        "guid": "go_608ad34e-9255-4a19-a1c4-6fc9b6e29118",
+        "name": "Lumber Order - Conveyor Model",
+        "parentId": "root",
+        "active": true,
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": -3.6,
+              "y": 0,
+              "z": 12.600000000000001
+            },
+            "rotation": {
+              "z": 0,
+              "x": 0,
+              "y": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          },
+          {
+            "type": "ModelRenderer",
+            "assetId": "asset_1791b38eb27c45bbabc8b986605e4de5"
+          }
+        ]
+      },
+      {
+        "id": "axe_and_bear_tower_building",
+        "guid": "go_0255063b-55f5-45e3-bde6-cd517384c41f",
+        "name": "Axe and Bear - Tower Building",
+        "parentId": "root",
+        "active": false,
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": -1.8,
+              "y": 0,
+              "z": 12.600000000000001
+            },
+            "rotation": {
+              "z": 0,
+              "x": 0,
+              "y": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          },
+          {
+            "type": "ModelRenderer",
+            "assetId": "asset_9330ffd627bb403eaca81058b0651132"
+          }
+        ]
+      },
+      {
+        "id": "axe_and_bear_sm",
+        "guid": "go_ec74ca4a-2878-4628-9825-a61a5b4cf147",
+        "name": "Axe and Bear - SM 房子推车",
+        "parentId": "root",
+        "active": true,
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": 2.4843766689300537,
+              "y": 4.618527782440651e-14,
+              "z": -5.393642902374268
+            },
+            "rotation": {
+              "z": 0.3033553340192351,
+              "x": -1.2675299071261241,
+              "y": -0.8125469146852273
+            },
+            "scale": {
+              "x": 1.3614519408965957,
+              "y": 1.3264327542500223,
+              "z": 1.2226189977880333
+            }
+          },
+          {
+            "type": "ModelRenderer",
+            "assetId": "asset_de16bd66ee3443589e89778bae314202"
           }
         ]
       }
