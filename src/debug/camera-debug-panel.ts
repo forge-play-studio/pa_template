@@ -4,16 +4,14 @@ import { Matrix, Vector3 } from '@babylonjs/core/Maths/math.vector';
 import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
 import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import {
-  mountEditorRuntimeCameraDebugPanel,
-  type EditorRuntimeCameraDebugPanel,
-  type EditorRuntimeCameraDebugPanInput,
-} from '@fps-games/editor';
-import {
   cloneEditorSceneCameraDebugSnapshot,
   createEditorSceneCameraDebugSnapshot,
   createEditorSceneCameraPanMovement,
+  mountEditorRuntimeCameraDebugPanel,
   readEditorSceneRuntimeCameraBinding,
   toEditorSceneCameraRig,
+  type EditorRuntimeCameraDebugPanel,
+  type EditorRuntimeCameraDebugPanInput,
   type EditorSceneCameraDebugSnapshot,
   type EditorSceneCameraRig,
   type EditorSceneVec3,

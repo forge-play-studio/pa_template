@@ -18,8 +18,6 @@
     "forceConsistentCasingInFileNames": true,
     "baseUrl": ".",
     "paths": {
-      "@fps-games/editor-browser": ["../../packages/editor-browser/dist/index.d.ts"],
-      "@fps-games/editor-playable-sdk": ["../../packages/editor-playable-sdk/dist/index.d.ts"],
       "@/*": ["src/*"]
     }
   },

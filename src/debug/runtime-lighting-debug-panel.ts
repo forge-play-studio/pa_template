@@ -1,15 +1,13 @@
 import type { ColorRGB } from '../config';
 import type { Game } from '../core/Game';
-import {
-  mountEditorRuntimeLightingDebugPanel,
-  type EditorRuntimeLightingDebugPanel,
-} from '@fps-games/editor';
 import type { RuntimeLightEditorBinding } from './runtime-lighting-save';
 import { saveRuntimeLightsToEditorScene } from './runtime-lighting-save';
 import {
+  mountEditorRuntimeLightingDebugPanel,
   readEditorSceneLightingProjectedLengthMultiplier,
   readEditorSceneRuntimeLightBinding,
   toEditorSceneRuntimeLightingPatches,
+  type EditorRuntimeLightingDebugPanel,
   type EditorSceneLightingDebugSnapshot as LightingDebugSnapshot,
   type EditorSceneRuntimeShadowMode as RuntimeShadowMode,
 } from '@fps-games/editor/playable-sdk';
