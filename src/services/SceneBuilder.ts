@@ -54,10 +54,10 @@ import {
   type TransformConfig,
 } from '../config';
 import {
+  applyPlayableBabylonOutlineOverrideToRuntimeNode,
   applyMaterialValueToRuntimeMaterial,
   resolveMaterialRuntimeKind,
   resolveMaterialOwnerNode,
-  resolveOutlineTarget,
 } from '@fps-games/editor/playable-sdk';
 
 const BABYLON_MATERIAL_RUNTIME = { Color3, Texture };
@@ -1394,24 +1394,7 @@ export class SceneBuilder {
   }
 
   private applyOutlineOverride(entity: TransformNode, override: OutlineOverrideConfig): void {
-    const { target } = resolveOutlineTarget(entity);
-    if (!target) return;
-
-    if (override.renderOutline !== undefined) {
-      (target as any).renderOutline = override.renderOutline;
-    }
-    if (override.outlineWidth !== undefined) {
-      (target as any).outlineWidth = override.outlineWidth;
-    }
-    if (override.outlineColor) {
-      const color = override.outlineColor;
-      const current = (target as any).outlineColor;
-      if (current?.copyFromFloats) {
-        current.copyFromFloats(color.r, color.g, color.b);
-      } else {
-        (target as any).outlineColor = new Color3(color.r, color.g, color.b);
-      }
-    }
+    applyPlayableBabylonOutlineOverrideToRuntimeNode(entity, override);
   }
 
   dispose(): void {
