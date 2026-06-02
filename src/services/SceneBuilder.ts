@@ -56,6 +56,7 @@ import {
 import {
   applyPlayableBabylonOutlineOverrideToRuntimeNode,
   applyMaterialValueToRuntimeMaterial,
+  resolveEditorSceneArtistMaterialBinding,
   resolveMaterialRuntimeKind,
   resolveMaterialOwnerNode,
 } from '@fps-games/editor/playable-sdk';
@@ -705,12 +706,8 @@ export class SceneBuilder {
   }
 
   private resolveMaterialBindingKind(binding: SceneNodeMaterialBindingConfig | undefined): SceneMaterialAssetKind | null {
-    const materialAsset = binding?.materialAssetId
-      ? configService.getSceneDocument().scene?.materialAssets?.find((asset) => asset.id === binding.materialAssetId)
-      : undefined;
-    if (!materialAsset) return null;
-    if (materialAsset.materialKind === 'standard' || materialAsset.system?.preset === 'default-standard') return 'standard';
-    return 'pbr';
+    if (!binding) return null;
+    return resolveEditorSceneArtistMaterialBinding(this.getMaterialAssetCatalog(), binding).materialAssetKind;
   }
 
   private async attachInstanceAssetAsync(
@@ -1364,8 +1361,8 @@ export class SceneBuilder {
     const ownerNode = this.resolveMaterialOverrideOwnerNode(rootNode, ownerNodePath);
     if (!ownerNode?.material) return;
 
-    const profile = this.resolveMaterialBindingProfile(binding);
-    if (!profile) return;
+    const { profile } = resolveEditorSceneArtistMaterialBinding(this.getMaterialAssetCatalog(), binding);
+    if (Object.keys(profile).length === 0) return;
 
     if (asset && this.shouldShareAssetMaterials(asset)) {
       this.detachOverrideMaterial(ownerNode, sceneNodeId, ownerNodePath);
@@ -1374,12 +1371,12 @@ export class SceneBuilder {
     this.applyArtistMaterialProfileToRuntimeMaterial(ownerNode.material, profile);
   }
 
-  private resolveMaterialBindingProfile(binding: SceneNodeMaterialBindingConfig): ArtistMaterialProfile | null {
-    const materialAsset = binding.materialAssetId
-      ? configService.getSceneDocument().scene?.materialAssets?.find((asset) => asset.id === binding.materialAssetId)
-      : undefined;
-    const profile = mergeArtistMaterialProfiles(materialAsset?.profile, binding.override);
-    return Object.keys(profile).length > 0 ? profile : null;
+  private getMaterialAssetCatalog(): { scene: { materialAssets: NonNullable<ReturnType<typeof configService.getSceneDocument>['scene']>['materialAssets'] } } {
+    return {
+      scene: {
+        materialAssets: configService.getSceneDocument().scene?.materialAssets ?? [],
+      },
+    };
   }
 
   private resolveMaterialOverrideOwnerNode(rootNode: TransformNode, ownerNodePath: string): any | null {
@@ -1499,30 +1496,6 @@ function readColorRGB(value: unknown): ColorRGB | undefined {
     return undefined;
   }
   return { r: record.r, g: record.g, b: record.b };
-}
-
-function mergeArtistMaterialProfiles(
-  base: ArtistMaterialProfile | undefined,
-  override: ArtistMaterialProfile | undefined,
-): ArtistMaterialProfile {
-  const merged: ArtistMaterialProfile = {
-    ...(base ? structuredClone(base) : {}),
-  };
-  if (override?.baseColor) {
-    merged.baseColor = {
-      ...(merged.baseColor ?? {}),
-      ...structuredClone(override.baseColor),
-    };
-  }
-  if (override?.metallic !== undefined) merged.metallic = override.metallic;
-  if (override?.roughness !== undefined) merged.roughness = override.roughness;
-  if (override?.emission) {
-    merged.emission = {
-      ...(merged.emission ?? {}),
-      ...structuredClone(override.emission),
-    };
-  }
-  return merged;
 }
 
 type SceneBuilderRuntimeColor = {

@@ -38,10 +38,10 @@
     },
     "postProcessing": {
       "bloom": {
-        "enabled": false,
-        "threshold": 0.9,
-        "weight": 0.2,
-        "kernel": 64,
+        "enabled": true,
+        "threshold": 0.15,
+        "weight": 2,
+        "kernel": 96,
         "scale": 0.5
       }
     },
