@@ -35,6 +35,7 @@ import {
   type PlayableLocalEditorHostCompatibilityReport,
   type PlayableLocalEditorHostBridgeContext,
   type PlayableLocalEditorHarnessApi,
+  type PlayableLocalEditorMultiPropertyCapabilityInput,
   type PlayableLocalEditorMultiPropertyPatchInput,
   type PlayableLocalEditorPropertyPatchInput,
   type PlayableLocalEditorTransformBatchPatchInput,
@@ -246,6 +247,7 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
         },
       },
       transformCommands: {
+        canCreateSerializedMultiPropertyPatch: canCreateEditorSceneSerializedMultiPropertyPatch,
         createSerializedMultiPropertyPatch: createEditorSceneSerializedMultiPropertyPatch,
         createTransformPatch: createEditorSceneTransformPatch,
         createTransformBatchPatch: createEditorSceneTransformBatchPatch,
@@ -521,6 +523,12 @@ function createEditorSceneSerializedPropertyPatch(
   input: PlayableLocalEditorPropertyPatchInput<EditorSceneDocument>,
 ): { patch: EditorSceneDocumentPatch; label: string; changedId: string; changedIds: string[]; reprojectIds?: string[] } | null {
   return createEditorSceneInspectorPropertyPatch(input);
+}
+
+function canCreateEditorSceneSerializedMultiPropertyPatch(
+  input: PlayableLocalEditorMultiPropertyCapabilityInput<EditorSceneDocument>,
+): boolean {
+  return input.path.startsWith('transform.');
 }
 
 function createEditorSceneSerializedMultiPropertyPatch(
