@@ -5,10 +5,99 @@
     "authoringSource": {
       "sourceId": "scene.main",
       "sourceType": "scene",
-      "revision": 21
+      "revision": 24
     }
   },
-  "assets": [],
+  "assets": [
+    {
+      "id": "asset_ff8c83040af443fe8381477634be9254",
+      "guid": "ff8c8304-0af4-43fe-8381-477634be9254",
+      "type": "glb",
+      "displayName": "Lumber Order - 松树",
+      "category": "Model",
+      "external": {
+        "platformAssetId": "lumber_order:lumber_order_pine_tree",
+        "assetPath": "src/assets/卡通低多边形常绿松树_SongShu.glb"
+      },
+      "metadata": {
+        "originalFileName": "lumber_order_pine_tree.glb",
+        "relativePath": "../imported/asset_ff8c83040af443fe8381477634be9254.glb",
+        "codeKey": "lumber_order_pine_tree",
+        "contentHash": "sha256:6dfe76a8c7c615a27d907d9cf635fcd726414d0c2cdcdd4ab3feccd6c2845d8f",
+        "byteSize": 67536
+      }
+    },
+    {
+      "id": "asset_606796e877654f96b4d3c3cf3745757a",
+      "guid": "606796e8-7765-4f96-b4d3-c3cf3745757a",
+      "type": "glb",
+      "displayName": "Lumber Order - 木板",
+      "category": "Model",
+      "external": {
+        "platformAssetId": "lumber_order:lumber_order_plank",
+        "assetPath": "src/assets/木板.glb"
+      },
+      "metadata": {
+        "originalFileName": "lumber_order_plank.glb",
+        "relativePath": "../imported/asset_606796e877654f96b4d3c3cf3745757a.glb",
+        "codeKey": "lumber_order_plank",
+        "contentHash": "sha256:bc1ed52cdc2b476516c05642b950c5d6aa1861f50741124a6a3438be0668d433",
+        "byteSize": 61072
+      }
+    },
+    {
+      "id": "asset_9330ffd627bb403eaca81058b0651132",
+      "guid": "9330ffd6-27bb-403e-aca8-1058b0651132",
+      "type": "glb",
+      "displayName": "Axe and Bear - Tower Building",
+      "category": "Model",
+      "external": {
+        "platformAssetId": "axe_and_bear:tower_building_model",
+        "assetPath": "src/assets/models/tower-building-model.glb"
+      },
+      "metadata": {
+        "originalFileName": "tower-building-model.glb",
+        "relativePath": "../imported/asset_9330ffd627bb403eaca81058b0651132.glb",
+        "codeKey": "axe_and_bear_tower_building_model",
+        "contentHash": "sha256:a44a6396b8c600eacf4199fbb015c37760530fa3becc861cc24426f760791e3e",
+        "byteSize": 38312,
+        "materialSlots": [
+          {
+            "slotId": "slot_3d5cd656",
+            "ownerNodePath": "电厂主体",
+            "label": "电厂主体",
+            "nodeIndex": 0,
+            "meshIndex": 0,
+            "sourceMaterialIndex": 0,
+            "sourceMaterialIndices": [
+              0,
+              1
+            ],
+            "materialName": "电厂主体",
+            "materialNames": [
+              "电厂主体",
+              "电厂框架"
+            ]
+          },
+          {
+            "slotId": "slot_42ea83aa",
+            "ownerNodePath": "闪电",
+            "label": "闪电",
+            "nodeIndex": 1,
+            "meshIndex": 1,
+            "sourceMaterialIndex": 2,
+            "sourceMaterialIndices": [
+              2
+            ],
+            "materialName": "电厂闪电",
+            "materialNames": [
+              "电厂闪电"
+            ]
+          }
+        ]
+      }
+    }
+  ],
   "scene": {
     "gameObjects": [
       {
@@ -307,16 +396,123 @@
             }
           }
         ]
+      },
+      {
+        "id": "lumber_order",
+        "guid": "go_0129cb49-3ce2-4cc5-be64-3ca2bdd12460",
+        "name": "Lumber Order - 松树",
+        "parentId": "root",
+        "active": true,
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": 3.6,
+              "y": 0,
+              "z": 1.8
+            },
+            "rotation": {
+              "z": 0,
+              "x": 0,
+              "y": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          },
+          {
+            "type": "ModelRenderer",
+            "assetId": "asset_ff8c83040af443fe8381477634be9254"
+          }
+        ]
+      },
+      {
+        "id": "lumber_order_2",
+        "guid": "go_ecb528ac-68b0-4df5-9cd0-04ca5e5b1366",
+        "name": "Lumber Order - 木板",
+        "parentId": "root",
+        "active": true,
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": -3.6,
+              "y": 0,
+              "z": 3.6
+            },
+            "rotation": {
+              "z": 0,
+              "x": 0,
+              "y": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          },
+          {
+            "type": "ModelRenderer",
+            "assetId": "asset_606796e877654f96b4d3c3cf3745757a"
+          }
+        ]
+      },
+      {
+        "id": "axe_and_bear_tower_building",
+        "guid": "go_0900c087-f4a9-4b07-9ddc-a8f60d647022",
+        "name": "Axe and Bear - Tower Building",
+        "parentId": "root",
+        "active": true,
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": -1.7999999523162842,
+              "y": 0.3543615937232971,
+              "z": 14.583954811096191
+            },
+            "rotation": {
+              "z": 0,
+              "x": 0,
+              "y": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          },
+          {
+            "type": "ModelRenderer",
+            "assetId": "asset_9330ffd627bb403eaca81058b0651132"
+          }
+        ],
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_3d5cd656": {
+              "materialAssetId": "mat_axe_and_bear_ground_moss"
+            },
+            "slot_42ea83aa": {
+              "materialAssetId": "mat_77358ffa7835418da5358cd476358e67"
+            }
+          }
+        }
       }
     ],
     "materialAssets": [
       {
         "id": "mat_default_pbr",
+        "guid": "00000000-0000-4000-8000-000000000001",
         "name": "Default PBR Material",
         "materialKind": "pbr",
         "system": {
           "readonly": true,
           "preset": "default-pbr"
+        },
+        "origin": {
+          "type": "preset"
         },
         "profile": {
           "baseColor": {
@@ -344,11 +540,15 @@
       },
       {
         "id": "mat_default_standard",
+        "guid": "00000000-0000-4000-8000-000000000002",
         "name": "Default Standard Material",
         "materialKind": "standard",
         "system": {
           "readonly": true,
           "preset": "default-standard"
+        },
+        "origin": {
+          "type": "preset"
         },
         "profile": {
           "baseColor": {
@@ -378,9 +578,9 @@
         "profile": {
           "baseColor": {
             "color": {
-              "r": 0.9607843137254902,
-              "g": 0.47058823529411764,
-              "b": 0.0392156862745098
+              "r": 0,
+              "g": 0,
+              "b": 0
             },
             "brightness": 1,
             "saturation": 1.08,
@@ -504,17 +704,15 @@
               "g": 0.6,
               "b": 0.32
             },
-            "brightness": 0.9,
-            "saturation": 1.15,
-            "contrast": 1,
-            "texture": {
-              "url": "/src/assets/imported/textures/texture_d77b8872bf7f4f2ab2e3ae1035c0d76b.jpg"
-            }
+            "brightness": 1,
+            "saturation": 2,
+            "contrast": 6,
+            "hue": 1
           },
-          "metallic": 0,
-          "roughness": 0.95,
+          "metallic": 10,
+          "roughness": 3,
           "emission": {
-            "intensity": 0
+            "intensity": 1
           }
         }
       },
@@ -579,6 +777,117 @@
             "maskTexture": {
               "url": "/src/assets/imported/textures/texture_79af58d28dfe40bba5cd2422a40a4635.png"
             }
+          }
+        }
+      },
+      {
+        "id": "mat_19685bc41a684d57ab685eea1c68607d",
+        "guid": "19685bc4-1a68-4d57-ab68-5eea1c68607d",
+        "name": "电厂主体",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "9330ffd6-27bb-403e-aca8-1058b0651132",
+          "sourceAssetId": "asset_9330ffd627bb403eaca81058b0651132",
+          "sourceSlotId": "slot_3d5cd656",
+          "sourceMaterialIndex": 0,
+          "sourceMaterialName": "电厂主体"
+        },
+        "profile": {
+          "baseColor": {
+            "color": {
+              "r": 0.6823529411764706,
+              "g": 0.2784313725490196,
+              "b": 0.2784313725490196
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 1,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_784f416f774f4fdcaa4f4495794f4302",
+        "guid": "784f416f-774f-4fdc-aa4f-4495794f4302",
+        "name": "电厂框架",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "9330ffd6-27bb-403e-aca8-1058b0651132",
+          "sourceAssetId": "asset_9330ffd627bb403eaca81058b0651132",
+          "sourceSlotId": "slot_3d5cd656",
+          "sourceMaterialIndex": 1,
+          "sourceMaterialName": "电厂框架"
+        },
+        "profile": {
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 1,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_77358ffa7835418da5358cd476358e67",
+        "guid": "77358ffa-7835-418d-a535-8cd476358e67",
+        "name": "电厂闪电",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "9330ffd6-27bb-403e-aca8-1058b0651132",
+          "sourceAssetId": "asset_9330ffd627bb403eaca81058b0651132",
+          "sourceSlotId": "slot_42ea83aa",
+          "sourceMaterialIndex": 2,
+          "sourceMaterialName": "电厂闪电"
+        },
+        "profile": {
+          "baseColor": {
+            "color": {
+              "r": 0,
+              "g": 0.3333333333333333,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 1,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
           }
         }
       }

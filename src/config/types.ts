@@ -236,12 +236,26 @@ export interface SceneMaterialAssetSystemConfig {
   preset?: SceneMaterialAssetSystemPreset;
 }
 
+export type SceneMaterialAssetOriginType = 'imported' | 'created' | 'duplicated' | 'preset';
+
+export interface SceneMaterialAssetOriginConfig {
+  type: SceneMaterialAssetOriginType;
+  sourceAssetGuid?: string;
+  sourceAssetId?: string;
+  sourceSlotId?: string;
+  sourceMaterialIndex?: number;
+  sourceMaterialName?: string;
+  sourceMaterialAssetId?: string;
+}
+
 export interface SceneMaterialAssetConfig {
   id: string;
+  guid?: string;
   name: string;
   profile: ArtistMaterialProfile;
   materialKind?: SceneMaterialAssetKind;
   system?: SceneMaterialAssetSystemConfig;
+  origin?: SceneMaterialAssetOriginConfig;
 }
 
 export interface SceneNodeMaterialBindingConfig {
@@ -317,6 +331,7 @@ export interface OutlineOverrideConfig {
 
 export interface SceneNodeVisualOverrides {
   materialBinding?: SceneNodeMaterialBindingConfig;
+  materialSlotBindings?: Record<string, SceneNodeMaterialBindingConfig>;
   childMaterialBindings?: Record<string, SceneNodeMaterialBindingConfig>;
   material?: MaterialOverrideConfig;
   childMaterials?: Record<string, MaterialOverrideConfig>;

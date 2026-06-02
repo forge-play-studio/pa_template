@@ -115,11 +115,13 @@ export function validateSceneJsonV2(
     else if (materialAssetIds.has(materialAsset.id)) add(`${path}.id`, `duplicate material asset id: ${materialAsset.id}`);
     else materialAssetIds.add(materialAsset.id);
     if (!nonEmptyString(materialAsset.name)) add(`${path}.name`, 'material asset name must be a non-empty string');
+    if (materialAsset.guid != null && !nonEmptyString(materialAsset.guid)) add(`${path}.guid`, 'material asset guid must be a non-empty string when present');
     if (materialAsset.materialKind != null && !MATERIAL_ASSET_KINDS.has(materialAsset.materialKind)) {
       add(`${path}.materialKind`, 'materialKind must be pbr or standard');
     }
     validateArtistMaterialProfile(materialAsset.profile, `${path}.profile`, add);
     validateMaterialAssetSystem(materialAsset.system, `${path}.system`, add);
+    validateMaterialAssetOrigin(materialAsset.origin, `${path}.origin`, add);
     validateMaterialAssetSystemKindConsistency(materialAsset, path, add);
   });
 
@@ -153,6 +155,9 @@ export function validateSceneJsonV2(
       validateCameraRig(node.camera, `${path}.camera`, add);
       validateSceneLight(node.light, `${path}.light`, add);
     }
+    if (node.kind === 'instance' || node.kind === 'transform' || node.kind === 'primitive') {
+      validateNodeVisualOverrides(node.overrides, `${path}.overrides`, materialAssetIds, add);
+    }
     if (strictNodes.has(node.id)) assertNoRuntimeOnlyFields(node, path, add);
   });
 
@@ -185,6 +190,62 @@ export function validateSceneJsonV2(
   });
 
   return errors;
+}
+
+function validateNodeVisualOverrides(
+  overrides: unknown,
+  path: string,
+  materialAssetIds: Set<string>,
+  add: (path: string, message: string) => void,
+): void {
+  if (overrides == null) return;
+  if (!isRecord(overrides)) {
+    add(path, 'overrides must be an object when present');
+    return;
+  }
+  validateNodeMaterialBinding(overrides.materialBinding, `${path}.materialBinding`, materialAssetIds, add);
+  validateNodeMaterialBindingMap(overrides.materialSlotBindings, `${path}.materialSlotBindings`, 'slotId', materialAssetIds, add);
+  validateNodeMaterialBindingMap(overrides.childMaterialBindings, `${path}.childMaterialBindings`, 'ownerNodePath', materialAssetIds, add);
+}
+
+function validateNodeMaterialBindingMap(
+  bindings: unknown,
+  path: string,
+  keyName: string,
+  materialAssetIds: Set<string>,
+  add: (path: string, message: string) => void,
+): void {
+  if (bindings == null) return;
+  if (!isRecord(bindings)) {
+    add(path, 'material binding map must be an object when present');
+    return;
+  }
+  for (const [key, binding] of Object.entries(bindings)) {
+    const bindingPath = `${path}.${key}`;
+    if (!nonEmptyString(key)) add(bindingPath, `${keyName} must be a non-empty string`);
+    validateNodeMaterialBinding(binding, bindingPath, materialAssetIds, add);
+  }
+}
+
+function validateNodeMaterialBinding(
+  binding: unknown,
+  path: string,
+  materialAssetIds: Set<string>,
+  add: (path: string, message: string) => void,
+): void {
+  if (binding == null) return;
+  if (!isRecord(binding)) {
+    add(path, 'material binding must be an object when present');
+    return;
+  }
+  if (binding.materialAssetId != null) {
+    if (!nonEmptyString(binding.materialAssetId)) {
+      add(`${path}.materialAssetId`, 'materialAssetId must be non-empty when present');
+    } else if (!materialAssetIds.has(binding.materialAssetId)) {
+      add(`${path}.materialAssetId`, `materialAssetId must reference scene.materialAssets: ${binding.materialAssetId}`);
+    }
+  }
+  if (binding.override != null) validateArtistMaterialProfile(binding.override, `${path}.override`, add);
 }
 
 function validateArtistMaterialProfile(
@@ -247,6 +308,27 @@ function validateMaterialAssetSystem(
   if (system.preset != null && !MATERIAL_ASSET_SYSTEM_PRESETS.has(system.preset)) {
     add(`${path}.preset`, 'preset must be default-pbr or default-standard');
   }
+}
+
+function validateMaterialAssetOrigin(
+  origin: unknown,
+  path: string,
+  add: (path: string, message: string) => void,
+): void {
+  if (origin == null) return;
+  if (!isRecord(origin)) {
+    add(path, 'material asset origin must be an object');
+    return;
+  }
+  if (origin.type !== 'imported' && origin.type !== 'created' && origin.type !== 'duplicated' && origin.type !== 'preset') {
+    add(`${path}.type`, 'origin type must be imported, created, duplicated, or preset');
+  }
+  if (origin.sourceAssetGuid != null && !nonEmptyString(origin.sourceAssetGuid)) add(`${path}.sourceAssetGuid`, 'sourceAssetGuid must be non-empty when present');
+  if (origin.sourceAssetId != null && !nonEmptyString(origin.sourceAssetId)) add(`${path}.sourceAssetId`, 'sourceAssetId must be non-empty when present');
+  if (origin.sourceSlotId != null && !nonEmptyString(origin.sourceSlotId)) add(`${path}.sourceSlotId`, 'sourceSlotId must be non-empty when present');
+  if (origin.sourceMaterialIndex != null && !Number.isInteger(origin.sourceMaterialIndex)) add(`${path}.sourceMaterialIndex`, 'sourceMaterialIndex must be an integer when present');
+  if (origin.sourceMaterialName != null && !nonEmptyString(origin.sourceMaterialName)) add(`${path}.sourceMaterialName`, 'sourceMaterialName must be non-empty when present');
+  if (origin.sourceMaterialAssetId != null && !nonEmptyString(origin.sourceMaterialAssetId)) add(`${path}.sourceMaterialAssetId`, 'sourceMaterialAssetId must be non-empty when present');
 }
 
 function validateMaterialAssetSystemKindConsistency(

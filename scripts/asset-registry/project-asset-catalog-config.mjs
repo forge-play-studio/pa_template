@@ -24,6 +24,25 @@ export const projectAssetCatalogConfig = {
   async loadRules() {
     return JSON.parse(await fs.readFile(this.rulesPath, 'utf8'));
   },
+  async resolveAssetMetadata({ kind, sourcePath, existingMetadata, payloadMetadata, guid, assetId }) {
+    const metadata = {
+      ...(existingMetadata ?? {}),
+      ...(payloadMetadata ?? {}),
+    };
+    if (kind !== 'model') return Object.keys(metadata).length > 0 ? metadata : null;
+
+    const materialSlots = await extractModelMaterialSlots(sourcePath, {
+      assetGuid: guid,
+      assetId,
+      existingMaterialSlots: metadata.materialSlots,
+    });
+    if (materialSlots.length === 0) {
+      delete metadata.materialSlots;
+    } else {
+      metadata.materialSlots = materialSlots;
+    }
+    return Object.keys(metadata).length > 0 ? metadata : null;
+  },
   relativeImportedPath(kind, fileName) {
     if (kind === 'model') return `../imported/${fileName}`;
     if (kind === 'sound') return `../imported/sounds/${fileName}`;
@@ -59,6 +78,7 @@ export const projectAssetCatalogConfig = {
           entry.contentHash ? `contentHash: ${JSON.stringify(entry.contentHash)}` : '',
           typeof entry.byteSize === 'number' ? `byteSize: ${JSON.stringify(entry.byteSize)}` : '',
           entry.external ? `external: ${JSON.stringify(entry.external)}` : '',
+          entry.metadata ? `metadata: ${JSON.stringify(entry.metadata)}` : '',
           entry.createdAt ? `createdAt: ${JSON.stringify(entry.createdAt)}` : '',
           entry.updatedAt ? `updatedAt: ${JSON.stringify(entry.updatedAt)}` : '',
         ].filter(Boolean).join(', ');
@@ -91,6 +111,7 @@ export const projectAssetCatalogConfig = {
       '  contentHash?: string;',
       '  byteSize?: number;',
       '  external?: { platformAssetId?: string; assetPath?: string; assetUrl?: string };',
+      '  metadata?: Record<string, unknown>;',
       '  createdAt?: string;',
       '  updatedAt?: string;',
       '}',
@@ -129,3 +150,209 @@ export const projectAssetCatalogConfig = {
 
 export const projectAssetRegistryConfig = projectAssetCatalogConfig;
 export const projectTextureRegistryConfig = projectAssetCatalogConfig;
+
+async function extractModelMaterialSlots(sourcePath, context = {}) {
+  try {
+    const gltf = await readGltfJson(sourcePath);
+    return collectGltfMaterialSlots(gltf, context);
+  } catch {
+    return [];
+  }
+}
+
+async function readGltfJson(sourcePath) {
+  const extension = path.extname(sourcePath).toLowerCase();
+  if (extension === '.gltf') {
+    return JSON.parse(await fs.readFile(sourcePath, 'utf8'));
+  }
+  if (extension !== '.glb') return null;
+  const bytes = await fs.readFile(sourcePath);
+  if (bytes.length < 20 || bytes.toString('utf8', 0, 4) !== 'glTF') return null;
+  const version = bytes.readUInt32LE(4);
+  if (version !== 2) return null;
+  const declaredLength = bytes.readUInt32LE(8);
+  if (declaredLength > bytes.length) return null;
+
+  let offset = 12;
+  while (offset + 8 <= bytes.length) {
+    const chunkLength = bytes.readUInt32LE(offset);
+    const chunkType = bytes.readUInt32LE(offset + 4);
+    offset += 8;
+    if (offset + chunkLength > bytes.length) return null;
+    if (chunkType === 0x4e4f534a) {
+      const jsonText = bytes.toString('utf8', offset, offset + chunkLength).replace(/\0+$/g, '');
+      return JSON.parse(jsonText);
+    }
+    offset += chunkLength;
+  }
+  return null;
+}
+
+function collectGltfMaterialSlots(gltf, context = {}) {
+  if (!gltf || typeof gltf !== 'object') return [];
+  const nodes = Array.isArray(gltf.nodes) ? gltf.nodes : [];
+  const meshes = Array.isArray(gltf.meshes) ? gltf.meshes : [];
+  const materials = Array.isArray(gltf.materials) ? gltf.materials : [];
+  const sceneIndexes = collectGltfSceneRootNodeIndexes(gltf);
+  const parentByNode = buildGltfParentIndex(nodes);
+  const rootSet = new Set(sceneIndexes);
+  const previousSlotIdByOwnerPath = createPreviousMaterialSlotIdMap(context.existingMaterialSlots);
+  const currentOwnerPathCounts = countGltfMaterialSlotOwnerPaths(nodes, meshes, parentByNode, rootSet);
+  const slots = [];
+
+  for (let nodeIndex = 0; nodeIndex < nodes.length; nodeIndex += 1) {
+    const node = nodes[nodeIndex];
+    const meshIndex = Number.isInteger(node?.mesh) ? node.mesh : -1;
+    if (meshIndex < 0 || meshIndex >= meshes.length) continue;
+
+    const ownerNodePath = buildGltfOwnerNodePath(nodes, parentByNode, rootSet, nodeIndex);
+    if (!ownerNodePath) continue;
+
+    const mesh = meshes[meshIndex];
+    const materialRefs = readGltfNodeMeshMaterialRefs(mesh, materials);
+    const sourceMaterialIndex = materialRefs.indices[0] ?? -1;
+    const materialName = materialRefs.names[0] ?? null;
+    const reusablePreviousSlotId = currentOwnerPathCounts.get(ownerNodePath) === 1
+      ? previousSlotIdByOwnerPath.get(ownerNodePath)
+      : null;
+    const slotId = reusablePreviousSlotId
+      ?? createGltfMaterialSlotId({
+        assetGuid: context.assetGuid,
+        assetId: context.assetId,
+        nodeIndex,
+        meshIndex,
+      });
+    slots.push({
+      slotId,
+      ownerNodePath,
+      label: readGltfNodeMeshLabel(node, mesh, ownerNodePath),
+      nodeIndex,
+      meshIndex,
+      ...(sourceMaterialIndex >= 0 ? { sourceMaterialIndex } : {}),
+      ...(materialRefs.indices.length > 0 ? { sourceMaterialIndices: materialRefs.indices } : {}),
+      ...(materialName ? { materialName } : {}),
+      ...(materialRefs.names.length > 0 ? { materialNames: materialRefs.names } : {}),
+    });
+  }
+
+  return slots.sort((left, right) => left.ownerNodePath.localeCompare(right.ownerNodePath));
+}
+
+function countGltfMaterialSlotOwnerPaths(nodes, meshes, parentByNode, rootSet) {
+  const counts = new Map();
+  for (let nodeIndex = 0; nodeIndex < nodes.length; nodeIndex += 1) {
+    const meshIndex = Number.isInteger(nodes[nodeIndex]?.mesh) ? nodes[nodeIndex].mesh : -1;
+    if (meshIndex < 0 || meshIndex >= meshes.length) continue;
+    const ownerNodePath = buildGltfOwnerNodePath(nodes, parentByNode, rootSet, nodeIndex);
+    if (!ownerNodePath) continue;
+    counts.set(ownerNodePath, (counts.get(ownerNodePath) ?? 0) + 1);
+  }
+  return counts;
+}
+
+function createPreviousMaterialSlotIdMap(rawSlots) {
+  const result = new Map();
+  if (!Array.isArray(rawSlots)) return result;
+  const ownerPathCounts = new Map();
+  for (const rawSlot of rawSlots) {
+    if (!rawSlot || typeof rawSlot !== 'object' || Array.isArray(rawSlot)) continue;
+    const ownerNodePath = typeof rawSlot.ownerNodePath === 'string'
+      ? rawSlot.ownerNodePath.trim().replace(/^\/+|\/+$/g, '')
+      : '';
+    if (ownerNodePath) ownerPathCounts.set(ownerNodePath, (ownerPathCounts.get(ownerNodePath) ?? 0) + 1);
+  }
+  for (const rawSlot of rawSlots) {
+    if (!rawSlot || typeof rawSlot !== 'object' || Array.isArray(rawSlot)) continue;
+    const ownerNodePath = typeof rawSlot.ownerNodePath === 'string'
+      ? rawSlot.ownerNodePath.trim().replace(/^\/+|\/+$/g, '')
+      : '';
+    const slotId = typeof rawSlot.slotId === 'string' ? rawSlot.slotId.trim() : '';
+    if (ownerNodePath && slotId && ownerPathCounts.get(ownerNodePath) === 1) result.set(ownerNodePath, slotId);
+  }
+  return result;
+}
+
+function createGltfMaterialSlotId({ assetGuid, assetId, nodeIndex, meshIndex }) {
+  const seed = `${assetGuid || assetId || 'asset'}:${nodeIndex}:${meshIndex}`;
+  return `slot_${stableHashToken(seed)}`;
+}
+
+function stableHashToken(value) {
+  const text = String(value ?? '');
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < text.length; index += 1) {
+    hash ^= text.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(16).padStart(8, '0');
+}
+
+function collectGltfSceneRootNodeIndexes(gltf) {
+  const scenes = Array.isArray(gltf.scenes) ? gltf.scenes : [];
+  const sceneIndex = Number.isInteger(gltf.scene) ? gltf.scene : 0;
+  const scene = scenes[sceneIndex] ?? scenes[0];
+  return Array.isArray(scene?.nodes) ? scene.nodes.filter(Number.isInteger) : [];
+}
+
+function buildGltfParentIndex(nodes) {
+  const parentByNode = new Map();
+  for (let parentIndex = 0; parentIndex < nodes.length; parentIndex += 1) {
+    const children = Array.isArray(nodes[parentIndex]?.children) ? nodes[parentIndex].children : [];
+    for (const childIndex of children) {
+      if (Number.isInteger(childIndex) && !parentByNode.has(childIndex)) {
+        parentByNode.set(childIndex, parentIndex);
+      }
+    }
+  }
+  return parentByNode;
+}
+
+function buildGltfOwnerNodePath(nodes, parentByNode, rootSet, nodeIndex) {
+  const segments = [];
+  let currentIndex = nodeIndex;
+  const visited = new Set();
+  while (Number.isInteger(currentIndex) && currentIndex >= 0 && currentIndex < nodes.length) {
+    if (visited.has(currentIndex)) return '';
+    visited.add(currentIndex);
+    segments.push(stableGltfNodeSegment(nodes[currentIndex], currentIndex));
+    const parentIndex = parentByNode.get(currentIndex);
+    if (!Number.isInteger(parentIndex)) break;
+    currentIndex = parentIndex;
+  }
+  segments.reverse();
+  if (segments.length > 1 && rootSet.has(currentIndex)) segments.shift();
+  return segments.filter(Boolean).join('/');
+}
+
+function stableGltfNodeSegment(node, index) {
+  const name = typeof node?.name === 'string' ? node.name.trim() : '';
+  return name || `node_${index}`;
+}
+
+function readGltfNodeMeshLabel(node, mesh, ownerNodePath) {
+  const nodeName = typeof node?.name === 'string' ? node.name.trim() : '';
+  const meshName = typeof mesh?.name === 'string' ? mesh.name.trim() : '';
+  return nodeName || meshName || ownerNodePath.split('/').filter(Boolean).pop() || ownerNodePath;
+}
+
+function readGltfNodeMeshMaterialRefs(mesh, materials) {
+  const primitives = Array.isArray(mesh?.primitives) ? mesh.primitives : [];
+  const indices = [];
+  const seen = new Set();
+  for (const primitive of primitives) {
+    const materialIndex = Number.isInteger(primitive?.material) ? primitive.material : -1;
+    if (materialIndex >= 0 && !seen.has(materialIndex)) {
+      seen.add(materialIndex);
+      indices.push(materialIndex);
+    }
+  }
+  return {
+    indices,
+    names: indices
+      .map((materialIndex) => {
+        const material = materials[materialIndex];
+        return typeof material?.name === 'string' ? material.name.trim() : '';
+      })
+      .filter(Boolean),
+  };
+}

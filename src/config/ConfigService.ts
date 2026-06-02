@@ -295,22 +295,51 @@ function inferSceneMaterialAssetKindFromSystemPreset(
   return undefined;
 }
 
+function normalizeSceneMaterialAssetOrigin(value: unknown): SceneMaterialAssetConfig['origin'] | undefined {
+  if (!isRecord(value)) return undefined;
+  const type = value.type === 'imported'
+    || value.type === 'created'
+    || value.type === 'duplicated'
+    || value.type === 'preset'
+    ? value.type
+    : undefined;
+  if (!type) return undefined;
+  const sourceAssetGuid = typeof value.sourceAssetGuid === 'string' ? value.sourceAssetGuid.trim() : '';
+  const sourceAssetId = typeof value.sourceAssetId === 'string' ? value.sourceAssetId.trim() : '';
+  const sourceSlotId = typeof value.sourceSlotId === 'string' ? value.sourceSlotId.trim() : '';
+  const sourceMaterialName = typeof value.sourceMaterialName === 'string' ? value.sourceMaterialName.trim() : '';
+  const sourceMaterialAssetId = typeof value.sourceMaterialAssetId === 'string' ? value.sourceMaterialAssetId.trim() : '';
+  return {
+    type,
+    ...(sourceAssetGuid ? { sourceAssetGuid } : {}),
+    ...(sourceAssetId ? { sourceAssetId } : {}),
+    ...(sourceSlotId ? { sourceSlotId } : {}),
+    ...(Number.isInteger(value.sourceMaterialIndex) ? { sourceMaterialIndex: value.sourceMaterialIndex as number } : {}),
+    ...(sourceMaterialName ? { sourceMaterialName } : {}),
+    ...(sourceMaterialAssetId ? { sourceMaterialAssetId } : {}),
+  };
+}
+
 function normalizeSceneMaterialAsset(value: unknown): SceneMaterialAssetConfig | undefined {
   if (!isRecord(value)) return undefined;
   const id = typeof value.id === 'string' ? value.id.trim() : '';
+  const guid = typeof value.guid === 'string' ? value.guid.trim() : '';
   const name = typeof value.name === 'string' ? value.name.trim() : '';
   const profile = normalizeArtistMaterialProfile(value.profile);
   if (!id || !name || !profile) return undefined;
   const system = normalizeSceneMaterialAssetSystemConfig(value.system);
+  const origin = normalizeSceneMaterialAssetOrigin(value.origin);
   const materialKind = normalizeSceneMaterialAssetKind(value.materialKind);
   const presetKind = inferSceneMaterialAssetKindFromSystemPreset(system?.preset);
   if (materialKind && presetKind && materialKind !== presetKind) return undefined;
   return {
     id,
+    ...(guid ? { guid } : {}),
     name,
     profile,
     ...(materialKind ?? presetKind ? { materialKind: materialKind ?? presetKind } : {}),
     ...(system ? { system } : {}),
+    ...(origin ? { origin } : {}),
   };
 }
 
@@ -477,6 +506,8 @@ function normalizeSceneNodeOverrides(value: unknown): SceneNodeVisualOverrides |
   const normalized: SceneNodeVisualOverrides = {};
   const materialBinding = normalizeSceneNodeMaterialBinding(value.materialBinding);
   if (materialBinding) normalized.materialBinding = materialBinding;
+  const materialSlotBindings = normalizeSceneNodeMaterialBindingMap(value.materialSlotBindings);
+  if (materialSlotBindings) normalized.materialSlotBindings = materialSlotBindings;
   const childMaterialBindings = normalizeSceneNodeMaterialBindingMap(value.childMaterialBindings);
   if (childMaterialBindings) normalized.childMaterialBindings = childMaterialBindings;
   const material = normalizeMaterialOverride(value.material);
@@ -491,6 +522,76 @@ function normalizeSceneNodeOverrides(value: unknown): SceneNodeVisualOverrides |
   if (childOutlines) normalized.childOutlines = childOutlines;
 
   return Object.keys(normalized).length > 0 ? normalized : undefined;
+}
+
+function migrateSceneMaterialSlotBindings(scene: NonNullable<SceneConfig['scene']>): void {
+  const assetById = new Map(scene.assets.map(asset => [asset.id, asset]));
+  for (const node of scene.nodes) {
+    if (node.kind !== 'instance') continue;
+    const overrides = node.overrides;
+    if (!overrides?.childMaterialBindings) continue;
+    const asset = assetById.get(node.instance.assetId);
+    const slots = collectSceneMaterialSlotMigrationDescriptors(asset);
+    if (slots.length === 0) continue;
+    const materialSlotBindings = {
+      ...(overrides.materialSlotBindings ?? {}),
+    };
+    const childMaterialBindings = {
+      ...overrides.childMaterialBindings,
+    };
+    let changed = false;
+    for (const slot of slots) {
+      const legacy = findLegacySceneMaterialSlotBinding(childMaterialBindings, slot.ownerNodePath);
+      const legacyBinding = legacy?.binding;
+      if (!legacyBinding || materialSlotBindings[slot.slotId]) continue;
+      materialSlotBindings[slot.slotId] = structuredClone(legacyBinding);
+      delete childMaterialBindings[legacy.ownerNodePath];
+      changed = true;
+    }
+    if (!changed) continue;
+    overrides.materialSlotBindings = materialSlotBindings;
+    if (Object.keys(childMaterialBindings).length > 0) overrides.childMaterialBindings = childMaterialBindings;
+    else delete overrides.childMaterialBindings;
+  }
+}
+
+function collectSceneMaterialSlotMigrationDescriptors(
+  asset: SceneAssetConfig | undefined,
+): Array<{ slotId: string; ownerNodePath: string }> {
+  const rawSlots = Array.isArray(asset?.metadata?.materialSlots) ? asset.metadata.materialSlots : [];
+  const slots: Array<{ slotId: string; ownerNodePath: string }> = [];
+  for (const rawSlot of rawSlots) {
+    if (!isRecord(rawSlot)) continue;
+    const slotId = typeof rawSlot.slotId === 'string' ? rawSlot.slotId.trim() : '';
+    const ownerNodePath = normalizeSceneMaterialSlotMigrationOwnerPath(
+      typeof rawSlot.ownerNodePath === 'string'
+        ? rawSlot.ownerNodePath
+        : typeof rawSlot.path === 'string'
+          ? rawSlot.path
+          : '',
+    );
+    if (slotId && ownerNodePath) slots.push({ slotId, ownerNodePath });
+  }
+  return slots;
+}
+
+function findLegacySceneMaterialSlotBinding(
+  childMaterialBindings: Record<string, SceneNodeMaterialBindingConfig>,
+  ownerNodePath: string,
+): { ownerNodePath: string; binding: SceneNodeMaterialBindingConfig } | null {
+  const exact = childMaterialBindings[ownerNodePath];
+  if (exact) return { ownerNodePath, binding: exact };
+  const normalizedOwnerNodePath = normalizeSceneMaterialSlotMigrationOwnerPath(ownerNodePath);
+  for (const [legacyOwnerNodePath, binding] of Object.entries(childMaterialBindings)) {
+    if (normalizeSceneMaterialSlotMigrationOwnerPath(legacyOwnerNodePath) === normalizedOwnerNodePath) {
+      return { ownerNodePath: legacyOwnerNodePath, binding };
+    }
+  }
+  return null;
+}
+
+function normalizeSceneMaterialSlotMigrationOwnerPath(ownerNodePath: string): string {
+  return String(ownerNodePath ?? '').split('/').filter(Boolean).join('/');
 }
 
 function normalizeSceneSharedMaterial(value: unknown): SceneSharedMaterialConfig | undefined {
@@ -588,6 +689,7 @@ export class ConfigService {
     for (const node of scene.nodes) {
       this.normalizeSceneNode(node);
     }
+    migrateSceneMaterialSlotBindings(scene);
     return scene;
   }
 

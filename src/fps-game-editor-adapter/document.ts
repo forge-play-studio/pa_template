@@ -372,6 +372,13 @@ type VisualOverrideContainer = {
   overrides?: SceneNodeVisualOverrides;
 };
 
+type ProjectSceneNodeFieldSchema = NonNullable<ReturnType<typeof resolveSceneNodeFieldSchema>> | {
+  path: string;
+  appliesTo: readonly SceneNodeConfig['kind'][];
+  allowDelete?: boolean;
+  validate: (value: unknown) => boolean;
+};
+
 function ensureSceneNodes(sceneConfig: SceneConfig): SceneNodeConfig[] {
   if (!sceneConfig.scene || typeof sceneConfig.scene !== 'object') {
     sceneConfig.scene = {
@@ -715,6 +722,15 @@ function cleanupSceneNodeOverrides(value: VisualOverrideContainer): void {
   if (materialBinding) overrides.materialBinding = materialBinding;
   else delete overrides.materialBinding;
 
+  for (const [key, materialSlotBinding] of Object.entries(overrides.materialSlotBindings ?? {})) {
+    const normalized = pruneMaterialBindingSnapshot(materialSlotBinding);
+    if (normalized) overrides.materialSlotBindings![key] = normalized;
+    else delete overrides.materialSlotBindings![key];
+  }
+  if (overrides.materialSlotBindings && Object.keys(overrides.materialSlotBindings).length === 0) {
+    delete overrides.materialSlotBindings;
+  }
+
   for (const [key, childMaterialBinding] of Object.entries(overrides.childMaterialBindings ?? {})) {
     const normalized = pruneMaterialBindingSnapshot(childMaterialBinding);
     if (normalized) overrides.childMaterialBindings![key] = normalized;
@@ -745,6 +761,7 @@ function cleanupSceneNodeOverrides(value: VisualOverrideContainer): void {
 
   if (
     !overrides.materialBinding
+    && !overrides.materialSlotBindings
     && !overrides.childMaterialBindings
     && !overrides.material
     && !overrides.outline
@@ -1958,8 +1975,31 @@ function applyJsonFieldPatch(target: Record<string, any>, patch: SceneNodeFieldP
 }
 
 function splitSceneNodePatchPath(path: string): string[] {
+  const materialSlotBinding = splitMaterialSlotBindingPatchPath(path);
+  if (materialSlotBinding) return materialSlotBinding;
   const childMaterialBinding = splitChildMaterialBindingPatchPath(path);
   return childMaterialBinding ?? path.split('.').filter(Boolean);
+}
+
+function splitMaterialSlotBindingPatchPath(path: string): string[] | null {
+  const prefix = 'overrides.materialSlotBindings.';
+  if (!path.startsWith(prefix)) return null;
+  const remainder = path.slice(prefix.length);
+  const overrideMarker = '.override.';
+  const overrideMarkerIndex = remainder.lastIndexOf(overrideMarker);
+  if (overrideMarkerIndex >= 0) {
+    const slotId = remainder.slice(0, overrideMarkerIndex);
+    const suffix = remainder.slice(overrideMarkerIndex + overrideMarker.length);
+    if (!slotId || !suffix) return null;
+    return ['overrides', 'materialSlotBindings', slotId, 'override', ...suffix.split('.').filter(Boolean)];
+  }
+  const materialAssetSuffix = '.materialAssetId';
+  if (remainder.endsWith(materialAssetSuffix)) {
+    const slotId = remainder.slice(0, -materialAssetSuffix.length);
+    if (!slotId) return null;
+    return ['overrides', 'materialSlotBindings', slotId, 'materialAssetId'];
+  }
+  return null;
 }
 
 function splitChildMaterialBindingPatchPath(path: string): string[] | null {
@@ -2006,8 +2046,37 @@ function normalizeSceneNodePatchValue(path: string, value: unknown): unknown {
 function isArtistMaterialTexturePath(path: string): boolean {
   return path === 'overrides.materialBinding.override.emission.maskTexture.url'
     || path === 'overrides.materialBinding.override.baseColor.texture.url'
+    || /^overrides\.materialSlotBindings\..+\.override\.emission\.maskTexture\.url$/.test(path)
+    || /^overrides\.materialSlotBindings\..+\.override\.baseColor\.texture\.url$/.test(path)
     || /^overrides\.childMaterialBindings\..+\.override\.emission\.maskTexture\.url$/.test(path)
     || /^overrides\.childMaterialBindings\..+\.override\.baseColor\.texture\.url$/.test(path);
+}
+
+function resolveProjectSceneNodeFieldSchema(
+  sceneConfig: SceneConfig,
+  nodeKind: SceneNodeConfig['kind'],
+  path: string,
+): ProjectSceneNodeFieldSchema | null {
+  const schema = resolveSceneNodeFieldSchema(path, nodeKind);
+  if (schema) return schema;
+  if (!isDynamicMaterialBindingPath(path)) return null;
+  return {
+    path,
+    appliesTo: ['instance', 'primitive'],
+    validate: (value: unknown) => isValidProjectMaterialAssetBindingValue(sceneConfig, value),
+  };
+}
+
+function isDynamicMaterialBindingPath(path: string): boolean {
+  return /^overrides\.(materialSlotBindings|childMaterialBindings)\..+\.materialAssetId$/.test(path);
+}
+
+function isValidProjectMaterialAssetBindingValue(sceneConfig: SceneConfig, value: unknown): boolean {
+  if (value == null) return true;
+  if (typeof value !== 'string') return false;
+  const materialAssetId = value.trim();
+  if (!materialAssetId) return false;
+  return (ensureSceneSection(sceneConfig).materialAssets ?? []).some(materialAsset => materialAsset.id === materialAssetId);
 }
 
 export function patchProjectEditorSceneNode(
@@ -2036,7 +2105,7 @@ export function patchProjectEditorSceneNode(
   const candidateNodes = ensureSceneNodes(candidate);
   const candidateNode = cloneJson(candidateNodes[nodeIndex]) as SceneNodeConfig;
   for (const patch of args.patches) {
-    const schema = resolveSceneNodeFieldSchema(patch.path, candidateNode.kind);
+    const schema = resolveProjectSceneNodeFieldSchema(candidate, candidateNode.kind, patch.path);
     const normalizedPatch: SceneNodeFieldPatch = {
       path: patch.path,
       value: normalizeSceneNodePatchValue(patch.path, patch.value),

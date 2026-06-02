@@ -68,6 +68,42 @@
       "platformAssetId": "axe_and_bear:tower_building_model",
       "assetPath": "src/assets/models/tower-building-model.glb"
     },
+    "metadata": {
+      "materialSlots": [
+        {
+          "slotId": "slot_3d5cd656",
+          "ownerNodePath": "电厂主体",
+          "label": "电厂主体",
+          "nodeIndex": 0,
+          "meshIndex": 0,
+          "sourceMaterialIndex": 0,
+          "sourceMaterialIndices": [
+            0,
+            1
+          ],
+          "materialName": "电厂主体",
+          "materialNames": [
+            "电厂主体",
+            "电厂框架"
+          ]
+        },
+        {
+          "slotId": "slot_42ea83aa",
+          "ownerNodePath": "闪电",
+          "label": "闪电",
+          "nodeIndex": 1,
+          "meshIndex": 1,
+          "sourceMaterialIndex": 2,
+          "sourceMaterialIndices": [
+            2
+          ],
+          "materialName": "电厂闪电",
+          "materialNames": [
+            "电厂闪电"
+          ]
+        }
+      ]
+    },
     "createdAt": "2026-05-29T05:50:59.286Z",
     "updatedAt": "2026-05-29T05:50:59.286Z"
   },

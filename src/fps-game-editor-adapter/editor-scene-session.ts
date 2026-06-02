@@ -26,6 +26,7 @@ import {
 } from '@fps-games/editor/playable-sdk';
 import {
   callEditorSceneRuntimeMethod as callPlayableEditorSceneRuntimeMethod,
+  addEditorSceneMaterialAssetAndBind as addPlayableEditorSceneMaterialAssetAndBind,
   addAssetLibraryItemToEditorSceneDocument as addPlayableAssetLibraryItemToEditorSceneDocument,
   canEditorSceneGameObjectHaveChildren as canPlayableEditorSceneGameObjectHaveChildren,
   collectEditorSceneSubtreeIdList as collectPlayableEditorSceneSubtreeIdList,
@@ -77,6 +78,7 @@ import {
   patchEditorSceneMaterialAssetField as patchPlayableEditorSceneMaterialAssetField,
   collectEditorSceneChildMaterialSlots as collectPlayableEditorSceneChildMaterialSlots,
   collectEditorSceneMaterialAssetBindingIds as collectPlayableEditorSceneMaterialAssetBindingIds,
+  readEditorSceneAssetMaterialSlots as readPlayableEditorSceneAssetMaterialSlots,
   readEditorSceneInspectorVec3 as readPlayableEditorSceneInspectorVec3,
   readEditorSceneRuntimeBoolean as readPlayableEditorSceneRuntimeBoolean,
   readEditorSceneRuntimeClassName as readPlayableEditorSceneRuntimeClassName,
@@ -121,6 +123,7 @@ import type {
   EditorSceneVec3,
 } from './editor-scene-document';
 import type {
+  MaterialOverrideConfig,
   OutlineOverrideConfig,
   SceneCameraProjection,
   SceneMaterialAssetConfig,
@@ -254,17 +257,22 @@ const EDITOR_SCENE_ROOT_TRANSFORM = createIdentityEditorTransform();
 const EDITOR_SCENE_GAME_OBJECT_GUID_PREFIX = 'go_';
 const CREATE_CHILD_MATERIAL_SLOT_PATH = 'overrides.childMaterialBindings.$create.ownerNodePath';
 const MATERIAL_ASSET_FIELD_PATH_PREFIX = 'scene.materialAssets.';
+const ASSET_MESH_SELECTION_SEPARATOR = '::assetMesh::';
 const DEFAULT_PBR_MATERIAL_ASSET_ID = 'mat_default_pbr';
 const DEFAULT_STANDARD_MATERIAL_ASSET_ID = 'mat_default_standard';
+const DEFAULT_PBR_MATERIAL_ASSET_GUID = '00000000-0000-4000-8000-000000000001';
+const DEFAULT_STANDARD_MATERIAL_ASSET_GUID = '00000000-0000-4000-8000-000000000002';
 const DEFAULT_ARTIST_MATERIAL_ASSET_ID = DEFAULT_PBR_MATERIAL_ASSET_ID;
 const DEFAULT_PBR_MATERIAL_ASSET: SceneMaterialAssetConfig = {
   id: DEFAULT_PBR_MATERIAL_ASSET_ID,
+  guid: DEFAULT_PBR_MATERIAL_ASSET_GUID,
   name: 'Default PBR Material',
   materialKind: 'pbr',
   system: {
     readonly: true,
     preset: 'default-pbr',
   },
+  origin: { type: 'preset' },
   profile: {
     baseColor: {
       color: { r: 1, g: 1, b: 1 },
@@ -283,12 +291,14 @@ const DEFAULT_PBR_MATERIAL_ASSET: SceneMaterialAssetConfig = {
 };
 const DEFAULT_STANDARD_MATERIAL_ASSET: SceneMaterialAssetConfig = {
   id: DEFAULT_STANDARD_MATERIAL_ASSET_ID,
+  guid: DEFAULT_STANDARD_MATERIAL_ASSET_GUID,
   name: 'Default Standard Material',
   materialKind: 'standard',
   system: {
     readonly: true,
     preset: 'default-standard',
   },
+  origin: { type: 'preset' },
   profile: {
     baseColor: {
       color: { r: 1, g: 1, b: 1 },
@@ -456,8 +466,12 @@ type ArtistMaterialInspectorText = {
   assetEmissionIntensity: string;
   assetEmissionMaskUrl: string;
   createSlotMaterial: string;
+  slotList: string;
+  slotId: string;
   slotOwnerPath: string;
   slotMaterialAsset: string;
+  slotSourceMaterial: string;
+  slotBindingPath: string;
   legacySlotRaw: string;
   summaryAsset: (name: string) => string;
   summaryMissingAsset: string;
@@ -487,6 +501,7 @@ type ArtistMaterialTooltipText = Record<
   | 'emissionIntensity'
   | 'emissionMaskUrl'
   | 'createSlotMaterial'
+  | 'slotList'
   | 'slotOwnerPath'
   | 'legacySlotRaw',
   string
@@ -527,8 +542,12 @@ const ARTIST_MATERIAL_INSPECTOR_TEXT: Record<ArtistMaterialInspectorLanguage, Ar
     assetEmissionIntensity: '资产自发光强度',
     assetEmissionMaskUrl: '资产遮罩贴图',
     createSlotMaterial: '添加材质槽',
+    slotList: '槽列表',
+    slotId: '槽 ID',
     slotOwnerPath: '槽节点路径',
     slotMaterialAsset: '槽材质资产',
+    slotSourceMaterial: '源材质',
+    slotBindingPath: '绑定路径',
     legacySlotRaw: '旧槽材质原始值',
     summaryAsset: (name) => `资产：${name}`,
     summaryMissingAsset: '资产缺失',
@@ -555,6 +574,7 @@ const ARTIST_MATERIAL_INSPECTOR_TEXT: Record<ArtistMaterialInspectorLanguage, Ar
       emissionIntensity: '自发光强度，0 表示无自发光。',
       emissionMaskUrl: '选择灰度贴图作为自发光强度遮罩。',
       createSlotMaterial: '输入 GLB 子节点或 mesh 的 ownerNodePath 来添加槽绑定，初始使用默认 PBR 材质。',
+      slotList: '根节点上的材质槽为只读总览。',
       slotOwnerPath: '材质槽定位到的子节点或 mesh 路径。',
       legacySlotRaw: '旧 childMaterials 配置只读展示；新编辑入口请使用槽材质资产。',
     },
@@ -593,8 +613,12 @@ const ARTIST_MATERIAL_INSPECTOR_TEXT: Record<ArtistMaterialInspectorLanguage, Ar
     assetEmissionIntensity: 'Asset Emission Intensity',
     assetEmissionMaskUrl: 'Asset Mask Texture',
     createSlotMaterial: 'Add Material Slot',
+    slotList: 'Slot List',
+    slotId: 'Slot ID',
     slotOwnerPath: 'Slot Owner Path',
     slotMaterialAsset: 'Slot Material Asset',
+    slotSourceMaterial: 'Source Material',
+    slotBindingPath: 'Binding Path',
     legacySlotRaw: 'Legacy Slot Raw',
     summaryAsset: (name) => `Asset: ${name}`,
     summaryMissingAsset: 'Missing asset',
@@ -621,6 +645,7 @@ const ARTIST_MATERIAL_INSPECTOR_TEXT: Record<ArtistMaterialInspectorLanguage, Ar
       emissionIntensity: 'Emission intensity. 0 means no emission.',
       emissionMaskUrl: 'Choose a grayscale texture to modulate emission intensity.',
       createSlotMaterial: 'Enter a GLB child node or mesh ownerNodePath to add a slot binding with the Default PBR material.',
+      slotList: 'Material slots on the root object are a readonly overview.',
       slotOwnerPath: 'Child node or mesh path targeted by this material slot.',
       legacySlotRaw: 'Readonly legacy childMaterials config. Use slot material assets for new edits.',
     },
@@ -994,9 +1019,9 @@ export function ensureEditorSceneEnvironmentDefaults(document: EditorSceneDocume
   let environmentLightSeen = false;
   let sunLightSeen = false;
   let changed = documentWithGuids !== document;
-  const materialAssets = ensureDefaultEditorSceneMaterialAssets(documentWithGuids.scene.materialAssets ?? []);
+  let materialAssets = ensureDefaultEditorSceneMaterialAssets(documentWithGuids.scene.materialAssets ?? []);
   changed = changed || materialAssets !== documentWithGuids.scene.materialAssets;
-  const gameObjects = documentWithGuids.scene.gameObjects.map((gameObject) => {
+  let gameObjects = documentWithGuids.scene.gameObjects.map((gameObject) => {
     if (gameObject.id === EDITOR_SCENE_ENVIRONMENT_LIGHT_ID) {
       environmentLightSeen = true;
       const next = normalizeEditorSceneSystemLightGameObject(gameObject, 'hemispheric');
@@ -1041,6 +1066,15 @@ export function ensureEditorSceneEnvironmentDefaults(document: EditorSceneDocume
     gameObjects.push(createDefaultEditorSceneSunLightGameObject(rootId, usedIds));
   }
 
+  const migratedSlotBindings = migrateEditorSceneMaterialSlotBindings(documentWithGuids, gameObjects);
+  gameObjects = migratedSlotBindings.gameObjects;
+  changed = changed || migratedSlotBindings.changed;
+
+  const importedMaterialDefaults = ensureImportedEditorSceneMaterialDefaults(documentWithGuids, materialAssets, gameObjects);
+  materialAssets = importedMaterialDefaults.materialAssets;
+  gameObjects = importedMaterialDefaults.gameObjects;
+  changed = changed || importedMaterialDefaults.changed;
+
   return changed
     ? {
         ...documentWithGuids,
@@ -1051,6 +1085,247 @@ export function ensureEditorSceneEnvironmentDefaults(document: EditorSceneDocume
         },
       }
     : documentWithGuids;
+}
+
+function migrateEditorSceneMaterialSlotBindings(
+  document: EditorSceneDocument,
+  gameObjects: readonly EditorSceneGameObject[],
+): { gameObjects: EditorSceneGameObject[]; changed: boolean } {
+  let changed = false;
+  const nextGameObjects = gameObjects.map((gameObject) => {
+    const renderer = findEditorSceneModelRenderer(gameObject);
+    const childMaterialBindings = gameObject.overrides?.childMaterialBindings;
+    if (!renderer || !childMaterialBindings) return gameObject;
+    const asset = document.assets.find((entry) => entry.id === renderer.assetId);
+    const slots = collectEditorSceneMaterialSlotMigrationDescriptors(asset);
+    if (slots.length === 0) return gameObject;
+
+    let nextGameObject = gameObject;
+    for (const slot of slots) {
+      const legacy = findEditorSceneLegacyMaterialSlotBinding(nextGameObject.overrides?.childMaterialBindings, slot.ownerNodePath);
+      const legacyBinding = legacy?.binding;
+      if (!legacyBinding || nextGameObject.overrides?.materialSlotBindings?.[slot.slotId]) continue;
+      nextGameObject = structuredClone(nextGameObject);
+      nextGameObject.overrides = nextGameObject.overrides ?? {};
+      nextGameObject.overrides.materialSlotBindings = nextGameObject.overrides.materialSlotBindings ?? {};
+      nextGameObject.overrides.materialSlotBindings[slot.slotId] = structuredClone(legacyBinding);
+      delete nextGameObject.overrides.childMaterialBindings?.[legacy.ownerNodePath];
+      if (nextGameObject.overrides.childMaterialBindings && Object.keys(nextGameObject.overrides.childMaterialBindings).length === 0) {
+        delete nextGameObject.overrides.childMaterialBindings;
+      }
+      changed = true;
+    }
+    return nextGameObject;
+  });
+  return { gameObjects: nextGameObjects, changed };
+}
+
+function collectEditorSceneMaterialSlotMigrationDescriptors(
+  asset: EditorSceneDocument['assets'][number] | undefined,
+): Array<{ slotId: string; ownerNodePath: string }> {
+  const rawSlots = Array.isArray(asset?.metadata?.materialSlots) ? asset.metadata.materialSlots : [];
+  const slots: Array<{ slotId: string; ownerNodePath: string }> = [];
+  for (const rawSlot of rawSlots) {
+    if (!rawSlot || typeof rawSlot !== 'object' || Array.isArray(rawSlot)) continue;
+    const record = rawSlot as Record<string, unknown>;
+    const slotId = typeof record.slotId === 'string' ? record.slotId.trim() : '';
+    const ownerNodePath = normalizeEditorSceneMaterialSlotMigrationOwnerPath(
+      typeof record.ownerNodePath === 'string'
+        ? record.ownerNodePath
+        : typeof record.path === 'string'
+          ? record.path
+          : '',
+    );
+    if (slotId && ownerNodePath) slots.push({ slotId, ownerNodePath });
+  }
+  return slots;
+}
+
+function findEditorSceneLegacyMaterialSlotBinding(
+  childMaterialBindings: Record<string, SceneNodeMaterialBindingConfig | undefined> | undefined,
+  ownerNodePath: string,
+): { ownerNodePath: string; binding: SceneNodeMaterialBindingConfig } | null {
+  if (!childMaterialBindings) return null;
+  const exact = childMaterialBindings[ownerNodePath];
+  if (exact) return { ownerNodePath, binding: exact };
+  const normalizedOwnerNodePath = normalizeEditorSceneMaterialSlotMigrationOwnerPath(ownerNodePath);
+  for (const [legacyOwnerNodePath, binding] of Object.entries(childMaterialBindings)) {
+    if (!binding) continue;
+    if (normalizeEditorSceneMaterialSlotMigrationOwnerPath(legacyOwnerNodePath) === normalizedOwnerNodePath) {
+      return { ownerNodePath: legacyOwnerNodePath, binding };
+    }
+  }
+  return null;
+}
+
+function normalizeEditorSceneMaterialSlotMigrationOwnerPath(ownerNodePath: string): string {
+  return String(ownerNodePath ?? '').split('/').filter(Boolean).join('/');
+}
+
+function ensureImportedEditorSceneMaterialDefaults(
+  document: EditorSceneDocument,
+  materialAssets: readonly SceneMaterialAssetConfig[],
+  gameObjects: readonly EditorSceneGameObject[],
+): {
+  materialAssets: SceneMaterialAssetConfig[];
+  gameObjects: EditorSceneGameObject[];
+  changed: boolean;
+} {
+  let changed = false;
+  const nextMaterialAssets = [...materialAssets];
+  const materialAssetIds = new Set(nextMaterialAssets.map(materialAsset => materialAsset.id));
+  const assetById = new Map(document.assets.map(asset => [asset.id, asset]));
+  const nextGameObjects = gameObjects.map((gameObject) => {
+    const renderer = findEditorSceneModelRenderer(gameObject);
+    if (!renderer || readEditorSceneNodeKind(gameObject) === 'primitive') return gameObject;
+    const sourceAsset = assetById.get(renderer.assetId);
+    if (!sourceAsset) return gameObject;
+    const slots = collectEditorSceneChildMaterialSlots(document, gameObject)
+      .filter(slot => collectEditorSceneSlotSourceMaterialIndices(slot).length > 0);
+    if (slots.length === 0) return gameObject;
+
+    let nextGameObject = gameObject;
+    for (const slot of slots) {
+      const sourceMaterialIndices = collectEditorSceneSlotSourceMaterialIndices(slot);
+      const importedMaterialIds = sourceMaterialIndices.map((sourceMaterialIndex) => {
+        const importedMaterial = createImportedEditorSceneMaterialAsset(sourceAsset, slot, sourceMaterialIndex);
+        if (!materialAssetIds.has(importedMaterial.id)) {
+          materialAssetIds.add(importedMaterial.id);
+          nextMaterialAssets.push(importedMaterial);
+          changed = true;
+        }
+        return importedMaterial.id;
+      });
+      const defaultMaterialAssetId = importedMaterialIds[0];
+      if (!defaultMaterialAssetId || getEditorSceneSlotMaterialBinding(nextGameObject, slot)?.materialAssetId) {
+        continue;
+      }
+      nextGameObject = bindDefaultEditorSceneSlotMaterial(nextGameObject, slot, defaultMaterialAssetId);
+      changed = true;
+    }
+    return nextGameObject;
+  });
+
+  return {
+    materialAssets: nextMaterialAssets,
+    gameObjects: nextGameObjects,
+    changed,
+  };
+}
+
+function createImportedEditorSceneMaterialAsset(
+  sourceAsset: EditorSceneDocument['assets'][number],
+  slot: EditorSceneChildMaterialSlot,
+  sourceMaterialIndex: number,
+): SceneMaterialAssetConfig {
+  const sourceAssetGuid = sourceAsset.guid ?? sourceAsset.id;
+  const guid = createStableEditorSceneMaterialAssetGuid(`imported:${sourceAssetGuid}:${sourceMaterialIndex}`);
+  const materialName = getEditorSceneSlotSourceMaterialName(slot, sourceMaterialIndex)
+    ?? `${sourceAsset.displayName ?? sourceAsset.id} Material ${sourceMaterialIndex + 1}`;
+  return {
+    id: createEditorSceneMaterialAssetId(guid),
+    guid,
+    name: materialName,
+    materialKind: 'pbr',
+    origin: {
+      type: 'imported',
+      sourceAssetGuid,
+      sourceAssetId: sourceAsset.id,
+      ...(slot.slotId ? { sourceSlotId: slot.slotId } : {}),
+      sourceMaterialIndex,
+      sourceMaterialName: materialName,
+    },
+    profile: structuredClone(DEFAULT_PBR_MATERIAL_ASSET.profile),
+  };
+}
+
+function createEditorSceneMaterialAssetId(guid: string): string {
+  const token = String(guid ?? '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '');
+  return `mat_${token || 'material'}`;
+}
+
+function createStableEditorSceneMaterialAssetGuid(seed: string): string {
+  const normalizedSeed = String(seed ?? '').trim() || 'material';
+  const hex = [0, 1, 2, 3]
+    .map(index => hashEditorSceneMaterialIdentitySeed(`${normalizedSeed}\0${index}`))
+    .join('');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-a${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
+}
+
+function hashEditorSceneMaterialIdentitySeed(value: string): string {
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(16).padStart(8, '0');
+}
+
+function bindDefaultEditorSceneSlotMaterial(
+  gameObject: EditorSceneGameObject,
+  slot: EditorSceneChildMaterialSlot,
+  materialAssetId: string,
+): EditorSceneGameObject {
+  const next = structuredClone(gameObject);
+  next.overrides = next.overrides ?? {};
+  if (slot.slotId) {
+    next.overrides.materialSlotBindings = next.overrides.materialSlotBindings ?? {};
+    next.overrides.materialSlotBindings[slot.slotId] = {
+      ...(next.overrides.materialSlotBindings[slot.slotId] ?? {}),
+      materialAssetId,
+    };
+  } else {
+    next.overrides.childMaterialBindings = next.overrides.childMaterialBindings ?? {};
+    next.overrides.childMaterialBindings[slot.ownerNodePath] = {
+      ...(next.overrides.childMaterialBindings[slot.ownerNodePath] ?? {}),
+      materialAssetId,
+    };
+  }
+  return next;
+}
+
+function collectEditorSceneSlotSourceMaterialIndices(slot: EditorSceneChildMaterialSlot): number[] {
+  if (slot.sourceMaterialIndices?.length) {
+    return [...new Set(slot.sourceMaterialIndices.filter((value): value is number => Number.isInteger(value)))];
+  }
+  const sourceMaterialIndex = slot.sourceMaterialIndex;
+  return typeof sourceMaterialIndex === 'number' && Number.isInteger(sourceMaterialIndex) ? [sourceMaterialIndex] : [];
+}
+
+function getEditorSceneSlotSelectionKey(slot: EditorSceneChildMaterialSlot): string {
+  return slot.slotId || slot.ownerNodePath;
+}
+
+function getEditorSceneSlotMaterialBindingPath(slot: EditorSceneChildMaterialSlot): string {
+  return slot.slotId
+    ? `overrides.materialSlotBindings.${slot.slotId}.materialAssetId`
+    : `overrides.childMaterialBindings.${slot.ownerNodePath}.materialAssetId`;
+}
+
+function getEditorSceneSlotMaterialBinding(
+  gameObject: EditorSceneGameObject,
+  slot: EditorSceneChildMaterialSlot,
+): SceneNodeMaterialBindingConfig | undefined {
+  const slotBinding = slot.slotId ? gameObject.overrides?.materialSlotBindings?.[slot.slotId] : undefined;
+  return slotBinding ?? gameObject.overrides?.childMaterialBindings?.[slot.ownerNodePath];
+}
+
+function getEditorSceneSlotLegacyMaterial(
+  gameObject: EditorSceneGameObject,
+  slot: EditorSceneChildMaterialSlot,
+): MaterialOverrideConfig | undefined {
+  return gameObject.overrides?.childMaterials?.[slot.ownerNodePath];
+}
+
+function getEditorSceneSlotSourceMaterialName(
+  slot: EditorSceneChildMaterialSlot,
+  sourceMaterialIndex: number,
+): string | null {
+  const indices = slot.sourceMaterialIndices ?? [];
+  const names = slot.materialNames ?? [];
+  const index = indices.findIndex(value => value === sourceMaterialIndex);
+  const name = index >= 0 ? names[index] : sourceMaterialIndex === slot.sourceMaterialIndex ? slot.materialName : null;
+  return typeof name === 'string' && name.trim() ? name.trim() : null;
 }
 
 function ensureDefaultEditorSceneMaterialAssets(
@@ -1095,7 +1370,36 @@ function getDefaultEditorSceneMaterialPreset(
 }
 
 export function getEditorSceneHierarchyItems(document: EditorSceneDocument): SceneGraphTreeItem[] {
-  return getPlayableEditorSceneHierarchyItems(document);
+  const items = getPlayableEditorSceneHierarchyItems(document);
+  const gameObjectsById = new Map(document.scene.gameObjects.map(gameObject => [gameObject.id, gameObject]));
+  const result: SceneGraphTreeItem[] = [];
+  for (const item of items) {
+    result.push(item);
+    const gameObject = gameObjectsById.get(item.id);
+    if (!gameObject || readEditorSceneNodeKind(gameObject) === 'primitive') continue;
+    const slots = collectEditorSceneChildMaterialSlots(document, gameObject);
+    for (const [slotIndex, slot] of slots.entries()) {
+      const assetMeshId = createEditorSceneAssetMeshSelectionId(gameObject.id, getEditorSceneSlotSelectionKey(slot));
+      result.push({
+        id: assetMeshId,
+        label: slot.label || formatEditorSceneMaterialSlotLabel(
+          slot.ownerNodePath,
+          slotIndex,
+          getArtistMaterialInspectorText(readArtistMaterialInspectorLanguage(gameObject)),
+        ),
+        parentId: gameObject.id,
+        role: 'object',
+        icon: 'material-slot',
+        selectable: true,
+        protected: false,
+        canHaveChildren: false,
+        renamable: false,
+        deletable: false,
+        draggable: false,
+      });
+    }
+  }
+  return result;
 }
 
 export function normalizeEditorSceneHierarchyDocument(document: EditorSceneDocument): EditorSceneDocument {
@@ -1335,6 +1639,10 @@ export function getEditorSceneInspectorObject(
   gameObjectId: string,
   context: EditorSceneInspectorContext = {},
 ): InspectorObject<EditorSceneDocument> | null {
+  const assetMeshTarget = resolveEditorSceneAssetMeshSelectionTarget(document, gameObjectId);
+  if (assetMeshTarget) {
+    return createEditorSceneAssetMeshInspectorObject(document, assetMeshTarget, context);
+  }
   const gameObject = findEditorSceneGameObject(document, gameObjectId);
   if (!gameObject) return null;
   return {
@@ -1538,10 +1846,12 @@ function readProjectionAssetMetadata(projectionNode: unknown): unknown {
 export function createEditorSceneInspectorPropertyPatch(
   input: EditorSceneInspectorPropertyPatchInput,
 ): { patch: EditorSceneDocumentPatch; label: string; changedId: string; changedIds: string[]; reprojectIds?: string[] } | null {
-  const gameObject = findEditorSceneGameObject(input.document, input.targetId);
+  const assetMeshTarget = resolveEditorSceneAssetMeshSelectionTarget(input.document, input.targetId);
+  const gameObject = assetMeshTarget?.gameObject ?? findEditorSceneGameObject(input.document, input.targetId);
   if (!gameObject) return null;
   const path = input.path;
   const value = normalizeEditorSceneInspectorValue(path, input.value);
+  const targetId = gameObject.id;
   if (path === CREATE_CHILD_MATERIAL_SLOT_PATH) {
     return createEditorSceneCreateChildMaterialSlotPatch(gameObject, value);
   }
@@ -1555,7 +1865,7 @@ export function createEditorSceneInspectorPropertyPatch(
     if (!input.document.scene.materialAssets?.some(materialAsset => materialAsset.id === materialAssetFieldPath.materialAssetId)) return null;
     if (!validateEditorSceneMaterialAssetFieldValue(materialAssetFieldPath.fieldPath, normalizedMaterialAssetValue)) return null;
     const changedIds = collectEditorSceneMaterialAssetBindingIds(input.document, materialAssetFieldPath.materialAssetId);
-    if (!changedIds.includes(input.targetId)) changedIds.push(input.targetId);
+    if (!changedIds.includes(targetId)) changedIds.push(targetId);
     return {
       label: `Patch material asset ${materialAssetFieldPath.materialAssetId} ${materialAssetFieldPath.fieldPath}`,
       patch: {
@@ -1564,29 +1874,30 @@ export function createEditorSceneInspectorPropertyPatch(
         path: materialAssetFieldPath.fieldPath,
         value: normalizedMaterialAssetValue,
       },
-      changedId: input.targetId,
+      changedId: targetId,
       changedIds,
       ...(materialAssetFieldPath.fieldPath.startsWith('profile.') ? { reprojectIds: changedIds } : {}),
     };
   }
-  if (isEditorSceneRootTransformPath(input.targetId, path)) return null;
+  if (assetMeshTarget && !isEditorSceneAssetMeshWritablePath(path)) return null;
+  if (isEditorSceneRootTransformPath(targetId, path)) return null;
   if (!validateEditorSceneInspectorValue(input.document, gameObject, path, value).ok) return null;
-  if (isBlockedEditorSceneSystemFieldPatch(input.document, input.targetId, path, value)) return null;
+  if (isBlockedEditorSceneSystemFieldPatch(input.document, targetId, path, value)) return null;
   const changedIds = path.startsWith('transform.')
-    ? collectEditorSceneSubtreeIdList(input.document, [input.targetId])
-    : [input.targetId];
+    ? collectEditorSceneSubtreeIdList(input.document, [targetId])
+    : [targetId];
   const reprojectIds = isEditorSceneProjectionShapePath(path) || isEditorSceneArtistMaterialPatchPath(path)
-    ? [input.targetId]
+    ? [targetId]
     : undefined;
   return {
-    label: `Patch ${input.targetId} ${path}`,
+    label: `Patch ${targetId} ${path}`,
     patch: {
       kind: 'game-object.field',
-      targetId: input.targetId,
+      targetId,
       path,
       value,
     },
-    changedId: input.targetId,
+    changedId: targetId,
     changedIds,
     ...(reprojectIds ? { reprojectIds } : {}),
   };
@@ -1597,6 +1908,21 @@ export function createEditorSceneAssetActionPatch(
 ): { patch: EditorSceneDocumentPatch; label: string; changedId?: string; changedIds?: string[]; reprojectIds?: string[] } | null {
   if (input.actionId === 'asset.apply-material') {
     if (!input.activeId) return null;
+    const assetMeshTarget = resolveEditorSceneAssetMeshSelectionTarget(input.document, input.activeId);
+    if (assetMeshTarget) {
+      return {
+        label: `Apply material ${input.assetId} to ${assetMeshTarget.label}`,
+        patch: {
+          kind: 'game-object.field',
+          targetId: assetMeshTarget.rootGameObjectId,
+          path: assetMeshTarget.materialBindingPath,
+          value: input.assetId,
+        },
+        changedId: assetMeshTarget.rootGameObjectId,
+        changedIds: [assetMeshTarget.rootGameObjectId],
+        reprojectIds: [assetMeshTarget.rootGameObjectId],
+      };
+    }
     return {
       label: `Apply material ${input.assetId}`,
       patch: {
@@ -1667,7 +1993,12 @@ function createEditorSceneDuplicateMaterialAssetForBindingPatch(
     gameObject,
     bindingPath,
     sourceMaterialAssetId,
-    isBindingPathAllowed: path => !!resolveSceneNodeFieldSchema(path, readEditorSceneNodeKind(gameObject)),
+    isBindingPathAllowed: path => isEditorSceneMaterialBindingPath(path)
+      && (
+        !!resolveSceneNodeFieldSchema(path, readEditorSceneNodeKind(gameObject))
+        || path.startsWith('overrides.materialSlotBindings.')
+        || path.startsWith('overrides.childMaterialBindings.')
+      ),
   });
   if (!result) return null;
   const sourceMaterialAsset = findEditorSceneMaterialAsset(document, sourceMaterialAssetId);
@@ -1698,6 +2029,95 @@ function findEditorSceneGameObject(
   gameObjectId: string,
 ): EditorSceneGameObject | null {
   return document.scene.gameObjects.find((gameObject) => gameObject.id === gameObjectId) ?? null;
+}
+
+type EditorSceneAssetMeshSelectionTarget = {
+  id: string;
+  rootGameObjectId: string;
+  slotSelectionKey: string;
+  slotId?: string;
+  ownerNodePath: string;
+  materialBindingPath: string;
+  label: string;
+  gameObject: EditorSceneGameObject;
+  slot: EditorSceneChildMaterialSlot;
+};
+
+function createEditorSceneAssetMeshSelectionId(
+  rootGameObjectId: string,
+  slotSelectionKey: string,
+): string {
+  return `${rootGameObjectId}${ASSET_MESH_SELECTION_SEPARATOR}${encodeURIComponent(slotSelectionKey)}`;
+}
+
+function parseEditorSceneAssetMeshSelectionId(value: string): { rootGameObjectId: string; slotSelectionKey: string } | null {
+  const separatorIndex = value.indexOf(ASSET_MESH_SELECTION_SEPARATOR);
+  if (separatorIndex < 0) return null;
+  const rootGameObjectId = value.slice(0, separatorIndex);
+  const encodedSlotSelectionKey = value.slice(separatorIndex + ASSET_MESH_SELECTION_SEPARATOR.length);
+  if (!rootGameObjectId || !encodedSlotSelectionKey) return null;
+  try {
+    const slotSelectionKey = decodeURIComponent(encodedSlotSelectionKey).trim().replace(/^\/+|\/+$/g, '');
+    return slotSelectionKey ? { rootGameObjectId, slotSelectionKey } : null;
+  } catch {
+    return null;
+  }
+}
+
+function resolveEditorSceneAssetMeshSelectionTarget(
+  document: EditorSceneDocument,
+  id: string,
+): EditorSceneAssetMeshSelectionTarget | null {
+  const parsed = parseEditorSceneAssetMeshSelectionId(id);
+  if (!parsed) return null;
+  const gameObject = findEditorSceneGameObject(document, parsed.rootGameObjectId);
+  if (!gameObject) return null;
+  const slots = collectEditorSceneChildMaterialSlots(document, gameObject);
+  const slot = slots.find(candidate => getEditorSceneSlotSelectionKey(candidate) === parsed.slotSelectionKey)
+    ?? slots.find(candidate => candidate.ownerNodePath === parsed.slotSelectionKey)
+    ?? null;
+  if (!slot) return null;
+  const slotIndex = Math.max(0, slots.indexOf(slot));
+  const text = getArtistMaterialInspectorText(readArtistMaterialInspectorLanguage(gameObject));
+  const label = slot.label || formatEditorSceneMaterialSlotLabel(slot.ownerNodePath, slotIndex, text);
+  return {
+    id,
+    rootGameObjectId: parsed.rootGameObjectId,
+    slotSelectionKey: parsed.slotSelectionKey,
+    ...(slot.slotId ? { slotId: slot.slotId } : {}),
+    ownerNodePath: slot.ownerNodePath,
+    materialBindingPath: getEditorSceneSlotMaterialBindingPath(slot),
+    label,
+    gameObject,
+    slot,
+  };
+}
+
+function isEditorSceneAssetMeshWritablePath(path: string): boolean {
+  return path.startsWith('overrides.materialSlotBindings.')
+    || path.startsWith('overrides.childMaterialBindings.')
+    || parseEditorSceneMaterialAssetFieldPath(path) != null;
+}
+
+function createEditorSceneAssetMeshInspectorObject(
+  document: EditorSceneDocument,
+  target: EditorSceneAssetMeshSelectionTarget,
+  context: EditorSceneInspectorContext,
+): InspectorObject<EditorSceneDocument> {
+  return {
+    targetIds: [target.id],
+    activeId: target.id,
+    label: target.label,
+    document,
+    selection: {
+      targetIds: [target.id],
+      activeId: target.id,
+      targetKind: 'assetMesh',
+      document,
+      capabilities: ['material'],
+    },
+    sections: createEditorSceneAssetMeshInspectorSections(document, target, context),
+  };
 }
 
 function resolveEditorSceneRootContainerId(document: EditorSceneDocument): string | undefined {
@@ -2303,44 +2723,108 @@ function createArtistMaterialInspectorSections(
   const text = getArtistMaterialInspectorText(language);
   const rootBinding = gameObject.overrides?.materialBinding;
   const rootAsset = findEditorSceneMaterialAsset(document, rootBinding?.materialAssetId ?? '');
-  sections.push({
-    id: 'artistMaterial',
-    title: text.title,
-    order: 46,
-    placement: 'body',
-    summary: createArtistMaterialBindingSummary(rootBinding, rootAsset, text),
-    persistence: 'document',
-    collapsedByDefault: false,
-    properties: [
-      createMaterialLanguageInspectorProperty(nodeKind, text, language, 0),
-      createMaterialAssetSelectorInspectorProperty(document, nodeKind, {
-        path: 'overrides.materialBinding.materialAssetId',
-        label: text.materialCard,
-        value: rootBinding?.materialAssetId ?? '',
-        order: 1,
-        text,
-        currentAsset: rootAsset,
-      }),
-      ...createArtistMaterialAssetInspectorProperties(document, rootAsset, text, 10, context),
-    ],
-  });
+  const hasDetectedSlots = hasDetectedModelMaterialSlots(document, gameObject);
+  if (!hasDetectedSlots) {
+    sections.push({
+      id: 'artistMaterial',
+      title: text.title,
+      order: 46,
+      placement: 'body',
+      summary: createArtistMaterialBindingSummary(rootBinding, rootAsset, text),
+      persistence: 'document',
+      collapsedByDefault: false,
+      properties: [
+        createMaterialLanguageInspectorProperty(nodeKind, text, language, 0),
+        createMaterialAssetSelectorInspectorProperty(document, nodeKind, {
+          path: 'overrides.materialBinding.materialAssetId',
+          label: text.materialCard,
+          value: rootBinding?.materialAssetId ?? '',
+          order: 1,
+          text,
+          currentAsset: rootAsset,
+        }),
+        ...createArtistMaterialAssetInspectorProperties(document, rootAsset, text, 10, context),
+      ],
+    });
+  }
 
   const slotProperties = nodeKind === 'primitive'
     ? []
-    : createChildMaterialBindingInspectorProperties(document, gameObject, nodeKind, context);
+    : hasDetectedSlots
+      ? createReadonlyMaterialSlotListInspectorProperties(document, gameObject, text)
+      : createChildMaterialBindingInspectorProperties(document, gameObject, nodeKind, context);
   if (slotProperties.length > 0) {
     sections.push({
       id: 'artistMaterialSlots',
-    title: text.slotTitle,
-    order: 48,
-    placement: 'body',
-    summary: createChildMaterialBindingSummary(document, gameObject, text),
-      persistence: 'document',
-      collapsedByDefault: true,
+      title: text.slotTitle,
+      order: 48,
+      placement: 'body',
+      summary: createChildMaterialBindingSummary(document, gameObject, text),
+      persistence: hasDetectedSlots ? 'readonly' : 'document',
+      collapsedByDefault: !hasDetectedSlots,
       properties: slotProperties,
     });
   }
   return sections;
+}
+
+function createEditorSceneAssetMeshInspectorSections(
+  document: EditorSceneDocument,
+  target: EditorSceneAssetMeshSelectionTarget,
+  context: EditorSceneInspectorContext = {},
+): InspectorSection<EditorSceneDocument>[] {
+  const gameObject = target.gameObject;
+  const nodeKind = readEditorSceneNodeKind(gameObject);
+  const text = getArtistMaterialInspectorText(readArtistMaterialInspectorLanguage(gameObject));
+  const binding = getEditorSceneSlotMaterialBinding(gameObject, target.slot);
+  const legacy = getEditorSceneSlotLegacyMaterial(gameObject, target.slot);
+  const materialAsset = findEditorSceneMaterialAsset(document, binding?.materialAssetId ?? '');
+  const properties: InspectorProperty<EditorSceneDocument>[] = [
+    createMaterialAssetSelectorInspectorProperty(document, nodeKind, {
+      path: target.materialBindingPath,
+      label: target.label,
+      value: binding?.materialAssetId ?? '',
+      order: 0,
+      text,
+      currentAsset: materialAsset,
+    }),
+    ...createArtistMaterialAssetInspectorProperties(document, materialAsset, text, 10, context),
+  ];
+  if (legacy) {
+    appendReadonlyInspectorProperty(properties, {
+      path: `overrides.childMaterials.${target.ownerNodePath}.raw`,
+      label: text.legacySlotRaw,
+      value: legacy,
+      order: 1000,
+      source: 'Document',
+      tags: ['Legacy', 'Advanced', 'Raw'],
+      tooltip: text.tooltips.legacySlotRaw,
+    });
+  }
+  return [
+    {
+      id: 'assetMesh',
+      title: 'Asset Mesh',
+      order: 10,
+      placement: 'summary',
+      persistence: 'readonly',
+      properties: [
+        createReadonlyInspectorProperty('assetMesh.parent', 'Parent GameObject', gameObject.name ?? gameObject.id, 0),
+        createReadonlyInspectorProperty('assetMesh.slotId', 'Slot ID', target.slotId ?? '', 1),
+        createReadonlyInspectorProperty('assetMesh.ownerNodePath', 'Owner Node Path', target.ownerNodePath, 2),
+      ],
+    },
+    {
+      id: 'artistMaterialSlot',
+      title: text.slotTitle,
+      order: 46,
+      placement: 'body',
+      summary: createArtistMaterialBindingSummary(binding, materialAsset, text),
+      persistence: 'document',
+      collapsedByDefault: false,
+      properties,
+    },
+  ];
 }
 
 function createArtistMaterialBindingSummary(
@@ -2377,12 +2861,12 @@ function createChildMaterialBindingInspectorProperties(
   const materialSlots = collectEditorSceneChildMaterialSlots(document, gameObject);
   materialSlots.forEach((slot, slotIndex) => {
     const ownerNodePath = slot.ownerNodePath;
-    const binding = gameObject.overrides?.childMaterialBindings?.[ownerNodePath];
-    const legacy = gameObject.overrides?.childMaterials?.[ownerNodePath];
+    const binding = getEditorSceneSlotMaterialBinding(gameObject, slot);
+    const legacy = getEditorSceneSlotLegacyMaterial(gameObject, slot);
     const materialAsset = findEditorSceneMaterialAsset(document, binding?.materialAssetId ?? '');
     const baseOrder = (slotIndex + 1) * 100;
     properties.push(createMaterialAssetSelectorInspectorProperty(document, nodeKind, {
-      path: `overrides.childMaterialBindings.${ownerNodePath}.materialAssetId`,
+      path: getEditorSceneSlotMaterialBindingPath(slot),
       label: slot.label || formatEditorSceneMaterialSlotLabel(ownerNodePath, slotIndex, text),
       value: binding?.materialAssetId ?? '',
       order: baseOrder,
@@ -2405,9 +2889,80 @@ function createChildMaterialBindingInspectorProperties(
   return properties;
 }
 
+function createReadonlyMaterialSlotListInspectorProperties(
+  document: EditorSceneDocument,
+  gameObject: EditorSceneGameObject,
+  text: ArtistMaterialInspectorText,
+): InspectorProperty<EditorSceneDocument>[] {
+  const slots = collectEditorSceneChildMaterialSlots(document, gameObject);
+  if (slots.length === 0) return [];
+  return [{
+    path: 'asset.materialSlots',
+    label: text.slotList,
+    valueType: 'object',
+    control: 'custom',
+    customControl: 'material-slot-list',
+    value: {
+      count: slots.length,
+      slots: slots.map((slot, slotIndex) => createReadonlyMaterialSlotListItem(document, gameObject, slot, slotIndex, text)),
+    },
+    readOnly: true,
+    persistence: 'readonly',
+    commitMode: 'immediate',
+    order: 0,
+    controlOptions: {
+      labels: {
+        material: text.slotMaterialAsset,
+        slotId: text.slotId,
+        ownerNodePath: text.slotOwnerPath,
+        sourceMaterial: text.slotSourceMaterial,
+        bindingPath: text.slotBindingPath,
+      },
+      slots: slots.map((slot, slotIndex) => createReadonlyMaterialSlotListItem(document, gameObject, slot, slotIndex, text)),
+    },
+    tags: ['ArtistMaterial', 'MaterialSlot', 'Readonly'],
+    tooltip: text.tooltips.slotList,
+    document,
+  }];
+}
+
+function createReadonlyMaterialSlotListItem(
+  document: EditorSceneDocument,
+  gameObject: EditorSceneGameObject,
+  slot: EditorSceneChildMaterialSlot,
+  slotIndex: number,
+  text: ArtistMaterialInspectorText,
+): Record<string, unknown> {
+  const binding = getEditorSceneSlotMaterialBinding(gameObject, slot);
+  const materialAsset = findEditorSceneMaterialAsset(document, binding?.materialAssetId ?? '');
+  const materialOptions = createMaterialAssetPickerControlOptions(document, materialAsset, text, binding?.materialAssetId ?? '');
+  const sourceMaterialIndex = slot.sourceMaterialIndex ?? slot.sourceMaterialIndices?.[0];
+  const sourceMaterialName = sourceMaterialIndex == null ? null : getEditorSceneSlotSourceMaterialName(slot, sourceMaterialIndex);
+  return {
+    key: getEditorSceneSlotSelectionKey(slot),
+    label: slot.label || formatEditorSceneMaterialSlotLabel(slot.ownerNodePath, slotIndex, text),
+    ...(slot.slotId ? { slotId: slot.slotId } : {}),
+    ownerNodePath: slot.ownerNodePath,
+    materialAssetId: binding?.materialAssetId ?? '',
+    materialLabel: materialOptions.currentLabel ?? text.inheritNone,
+    materialMeta: materialOptions.currentMeta ?? text.summaryInherit,
+    ...(materialOptions.currentPreview ? { materialPreview: materialOptions.currentPreview } : {}),
+    ...(sourceMaterialIndex == null ? {} : { sourceMaterialIndex }),
+    ...(sourceMaterialName ? { sourceMaterialName } : {}),
+    bindingPath: getEditorSceneSlotMaterialBindingPath(slot),
+  };
+}
+
 type EditorSceneChildMaterialSlot = {
+  slotId?: string;
   ownerNodePath: string;
   label?: string;
+  nodeIndex?: number;
+  meshIndex?: number;
+  sourceMaterialIndex?: number;
+  sourceMaterialIndices?: number[];
+  materialName?: string;
+  materialNames?: string[];
 };
 
 function collectEditorSceneChildMaterialSlots(
@@ -2415,6 +2970,13 @@ function collectEditorSceneChildMaterialSlots(
   gameObject: EditorSceneGameObject,
 ): EditorSceneChildMaterialSlot[] {
   return collectPlayableEditorSceneChildMaterialSlots(document, gameObject) as EditorSceneChildMaterialSlot[];
+}
+
+function hasDetectedModelMaterialSlots(
+  document: EditorSceneDocument,
+  gameObject: EditorSceneGameObject,
+): boolean {
+  return readPlayableEditorSceneAssetMaterialSlots(document, gameObject).length > 0;
 }
 
 function formatEditorSceneMaterialSlotLabel(
@@ -2950,6 +3512,11 @@ function validateProjectEditorSceneInspectorField(input: {
   ) {
     return { ok: false, message: `Material asset not found: ${input.value}.` };
   }
+  if (isMaterialAssetBindingPath(input.path)) {
+    return input.value == null || (typeof input.value === 'string' && input.value.trim().length > 0)
+      ? { ok: true, value: input.value }
+      : { ok: false, message: `Invalid value for scene node field: ${input.path}.` };
+  }
   return null;
 }
 
@@ -3032,6 +3599,9 @@ function normalizeEditorSceneInspectorValue(path: string, value: unknown): unkno
       path === 'overrides.materialBinding.materialAssetId'
       || path === 'overrides.materialBinding.override.emission.maskTexture.url'
       || path === 'overrides.materialBinding.override.baseColor.texture.url'
+      || /^overrides\.materialSlotBindings\..+\.materialAssetId$/.test(path)
+      || /^overrides\.materialSlotBindings\..+\.override\.emission\.maskTexture\.url$/.test(path)
+      || /^overrides\.materialSlotBindings\..+\.override\.baseColor\.texture\.url$/.test(path)
       || /^overrides\.childMaterialBindings\..+\.materialAssetId$/.test(path)
       || /^overrides\.childMaterialBindings\..+\.override\.emission\.maskTexture\.url$/.test(path)
       || /^overrides\.childMaterialBindings\..+\.override\.baseColor\.texture\.url$/.test(path)
@@ -3134,15 +3704,12 @@ function addEditorSceneMaterialAssetAndBind(
   bindingPath: string,
   materialAsset: SceneMaterialAssetConfig,
 ): EditorSceneDocument {
-  if (document.scene.materialAssets?.some((entry) => entry.id === materialAsset.id)) return document;
-  const withAsset: EditorSceneDocument = {
-    ...document,
-    scene: {
-      ...document.scene,
-      materialAssets: [...(document.scene.materialAssets ?? []), structuredClone(materialAsset)],
-    },
-  };
-  return patchEditorSceneGameObjectField(withAsset, targetId, bindingPath, materialAsset.id);
+  return addPlayableEditorSceneMaterialAssetAndBind(
+    document,
+    targetId,
+    bindingPath,
+    materialAsset,
+  ) as EditorSceneDocument;
 }
 
 function applyJsonFieldPatch(target: Record<string, unknown>, path: string, value: unknown): void {
@@ -3162,8 +3729,31 @@ function applyJsonFieldPatch(target: Record<string, unknown>, path: string, valu
 }
 
 function splitEditorSceneFieldPath(path: string): string[] {
+  const materialSlotBinding = splitMaterialSlotBindingFieldPath(path);
+  if (materialSlotBinding) return materialSlotBinding;
   const childMaterialBinding = splitChildMaterialBindingFieldPath(path);
   return childMaterialBinding ?? path.split('.').filter(Boolean);
+}
+
+function splitMaterialSlotBindingFieldPath(path: string): string[] | null {
+  const prefix = 'overrides.materialSlotBindings.';
+  if (!path.startsWith(prefix)) return null;
+  const remainder = path.slice(prefix.length);
+  const overrideMarker = '.override.';
+  const overrideMarkerIndex = remainder.lastIndexOf(overrideMarker);
+  if (overrideMarkerIndex >= 0) {
+    const slotId = remainder.slice(0, overrideMarkerIndex);
+    const suffix = remainder.slice(overrideMarkerIndex + overrideMarker.length);
+    if (!slotId || !suffix) return null;
+    return ['overrides', 'materialSlotBindings', slotId, 'override', ...suffix.split('.').filter(Boolean)];
+  }
+  const materialAssetSuffix = '.materialAssetId';
+  if (remainder.endsWith(materialAssetSuffix)) {
+    const slotId = remainder.slice(0, -materialAssetSuffix.length);
+    if (!slotId) return null;
+    return ['overrides', 'materialSlotBindings', slotId, 'materialAssetId'];
+  }
+  return null;
 }
 
 function splitChildMaterialBindingFieldPath(path: string): string[] | null {

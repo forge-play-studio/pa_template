@@ -209,6 +209,15 @@ export async function registerAsset(config, args, errorCodes = {}) {
         assetPath: payload.assetPath,
         assetUrl: payload.assetUrl,
       }),
+      metadata: await resolveManifestEntryMetadata(config, {
+        existing,
+        payload,
+        sourcePath,
+        targetPath,
+        kind,
+        guid,
+        assetId,
+      }),
       createdAt: existing?.createdAt ?? now,
       updatedAt: shouldCopy ? now : (existing?.updatedAt ?? now),
     });
@@ -443,6 +452,7 @@ function normalizeManifestEntry(entry) {
   const displayName = readOptionalString(entry.displayName);
   const relativePath = readOptionalString(entry.relativePath);
   if (!guid || !assetId || !kind || !displayName || !relativePath) return null;
+  const metadata = normalizeMetadata(entry.metadata);
   return {
     guid,
     assetId,
@@ -455,6 +465,7 @@ function normalizeManifestEntry(entry) {
     ...(readOptionalString(entry.contentHash) ? { contentHash: readOptionalString(entry.contentHash) } : {}),
     ...(typeof entry.byteSize === 'number' ? { byteSize: entry.byteSize } : {}),
     ...(normalizeExternalRef(entry.external) ? { external: normalizeExternalRef(entry.external) } : {}),
+    ...(metadata ? { metadata } : {}),
     ...(readOptionalString(entry.createdAt) ? { createdAt: readOptionalString(entry.createdAt) } : {}),
     ...(readOptionalString(entry.updatedAt) ? { updatedAt: readOptionalString(entry.updatedAt) } : {}),
   };
@@ -477,6 +488,26 @@ function normalizeExternalRef(value) {
     ...(assetPath ? { assetPath } : {}),
     ...(assetUrl ? { assetUrl } : {}),
   };
+}
+
+function normalizeMetadata(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  return structuredClone(value);
+}
+
+async function resolveManifestEntryMetadata(config, context) {
+  const payloadMetadata = normalizeMetadata(context.payload?.metadata);
+  if (typeof config.resolveAssetMetadata === 'function') {
+    const resolved = await config.resolveAssetMetadata({
+      ...context,
+      existingMetadata: normalizeMetadata(context.existing?.metadata),
+      payloadMetadata,
+    });
+    const normalized = normalizeMetadata(resolved);
+    if (normalized) return normalized;
+    return null;
+  }
+  return payloadMetadata ?? normalizeMetadata(context.existing?.metadata);
 }
 
 function findReusableCatalogEntry(manifest, payload, sourcePath, audit, kind) {

@@ -4,6 +4,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { AssetRegistryError, createAssetId, registerAsset, unregisterAsset, loadManifest, toImportName } from './asset-registry/core.mjs';
+import { projectAssetCatalogConfig } from './asset-registry/project-asset-catalog-config.mjs';
 
 const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'asset-catalog-check-'));
 const cwd = tempRoot;
@@ -16,6 +17,9 @@ const explicitProjectModel = path.join(cwd, '显式项目资产.glb');
 const invalidProjectModel = path.join(cwd, '错误项目资产.glb');
 const sourceTexture = path.join(cwd, '地贴.png');
 const preservedModel = path.join(assetsDir, '静态模型.glb');
+const slotMetadataModel = path.join(cwd, 'slot-metadata.gltf');
+const duplicateSlotMetadataModel = path.join(cwd, 'duplicate-slot-metadata.gltf');
+const emptySlotMetadataModel = path.join(cwd, 'empty-slot-metadata.gltf');
 const codeFile = path.join(assetsDir, 'index.ts');
 
 await fs.writeFile(scenePath, JSON.stringify({ scene: { nodes: [] } }));
@@ -23,6 +27,36 @@ await fs.writeFile(sourceModel, 'glb-bytes');
 await fs.writeFile(explicitProjectModel, 'explicit-project-glb-bytes');
 await fs.writeFile(invalidProjectModel, 'invalid-project-glb-bytes');
 await fs.writeFile(sourceTexture, 'png-bytes');
+await fs.writeFile(slotMetadataModel, JSON.stringify({
+  scene: 0,
+  scenes: [{ nodes: [0] }],
+  nodes: [
+    { name: 'Root', children: [1] },
+    { name: 'Body', mesh: 0 },
+  ],
+  meshes: [{ name: 'BodyMesh', primitives: [{ material: 0 }, { material: 1 }] }],
+  materials: [{ name: 'Paint' }, { name: 'Frame' }],
+}));
+await fs.writeFile(duplicateSlotMetadataModel, JSON.stringify({
+  scene: 0,
+  scenes: [{ nodes: [0, 1] }],
+  nodes: [
+    { name: 'Bolt', mesh: 0 },
+    { name: 'Bolt', mesh: 1 },
+  ],
+  meshes: [
+    { name: 'BoltA', primitives: [{ material: 0 }] },
+    { name: 'BoltB', primitives: [{ material: 1 }] },
+  ],
+  materials: [{ name: 'Metal' }, { name: 'Paint' }],
+}));
+await fs.writeFile(emptySlotMetadataModel, JSON.stringify({
+  scene: 0,
+  scenes: [{ nodes: [0] }],
+  nodes: [{ name: 'Empty' }],
+  meshes: [],
+  materials: [],
+}));
 await fs.mkdir(assetsDir, { recursive: true });
 await fs.writeFile(preservedModel, 'preserved-glb-bytes');
 await fs.writeFile(codeFile, 'export const untouched = true;\n');
@@ -217,6 +251,68 @@ await assert.rejects(
   },
 );
 assert.equal(await fs.readFile(codeFile, 'utf8'), 'export const untouched = true;\n');
+
+const slotMetadata = await projectAssetCatalogConfig.resolveAssetMetadata({
+  kind: 'model',
+  sourcePath: slotMetadataModel,
+  guid: '55555555-6666-4777-8888-999999999999',
+  assetId: 'asset_55555555666647778888999999999999',
+  existingMetadata: {
+    materialSlots: [{
+      slotId: 'slot_existing_body',
+      ownerNodePath: 'Body',
+    }],
+  },
+  payloadMetadata: {},
+});
+assert.deepEqual(slotMetadata.materialSlots, [{
+  slotId: 'slot_existing_body',
+  ownerNodePath: 'Body',
+  label: 'Body',
+  nodeIndex: 1,
+  meshIndex: 0,
+  sourceMaterialIndex: 0,
+  sourceMaterialIndices: [0, 1],
+  materialName: 'Paint',
+  materialNames: ['Paint', 'Frame'],
+}]);
+
+const duplicateSlotMetadata = await projectAssetCatalogConfig.resolveAssetMetadata({
+  kind: 'model',
+  sourcePath: duplicateSlotMetadataModel,
+  guid: '66666666-7777-4888-8999-aaaaaaaaaaaa',
+  assetId: 'asset_66666666777748888999aaaaaaaaaaaa',
+  existingMetadata: {
+    materialSlots: [{ slotId: 'slot_old_unique', ownerNodePath: 'Bolt' }],
+  },
+  payloadMetadata: {},
+});
+assert.equal(duplicateSlotMetadata.materialSlots.length, 2);
+assert.equal(duplicateSlotMetadata.materialSlots[0].ownerNodePath, 'Bolt');
+assert.equal(duplicateSlotMetadata.materialSlots[1].ownerNodePath, 'Bolt');
+assert.notEqual(duplicateSlotMetadata.materialSlots[0].slotId, 'slot_old_unique');
+assert.notEqual(duplicateSlotMetadata.materialSlots[1].slotId, 'slot_old_unique');
+assert.notEqual(duplicateSlotMetadata.materialSlots[0].slotId, duplicateSlotMetadata.materialSlots[1].slotId);
+assert.deepEqual(
+  duplicateSlotMetadata.materialSlots.map(slot => [slot.nodeIndex, slot.meshIndex, slot.sourceMaterialIndex]),
+  [[0, 0, 0], [1, 1, 1]],
+);
+assert.deepEqual(
+  duplicateSlotMetadata.materialSlots.map(slot => slot.sourceMaterialIndices),
+  [[0], [1]],
+);
+
+const clearedSlotMetadata = await projectAssetCatalogConfig.resolveAssetMetadata({
+  kind: 'model',
+  sourcePath: emptySlotMetadataModel,
+  guid: '77777777-8888-4999-aaaa-bbbbbbbbbbbb',
+  assetId: 'asset_7777777788884999aaaabbbbbbbbbbbb',
+  existingMetadata: {
+    materialSlots: [{ slotId: 'slot_stale', ownerNodePath: 'Old' }],
+  },
+  payloadMetadata: {},
+});
+assert.equal(clearedSlotMetadata, null);
 
 await fs.rm(tempRoot, { recursive: true, force: true });
 console.log('asset catalog generator check passed');
