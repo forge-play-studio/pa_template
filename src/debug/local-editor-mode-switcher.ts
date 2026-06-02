@@ -35,6 +35,7 @@ import {
   type PlayableLocalEditorHostCompatibilityReport,
   type PlayableLocalEditorHostBridgeContext,
   type PlayableLocalEditorHarnessApi,
+  type PlayableLocalEditorMultiPropertyCapabilityInput,
   type PlayableLocalEditorMultiPropertyPatchInput,
   type PlayableLocalEditorPropertyPatchInput,
   type PlayableLocalEditorTransformBatchPatchInput,
@@ -57,6 +58,8 @@ import type { EditorSceneDocument } from '../fps-game-editor-adapter/editor-scen
 import {
   type EditorSceneAssetLibraryItem,
   type EditorSceneGameObject,
+  findEditorSceneModelRenderer,
+  readEditorSceneNodeKind,
 } from '../fps-game-editor-adapter/editor-scene-document';
 import { enrichEditorSceneDocumentAssets } from '../fps-game-editor-adapter/editor-asset-library';
 import {
@@ -237,6 +240,11 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
       assetBrowser: {
         getBrowserAssetItems: createEditorSceneBrowserAssetItems,
       },
+      agentContext: {
+        describeSceneObject: input => describeEditorSceneAgentObject(input.document, input.objectId),
+        describeSceneObjectSet: input => describeEditorSceneAgentObjectSet(input.document, input.objectIds),
+        describeRegionBinding: input => describeEditorSceneAgentRegionBinding(input.document, input.objectIds),
+      },
       assetActions: {
         createAssetActionPatch: input => createEditorSceneAssetActionPatch(input as unknown as Parameters<typeof createEditorSceneAssetActionPatch>[0]),
         createPlacedAssetPatch: createEditorScenePlacedAssetPatch,
@@ -246,6 +254,7 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
         },
       },
       transformCommands: {
+        canCreateSerializedMultiPropertyPatch: canCreateEditorSceneSerializedMultiPropertyPatch,
         createSerializedMultiPropertyPatch: createEditorSceneSerializedMultiPropertyPatch,
         createTransformPatch: createEditorSceneTransformPatch,
         createTransformBatchPatch: createEditorSceneTransformBatchPatch,
@@ -521,6 +530,12 @@ function createEditorSceneSerializedPropertyPatch(
   input: PlayableLocalEditorPropertyPatchInput<EditorSceneDocument>,
 ): { patch: EditorSceneDocumentPatch; label: string; changedId: string; changedIds: string[]; reprojectIds?: string[] } | null {
   return createEditorSceneInspectorPropertyPatch(input);
+}
+
+function canCreateEditorSceneSerializedMultiPropertyPatch(
+  input: PlayableLocalEditorMultiPropertyCapabilityInput<EditorSceneDocument>,
+): boolean {
+  return input.path.startsWith('transform.');
 }
 
 function createEditorSceneSerializedMultiPropertyPatch(
@@ -922,4 +937,155 @@ function readBaseSceneVersion(): number | undefined {
 
 function summarizeEditorScene(editorScene: EditorSceneDocument): string {
   return `editorScene assets=${editorScene.assets.length}, gameObjects=${editorScene.scene.gameObjects.length}`;
+}
+
+function describeEditorSceneAgentObject(
+  editorScene: EditorSceneDocument,
+  objectId: string,
+) {
+  const gameObject = findEditorSceneAgentGameObject(editorScene, objectId);
+  if (!gameObject) return null;
+  const nodeKind = readEditorSceneNodeKind(gameObject);
+  const asset = findEditorSceneAgentAsset(editorScene, gameObject);
+  const label = gameObject.name || gameObject.id;
+  return {
+    domainKind: `pa-template:${nodeKind}`,
+    domainRole: resolveEditorSceneAgentGameplayRole(gameObject),
+    functionLabel: label,
+    functionDescription: asset
+      ? `${label} is a ${nodeKind} scene node using asset ${asset.displayName || asset.id}.`
+      : `${label} is a ${nodeKind} scene node in the editable scene document.`,
+    domainHints: [
+      `Interpret this as a ${nodeKind} node from pa_template's scene graph.`,
+      ...(asset ? [`Asset reference: ${asset.displayName || asset.id}.`] : []),
+    ],
+    bindingCandidates: [
+      {
+        kind: 'scene-node',
+        id: gameObject.id,
+        label,
+        path: `scene.gameObjects.${gameObject.id}`,
+      },
+      ...(asset ? [{
+        kind: 'scene-asset',
+        id: asset.id,
+        label: asset.displayName || asset.id,
+        path: `assets.${asset.id}`,
+      }] : []),
+    ],
+    sourceRefs: [
+      {
+        kind: 'scene-document',
+        path: 'scene.gameObjects',
+        label,
+      },
+    ],
+    metadata: {
+      nodeKind,
+      ...(asset ? { assetId: asset.id, assetDisplayName: asset.displayName || asset.id } : {}),
+    },
+  };
+}
+
+function describeEditorSceneAgentObjectSet(
+  editorScene: EditorSceneDocument,
+  objectIds: readonly string[],
+) {
+  const gameObjects = findEditorSceneAgentGameObjects(editorScene, objectIds);
+  if (gameObjects.length === 0) return null;
+  const nodeKinds = [...new Set(gameObjects.map(readEditorSceneNodeKind))];
+  return {
+    domainKind: 'pa-template:scene-object-set',
+    domainRole: 'selection',
+    functionLabel: `${gameObjects.length} selected scene nodes`,
+    functionDescription: 'A multi-selection from the pa_template scene graph.',
+    domainHints: [
+      'Consider these nodes together before proposing scene edits or gameplay bindings.',
+      `Selected node kinds: ${nodeKinds.join(', ')}.`,
+    ],
+    relationshipHints: [{
+      type: 'selection',
+      description: 'The user selected these scene nodes together in the editor hierarchy.',
+      primaryObjectId: gameObjects[0]?.id,
+      supportingObjectIds: gameObjects.slice(1).map(gameObject => gameObject.id),
+    }],
+    sourceRefs: gameObjects.map(gameObject => ({
+      kind: 'scene-document',
+      path: 'scene.gameObjects',
+      label: gameObject.name || gameObject.id,
+    })),
+    metadata: {
+      objectCount: gameObjects.length,
+      nodeKinds,
+    },
+  };
+}
+
+function describeEditorSceneAgentRegionBinding(
+  editorScene: EditorSceneDocument,
+  objectIds: readonly string[],
+) {
+  const gameObjects = findEditorSceneAgentGameObjects(editorScene, objectIds);
+  if (gameObjects.length === 0) return null;
+  return {
+    domainKind: 'pa-template:selection-region',
+    domainRole: 'region-binding',
+    functionLabel: `${gameObjects.length} nodes as gameplay region`,
+    functionDescription: 'The selected scene nodes are being treated as a candidate gameplay region.',
+    domainHints: [
+      'Use the selected nodes as landmarks or bounds for reasoning about an editable gameplay region.',
+      'Prefer suggestions that preserve the selected nodes and describe their spatial relationship.',
+    ],
+    relationshipHints: [{
+      type: 'selection-region',
+      description: 'The current multi-selection defines a region relationship for Agent reasoning.',
+      primaryObjectId: gameObjects[0]?.id,
+      supportingObjectIds: gameObjects.slice(1).map(gameObject => gameObject.id),
+    }],
+    sourceRefs: gameObjects.map(gameObject => ({
+      kind: 'scene-document',
+      path: 'scene.gameObjects',
+      label: gameObject.name || gameObject.id,
+    })),
+    metadata: {
+      objectCount: gameObjects.length,
+      objectIds: gameObjects.map(gameObject => gameObject.id),
+    },
+  };
+}
+
+function findEditorSceneAgentGameObject(
+  editorScene: EditorSceneDocument,
+  objectId: string,
+): EditorSceneGameObject | null {
+  return editorScene.scene.gameObjects.find(gameObject => gameObject.id === objectId) ?? null;
+}
+
+function findEditorSceneAgentGameObjects(
+  editorScene: EditorSceneDocument,
+  objectIds: readonly string[],
+): EditorSceneGameObject[] {
+  const requested = new Set(objectIds);
+  return editorScene.scene.gameObjects.filter(gameObject => requested.has(gameObject.id));
+}
+
+function findEditorSceneAgentAsset(
+  editorScene: EditorSceneDocument,
+  gameObject: EditorSceneGameObject,
+): EditorSceneAssetLibraryItem | null {
+  const renderer = findEditorSceneModelRenderer(gameObject);
+  const instanceAssetId = (gameObject as { instance?: { assetId?: string } }).instance?.assetId;
+  const assetId = renderer?.assetId ?? instanceAssetId;
+  if (!assetId) return null;
+  return editorScene.assets.find(asset => asset.id === assetId) as EditorSceneAssetLibraryItem | undefined ?? null;
+}
+
+function resolveEditorSceneAgentGameplayRole(gameObject: EditorSceneGameObject): string {
+  const nodeKind = readEditorSceneNodeKind(gameObject);
+  if (gameObject.camera) return 'camera';
+  if (gameObject.light) return 'light';
+  if (gameObject.groundDecal) return 'ground-decal';
+  if (findEditorSceneModelRenderer(gameObject)) return 'asset-instance';
+  if (gameObject.primitive) return `primitive-${gameObject.primitive.shape}`;
+  return nodeKind;
 }

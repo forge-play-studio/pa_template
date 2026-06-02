@@ -445,6 +445,7 @@ type ArtistMaterialInspectorText = {
   defaultStandardMaterialMeta: string;
   defaultMaterialReadOnly: string;
   replace: string;
+  batchReplaceUnsupported: string;
   duplicateForObject: string;
   materialPickerTitle: string;
   texturePickerTitle: string;
@@ -521,6 +522,7 @@ const ARTIST_MATERIAL_INSPECTOR_TEXT: Record<ArtistMaterialInspectorLanguage, Ar
     defaultStandardMaterialMeta: 'BabylonJS 默认 Standard 材质',
     defaultMaterialReadOnly: '系统默认材质为只读；请选择可编辑材质球后调整参数。',
     replace: '替换',
+    batchReplaceUnsupported: '多选统一替换材质暂未接入；请先单选对象替换材质。',
     duplicateForObject: '复制',
     materialPickerTitle: '选择材质资产',
     texturePickerTitle: '选择贴图资产',
@@ -592,6 +594,7 @@ const ARTIST_MATERIAL_INSPECTOR_TEXT: Record<ArtistMaterialInspectorLanguage, Ar
     defaultStandardMaterialMeta: 'BabylonJS-style default Standard material',
     defaultMaterialReadOnly: 'The system default material is read-only. Choose an editable material asset to adjust parameters.',
     replace: 'Replace',
+    batchReplaceUnsupported: 'Batch material replacement is not wired yet. Select one object to replace its material.',
     duplicateForObject: 'Copy',
     materialPickerTitle: 'Select Material Asset',
     texturePickerTitle: 'Select Texture Asset',
@@ -3095,6 +3098,7 @@ function createMaterialAssetPickerControlOptions(
       pickerText: createEditorSceneMaterialPickerText(text),
       displayText: createEditorSceneMaterialDisplayText(text),
     }),
+    actionDisabledReason: text.batchReplaceUnsupported,
   };
 }
 

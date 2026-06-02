@@ -54,6 +54,24 @@
     "updatedAt": "2026-05-29T05:51:00.007Z"
   },
   {
+    "guid": "de16bd66-ee34-4358-9e89-778bae314202",
+    "assetId": "asset_de16bd66ee3443589e89778bae314202",
+    "kind": "model",
+    "displayName": "Axe and Bear - SM 房子推车",
+    "relativePath": "../imported/asset_de16bd66ee3443589e89778bae314202.glb",
+    "originalFileName": "SM_房子推车.glb",
+    "codeKey": "axe_and_bear_house_cart_model",
+    "placeable": true,
+    "contentHash": "sha256:2e6495192bfd35705c06420a1df2f27647dbd1722ee39f6aeeb92024d22c5989",
+    "byteSize": 841372,
+    "external": {
+      "platformAssetId": "axe_and_bear:house_cart_model",
+      "assetPath": "src/assets/SM_房子推车.glb"
+    },
+    "createdAt": "2026-06-02T08:30:03.017Z",
+    "updatedAt": "2026-06-02T08:30:03.017Z"
+  },
+  {
     "guid": "9330ffd6-27bb-403e-aca8-1058b0651132",
     "assetId": "asset_9330ffd627bb403eaca81058b0651132",
     "kind": "model",

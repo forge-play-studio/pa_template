@@ -54,14 +54,12 @@ import {
   type TransformConfig,
 } from '../config';
 import {
+  applyPlayableBabylonOutlineOverrideToRuntimeNode,
   applyMaterialValueToRuntimeMaterial,
+  resolveEditorSceneArtistMaterialBinding,
   resolveMaterialRuntimeKind,
   resolveMaterialOwnerNode,
-  resolveOutlineTarget,
 } from '@fps-games/editor/playable-sdk';
-import {
-  applyArtistMaterialProfileToRuntimeMaterial,
-} from '@fps-games/editor-babylon';
 
 const BABYLON_MATERIAL_RUNTIME = { Color3, Texture };
 
@@ -207,6 +205,13 @@ export class SceneBuilder {
     this.selectedCameraRig = cloneCameraRig(nextRig);
     this.relaxCameraLimitsForRigAssignment(camera);
     this.applyCameraRuntimeProperties(camera, nextRig, target ?? camera.target.clone());
+  }
+
+  setSelectedCameraTargetOffset(target: Vector3): SceneCameraRigConfig {
+    const cameraRig = cloneCameraRig(this.selectedCameraRig ?? this.resolveCameraRig());
+    cameraRig.targetOffset = { x: target.x, y: target.y, z: target.z };
+    this.selectedCameraRig = cloneCameraRig(cameraRig);
+    return cloneCameraRig(cameraRig);
   }
 
   getSelectedCameraRig(): SceneCameraRigConfig {
@@ -708,12 +713,8 @@ export class SceneBuilder {
   }
 
   private resolveMaterialBindingKind(binding: SceneNodeMaterialBindingConfig | undefined): SceneMaterialAssetKind | null {
-    const materialAsset = binding?.materialAssetId
-      ? configService.getSceneDocument().scene?.materialAssets?.find((asset) => asset.id === binding.materialAssetId)
-      : undefined;
-    if (!materialAsset) return null;
-    if (materialAsset.materialKind === 'standard' || materialAsset.system?.preset === 'default-standard') return 'standard';
-    return 'pbr';
+    if (!binding) return null;
+    return resolveEditorSceneArtistMaterialBinding(this.getMaterialAssetCatalog(), binding).materialAssetKind;
   }
 
   private async attachInstanceAssetAsync(
@@ -1380,8 +1381,8 @@ export class SceneBuilder {
     const ownerNodes = this.resolveMaterialOverrideOwnerNodes(rootNode, ownerNodePath);
     if (ownerNodes.length === 0) return;
 
-    const profile = this.resolveMaterialBindingProfile(binding);
-    if (!profile) return;
+    const { profile } = resolveEditorSceneArtistMaterialBinding(this.getMaterialAssetCatalog(), binding);
+    if (Object.keys(profile).length === 0) return;
 
     for (const ownerNode of ownerNodes) {
       if (asset && this.shouldShareAssetMaterials(asset)) {
@@ -1391,12 +1392,12 @@ export class SceneBuilder {
     }
   }
 
-  private resolveMaterialBindingProfile(binding: SceneNodeMaterialBindingConfig): ArtistMaterialProfile | null {
-    const materialAsset = binding.materialAssetId
-      ? configService.getSceneDocument().scene?.materialAssets?.find((asset) => asset.id === binding.materialAssetId)
-      : undefined;
-    const profile = mergeArtistMaterialProfiles(materialAsset?.profile, binding.override);
-    return Object.keys(profile).length > 0 ? profile : null;
+  private getMaterialAssetCatalog(): { scene: { materialAssets: NonNullable<ReturnType<typeof configService.getSceneDocument>['scene']>['materialAssets'] } } {
+    return {
+      scene: {
+        materialAssets: configService.getSceneDocument().scene?.materialAssets ?? [],
+      },
+    };
   }
 
   private resolveSceneAssetMaterialSlotOwnerPath(asset: SceneAssetConfig | undefined, slotId: string): string | null {
@@ -1428,28 +1429,11 @@ export class SceneBuilder {
   }
 
   private applyArtistMaterialProfileToRuntimeMaterial(material: any, profile: ArtistMaterialProfile): void {
-    applyArtistMaterialProfileToRuntimeMaterial(material, this.scene, profile, { babylon: BABYLON_MATERIAL_RUNTIME });
+    applySceneBuilderArtistMaterialProfileToRuntimeMaterial(material, this.scene, profile);
   }
 
   private applyOutlineOverride(entity: TransformNode, override: OutlineOverrideConfig): void {
-    const { target } = resolveOutlineTarget(entity);
-    if (!target) return;
-
-    if (override.renderOutline !== undefined) {
-      (target as any).renderOutline = override.renderOutline;
-    }
-    if (override.outlineWidth !== undefined) {
-      (target as any).outlineWidth = override.outlineWidth;
-    }
-    if (override.outlineColor) {
-      const color = override.outlineColor;
-      const current = (target as any).outlineColor;
-      if (current?.copyFromFloats) {
-        current.copyFromFloats(color.r, color.g, color.b);
-      } else {
-        (target as any).outlineColor = new Color3(color.r, color.g, color.b);
-      }
-    }
+    applyPlayableBabylonOutlineOverrideToRuntimeNode(entity, override);
   }
 
   dispose(): void {
@@ -1573,26 +1557,196 @@ function readColorRGB(value: unknown): ColorRGB | undefined {
   return { r: record.r, g: record.g, b: record.b };
 }
 
-function mergeArtistMaterialProfiles(
-  base: ArtistMaterialProfile | undefined,
-  override: ArtistMaterialProfile | undefined,
-): ArtistMaterialProfile {
-  const merged: ArtistMaterialProfile = {
-    ...(base ? structuredClone(base) : {}),
+type SceneBuilderRuntimeColor = {
+  r: number;
+  g: number;
+  b: number;
+};
+
+function applySceneBuilderArtistMaterialProfileToRuntimeMaterial(
+  material: any,
+  scene: Scene,
+  profile: ArtistMaterialProfile,
+): void {
+  if (!material || typeof material !== 'object') return;
+  const runtimeOptions = { babylon: BABYLON_MATERIAL_RUNTIME };
+  applySceneBuilderArtistBaseColorProfile(material, scene, profile, runtimeOptions);
+
+  if (resolveMaterialRuntimeKind(material) === 'pbr') {
+    if (isFiniteSceneBuilderNumber(profile.metallic)) {
+      applyMaterialValueToRuntimeMaterial(material, scene, 'material.metallic', clampSceneBuilder01(profile.metallic), runtimeOptions);
+    }
+    if (isFiniteSceneBuilderNumber(profile.roughness)) {
+      applyMaterialValueToRuntimeMaterial(material, scene, 'material.roughness', clampSceneBuilder01(profile.roughness), runtimeOptions);
+    }
+  }
+
+  applySceneBuilderArtistEmissionProfile(material, scene, profile, runtimeOptions);
+}
+
+function applySceneBuilderArtistBaseColorProfile(
+  material: any,
+  scene: Scene,
+  profile: ArtistMaterialProfile,
+  runtimeOptions: { babylon: typeof BABYLON_MATERIAL_RUNTIME },
+): void {
+  const baseColor = profile.baseColor;
+  if (!baseColor) return;
+  const hasBaseColorInput =
+    baseColor.color !== undefined
+    || baseColor.texture !== undefined
+    || baseColor.brightness !== undefined
+    || baseColor.saturation !== undefined
+    || baseColor.contrast !== undefined
+    || baseColor.hue !== undefined;
+  if (!hasBaseColorInput) return;
+
+  const textureUrl = typeof baseColor.texture?.url === 'string' ? baseColor.texture.url.trim() : '';
+  if (textureUrl) {
+    applyMaterialValueToRuntimeMaterial(material, scene, 'material.albedoTexture.url', textureUrl, runtimeOptions);
+  }
+
+  const sourceColor = readSceneBuilderProfileColor(baseColor.color)
+    ?? readSceneBuilderMaterialColor(material, 'albedoColor')
+    ?? readSceneBuilderMaterialColor(material, 'diffuseColor');
+  if (!sourceColor) return;
+
+  const transformed = transformSceneBuilderArtistBaseColor(sourceColor, baseColor);
+  applyMaterialValueToRuntimeMaterial(material, scene, 'material.albedoColor', transformed, runtimeOptions);
+}
+
+function applySceneBuilderArtistEmissionProfile(
+  material: any,
+  scene: Scene,
+  profile: ArtistMaterialProfile,
+  runtimeOptions: { babylon: typeof BABYLON_MATERIAL_RUNTIME },
+): void {
+  const emission = profile.emission;
+  if (!emission) return;
+
+  const intensity = isFiniteSceneBuilderNumber(emission.intensity) ? Math.max(0, emission.intensity) : 0;
+  const color = readSceneBuilderProfileColor(emission.color)
+    ?? readSceneBuilderMaterialColor(material, 'emissiveColor')
+    ?? { r: 1, g: 1, b: 1 };
+
+  if (emission.color !== undefined || emission.intensity !== undefined) {
+    applyMaterialValueToRuntimeMaterial(
+      material,
+      scene,
+      'material.emissiveColor',
+      {
+        r: color.r * intensity,
+        g: color.g * intensity,
+        b: color.b * intensity,
+      },
+      runtimeOptions,
+    );
+  }
+
+  const maskUrl = typeof emission.maskTexture?.url === 'string' ? emission.maskTexture.url.trim() : '';
+  if (!maskUrl || !('emissiveTexture' in material)) return;
+  material.emissiveTexture = new Texture(maskUrl, scene, false, false);
+  if ('level' in material.emissiveTexture) {
+    material.emissiveTexture.level = intensity;
+  }
+}
+
+function readSceneBuilderProfileColor(color: ColorRGB | null | undefined): SceneBuilderRuntimeColor | null {
+  if (!color || !isFiniteSceneBuilderNumber(color.r) || !isFiniteSceneBuilderNumber(color.g) || !isFiniteSceneBuilderNumber(color.b)) {
+    return null;
+  }
+  return { r: color.r, g: color.g, b: color.b };
+}
+
+function readSceneBuilderMaterialColor(material: any, property: string): SceneBuilderRuntimeColor | null {
+  const value = material?.[property];
+  if (!value || typeof value !== 'object') return null;
+  const r = isFiniteSceneBuilderNumber(value.r) ? value.r : isFiniteSceneBuilderNumber(value._r) ? value._r : null;
+  const g = isFiniteSceneBuilderNumber(value.g) ? value.g : isFiniteSceneBuilderNumber(value._g) ? value._g : null;
+  const b = isFiniteSceneBuilderNumber(value.b) ? value.b : isFiniteSceneBuilderNumber(value._b) ? value._b : null;
+  if (r == null || g == null || b == null) return null;
+  return { r, g, b };
+}
+
+function transformSceneBuilderArtistBaseColor(
+  source: SceneBuilderRuntimeColor,
+  baseColor: NonNullable<ArtistMaterialProfile['baseColor']>,
+): SceneBuilderRuntimeColor {
+  const brightness = isFiniteSceneBuilderNumber(baseColor.brightness) ? baseColor.brightness : 1;
+  const contrast = isFiniteSceneBuilderNumber(baseColor.contrast) ? baseColor.contrast : 1;
+  const saturation = isFiniteSceneBuilderNumber(baseColor.saturation) ? baseColor.saturation : 1;
+  const hue = isFiniteSceneBuilderNumber(baseColor.hue) ? baseColor.hue : 0;
+
+  let r = clampSceneBuilder01(source.r * Math.max(0, brightness));
+  let g = clampSceneBuilder01(source.g * Math.max(0, brightness));
+  let b = clampSceneBuilder01(source.b * Math.max(0, brightness));
+
+  r = clampSceneBuilder01((r - 0.5) * contrast + 0.5);
+  g = clampSceneBuilder01((g - 0.5) * contrast + 0.5);
+  b = clampSceneBuilder01((b - 0.5) * contrast + 0.5);
+
+  const hsl = rgbToSceneBuilderHsl(r, g, b);
+  hsl.h = normalizeSceneBuilderHue(hsl.h + hue);
+  hsl.s = clampSceneBuilder01(hsl.s * Math.max(0, saturation));
+  return hslToSceneBuilderRgb(hsl.h, hsl.s, hsl.l);
+}
+
+function rgbToSceneBuilderHsl(r: number, g: number, b: number): { h: number; s: number; l: number } {
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  if (max === min) return { h: 0, s: 0, l };
+
+  const d = max - min;
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+  let h = 0;
+  switch (max) {
+    case r:
+      h = (g - b) / d + (g < b ? 6 : 0);
+      break;
+    case g:
+      h = (b - r) / d + 2;
+      break;
+    default:
+      h = (r - g) / d + 4;
+      break;
+  }
+  return { h: h * 60, s, l };
+}
+
+function hslToSceneBuilderRgb(h: number, s: number, l: number): SceneBuilderRuntimeColor {
+  if (s === 0) return { r: l, g: l, b: l };
+
+  const hueToRgb = (p: number, q: number, t: number): number => {
+    let nextT = t;
+    if (nextT < 0) nextT += 1;
+    if (nextT > 1) nextT -= 1;
+    if (nextT < 1 / 6) return p + (q - p) * 6 * nextT;
+    if (nextT < 1 / 2) return q;
+    if (nextT < 2 / 3) return p + (q - p) * (2 / 3 - nextT) * 6;
+    return p;
   };
-  if (override?.baseColor) {
-    merged.baseColor = {
-      ...(merged.baseColor ?? {}),
-      ...structuredClone(override.baseColor),
-    };
-  }
-  if (override?.metallic !== undefined) merged.metallic = override.metallic;
-  if (override?.roughness !== undefined) merged.roughness = override.roughness;
-  if (override?.emission) {
-    merged.emission = {
-      ...(merged.emission ?? {}),
-      ...structuredClone(override.emission),
-    };
-  }
-  return merged;
+
+  const normalizedHue = normalizeSceneBuilderHue(h) / 360;
+  const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+  const p = 2 * l - q;
+  return {
+    r: clampSceneBuilder01(hueToRgb(p, q, normalizedHue + 1 / 3)),
+    g: clampSceneBuilder01(hueToRgb(p, q, normalizedHue)),
+    b: clampSceneBuilder01(hueToRgb(p, q, normalizedHue - 1 / 3)),
+  };
+}
+
+function normalizeSceneBuilderHue(value: number): number {
+  const result = value % 360;
+  return result < 0 ? result + 360 : result;
+}
+
+function clampSceneBuilder01(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.min(1, Math.max(0, value));
+}
+
+function isFiniteSceneBuilderNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
 }
