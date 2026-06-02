@@ -7,8 +7,11 @@
 
 import { Scene } from '@babylonjs/core/scene';
 import { Camera } from '@babylonjs/core/Cameras/camera';
-import { DefaultRenderingPipeline } from '@babylonjs/core/PostProcesses/RenderPipeline/Pipelines/defaultRenderingPipeline';
-import { ImageProcessingConfiguration } from '@babylonjs/core/Materials/imageProcessingConfiguration';
+import {
+  createBabylonDefaultPostProcessPipelineController,
+  resolveBabylonDefaultPostProcessVolumeStack,
+  type BabylonDefaultPostProcessPipelineController,
+} from '@fps-games/editor/playable-sdk';
 
 // 导入配置
 import renderingConfig from '../config/rendering.json';
@@ -67,7 +70,7 @@ interface GlobalVolumeConfig {
  */
 export class RenderingService {
   private scene: Scene;
-  private pipeline: DefaultRenderingPipeline | null = null;
+  private pipeline: BabylonDefaultPostProcessPipelineController | null = null;
   private config: GlobalVolumeConfig;
 
   constructor(scene: Scene) {
@@ -81,88 +84,13 @@ export class RenderingService {
    * @param cameras 要应用管线的相机列表
    */
   initialize(cameras: Camera[]): void {
-    // 创建 DefaultRenderingPipeline
-    this.pipeline = new DefaultRenderingPipeline(
-      'defaultPipeline',  // 管线名称
-      true,               // 启用 HDR
-      this.scene,
-      cameras
+    const resolved = resolveBabylonDefaultPostProcessVolumeStack(renderingConfig);
+    this.pipeline = createBabylonDefaultPostProcessPipelineController(
+      this.scene as any,
+      cameras as any,
+      resolved.profile,
+      { name: 'defaultPipeline' },
     );
-
-    // 应用各项配置
-    this.applyImageProcessing();
-    this.applyBloomSettings();
-    this.applyAdditionalSettings();
-
-  }
-
-  /**
-   * 应用图像处理配置
-   *
-   * 包括曝光度、对比度、色调映射等
-   */
-  private applyImageProcessing(): void {
-    if (!this.pipeline) return;
-
-    const { imageProcessing } = this.config;
-
-    // 启用图像处理
-    this.pipeline.imageProcessingEnabled = true;
-
-    // 设置曝光度
-    this.pipeline.imageProcessing.exposure = imageProcessing.exposure;
-
-    // 设置对比度
-    this.pipeline.imageProcessing.contrast = imageProcessing.contrast;
-
-    // 启用色调映射 (ACES Tone Mapping)
-    this.pipeline.imageProcessing.toneMappingEnabled = true;
-    this.pipeline.imageProcessing.toneMappingType = ImageProcessingConfiguration.TONEMAPPING_ACES;
-  }
-
-  /**
-   * 应用泛光(Bloom)设置
-   */
-  private applyBloomSettings(): void {
-    if (!this.pipeline) return;
-
-    const { bloom } = this.config.postProcessing;
-
-    // 启用/禁用泛光
-    this.pipeline.bloomEnabled = bloom.enabled;
-
-    if (bloom.enabled) {
-      // 泛光阈值 - 亮度超过此值才会产生泛光
-      this.pipeline.bloomThreshold = bloom.threshold;
-
-      // 泛光权重/强度
-      this.pipeline.bloomWeight = bloom.weight;
-
-      // 泛光模糊核大小
-      this.pipeline.bloomKernel = bloom.kernel;
-
-      // 泛光缩放
-      this.pipeline.bloomScale = bloom.scale;
-    }
-  }
-
-  /**
-   * 应用其他渲染设置
-   *
-   * 包括抗锯齿、锐化、色差等
-   */
-  private applyAdditionalSettings(): void {
-    if (!this.pipeline) return;
-
-    // 抗锯齿设置 - 4x MSAA
-    this.pipeline.samples = 4;
-
-    // 禁用不需要的效果
-    this.pipeline.sharpenEnabled = false;           // 锐化
-    this.pipeline.chromaticAberrationEnabled = false; // 色差
-    this.pipeline.depthOfFieldEnabled = false;      // 景深
-    this.pipeline.grainEnabled = false;             // 颗粒效果
-
   }
 
   // ============================================================
@@ -172,8 +100,8 @@ export class RenderingService {
   /**
    * 获取渲染管线实例
    */
-  getPipeline(): DefaultRenderingPipeline | null {
-    return this.pipeline;
+  getPipeline(): unknown | null {
+    return this.pipeline?.getPipeline() ?? null;
   }
 
   /**
@@ -198,50 +126,6 @@ export class RenderingService {
   }
 
   // ============================================================
-  // 动态调整方法
-  // ============================================================
-
-  /**
-   * 动态更新曝光度
-   * @param value 新的曝光度值
-   */
-  setExposure(value: number): void {
-    if (this.pipeline) {
-      this.pipeline.imageProcessing.exposure = value;
-    }
-  }
-
-  /**
-   * 动态更新对比度
-   * @param value 新的对比度值
-   */
-  setContrast(value: number): void {
-    if (this.pipeline) {
-      this.pipeline.imageProcessing.contrast = value;
-    }
-  }
-
-  /**
-   * 动态启用/禁用泛光
-   * @param enabled 是否启用
-   */
-  setBloomEnabled(enabled: boolean): void {
-    if (this.pipeline) {
-      this.pipeline.bloomEnabled = enabled;
-    }
-  }
-
-  /**
-   * 动态更新泛光强度
-   * @param value 新的泛光强度
-   */
-  setBloomWeight(value: number): void {
-    if (this.pipeline) {
-      this.pipeline.bloomWeight = value;
-    }
-  }
-
-  // ============================================================
   // 生命周期
   // ============================================================
 
@@ -249,9 +133,7 @@ export class RenderingService {
    * 销毁渲染管线
    */
   dispose(): void {
-    if (this.pipeline) {
-      this.pipeline.dispose();
-      this.pipeline = null;
-    }
+    this.pipeline?.dispose();
+    this.pipeline = null;
   }
 }

@@ -5,10 +5,28 @@
     "authoringSource": {
       "sourceId": "scene.main",
       "sourceType": "scene",
-      "revision": 26
+      "revision": 33
     }
   },
   "assets": [
+    {
+      "id": "asset_bf50e45f742244bd96f47946981c37a0",
+      "guid": "bf50e45f-7422-44bd-96f4-7946981c37a0",
+      "type": "glb",
+      "displayName": "Axe and Bear - Fence Prop",
+      "category": "Model",
+      "external": {
+        "platformAssetId": "axe_and_bear:fence_prop_model",
+        "assetPath": "src/assets/models/fence-prop-model.glb"
+      },
+      "metadata": {
+        "originalFileName": "fence-prop-model.glb",
+        "relativePath": "../imported/asset_bf50e45f742244bd96f47946981c37a0.glb",
+        "codeKey": "axe_and_bear_fence_prop_model",
+        "contentHash": "sha256:e4a2b2083ecad594b344af2a88c8eb456844dd530ff87af28712e3d3aeea11f7",
+        "byteSize": 62120
+      }
+    },
     {
       "id": "asset_ff8c83040af443fe8381477634be9254",
       "guid": "ff8c8304-0af4-43fe-8381-477634be9254",
@@ -338,7 +356,7 @@
         ],
         "overrides": {
           "materialBinding": {
-            "materialAssetId": "mat_lumber_order_upgrade_glow"
+            "materialAssetId": "mat_plane_default_pbr_material"
           }
         }
       },
@@ -381,6 +399,9 @@
               "g": 0.03,
               "b": 0.03
             }
+          },
+          "materialBinding": {
+            "materialAssetId": "mat_cube_default_pbr_material"
           }
         }
       },
@@ -465,6 +486,9 @@
               "g": 0.03,
               "b": 0.03
             }
+          },
+          "materialBinding": {
+            "materialAssetId": "mat_capsule_default_pbr_material"
           }
         }
       },
@@ -1209,6 +1233,37 @@
         ]
       },
       {
+        "id": "axe_and_bear_fence_prop",
+        "guid": "go_6edd28b4-f389-4685-ae16-6feb855b15ed",
+        "name": "Axe and Bear - Fence Prop",
+        "parentId": "root",
+        "active": true,
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": 3.5999999046325684,
+              "y": 0.8350777626037598,
+              "z": 1.7999999523162842
+            },
+            "rotation": {
+              "z": 0,
+              "x": 0,
+              "y": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          },
+          {
+            "type": "ModelRenderer",
+            "assetId": "asset_bf50e45f742244bd96f47946981c37a0"
+          }
+        ]
+      },
+      {
         "id": "lumber_order",
         "guid": "go_6697756a-c434-4b5e-b5c6-e81d8b9e5d26",
         "name": "Lumber Order - 松树",
@@ -1696,6 +1751,90 @@
             "maskTexture": {
               "url": "/src/assets/imported/textures/texture_79af58d28dfe40bba5cd2422a40a4635.png"
             }
+          }
+        }
+      },
+      {
+        "id": "mat_capsule_default_pbr_material",
+        "name": "Capsule - Default PBR Material",
+        "materialKind": "pbr",
+        "profile": {
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 0.058823529411764705,
+              "b": 0.058823529411764705
+            },
+            "brightness": 5,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 1,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_plane_default_pbr_material",
+        "name": "Plane - Default PBR Material",
+        "materialKind": "pbr",
+        "profile": {
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 10,
+            "saturation": 1,
+            "contrast": 10,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 1,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 2
+          }
+        }
+      },
+      {
+        "id": "mat_cube_default_pbr_material",
+        "name": "Cube - Default PBR Material",
+        "materialKind": "pbr",
+        "profile": {
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 10,
+            "saturation": 10,
+            "contrast": 19,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 1,
+          "emission": {
+            "color": {
+              "r": 0.2,
+              "g": 0.9,
+              "b": 1
+            },
+            "intensity": 12
           }
         }
       }
