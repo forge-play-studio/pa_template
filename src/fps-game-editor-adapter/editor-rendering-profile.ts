@@ -1,10 +1,13 @@
 import {
+  resolveBabylonDefaultPostProcessVolumeStack,
   createEditorSceneRenderingPanelState,
+  type EditorSceneRenderingPanelLanguage,
   type EditorSceneRenderingPanelState,
   type EditorSceneRenderingStatusTone,
 } from '@fps-games/editor/playable-sdk';
 import type { EditorSceneDocument } from './editor-scene-document';
 import {
+  EDITOR_SCENE_MAIN_CAMERA_ID,
   EDITOR_SCENE_SUN_LIGHT_ID,
 } from './editor-scene-session';
 import {
@@ -50,6 +53,7 @@ export function resolveEditorWorldRenderingProfile(
   const profile = getActiveRenderingProfile();
   const sunObject = document.scene.gameObjects.find(gameObject => gameObject.id === EDITOR_SCENE_SUN_LIGHT_ID);
   return {
+    postProcess: resolveBabylonDefaultPostProcessVolumeStack(getActiveRenderingConfig()).profile,
     shadowPreview: {
       planar: {
         ...createPlanarShadowOptionsFromRenderingProfile(profile, {
@@ -62,15 +66,19 @@ export function resolveEditorWorldRenderingProfile(
 }
 
 export function getEditorRenderingPanelState(
-  _document: EditorSceneDocument,
+  document: EditorSceneDocument,
 ): RenderingPanelState {
-  return createRenderingPanelState(getActiveRenderingProfile(), getEditorRenderingProfileState());
+  return createRenderingPanelState(
+    getActiveRenderingProfile(),
+    getEditorRenderingProfileState(),
+    resolveEditorRenderingPanelLanguage(document),
+  );
 }
 
 export async function applyEditorRenderingPropertyChange(
   input: RenderingPropertyInput,
 ): Promise<RenderingPropertyChangeResult> {
-  if (input.sectionId !== 'shadows') {
+  if (input.sectionId !== 'shadows' && input.sectionId !== 'post-process') {
     return {
       changed: false,
       status: `Unsupported rendering section: ${input.sectionId}`,
@@ -136,13 +144,29 @@ export function hasEditorRenderingDraftChanges(): boolean {
 export function createRenderingPanelState(
   profile: NormalizedRenderingProfile,
   state: { dirty?: boolean; lastError?: string | null } = {},
+  language: EditorSceneRenderingPanelLanguage = 'zh',
 ): RenderingPanelState {
-  const panel = createEditorSceneRenderingPanelState(profile, state);
+  const panel = createEditorSceneRenderingPanelState(profile, state, { language });
   const revertAction = panel.actions?.find(action => action.id === 'revert-rendering');
   if (revertAction) {
-    revertAction.tooltip = state.dirty === true
-      ? 'Revert rendering settings to the last saved rendering.json.'
-      : 'Rendering settings already match the last saved rendering.json.';
+    revertAction.tooltip = language === 'en'
+      ? state.dirty === true
+        ? 'Revert rendering settings to the last saved rendering.json.'
+        : 'Rendering settings already match the last saved rendering.json.'
+      : state.dirty === true
+        ? '还原到上一次保存的 rendering.json。'
+        : '当前渲染设置已经和上一次保存的 rendering.json 一致。';
   }
   return panel;
+}
+
+function resolveEditorRenderingPanelLanguage(
+  document: EditorSceneDocument,
+): EditorSceneRenderingPanelLanguage {
+  const sunLight = document.scene.gameObjects.find(gameObject => gameObject.id === EDITOR_SCENE_SUN_LIGHT_ID);
+  if (sunLight?.light?.inspectorLanguage === 'en') return 'en';
+  if (sunLight?.light?.inspectorLanguage === 'zh') return 'zh';
+  const mainCamera = document.scene.gameObjects.find(gameObject => gameObject.id === EDITOR_SCENE_MAIN_CAMERA_ID);
+  if (mainCamera?.camera?.inspectorLanguage === 'en') return 'en';
+  return 'zh';
 }
