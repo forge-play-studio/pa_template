@@ -8,10 +8,10 @@
     "generatedFrom": {
       "sourceId": "scene.main",
       "sourceType": "scene",
-      "revision": 21,
+      "revision": 23,
       "compilerId": "pa_template.editor-scene.compiler",
       "compilerVersion": "1",
-      "compiledAt": "2026-05-29T15:21:27.239Z"
+      "compiledAt": "2026-06-02T03:12:14.117Z"
     }
   },
   "gameplay": {
@@ -40,7 +40,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 21,
+          "revision": 23,
           "objectGuid": "go_2406b122-d63b-4971-bf66-7d78a8776543",
           "objectId": "main_camera",
           "component": "Transform"
@@ -96,7 +96,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 21,
+          "revision": 23,
           "objectGuid": "go_environment_light_default",
           "objectId": "environment_light",
           "component": "Transform"
@@ -142,7 +142,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 21,
+          "revision": 23,
           "objectGuid": "go_7017d029-9d69-4381-91ac-75093053caa9",
           "objectId": "sun_light",
           "component": "Transform"
@@ -188,7 +188,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 21,
+          "revision": 23,
           "objectGuid": "go_20efbb4a-c323-4ea3-911c-23c72827d7b9",
           "objectId": "plane",
           "component": "PrimitiveRenderer"
@@ -227,7 +227,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 21,
+          "revision": 23,
           "objectGuid": "go_ac4a2824-3625-468c-aeee-d7c75dedc814",
           "objectId": "cube",
           "component": "PrimitiveRenderer"
@@ -252,6 +252,17 @@
         "kind": "primitive",
         "primitive": {
           "shape": "cube"
+        },
+        "overrides": {
+          "outline": {
+            "renderOutline": true,
+            "outlineWidth": 0.02,
+            "outlineColor": {
+              "r": 0.03,
+              "g": 0.03,
+              "b": 0.03
+            }
+          }
         }
       },
       {
@@ -261,7 +272,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 21,
+          "revision": 23,
           "objectGuid": "go_cc80f1b1-57b9-4373-baba-eed140d90c8f",
           "objectId": "sphere",
           "component": "PrimitiveRenderer"
@@ -286,6 +297,17 @@
         "kind": "primitive",
         "primitive": {
           "shape": "sphere"
+        },
+        "overrides": {
+          "outline": {
+            "renderOutline": true,
+            "outlineWidth": 0.03,
+            "outlineColor": {
+              "r": 0.03,
+              "g": 0.03,
+              "b": 0.03
+            }
+          }
         }
       },
       {
@@ -295,7 +317,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 21,
+          "revision": 23,
           "objectGuid": "go_68778bee-9b2d-44bb-9a37-cfa42efa2846",
           "objectId": "capsule",
           "component": "PrimitiveRenderer"
@@ -320,6 +342,829 @@
         "kind": "primitive",
         "primitive": {
           "shape": "capsule"
+        },
+        "overrides": {
+          "outline": {
+            "renderOutline": true,
+            "outlineWidth": 0.02,
+            "outlineColor": {
+              "r": 0.03,
+              "g": 0.03,
+              "b": 0.03
+            }
+          }
+        }
+      },
+      {
+        "id": "empty",
+        "name": "Empty",
+        "parentId": "root",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 23,
+          "objectGuid": "go_cfaa94ff-8ca2-482b-a24a-748f236b5e8f",
+          "objectId": "empty",
+          "component": "Transform"
+        },
+        "transform": {
+          "position": {
+            "x": -2.91023325920105,
+            "y": 8.881784197001252e-16,
+            "z": 1.5916268825531006
+          },
+          "rotation": {
+            "z": 0,
+            "x": 0,
+            "y": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "transform",
+        "transformType": "plain"
+      },
+      {
+        "id": "cube_2",
+        "name": "Cube",
+        "parentId": "empty",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 23,
+          "objectGuid": "go_6878ee87-145f-40b5-9eaf-4cc2a57f30db",
+          "objectId": "cube_2",
+          "component": "PrimitiveRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "primitive",
+        "primitive": {
+          "shape": "cube"
+        }
+      },
+      {
+        "id": "cube_2_copy",
+        "name": "Cube Copy",
+        "parentId": "empty",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 23,
+          "objectGuid": "go_21cffc23-b664-4c23-892c-f0ad201c135f",
+          "objectId": "cube_2_copy",
+          "component": "PrimitiveRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "primitive",
+        "primitive": {
+          "shape": "cube"
+        }
+      },
+      {
+        "id": "cube_2_copy_2",
+        "name": "Cube Copy",
+        "parentId": "empty",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 23,
+          "objectGuid": "go_d5ccad9e-0ab6-494e-ba38-ea3fcc57ef12",
+          "objectId": "cube_2_copy_2",
+          "component": "PrimitiveRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "primitive",
+        "primitive": {
+          "shape": "cube"
+        }
+      },
+      {
+        "id": "cube_2_copy_3",
+        "name": "Cube Copy",
+        "parentId": "empty",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 23,
+          "objectGuid": "go_b2723960-87d5-4bfc-85dd-61b04847fa63",
+          "objectId": "cube_2_copy_3",
+          "component": "PrimitiveRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "primitive",
+        "primitive": {
+          "shape": "cube"
+        }
+      },
+      {
+        "id": "cube_2_copy_4",
+        "name": "Cube Copy",
+        "parentId": "empty",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 23,
+          "objectGuid": "go_59efe6d6-4b0e-4af9-9856-680e918cac51",
+          "objectId": "cube_2_copy_4",
+          "component": "PrimitiveRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "primitive",
+        "primitive": {
+          "shape": "cube"
+        }
+      },
+      {
+        "id": "cube_2_copy_5",
+        "name": "Cube Copy",
+        "parentId": "empty",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 23,
+          "objectGuid": "go_128f5be2-5e14-4ef1-9836-a36c73e6081b",
+          "objectId": "cube_2_copy_5",
+          "component": "PrimitiveRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "primitive",
+        "primitive": {
+          "shape": "cube"
+        }
+      },
+      {
+        "id": "cube_2_copy_6",
+        "name": "Cube Copy",
+        "parentId": "empty",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 23,
+          "objectGuid": "go_85b91a2b-39f4-4396-b171-d658b1b1fdfb",
+          "objectId": "cube_2_copy_6",
+          "component": "PrimitiveRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "primitive",
+        "primitive": {
+          "shape": "cube"
+        }
+      },
+      {
+        "id": "cube_2_copy_7",
+        "name": "Cube Copy",
+        "parentId": "empty",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 23,
+          "objectGuid": "go_49b2e186-ae84-49e3-8c61-0fbf3fb03c6c",
+          "objectId": "cube_2_copy_7",
+          "component": "PrimitiveRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "primitive",
+        "primitive": {
+          "shape": "cube"
+        }
+      },
+      {
+        "id": "cube_2_copy_8",
+        "name": "Cube Copy",
+        "parentId": "empty",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 23,
+          "objectGuid": "go_1b4c2594-f66a-42bb-a69a-c5d49a90293e",
+          "objectId": "cube_2_copy_8",
+          "component": "PrimitiveRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "primitive",
+        "primitive": {
+          "shape": "cube"
+        }
+      },
+      {
+        "id": "cube_2_copy_9",
+        "name": "Cube Copy",
+        "parentId": "empty",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 23,
+          "objectGuid": "go_0b484a77-a0a7-4636-95d5-320ef6bd01a8",
+          "objectId": "cube_2_copy_9",
+          "component": "PrimitiveRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "primitive",
+        "primitive": {
+          "shape": "cube"
+        }
+      },
+      {
+        "id": "cube_2_copy_10",
+        "name": "Cube Copy",
+        "parentId": "empty",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 23,
+          "objectGuid": "go_43c8ca9c-1d4c-4885-a452-53be8f5efa7f",
+          "objectId": "cube_2_copy_10",
+          "component": "PrimitiveRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "primitive",
+        "primitive": {
+          "shape": "cube"
+        }
+      },
+      {
+        "id": "empty_copy",
+        "name": "Empty Copy",
+        "parentId": "root",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 23,
+          "objectGuid": "go_3417a114-eb94-425c-9490-b6acf8948620",
+          "objectId": "empty_copy",
+          "component": "Transform"
+        },
+        "transform": {
+          "position": {
+            "x": -0.9948525428771973,
+            "y": -0.12947770953178406,
+            "z": -3.882814407348633
+          },
+          "rotation": {
+            "z": 0,
+            "x": 0,
+            "y": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "transform",
+        "transformType": "plain"
+      },
+      {
+        "id": "cube_2_copy_11",
+        "name": "Cube Copy",
+        "parentId": "empty_copy",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 23,
+          "objectGuid": "go_95344ac7-7743-4593-ab7a-b5f449037a03",
+          "objectId": "cube_2_copy_11",
+          "component": "PrimitiveRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "primitive",
+        "primitive": {
+          "shape": "cube"
+        }
+      },
+      {
+        "id": "cube_2_copy_copy",
+        "name": "Cube Copy Copy",
+        "parentId": "empty_copy",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 23,
+          "objectGuid": "go_74e1d56f-eb43-41ea-9c58-598ab57ebf8e",
+          "objectId": "cube_2_copy_copy",
+          "component": "PrimitiveRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "primitive",
+        "primitive": {
+          "shape": "cube"
+        }
+      },
+      {
+        "id": "cube_2_copy_2_copy",
+        "name": "Cube Copy Copy",
+        "parentId": "empty_copy",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 23,
+          "objectGuid": "go_e1ff2466-8601-4b30-a7f5-cae15010e4a5",
+          "objectId": "cube_2_copy_2_copy",
+          "component": "PrimitiveRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "primitive",
+        "primitive": {
+          "shape": "cube"
+        }
+      },
+      {
+        "id": "cube_2_copy_3_copy",
+        "name": "Cube Copy Copy",
+        "parentId": "empty_copy",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 23,
+          "objectGuid": "go_888d3ae5-0fee-4c61-b6d5-894954707840",
+          "objectId": "cube_2_copy_3_copy",
+          "component": "PrimitiveRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "primitive",
+        "primitive": {
+          "shape": "cube"
+        }
+      },
+      {
+        "id": "cube_2_copy_4_copy",
+        "name": "Cube Copy Copy",
+        "parentId": "empty_copy",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 23,
+          "objectGuid": "go_e9e164c4-8adb-492f-8ffc-daebd36e1ac3",
+          "objectId": "cube_2_copy_4_copy",
+          "component": "PrimitiveRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "primitive",
+        "primitive": {
+          "shape": "cube"
+        }
+      },
+      {
+        "id": "cube_2_copy_5_copy",
+        "name": "Cube Copy Copy",
+        "parentId": "empty_copy",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 23,
+          "objectGuid": "go_adc9c95b-5d79-470b-880c-dd45e419e971",
+          "objectId": "cube_2_copy_5_copy",
+          "component": "PrimitiveRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "primitive",
+        "primitive": {
+          "shape": "cube"
+        }
+      },
+      {
+        "id": "cube_2_copy_6_copy",
+        "name": "Cube Copy Copy",
+        "parentId": "empty_copy",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 23,
+          "objectGuid": "go_f1716e18-5648-4872-a3d0-f2a956dd4a09",
+          "objectId": "cube_2_copy_6_copy",
+          "component": "PrimitiveRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "primitive",
+        "primitive": {
+          "shape": "cube"
+        }
+      },
+      {
+        "id": "cube_2_copy_7_copy",
+        "name": "Cube Copy Copy",
+        "parentId": "empty_copy",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 23,
+          "objectGuid": "go_a2e40862-e54f-485f-95dc-b19545500895",
+          "objectId": "cube_2_copy_7_copy",
+          "component": "PrimitiveRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "primitive",
+        "primitive": {
+          "shape": "cube"
+        }
+      },
+      {
+        "id": "cube_2_copy_8_copy",
+        "name": "Cube Copy Copy",
+        "parentId": "empty_copy",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 23,
+          "objectGuid": "go_292f34fe-b5d4-4876-a83a-c558da75126f",
+          "objectId": "cube_2_copy_8_copy",
+          "component": "PrimitiveRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "primitive",
+        "primitive": {
+          "shape": "cube"
+        }
+      },
+      {
+        "id": "cube_2_copy_9_copy",
+        "name": "Cube Copy Copy",
+        "parentId": "empty_copy",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 23,
+          "objectGuid": "go_f1a93353-e6e1-4603-becf-bcd95e61aaa9",
+          "objectId": "cube_2_copy_9_copy",
+          "component": "PrimitiveRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "primitive",
+        "primitive": {
+          "shape": "cube"
+        }
+      },
+      {
+        "id": "cube_2_copy_10_copy",
+        "name": "Cube Copy Copy",
+        "parentId": "empty_copy",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 23,
+          "objectGuid": "go_ccfb94dc-e506-4560-92e9-2e10c79df75f",
+          "objectId": "cube_2_copy_10_copy",
+          "component": "PrimitiveRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "primitive",
+        "primitive": {
+          "shape": "cube"
         }
       }
     ],
@@ -601,6 +1446,6 @@
     "textures": []
   },
   "render": {},
-  "version": 20,
-  "updatedAt": "2026-05-29T15:21:27.240Z"
+  "version": 22,
+  "updatedAt": "2026-06-02T03:12:14.118Z"
 }

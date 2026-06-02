@@ -5,7 +5,7 @@
     "authoringSource": {
       "sourceId": "scene.main",
       "sourceType": "scene",
-      "revision": 21
+      "revision": 23
     }
   },
   "assets": [],
@@ -244,7 +244,18 @@
               "z": 1
             }
           }
-        ]
+        ],
+        "overrides": {
+          "outline": {
+            "renderOutline": true,
+            "outlineWidth": 0.02,
+            "outlineColor": {
+              "r": 0.03,
+              "g": 0.03,
+              "b": 0.03
+            }
+          }
+        }
       },
       {
         "id": "sphere",
@@ -275,7 +286,18 @@
               "z": 1
             }
           }
-        ]
+        ],
+        "overrides": {
+          "outline": {
+            "renderOutline": true,
+            "outlineWidth": 0.03,
+            "outlineColor": {
+              "r": 0.03,
+              "g": 0.03,
+              "b": 0.03
+            }
+          }
+        }
       },
       {
         "id": "capsule",
@@ -299,6 +321,757 @@
               "z": 0,
               "x": 0,
               "y": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          }
+        ],
+        "overrides": {
+          "outline": {
+            "renderOutline": true,
+            "outlineWidth": 0.02,
+            "outlineColor": {
+              "r": 0.03,
+              "g": 0.03,
+              "b": 0.03
+            }
+          }
+        }
+      },
+      {
+        "id": "empty",
+        "guid": "go_cfaa94ff-8ca2-482b-a24a-748f236b5e8f",
+        "name": "Empty",
+        "kind": "transform",
+        "transformType": "plain",
+        "parentId": "root",
+        "active": true,
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": -2.91023325920105,
+              "y": 8.881784197001252e-16,
+              "z": 1.5916268825531006
+            },
+            "rotation": {
+              "z": 0,
+              "x": 0,
+              "y": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          }
+        ]
+      },
+      {
+        "id": "cube_2",
+        "guid": "go_6878ee87-145f-40b5-9eaf-4cc2a57f30db",
+        "name": "Cube",
+        "kind": "primitive",
+        "parentId": "empty",
+        "active": true,
+        "primitive": {
+          "shape": "cube"
+        },
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          }
+        ]
+      },
+      {
+        "id": "cube_2_copy",
+        "guid": "go_21cffc23-b664-4c23-892c-f0ad201c135f",
+        "name": "Cube Copy",
+        "kind": "primitive",
+        "parentId": "empty",
+        "active": true,
+        "primitive": {
+          "shape": "cube"
+        },
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          }
+        ]
+      },
+      {
+        "id": "cube_2_copy_2",
+        "guid": "go_d5ccad9e-0ab6-494e-ba38-ea3fcc57ef12",
+        "name": "Cube Copy",
+        "kind": "primitive",
+        "parentId": "empty",
+        "active": true,
+        "primitive": {
+          "shape": "cube"
+        },
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          }
+        ]
+      },
+      {
+        "id": "cube_2_copy_3",
+        "guid": "go_b2723960-87d5-4bfc-85dd-61b04847fa63",
+        "name": "Cube Copy",
+        "kind": "primitive",
+        "parentId": "empty",
+        "active": true,
+        "primitive": {
+          "shape": "cube"
+        },
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          }
+        ]
+      },
+      {
+        "id": "cube_2_copy_4",
+        "guid": "go_59efe6d6-4b0e-4af9-9856-680e918cac51",
+        "name": "Cube Copy",
+        "kind": "primitive",
+        "parentId": "empty",
+        "active": true,
+        "primitive": {
+          "shape": "cube"
+        },
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          }
+        ]
+      },
+      {
+        "id": "cube_2_copy_5",
+        "guid": "go_128f5be2-5e14-4ef1-9836-a36c73e6081b",
+        "name": "Cube Copy",
+        "kind": "primitive",
+        "parentId": "empty",
+        "active": true,
+        "primitive": {
+          "shape": "cube"
+        },
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          }
+        ]
+      },
+      {
+        "id": "cube_2_copy_6",
+        "guid": "go_85b91a2b-39f4-4396-b171-d658b1b1fdfb",
+        "name": "Cube Copy",
+        "kind": "primitive",
+        "parentId": "empty",
+        "active": true,
+        "primitive": {
+          "shape": "cube"
+        },
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          }
+        ]
+      },
+      {
+        "id": "cube_2_copy_7",
+        "guid": "go_49b2e186-ae84-49e3-8c61-0fbf3fb03c6c",
+        "name": "Cube Copy",
+        "kind": "primitive",
+        "parentId": "empty",
+        "active": true,
+        "primitive": {
+          "shape": "cube"
+        },
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          }
+        ]
+      },
+      {
+        "id": "cube_2_copy_8",
+        "guid": "go_1b4c2594-f66a-42bb-a69a-c5d49a90293e",
+        "name": "Cube Copy",
+        "kind": "primitive",
+        "parentId": "empty",
+        "active": true,
+        "primitive": {
+          "shape": "cube"
+        },
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          }
+        ]
+      },
+      {
+        "id": "cube_2_copy_9",
+        "guid": "go_0b484a77-a0a7-4636-95d5-320ef6bd01a8",
+        "name": "Cube Copy",
+        "kind": "primitive",
+        "parentId": "empty",
+        "active": true,
+        "primitive": {
+          "shape": "cube"
+        },
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          }
+        ]
+      },
+      {
+        "id": "cube_2_copy_10",
+        "guid": "go_43c8ca9c-1d4c-4885-a452-53be8f5efa7f",
+        "name": "Cube Copy",
+        "kind": "primitive",
+        "parentId": "empty",
+        "active": true,
+        "primitive": {
+          "shape": "cube"
+        },
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          }
+        ]
+      },
+      {
+        "id": "empty_copy",
+        "guid": "go_3417a114-eb94-425c-9490-b6acf8948620",
+        "name": "Empty Copy",
+        "kind": "transform",
+        "transformType": "plain",
+        "parentId": "root",
+        "active": true,
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": -0.9948525428771973,
+              "y": -0.12947770953178406,
+              "z": -3.882814407348633
+            },
+            "rotation": {
+              "z": 0,
+              "x": 0,
+              "y": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          }
+        ]
+      },
+      {
+        "id": "cube_2_copy_11",
+        "guid": "go_95344ac7-7743-4593-ab7a-b5f449037a03",
+        "name": "Cube Copy",
+        "kind": "primitive",
+        "parentId": "empty_copy",
+        "active": true,
+        "primitive": {
+          "shape": "cube"
+        },
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          }
+        ]
+      },
+      {
+        "id": "cube_2_copy_copy",
+        "guid": "go_74e1d56f-eb43-41ea-9c58-598ab57ebf8e",
+        "name": "Cube Copy Copy",
+        "kind": "primitive",
+        "parentId": "empty_copy",
+        "active": true,
+        "primitive": {
+          "shape": "cube"
+        },
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          }
+        ]
+      },
+      {
+        "id": "cube_2_copy_2_copy",
+        "guid": "go_e1ff2466-8601-4b30-a7f5-cae15010e4a5",
+        "name": "Cube Copy Copy",
+        "kind": "primitive",
+        "parentId": "empty_copy",
+        "active": true,
+        "primitive": {
+          "shape": "cube"
+        },
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          }
+        ]
+      },
+      {
+        "id": "cube_2_copy_3_copy",
+        "guid": "go_888d3ae5-0fee-4c61-b6d5-894954707840",
+        "name": "Cube Copy Copy",
+        "kind": "primitive",
+        "parentId": "empty_copy",
+        "active": true,
+        "primitive": {
+          "shape": "cube"
+        },
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          }
+        ]
+      },
+      {
+        "id": "cube_2_copy_4_copy",
+        "guid": "go_e9e164c4-8adb-492f-8ffc-daebd36e1ac3",
+        "name": "Cube Copy Copy",
+        "kind": "primitive",
+        "parentId": "empty_copy",
+        "active": true,
+        "primitive": {
+          "shape": "cube"
+        },
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          }
+        ]
+      },
+      {
+        "id": "cube_2_copy_5_copy",
+        "guid": "go_adc9c95b-5d79-470b-880c-dd45e419e971",
+        "name": "Cube Copy Copy",
+        "kind": "primitive",
+        "parentId": "empty_copy",
+        "active": true,
+        "primitive": {
+          "shape": "cube"
+        },
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          }
+        ]
+      },
+      {
+        "id": "cube_2_copy_6_copy",
+        "guid": "go_f1716e18-5648-4872-a3d0-f2a956dd4a09",
+        "name": "Cube Copy Copy",
+        "kind": "primitive",
+        "parentId": "empty_copy",
+        "active": true,
+        "primitive": {
+          "shape": "cube"
+        },
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          }
+        ]
+      },
+      {
+        "id": "cube_2_copy_7_copy",
+        "guid": "go_a2e40862-e54f-485f-95dc-b19545500895",
+        "name": "Cube Copy Copy",
+        "kind": "primitive",
+        "parentId": "empty_copy",
+        "active": true,
+        "primitive": {
+          "shape": "cube"
+        },
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          }
+        ]
+      },
+      {
+        "id": "cube_2_copy_8_copy",
+        "guid": "go_292f34fe-b5d4-4876-a83a-c558da75126f",
+        "name": "Cube Copy Copy",
+        "kind": "primitive",
+        "parentId": "empty_copy",
+        "active": true,
+        "primitive": {
+          "shape": "cube"
+        },
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          }
+        ]
+      },
+      {
+        "id": "cube_2_copy_9_copy",
+        "guid": "go_f1a93353-e6e1-4603-becf-bcd95e61aaa9",
+        "name": "Cube Copy Copy",
+        "kind": "primitive",
+        "parentId": "empty_copy",
+        "active": true,
+        "primitive": {
+          "shape": "cube"
+        },
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          }
+        ]
+      },
+      {
+        "id": "cube_2_copy_10_copy",
+        "guid": "go_ccfb94dc-e506-4560-92e9-2e10c79df75f",
+        "name": "Cube Copy Copy",
+        "kind": "primitive",
+        "parentId": "empty_copy",
+        "active": true,
+        "primitive": {
+          "shape": "cube"
+        },
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
             },
             "scale": {
               "x": 1,
