@@ -7,8 +7,10 @@ export const ASSET_CATALOG_KINDS = ['model', 'texture', 'image', 'sound'];
 
 const MODEL_EXTENSIONS = ['.glb', '.gltf'];
 const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.webp'];
+const ENVIRONMENT_TEXTURE_EXTENSIONS = ['.env', '.hdr', '.dds', '.ktx', '.ktx2'];
+const TEXTURE_EXTENSIONS = [...IMAGE_EXTENSIONS, ...ENVIRONMENT_TEXTURE_EXTENSIONS];
 const SOUND_EXTENSIONS = ['.mp3', '.wav', '.ogg', '.m4a'];
-const DEFAULT_EXTENSIONS = [...MODEL_EXTENSIONS, ...IMAGE_EXTENSIONS, ...SOUND_EXTENSIONS];
+const DEFAULT_EXTENSIONS = [...MODEL_EXTENSIONS, ...TEXTURE_EXTENSIONS, ...SOUND_EXTENSIONS];
 
 export function guidToStableToken(guid) {
   return String(guid ?? '').trim().toLowerCase().replace(/-/g, '');
@@ -52,7 +54,7 @@ export function normalizeAssetKind(value, filePath = '') {
   const extension = path.extname(filePath).toLowerCase();
   if (MODEL_EXTENSIONS.includes(extension)) return 'model';
   if (SOUND_EXTENSIONS.includes(extension)) return 'sound';
-  if (IMAGE_EXTENSIONS.includes(extension)) return 'texture';
+  if (TEXTURE_EXTENSIONS.includes(extension)) return 'texture';
   return null;
 }
 
@@ -421,7 +423,8 @@ function assertAssetKindExtension(kind, filePath, label) {
 function getAssetKindExtensions(kind) {
   if (kind === 'model') return MODEL_EXTENSIONS;
   if (kind === 'sound') return SOUND_EXTENSIONS;
-  if (kind === 'texture' || kind === 'image') return IMAGE_EXTENSIONS;
+  if (kind === 'texture') return TEXTURE_EXTENSIONS;
+  if (kind === 'image') return IMAGE_EXTENSIONS;
   return [];
 }
 

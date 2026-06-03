@@ -93,6 +93,7 @@ import {
   resolveEditorSceneMaterialAssetIntegrity as resolvePlayableEditorSceneMaterialAssetIntegrity,
   resolveEditorSceneMaterialAssetKind as resolvePlayableEditorSceneMaterialAssetKind,
   resolveEditorSceneMaterialAssetDeleteState as resolvePlayableEditorSceneMaterialAssetDeleteState,
+  resolveEditorSceneMaterialSlotReimportDiff as resolvePlayableEditorSceneMaterialSlotReimportDiff,
   roundEditorSceneInspectorNumber as roundPlayableEditorSceneInspectorNumber,
   applyEditorSceneJsonFieldPatch as applyPlayableEditorSceneJsonFieldPatch,
   toEditorSceneLocalTransformFromWorld as toPlayableEditorSceneLocalTransformFromWorld,
@@ -128,6 +129,7 @@ import type {
   EditorSceneVec3,
 } from './editor-scene-document';
 import type {
+  ArtistMaterialProfile,
   MaterialOverrideConfig,
   OutlineOverrideConfig,
   SceneCameraProjection,
@@ -288,6 +290,7 @@ const DEFAULT_PBR_MATERIAL_ASSET: SceneMaterialAssetConfig = {
   },
   origin: { type: 'preset' },
   profile: {
+    lightingModel: 'lit',
     baseColor: {
       color: { r: 1, g: 1, b: 1 },
       brightness: 1,
@@ -314,6 +317,7 @@ const DEFAULT_STANDARD_MATERIAL_ASSET: SceneMaterialAssetConfig = {
   },
   origin: { type: 'preset' },
   profile: {
+    lightingModel: 'lit',
     baseColor: {
       color: { r: 1, g: 1, b: 1 },
       brightness: 1,
@@ -469,17 +473,33 @@ type ArtistMaterialInspectorText = {
   assetKind: string;
   assetKindPbr: string;
   assetKindStandard: string;
+  assetLightingModel: string;
+  assetLightingModelLit: string;
+  assetLightingModelUnlit: string;
   assetBaseColor: string;
   assetBaseTexture: string;
   assetBrightness: string;
   assetSaturation: string;
   assetContrast: string;
   assetHue: string;
+  assetNormalTexture: string;
+  assetNormalStrength: string;
   assetMetallic: string;
   assetRoughness: string;
+  assetMetallicRoughnessTexture: string;
+  assetOcclusionTexture: string;
+  assetOcclusionStrength: string;
   assetEmissionColor: string;
   assetEmissionIntensity: string;
+  assetEmissionTexture: string;
   assetEmissionMaskUrl: string;
+  assetAlphaMode: string;
+  assetAlphaModeOpaque: string;
+  assetAlphaModeMask: string;
+  assetAlphaModeBlend: string;
+  assetAlphaOpacity: string;
+  assetAlphaCutoff: string;
+  assetAlphaTexture: string;
   createSlotMaterial: string;
   slotList: string;
   slotId: string;
@@ -487,6 +507,7 @@ type ArtistMaterialInspectorText = {
   slotMaterialAsset: string;
   slotSourceMaterial: string;
   slotBindingPath: string;
+  reimportConflicts: string;
   legacySlotRaw: string;
   summaryAsset: (name: string) => string;
   summaryMissingAsset: string;
@@ -494,6 +515,10 @@ type ArtistMaterialInspectorText = {
   summaryInherit: string;
   summaryAddSlot: string;
   summarySlotCount: (count: number) => string;
+  formatUsageCount: (count: number) => string;
+  formatMaterialEditImpact: (count: number) => string;
+  formatDuplicateMaterialImpact: (count: number) => string;
+  formatReimportConflictSummary: (count: number) => string;
   tooltips: ArtistMaterialTooltipText;
 };
 
@@ -504,20 +529,32 @@ type ArtistMaterialTooltipText = Record<
   | 'assetProfile'
   | 'assetName'
   | 'assetKind'
+  | 'lightingModel'
   | 'baseColor'
   | 'duplicateForObject'
   | 'brightness'
   | 'saturation'
   | 'contrast'
   | 'hue'
+  | 'normalTexture'
+  | 'normalStrength'
   | 'metallic'
   | 'roughness'
+  | 'metallicRoughnessTexture'
+  | 'occlusionTexture'
+  | 'occlusionStrength'
   | 'emissionColor'
   | 'emissionIntensity'
+  | 'emissionTexture'
   | 'emissionMaskUrl'
+  | 'alphaMode'
+  | 'alphaOpacity'
+  | 'alphaCutoff'
+  | 'alphaTexture'
   | 'createSlotMaterial'
   | 'slotList'
   | 'slotOwnerPath'
+  | 'reimportConflicts'
   | 'legacySlotRaw',
   string
 >;
@@ -546,17 +583,33 @@ const ARTIST_MATERIAL_INSPECTOR_TEXT: Record<ArtistMaterialInspectorLanguage, Ar
     assetKind: '材质类型',
     assetKindPbr: 'PBR 标准材质球',
     assetKindStandard: 'Standard 标准材质球',
-    assetBaseColor: '资产基础色',
-    assetBaseTexture: '资产基础贴图',
-    assetBrightness: '资产亮度',
-    assetSaturation: '资产饱和度',
-    assetContrast: '资产对比度',
-    assetHue: '资产色相',
-    assetMetallic: '资产金属度',
-    assetRoughness: '资产粗糙度',
-    assetEmissionColor: '资产自发光色',
-    assetEmissionIntensity: '资产自发光强度',
-    assetEmissionMaskUrl: '资产遮罩贴图',
+    assetLightingModel: '光照模型',
+    assetLightingModelLit: '受光照',
+    assetLightingModelUnlit: '不受光照',
+    assetBaseColor: '基础色',
+    assetBaseTexture: '基础贴图',
+    assetBrightness: '亮度',
+    assetSaturation: '饱和度',
+    assetContrast: '对比度',
+    assetHue: '色相',
+    assetNormalTexture: '法线贴图',
+    assetNormalStrength: '法线强度',
+    assetMetallic: '金属度',
+    assetRoughness: '粗糙度',
+    assetMetallicRoughnessTexture: '金属粗糙贴图',
+    assetOcclusionTexture: 'AO 贴图',
+    assetOcclusionStrength: 'AO 强度',
+    assetEmissionColor: '自发光色',
+    assetEmissionIntensity: '自发光强度',
+    assetEmissionTexture: '自发光贴图',
+    assetEmissionMaskUrl: '遮罩贴图',
+    assetAlphaMode: '透明模式',
+    assetAlphaModeOpaque: '不透明',
+    assetAlphaModeMask: '遮罩',
+    assetAlphaModeBlend: '半透明',
+    assetAlphaOpacity: '不透明度',
+    assetAlphaCutoff: 'Alpha 阈值',
+    assetAlphaTexture: 'Alpha 贴图',
     createSlotMaterial: '添加材质槽',
     slotList: '槽列表',
     slotId: '槽 ID',
@@ -564,6 +617,7 @@ const ARTIST_MATERIAL_INSPECTOR_TEXT: Record<ArtistMaterialInspectorLanguage, Ar
     slotMaterialAsset: '槽材质资产',
     slotSourceMaterial: '源材质',
     slotBindingPath: '绑定路径',
+    reimportConflicts: '重导入材质冲突',
     legacySlotRaw: '旧槽材质原始值',
     summaryAsset: (name) => `资产：${name}`,
     summaryMissingAsset: '资产缺失',
@@ -571,27 +625,51 @@ const ARTIST_MATERIAL_INSPECTOR_TEXT: Record<ArtistMaterialInspectorLanguage, Ar
     summaryInherit: '继承',
     summaryAddSlot: '添加槽',
     summarySlotCount: (count) => `${count} 个槽`,
+    formatUsageCount: (count) => (count > 0 ? `被 ${count} 处使用` : '未被使用'),
+    formatMaterialEditImpact: (count) => {
+      if (count <= 0) return '当前未被场景使用，修改只会改变材质资产本身。';
+      if (count === 1) return '修改会影响当前绑定。';
+      return `共享材质，修改会影响 ${count} 处绑定。`;
+    },
+    formatDuplicateMaterialImpact: (count) => {
+      if (count <= 0) return '复制后创建一个可独立编辑的材质资产。';
+      if (count === 1) return '复制后当前对象或槽会使用独立材质。';
+      return `复制后当前对象或槽会使用独立材质，原 ${count} 处共享绑定不被继续修改。`;
+    },
+    formatReimportConflictSummary: (count) => `检测到 ${count} 个材质槽重导入差异；已保留现有绑定，需人工确认不可匹配项。`,
     tooltips: {
       language: '切换美术材质 Inspector 的显示语言。',
       materialAsset: '选择项目级共享材质资产，或使用只读的默认 PBR 材质。',
       baseTexture: '选择项目贴图作为 Base Color 贴图。',
       assetProfile: '共享材质资产的参数会影响所有绑定该资产的节点。',
-      assetName: '材质资产名称为只读，避免破坏历史按名称查找链路。',
+      assetName: '材质资产名称只用于展示；绑定使用稳定材质 ID，不受重命名影响。',
       assetKind: '材质球类型决定运行时使用 PBRMaterial 或 StandardMaterial。',
+      lightingModel: '受光照材质会响应环境光和直射光；不受光照材质适合 UI、特效、图标和导视标记。',
       baseColor: '基础颜色。修改共享材质资产会影响所有绑定该材质球的节点。',
       duplicateForObject: '复制当前材质球为这个对象或槽的独立材质，然后自动替换绑定。',
       brightness: '亮度倍率，1 为不改变。',
       saturation: '饱和度倍率，1 为不改变。',
       contrast: '对比度倍率，1 为不改变。',
       hue: '色相偏移，单位为度。',
+      normalTexture: '选择法线贴图，运行时应用到 PBR/Standard 材质的 bump/normal 通道。',
+      normalStrength: '法线强度，1 为贴图原始强度。',
       metallic: '金属度，范围 0 到 1。',
       roughness: '粗糙度，范围 0 到 1。',
+      metallicRoughnessTexture: '选择金属粗糙贴图。PBR 运行时按 GLB 常用约定读取蓝色金属度、绿色粗糙度。',
+      occlusionTexture: '选择环境遮蔽 AO 贴图，只对 PBR 材质生效。',
+      occlusionStrength: 'AO 强度，1 为贴图原始强度。',
       emissionColor: '自发光颜色，会与强度相乘。',
       emissionIntensity: '自发光强度，0 表示无自发光。',
+      emissionTexture: '选择自发光贴图；若未设置则兼容使用旧遮罩贴图。',
       emissionMaskUrl: '选择灰度贴图作为自发光强度遮罩。',
+      alphaMode: '透明模式：不透明、Alpha Test 遮罩或 Alpha Blend 半透明。',
+      alphaOpacity: '材质整体不透明度，1 为完全不透明。',
+      alphaCutoff: '遮罩模式的 Alpha 截断阈值。',
+      alphaTexture: '选择 Alpha/Opacity 贴图。',
       createSlotMaterial: '输入 GLB 子节点或 mesh 的 ownerNodePath 来添加槽绑定，初始使用默认 PBR 材质。',
       slotList: '根节点上的材质槽为只读总览。',
       slotOwnerPath: '材质槽定位到的子节点或 mesh 路径。',
+      reimportConflicts: '模型重导入后无法自动匹配或源材质变化的槽。现有绑定会保留，不会静默删除或覆盖。',
       legacySlotRaw: '旧 childMaterials 配置只读展示；新编辑入口请使用槽材质资产。',
     },
   },
@@ -618,17 +696,33 @@ const ARTIST_MATERIAL_INSPECTOR_TEXT: Record<ArtistMaterialInspectorLanguage, Ar
     assetKind: 'Material Kind',
     assetKindPbr: 'PBR standard material',
     assetKindStandard: 'Standard material',
-    assetBaseColor: 'Asset Base Color',
-    assetBaseTexture: 'Asset Base Texture',
-    assetBrightness: 'Asset Brightness',
-    assetSaturation: 'Asset Saturation',
-    assetContrast: 'Asset Contrast',
-    assetHue: 'Asset Hue',
-    assetMetallic: 'Asset Metallic',
-    assetRoughness: 'Asset Roughness',
-    assetEmissionColor: 'Asset Emission Color',
-    assetEmissionIntensity: 'Asset Emission Intensity',
-    assetEmissionMaskUrl: 'Asset Mask Texture',
+    assetLightingModel: 'Lighting Model',
+    assetLightingModelLit: 'Lit',
+    assetLightingModelUnlit: 'Unlit',
+    assetBaseColor: 'Base Color',
+    assetBaseTexture: 'Base Texture',
+    assetBrightness: 'Brightness',
+    assetSaturation: 'Saturation',
+    assetContrast: 'Contrast',
+    assetHue: 'Hue',
+    assetNormalTexture: 'Normal Texture',
+    assetNormalStrength: 'Normal Strength',
+    assetMetallic: 'Metallic',
+    assetRoughness: 'Roughness',
+    assetMetallicRoughnessTexture: 'Metallic-Roughness Texture',
+    assetOcclusionTexture: 'AO Texture',
+    assetOcclusionStrength: 'AO Strength',
+    assetEmissionColor: 'Emission Color',
+    assetEmissionIntensity: 'Emission Intensity',
+    assetEmissionTexture: 'Emission Texture',
+    assetEmissionMaskUrl: 'Mask Texture',
+    assetAlphaMode: 'Alpha Mode',
+    assetAlphaModeOpaque: 'Opaque',
+    assetAlphaModeMask: 'Mask',
+    assetAlphaModeBlend: 'Blend',
+    assetAlphaOpacity: 'Opacity',
+    assetAlphaCutoff: 'Alpha Cutoff',
+    assetAlphaTexture: 'Alpha Texture',
     createSlotMaterial: 'Add Material Slot',
     slotList: 'Slot List',
     slotId: 'Slot ID',
@@ -636,6 +730,7 @@ const ARTIST_MATERIAL_INSPECTOR_TEXT: Record<ArtistMaterialInspectorLanguage, Ar
     slotMaterialAsset: 'Slot Material Asset',
     slotSourceMaterial: 'Source Material',
     slotBindingPath: 'Binding Path',
+    reimportConflicts: 'Reimport Material Conflicts',
     legacySlotRaw: 'Legacy Slot Raw',
     summaryAsset: (name) => `Asset: ${name}`,
     summaryMissingAsset: 'Missing asset',
@@ -643,27 +738,51 @@ const ARTIST_MATERIAL_INSPECTOR_TEXT: Record<ArtistMaterialInspectorLanguage, Ar
     summaryInherit: 'Inherit',
     summaryAddSlot: 'Add slot',
     summarySlotCount: (count) => `${count} slot${count === 1 ? '' : 's'}`,
+    formatUsageCount: (count) => (count > 0 ? `Used in ${count} place${count === 1 ? '' : 's'}` : 'Unused'),
+    formatMaterialEditImpact: (count) => {
+      if (count <= 0) return 'This material is not used in the scene; edits only change the asset.';
+      if (count === 1) return 'Edits affect the current binding.';
+      return `Shared material: edits affect ${count} bindings.`;
+    },
+    formatDuplicateMaterialImpact: (count) => {
+      if (count <= 0) return 'Copying creates an independently editable material asset.';
+      if (count === 1) return 'After copying, the current object or slot uses an independent material.';
+      return `After copying, the current object or slot uses an independent material; the original ${count} shared bindings are left unchanged.`;
+    },
+    formatReimportConflictSummary: (count) => `${count} material slot reimport difference${count === 1 ? '' : 's'} detected. Existing bindings are preserved until unmatched items are resolved.`,
     tooltips: {
       language: 'Switch the artist material Inspector language.',
       materialAsset: 'Choose a project-level shared material asset, or use the read-only Default PBR material.',
       baseTexture: 'Choose a project texture as the Base Color texture.',
       assetProfile: 'Shared asset parameters affect every node bound to this material asset.',
-      assetName: 'Material asset names are readonly to preserve legacy name-based lookups.',
+      assetName: 'Material asset names are display-only for bindings; stable material IDs survive renames.',
       assetKind: 'The material kind controls whether runtime projection uses PBRMaterial or StandardMaterial.',
+      lightingModel: 'Lit materials respond to environment and directional lights; unlit materials are useful for UI, VFX, icons, and markers.',
       baseColor: 'Base color. Editing the shared material asset affects every bound node.',
       duplicateForObject: 'Copy the current material as an independent material for this object or slot, then bind it automatically.',
       brightness: 'Brightness multiplier. 1 leaves the color unchanged.',
       saturation: 'Saturation multiplier. 1 leaves the color unchanged.',
       contrast: 'Contrast multiplier. 1 leaves the color unchanged.',
       hue: 'Hue offset in degrees.',
+      normalTexture: 'Choose a normal map applied to the runtime bump/normal channel for PBR and Standard materials.',
+      normalStrength: 'Normal strength. 1 keeps the texture at original strength.',
       metallic: 'Metallic value from 0 to 1.',
       roughness: 'Roughness value from 0 to 1.',
+      metallicRoughnessTexture: 'Choose a metallic-roughness texture. PBR runtime reads blue as metallic and green as roughness by the common GLB convention.',
+      occlusionTexture: 'Choose an ambient occlusion texture. Applies to PBR materials.',
+      occlusionStrength: 'Ambient occlusion strength. 1 keeps the texture at original strength.',
       emissionColor: 'Emission color multiplied by emission intensity.',
       emissionIntensity: 'Emission intensity. 0 means no emission.',
+      emissionTexture: 'Choose an emissive texture. If empty, the legacy mask texture remains the fallback.',
       emissionMaskUrl: 'Choose a grayscale texture to modulate emission intensity.',
+      alphaMode: 'Alpha mode: opaque, alpha-test mask, or alpha-blend transparency.',
+      alphaOpacity: 'Overall material opacity. 1 is fully opaque.',
+      alphaCutoff: 'Alpha-test cutoff threshold for mask mode.',
+      alphaTexture: 'Choose an alpha/opacity texture.',
       createSlotMaterial: 'Enter a GLB child node or mesh ownerNodePath to add a slot binding with the Default PBR material.',
       slotList: 'Material slots on the root object are a readonly overview.',
       slotOwnerPath: 'Child node or mesh path targeted by this material slot.',
+      reimportConflicts: 'Slots whose source material changed or could not be matched after model reimport. Existing bindings are preserved instead of being silently deleted or overwritten.',
       legacySlotRaw: 'Readonly legacy childMaterials config. Use slot material assets for new edits.',
     },
   },
@@ -681,6 +800,21 @@ export interface EditorSceneInspectorContext {
 }
 
 const MATERIAL_LANGUAGE_OPTIONS = CAMERA_LANGUAGE_OPTIONS;
+
+function createMaterialLightingModelOptions(text: ArtistMaterialInspectorText): Array<{ label: string; value: 'lit' | 'unlit' }> {
+  return [
+    { label: text.assetLightingModelLit, value: 'lit' },
+    { label: text.assetLightingModelUnlit, value: 'unlit' },
+  ];
+}
+
+function createMaterialAlphaModeOptions(text: ArtistMaterialInspectorText): Array<{ label: string; value: 'opaque' | 'mask' | 'blend' }> {
+  return [
+    { label: text.assetAlphaModeOpaque, value: 'opaque' },
+    { label: text.assetAlphaModeMask, value: 'mask' },
+    { label: text.assetAlphaModeBlend, value: 'blend' },
+  ];
+}
 
 function getCameraInspectorText(language: EditorSceneCameraInspectorLanguage): CameraInspectorText {
   return CAMERA_INSPECTOR_TEXT[language] ?? CAMERA_INSPECTOR_TEXT.zh;
@@ -1099,6 +1233,20 @@ export function ensureEditorSceneEnvironmentDefaults(document: EditorSceneDocume
   gameObjects = migratedSlotBindings.gameObjects;
   changed = changed || migratedSlotBindings.changed;
 
+  const reimportSlotBindings = reconcileEditorSceneMaterialSlotReimportBindings(
+    {
+      ...documentWithGuids,
+      scene: {
+        ...documentWithGuids.scene,
+        gameObjects,
+        materialAssets,
+      },
+    },
+    gameObjects,
+  );
+  gameObjects = reimportSlotBindings.gameObjects;
+  changed = changed || reimportSlotBindings.changed;
+
   const importedMaterialDefaults = ensureImportedEditorSceneMaterialDefaults(documentWithGuids, materialAssets, gameObjects);
   materialAssets = importedMaterialDefaults.materialAssets;
   gameObjects = importedMaterialDefaults.gameObjects;
@@ -1192,6 +1340,33 @@ function migrateEditorSceneMaterialSlotBindings(
       delete nextGameObject.overrides.childMaterialBindings?.[legacy.ownerNodePath];
       if (nextGameObject.overrides.childMaterialBindings && Object.keys(nextGameObject.overrides.childMaterialBindings).length === 0) {
         delete nextGameObject.overrides.childMaterialBindings;
+      }
+      changed = true;
+    }
+    return nextGameObject;
+  });
+  return { gameObjects: nextGameObjects, changed };
+}
+
+function reconcileEditorSceneMaterialSlotReimportBindings(
+  document: EditorSceneDocument,
+  gameObjects: readonly EditorSceneGameObject[],
+): { gameObjects: EditorSceneGameObject[]; changed: boolean } {
+  let changed = false;
+  const nextGameObjects = gameObjects.map((gameObject) => {
+    const diff = resolvePlayableEditorSceneMaterialSlotReimportDiff(document, gameObject);
+    if (diff.bindingRemaps.length === 0) return gameObject;
+    let nextGameObject = gameObject;
+    for (const remap of diff.bindingRemaps) {
+      const sourceBinding = nextGameObject.overrides?.materialSlotBindings?.[remap.fromSlotId];
+      if (!sourceBinding || nextGameObject.overrides?.materialSlotBindings?.[remap.toSlotId]) continue;
+      nextGameObject = structuredClone(nextGameObject);
+      nextGameObject.overrides = nextGameObject.overrides ?? {};
+      nextGameObject.overrides.materialSlotBindings = nextGameObject.overrides.materialSlotBindings ?? {};
+      nextGameObject.overrides.materialSlotBindings[remap.toSlotId] = structuredClone(sourceBinding);
+      delete nextGameObject.overrides.materialSlotBindings[remap.fromSlotId];
+      if (Object.keys(nextGameObject.overrides.materialSlotBindings).length === 0) {
+        delete nextGameObject.overrides.materialSlotBindings;
       }
       changed = true;
     }
@@ -1302,6 +1477,7 @@ function createImportedEditorSceneMaterialAsset(
   const guid = createStableEditorSceneMaterialAssetGuid(`imported:${sourceAssetGuid}:${sourceMaterialIndex}`);
   const materialName = getEditorSceneSlotSourceMaterialName(slot, sourceMaterialIndex)
     ?? `${sourceAsset.displayName ?? sourceAsset.id} Material ${sourceMaterialIndex + 1}`;
+  const sourceProfile = getEditorSceneSlotSourceMaterialProfile(slot, sourceMaterialIndex)?.profile;
   return {
     id: createEditorSceneMaterialAssetId(guid),
     guid,
@@ -1315,8 +1491,50 @@ function createImportedEditorSceneMaterialAsset(
       sourceMaterialIndex,
       sourceMaterialName: materialName,
     },
-    profile: structuredClone(DEFAULT_PBR_MATERIAL_ASSET.profile),
+    profile: mergeEditorSceneImportedMaterialProfile(sourceProfile),
   };
+}
+
+function mergeEditorSceneImportedMaterialProfile(sourceProfile: ArtistMaterialProfile | null | undefined): ArtistMaterialProfile {
+  const baseProfile = structuredClone(DEFAULT_PBR_MATERIAL_ASSET.profile);
+  if (!sourceProfile || typeof sourceProfile !== 'object') return baseProfile;
+  const nextProfile: ArtistMaterialProfile = {
+    ...baseProfile,
+    ...structuredClone(sourceProfile),
+  };
+  nextProfile.baseColor = {
+    ...(baseProfile.baseColor ?? {}),
+    ...(sourceProfile.baseColor ?? {}),
+  };
+  if (baseProfile.normal || sourceProfile.normal) {
+    nextProfile.normal = {
+      ...(baseProfile.normal ?? {}),
+      ...(sourceProfile.normal ?? {}),
+    };
+  }
+  if (baseProfile.metallicRoughness || sourceProfile.metallicRoughness) {
+    nextProfile.metallicRoughness = {
+      ...(baseProfile.metallicRoughness ?? {}),
+      ...(sourceProfile.metallicRoughness ?? {}),
+    };
+  }
+  if (baseProfile.occlusion || sourceProfile.occlusion) {
+    nextProfile.occlusion = {
+      ...(baseProfile.occlusion ?? {}),
+      ...(sourceProfile.occlusion ?? {}),
+    };
+  }
+  nextProfile.emission = {
+    ...(baseProfile.emission ?? {}),
+    ...(sourceProfile.emission ?? {}),
+  };
+  if (baseProfile.alpha || sourceProfile.alpha) {
+    nextProfile.alpha = {
+      ...(baseProfile.alpha ?? {}),
+      ...(sourceProfile.alpha ?? {}),
+    };
+  }
+  return nextProfile;
 }
 
 function createEditorSceneMaterialAssetId(guid: string): string {
@@ -1405,7 +1623,16 @@ function getEditorSceneSlotSourceMaterialName(
   const names = slot.materialNames ?? [];
   const index = indices.findIndex(value => value === sourceMaterialIndex);
   const name = index >= 0 ? names[index] : sourceMaterialIndex === slot.sourceMaterialIndex ? slot.materialName : null;
-  return typeof name === 'string' && name.trim() ? name.trim() : null;
+  if (typeof name === 'string' && name.trim()) return name.trim();
+  const sourceProfileName = getEditorSceneSlotSourceMaterialProfile(slot, sourceMaterialIndex)?.materialName;
+  return typeof sourceProfileName === 'string' && sourceProfileName.trim() ? sourceProfileName.trim() : null;
+}
+
+function getEditorSceneSlotSourceMaterialProfile(
+  slot: EditorSceneChildMaterialSlot,
+  sourceMaterialIndex: number,
+): EditorSceneSourceMaterialProfile | null {
+  return slot.sourceMaterialProfiles?.find((profile) => profile.sourceMaterialIndex === sourceMaterialIndex) ?? null;
 }
 
 function ensureDefaultEditorSceneMaterialAssets(
@@ -2846,6 +3073,10 @@ function createArtistMaterialInspectorSections(
   const rootBinding = gameObject.overrides?.materialBinding;
   const rootAsset = findEditorSceneMaterialAsset(document, rootBinding?.materialAssetId ?? '');
   const hasDetectedSlots = hasDetectedModelMaterialSlots(document, gameObject);
+  const hasReadonlyReimportConflicts = nodeKind !== 'primitive'
+    && hasReadonlyEditorSceneMaterialSlotReimportIssues(
+      resolvePlayableEditorSceneMaterialSlotReimportDiff(document, gameObject),
+    );
   if (!hasDetectedSlots) {
     sections.push({
       id: 'artistMaterial',
@@ -2872,7 +3103,7 @@ function createArtistMaterialInspectorSections(
 
   const slotProperties = nodeKind === 'primitive'
     ? []
-    : hasDetectedSlots
+    : hasDetectedSlots || hasReadonlyReimportConflicts
       ? createReadonlyMaterialSlotListInspectorProperties(document, gameObject, text)
       : createChildMaterialBindingInspectorProperties(document, gameObject, nodeKind, context);
   if (slotProperties.length > 0) {
@@ -2882,8 +3113,8 @@ function createArtistMaterialInspectorSections(
       order: 48,
       placement: 'body',
       summary: createChildMaterialBindingSummary(document, gameObject, text),
-      persistence: hasDetectedSlots ? 'readonly' : 'document',
-      collapsedByDefault: !hasDetectedSlots,
+      persistence: hasDetectedSlots || hasReadonlyReimportConflicts ? 'readonly' : 'document',
+      collapsedByDefault: !(hasDetectedSlots || hasReadonlyReimportConflicts),
       properties: slotProperties,
     });
   }
@@ -3018,7 +3249,18 @@ function createReadonlyMaterialSlotListInspectorProperties(
 ): InspectorProperty<EditorSceneDocument>[] {
   const slots = collectEditorSceneChildMaterialSlots(document, gameObject);
   if (slots.length === 0) return [];
-  return [{
+  const properties: InspectorProperty<EditorSceneDocument>[] = [];
+  const reimportDiff = resolvePlayableEditorSceneMaterialSlotReimportDiff(document, gameObject);
+  if (reimportDiff.issues.length > 0) {
+    properties.push(createReadonlyInspectorProperty(
+      'asset.materialSlots.reimportConflicts',
+      text.reimportConflicts,
+      formatEditorSceneMaterialSlotReimportIssues(reimportDiff.issues, text),
+      -1,
+      text.tooltips.reimportConflicts,
+    ));
+  }
+  properties.push({
     path: 'asset.materialSlots',
     label: text.slotList,
     valueType: 'object',
@@ -3045,7 +3287,42 @@ function createReadonlyMaterialSlotListInspectorProperties(
     tags: ['ArtistMaterial', 'MaterialSlot', 'Readonly'],
     tooltip: text.tooltips.slotList,
     document,
-  }];
+  });
+  return properties;
+}
+
+function hasReadonlyEditorSceneMaterialSlotReimportIssues(
+  diff: ReturnType<typeof resolvePlayableEditorSceneMaterialSlotReimportDiff>,
+): boolean {
+  return diff.issues.some(issue => issue.reason !== 'unmatched-legacy-binding');
+}
+
+function formatEditorSceneMaterialSlotReimportIssues(
+  issues: ReturnType<typeof resolvePlayableEditorSceneMaterialSlotReimportDiff>['issues'],
+  text: ArtistMaterialInspectorText,
+): string {
+  const lines = issues.map((issue) => {
+    const target = issue.label || issue.ownerNodePath || issue.slotId || issue.previousSlotId || issue.bindingPath || 'slot';
+    if (issue.reason === 'source-material-changed') {
+      const from = issue.previousSourceMaterialIndex == null ? '?' : `#${issue.previousSourceMaterialIndex}`;
+      const to = issue.sourceMaterialIndex == null ? '?' : `#${issue.sourceMaterialIndex}`;
+      return `${target}: source material ${from} -> ${to}; ${issue.materialAssetId ?? text.inheritNone}`;
+    }
+    if (issue.reason === 'slot-removed') {
+      return `${target}: removed slot; ${issue.materialAssetId ?? text.inheritNone}`;
+    }
+    if (issue.reason === 'unmatched-legacy-binding') {
+      return `${target}: unmatched legacy binding; ${issue.materialAssetId ?? text.inheritNone}`;
+    }
+    if (issue.reason === 'slot-added') {
+      return `${target}: added slot without binding`;
+    }
+    return `${target}: ${issue.status}`;
+  });
+  return [
+    text.formatReimportConflictSummary(issues.length),
+    ...lines,
+  ].join('\n');
 }
 
 function createReadonlyMaterialSlotListItem(
@@ -3063,6 +3340,7 @@ function createReadonlyMaterialSlotListItem(
   return {
     key: getEditorSceneSlotSelectionKey(slot),
     label: slot.label || formatEditorSceneMaterialSlotLabel(slot.ownerNodePath, slotIndex, text),
+    selectionTargetId: createEditorSceneAssetMeshSelectionId(gameObject.id, getEditorSceneSlotSelectionKey(slot)),
     ...(slot.slotId ? { slotId: slot.slotId } : {}),
     ownerNodePath: slot.ownerNodePath,
     materialAssetId: binding?.materialAssetId ?? '',
@@ -3085,6 +3363,22 @@ type EditorSceneChildMaterialSlot = {
   sourceMaterialIndices?: number[];
   materialName?: string;
   materialNames?: string[];
+  sourceMaterialProfiles?: EditorSceneSourceMaterialProfile[];
+};
+
+type EditorSceneSourceMaterialProfile = {
+  sourceMaterialIndex: number;
+  materialName?: string;
+  profile?: ArtistMaterialProfile;
+  textureHints?: Array<{
+    profilePath: string;
+    reason: string;
+    textureIndex?: number;
+    imageIndex?: number;
+    bufferView?: number;
+    mimeType?: string;
+    uri?: string;
+  }>;
 };
 
 function collectEditorSceneChildMaterialSlots(
@@ -3216,6 +3510,8 @@ function createMaterialAssetPickerControlOptions(
       currentValue,
       pickerText: createEditorSceneMaterialPickerText(text),
       displayText: createEditorSceneMaterialDisplayText(text),
+      document,
+      ownershipText: createEditorSceneMaterialOwnershipText(text),
     }),
     actionDisabledReason: text.batchReplaceUnsupported,
   };
@@ -3240,6 +3536,14 @@ function createEditorSceneMaterialPickerText(text: ArtistMaterialInspectorText) 
     summaryMissingAsset: text.summaryMissingAsset,
     summaryInherit: text.summaryInherit,
     inheritNone: text.inheritNone,
+  };
+}
+
+function createEditorSceneMaterialOwnershipText(text: ArtistMaterialInspectorText) {
+  return {
+    formatUsageCount: text.formatUsageCount,
+    formatEditImpact: text.formatMaterialEditImpact,
+    formatDuplicateImpact: text.formatDuplicateMaterialImpact,
   };
 }
 
@@ -3284,11 +3588,12 @@ function createArtistMaterialAssetInspectorProperties(
   const profile = materialAsset.profile ?? {};
   const properties: InspectorProperty<EditorSceneDocument>[] = [
     ...identityProperties,
+    createMaterialAssetEnumInspectorProperty(document, materialAsset, 'profile.lightingModel', text.assetLightingModel, profile.lightingModel ?? 'lit', orderOffset + 1, createMaterialLightingModelOptions(text), text.tooltips.lightingModel),
     createMaterialAssetFieldInspectorProperty(document, materialAsset, 'profile.baseColor.color', text.assetBaseColor, profile.baseColor?.color ?? { r: 1, g: 1, b: 1 }, orderOffset + 2, 'color', 'color', 'immediate', text.tooltips.baseColor),
     createMaterialTexturePickerInspectorProperty({
-      path: `${MATERIAL_ASSET_FIELD_PATH_PREFIX}${materialAsset.id}.profile.baseColor.texture.url`,
+      path: `${MATERIAL_ASSET_FIELD_PATH_PREFIX}${materialAsset.id}.profile.baseColor.texture.textureAssetId`,
       label: text.assetBaseTexture,
-      value: profile.baseColor?.texture?.url ?? '',
+      value: readArtistMaterialTexturePickerValue(profile.baseColor?.texture),
       order: orderOffset + 3,
       text,
       context,
@@ -3298,24 +3603,74 @@ function createArtistMaterialAssetInspectorProperties(
     createMaterialAssetNumberInspectorProperty(document, materialAsset, 'profile.baseColor.saturation', text.assetSaturation, profile.baseColor?.saturation ?? 1, orderOffset + 5, 0, 2, 0.05, text.tooltips.saturation),
     createMaterialAssetNumberInspectorProperty(document, materialAsset, 'profile.baseColor.contrast', text.assetContrast, profile.baseColor?.contrast ?? 1, orderOffset + 6, 0, 2, 0.05, text.tooltips.contrast),
     createMaterialAssetNumberInspectorProperty(document, materialAsset, 'profile.baseColor.hue', text.assetHue, profile.baseColor?.hue ?? 0, orderOffset + 7, -180, 180, 1, text.tooltips.hue),
+    createMaterialTexturePickerInspectorProperty({
+      path: `${MATERIAL_ASSET_FIELD_PATH_PREFIX}${materialAsset.id}.profile.normal.texture.textureAssetId`,
+      label: text.assetNormalTexture,
+      value: readArtistMaterialTexturePickerValue(profile.normal?.texture),
+      order: orderOffset + 8,
+      text,
+      context,
+      tooltip: text.tooltips.normalTexture,
+    }),
+    createMaterialAssetNumberInspectorProperty(document, materialAsset, 'profile.normal.strength', text.assetNormalStrength, profile.normal?.strength ?? 1, orderOffset + 9, 0, 4, 0.05, text.tooltips.normalStrength),
   ];
   if (materialKind === 'pbr') {
     properties.push(
-      createMaterialAssetNumberInspectorProperty(document, materialAsset, 'profile.metallic', text.assetMetallic, profile.metallic ?? 0, orderOffset + 8, 0, 1, 0.05, text.tooltips.metallic),
-      createMaterialAssetNumberInspectorProperty(document, materialAsset, 'profile.roughness', text.assetRoughness, profile.roughness ?? 1, orderOffset + 9, 0, 1, 0.05, text.tooltips.roughness),
+      createMaterialAssetNumberInspectorProperty(document, materialAsset, 'profile.metallic', text.assetMetallic, profile.metallic ?? 0, orderOffset + 10, 0, 1, 0.05, text.tooltips.metallic),
+      createMaterialAssetNumberInspectorProperty(document, materialAsset, 'profile.roughness', text.assetRoughness, profile.roughness ?? 1, orderOffset + 11, 0, 1, 0.05, text.tooltips.roughness),
+      createMaterialTexturePickerInspectorProperty({
+        path: `${MATERIAL_ASSET_FIELD_PATH_PREFIX}${materialAsset.id}.profile.metallicRoughness.texture.textureAssetId`,
+        label: text.assetMetallicRoughnessTexture,
+        value: readArtistMaterialTexturePickerValue(profile.metallicRoughness?.texture),
+        order: orderOffset + 12,
+        text,
+        context,
+        tooltip: text.tooltips.metallicRoughnessTexture,
+      }),
+      createMaterialTexturePickerInspectorProperty({
+        path: `${MATERIAL_ASSET_FIELD_PATH_PREFIX}${materialAsset.id}.profile.occlusion.texture.textureAssetId`,
+        label: text.assetOcclusionTexture,
+        value: readArtistMaterialTexturePickerValue(profile.occlusion?.texture),
+        order: orderOffset + 13,
+        text,
+        context,
+        tooltip: text.tooltips.occlusionTexture,
+      }),
+      createMaterialAssetNumberInspectorProperty(document, materialAsset, 'profile.occlusion.strength', text.assetOcclusionStrength, profile.occlusion?.strength ?? 1, orderOffset + 14, 0, 4, 0.05, text.tooltips.occlusionStrength),
     );
   }
   properties.push(
-    createMaterialAssetFieldInspectorProperty(document, materialAsset, 'profile.emission.color', text.assetEmissionColor, profile.emission?.color ?? { r: 0, g: 0, b: 0 }, orderOffset + 10, 'color', 'color', 'immediate', text.tooltips.emissionColor),
-    createMaterialAssetNumberInspectorProperty(document, materialAsset, 'profile.emission.intensity', text.assetEmissionIntensity, profile.emission?.intensity ?? 0, orderOffset + 11, 0, undefined, 0.05, text.tooltips.emissionIntensity),
+    createMaterialAssetFieldInspectorProperty(document, materialAsset, 'profile.emission.color', text.assetEmissionColor, profile.emission?.color ?? { r: 0, g: 0, b: 0 }, orderOffset + 20, 'color', 'color', 'immediate', text.tooltips.emissionColor),
+    createMaterialAssetNumberInspectorProperty(document, materialAsset, 'profile.emission.intensity', text.assetEmissionIntensity, profile.emission?.intensity ?? 0, orderOffset + 21, 0, undefined, 0.05, text.tooltips.emissionIntensity),
     createMaterialTexturePickerInspectorProperty({
-      path: `${MATERIAL_ASSET_FIELD_PATH_PREFIX}${materialAsset.id}.profile.emission.maskTexture.url`,
+      path: `${MATERIAL_ASSET_FIELD_PATH_PREFIX}${materialAsset.id}.profile.emission.texture.textureAssetId`,
+      label: text.assetEmissionTexture,
+      value: readArtistMaterialTexturePickerValue(profile.emission?.texture),
+      order: orderOffset + 22,
+      text,
+      context,
+      tooltip: text.tooltips.emissionTexture,
+    }),
+    createMaterialTexturePickerInspectorProperty({
+      path: `${MATERIAL_ASSET_FIELD_PATH_PREFIX}${materialAsset.id}.profile.emission.maskTexture.textureAssetId`,
       label: text.assetEmissionMaskUrl,
-      value: profile.emission?.maskTexture?.url ?? '',
-      order: orderOffset + 12,
+      value: readArtistMaterialTexturePickerValue(profile.emission?.maskTexture),
+      order: orderOffset + 23,
       text,
       context,
       tooltip: text.tooltips.emissionMaskUrl,
+    }),
+    createMaterialAssetEnumInspectorProperty(document, materialAsset, 'profile.alpha.mode', text.assetAlphaMode, profile.alpha?.mode ?? 'opaque', orderOffset + 30, createMaterialAlphaModeOptions(text), text.tooltips.alphaMode),
+    createMaterialAssetNumberInspectorProperty(document, materialAsset, 'profile.alpha.opacity', text.assetAlphaOpacity, profile.alpha?.opacity ?? 1, orderOffset + 31, 0, 1, 0.05, text.tooltips.alphaOpacity),
+    createMaterialAssetNumberInspectorProperty(document, materialAsset, 'profile.alpha.cutoff', text.assetAlphaCutoff, profile.alpha?.cutoff ?? 0.5, orderOffset + 32, 0, 1, 0.01, text.tooltips.alphaCutoff),
+    createMaterialTexturePickerInspectorProperty({
+      path: `${MATERIAL_ASSET_FIELD_PATH_PREFIX}${materialAsset.id}.profile.alpha.texture.textureAssetId`,
+      label: text.assetAlphaTexture,
+      value: readArtistMaterialTexturePickerValue(profile.alpha?.texture),
+      order: orderOffset + 33,
+      text,
+      context,
+      tooltip: text.tooltips.alphaTexture,
     }),
   );
   return properties;
@@ -3387,12 +3742,16 @@ function createMaterialTexturePickerInspectorProperty(input: {
     tooltip: input.tooltip,
     tags: ['ArtistMaterial', 'TextureAsset'],
     controlOptions: createTexturePickerControlOptions(input.context, input.text, input.value, currentTexture),
-    validate: (value) => (
-      value == null || value === '' || (typeof value === 'string' && value.trim().length > 0)
-        ? { ok: true, value: typeof value === 'string' && value.trim() ? value.trim() : null }
-        : { ok: false, message: 'Invalid texture selection.' }
-    ),
-    coerce: (value) => (typeof value === 'string' && value.trim() ? value.trim() : null),
+    validate: (value) => {
+      const normalized = normalizeMaterialTexturePickerPropertyValue(input.context, input.path, value);
+      return normalized.ok
+        ? { ok: true, value: normalized.value }
+        : { ok: false, message: 'Invalid texture selection.' };
+    },
+    coerce: (value) => {
+      const normalized = normalizeMaterialTexturePickerPropertyValue(input.context, input.path, value);
+      return normalized.ok ? normalized.value : null;
+    },
   };
 }
 
@@ -3408,6 +3767,7 @@ function createTexturePickerControlOptions(
       currentTexture,
       currentValue,
       pickerText: createEditorSceneTexturePickerText(text),
+      candidateValue: 'assetId',
     }),
   };
 }
@@ -3417,6 +3777,30 @@ function findEditorSceneInspectorTextureAsset(
   value: string,
 ): EditorSceneInspectorTextureAsset | null {
   return findPlayableEditorSceneInspectorTextureAsset(context.textureAssets, value) as EditorSceneInspectorTextureAsset | null;
+}
+
+function readArtistMaterialTexturePickerValue(
+  texture: { textureAssetId?: string | null; url?: string | null } | null | undefined,
+): string {
+  const textureAssetId = typeof texture?.textureAssetId === 'string' ? texture.textureAssetId.trim() : '';
+  if (textureAssetId) return textureAssetId;
+  const textureUrl = typeof texture?.url === 'string' ? texture.url.trim() : '';
+  return textureUrl;
+}
+
+function normalizeMaterialTexturePickerPropertyValue(
+  context: EditorSceneInspectorContext,
+  path: string,
+  value: unknown,
+): { ok: true; value: string | null } | { ok: false } {
+  if (value == null || value === '') return { ok: true, value: null };
+  if (typeof value !== 'string') return { ok: false };
+  const trimmed = value.trim();
+  if (!trimmed) return { ok: true, value: null };
+  if (!path.endsWith('.textureAssetId')) return { ok: true, value: trimmed };
+  const textureAsset = findPlayableEditorSceneInspectorTextureAsset(context.textureAssets, trimmed);
+  if (textureAsset) return { ok: true, value: textureAsset.id };
+  return /^[A-Za-z0-9_-]+$/.test(trimmed) ? { ok: true, value: trimmed } : { ok: true, value: null };
 }
 
 function createEditorSceneTexturePickerText(text: ArtistMaterialInspectorText) {
@@ -3445,6 +3829,23 @@ function createMaterialAssetNumberInspectorProperty(
     min,
     max,
     step,
+  };
+}
+
+function createMaterialAssetEnumInspectorProperty(
+  document: EditorSceneDocument,
+  materialAsset: SceneMaterialAssetConfig,
+  path: string,
+  label: string,
+  value: string,
+  order: number,
+  options: InspectorProperty<EditorSceneDocument>['options'],
+  tooltip?: string,
+): InspectorProperty<EditorSceneDocument> {
+  return {
+    ...createMaterialAssetFieldInspectorProperty(document, materialAsset, path, label, value, order, 'enum', 'enum', 'immediate', tooltip),
+    options,
+    controlOptions: { variant: 'segmented' },
   };
 }
 

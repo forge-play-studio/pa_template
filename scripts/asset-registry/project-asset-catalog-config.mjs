@@ -16,7 +16,12 @@ export const projectAssetCatalogConfig = {
   registryPath: path.join(generatedDir, 'asset-catalog.generated.ts'),
   scenePath: path.resolve(cwd, 'src/config/scene.json'),
   rulesPath: path.resolve(cwd, 'src/config/scene-json-v2-rules.json'),
-  supportedExtensions: ['.glb', '.gltf', '.png', '.jpg', '.jpeg', '.webp', '.mp3', '.wav', '.ogg', '.m4a'],
+  supportedExtensions: [
+    '.glb', '.gltf',
+    '.png', '.jpg', '.jpeg', '.webp',
+    '.env', '.hdr', '.dds', '.ktx', '.ktx2',
+    '.mp3', '.wav', '.ogg', '.m4a',
+  ],
   commands: {
     register: 'npm run asset:register',
     unregister: 'npm run asset:unregister',
@@ -29,11 +34,25 @@ export const projectAssetCatalogConfig = {
       ...(existingMetadata ?? {}),
       ...(payloadMetadata ?? {}),
     };
+    if (kind === 'texture') {
+      const textureCapabilities = createTextureAssetCapabilities(sourcePath, metadata);
+      if (textureCapabilities) {
+        metadata.textureUsage = textureCapabilities.usage;
+        metadata.capabilities = {
+          ...(isRecord(metadata.capabilities) ? metadata.capabilities : {}),
+          materialTexture: textureCapabilities.materialTexture,
+          environmentTexture: textureCapabilities.environmentTexture,
+        };
+      }
+      return Object.keys(metadata).length > 0 ? metadata : null;
+    }
     if (kind !== 'model') return Object.keys(metadata).length > 0 ? metadata : null;
 
     const materialSlots = await extractModelMaterialSlots(sourcePath, {
       assetGuid: guid,
       assetId,
+      cwd,
+      assetsDir,
       existingMaterialSlots: metadata.materialSlots,
     });
     if (materialSlots.length === 0) {
@@ -154,7 +173,10 @@ export const projectTextureRegistryConfig = projectAssetCatalogConfig;
 async function extractModelMaterialSlots(sourcePath, context = {}) {
   try {
     const gltf = await readGltfJson(sourcePath);
-    return collectGltfMaterialSlots(gltf, context);
+    return collectGltfMaterialSlots(gltf, {
+      ...context,
+      sourcePath,
+    });
   } catch {
     return [];
   }
@@ -193,6 +215,7 @@ function collectGltfMaterialSlots(gltf, context = {}) {
   const nodes = Array.isArray(gltf.nodes) ? gltf.nodes : [];
   const meshes = Array.isArray(gltf.meshes) ? gltf.meshes : [];
   const materials = Array.isArray(gltf.materials) ? gltf.materials : [];
+  const sourceMaterialProfiles = collectGltfSourceMaterialProfiles(gltf, context);
   const sceneIndexes = collectGltfSceneRootNodeIndexes(gltf);
   const parentByNode = buildGltfParentIndex(nodes);
   const rootSet = new Set(sceneIndexes);
@@ -232,10 +255,176 @@ function collectGltfMaterialSlots(gltf, context = {}) {
       ...(materialRefs.indices.length > 0 ? { sourceMaterialIndices: materialRefs.indices } : {}),
       ...(materialName ? { materialName } : {}),
       ...(materialRefs.names.length > 0 ? { materialNames: materialRefs.names } : {}),
+      ...pickGltfSlotSourceMaterialProfiles(sourceMaterialProfiles, materialRefs.indices),
     });
   }
 
   return slots.sort((left, right) => left.ownerNodePath.localeCompare(right.ownerNodePath));
+}
+
+function collectGltfSourceMaterialProfiles(gltf, context = {}) {
+  const materials = Array.isArray(gltf?.materials) ? gltf.materials : [];
+  const profiles = [];
+  for (let sourceMaterialIndex = 0; sourceMaterialIndex < materials.length; sourceMaterialIndex += 1) {
+    const sourceProfile = readGltfSourceMaterialProfile(gltf, sourceMaterialIndex, context);
+    if (sourceProfile) profiles.push(sourceProfile);
+  }
+  return profiles;
+}
+
+function pickGltfSlotSourceMaterialProfiles(sourceProfiles, sourceMaterialIndices) {
+  if (!sourceMaterialIndices.length || !sourceProfiles.length) return {};
+  const profileByIndex = new Map(sourceProfiles.map(profile => [profile.sourceMaterialIndex, profile]));
+  const sourceMaterialProfiles = sourceMaterialIndices
+    .map(sourceMaterialIndex => profileByIndex.get(sourceMaterialIndex))
+    .filter(Boolean);
+  return sourceMaterialProfiles.length > 0 ? { sourceMaterialProfiles } : {};
+}
+
+function readGltfSourceMaterialProfile(gltf, sourceMaterialIndex, context = {}) {
+  const material = Array.isArray(gltf?.materials) ? gltf.materials[sourceMaterialIndex] : null;
+  if (!material || typeof material !== 'object') return null;
+
+  const profile = {};
+  const textureHints = [];
+  const pbr = material.pbrMetallicRoughness && typeof material.pbrMetallicRoughness === 'object'
+    ? material.pbrMetallicRoughness
+    : {};
+
+  const baseColor = {};
+  const baseColorFactor = Array.isArray(pbr.baseColorFactor) ? pbr.baseColorFactor : null;
+  const baseColorRgb = readGltfRgbFactor(baseColorFactor);
+  if (baseColorRgb) baseColor.color = baseColorRgb;
+  const baseColorTextureRef = applyGltfTextureRef(gltf, pbr.baseColorTexture, context, 'baseColor.texture', baseColor, 'texture', textureHints);
+  if (Object.keys(baseColor).length > 0) profile.baseColor = {
+    ...baseColor,
+    brightness: 1,
+    saturation: 1,
+    contrast: 1,
+    hue: 0,
+  };
+
+  const normal = {};
+  applyGltfTextureRef(gltf, material.normalTexture, context, 'normal.texture', normal, 'texture', textureHints);
+  if (Number.isFinite(material.normalTexture?.scale)) normal.strength = material.normalTexture.scale;
+  else if (normal.texture) normal.strength = 1;
+  if (Object.keys(normal).length > 0) profile.normal = normal;
+
+  profile.metallic = Number.isFinite(pbr.metallicFactor) ? pbr.metallicFactor : 1;
+  profile.roughness = Number.isFinite(pbr.roughnessFactor) ? pbr.roughnessFactor : 1;
+
+  const metallicRoughness = {};
+  applyGltfTextureRef(gltf, pbr.metallicRoughnessTexture, context, 'metallicRoughness.texture', metallicRoughness, 'texture', textureHints);
+  if (Object.keys(metallicRoughness).length > 0) profile.metallicRoughness = metallicRoughness;
+
+  const occlusion = {};
+  applyGltfTextureRef(gltf, material.occlusionTexture, context, 'occlusion.texture', occlusion, 'texture', textureHints);
+  if (Number.isFinite(material.occlusionTexture?.strength)) occlusion.strength = material.occlusionTexture.strength;
+  else if (occlusion.texture) occlusion.strength = 1;
+  if (Object.keys(occlusion).length > 0) profile.occlusion = occlusion;
+
+  const emission = {};
+  const emissiveColor = readGltfRgbFactor(Array.isArray(material.emissiveFactor) ? material.emissiveFactor : null);
+  const hasEmissionColor = emissiveColor && (emissiveColor.r !== 0 || emissiveColor.g !== 0 || emissiveColor.b !== 0);
+  if (hasEmissionColor) emission.color = emissiveColor;
+  applyGltfTextureRef(gltf, material.emissiveTexture, context, 'emission.texture', emission, 'texture', textureHints);
+  if (hasEmissionColor) {
+    emission.intensity = 1;
+  }
+  if (Object.keys(emission).length > 0) profile.emission = emission;
+
+  const alpha = {};
+  const alphaMode = normalizeGltfAlphaMode(material.alphaMode);
+  if (alphaMode) alpha.mode = alphaMode;
+  if (alphaMode === 'mask' || alphaMode === 'blend') {
+    if (baseColorFactor && Number.isFinite(baseColorFactor[3]) && baseColorFactor[3] !== 1) alpha.opacity = baseColorFactor[3];
+    if (Number.isFinite(material.alphaCutoff)) alpha.cutoff = material.alphaCutoff;
+    else if (alphaMode === 'mask') alpha.cutoff = 0.5;
+    if (baseColorTextureRef.texture) {
+      alpha.texture = structuredClone(baseColorTextureRef.texture);
+    } else if (baseColorTextureRef.hint) {
+      textureHints.push({
+        ...baseColorTextureRef.hint,
+        profilePath: 'alpha.texture',
+      });
+    }
+  }
+  if (Object.keys(alpha).length > 0) profile.alpha = alpha;
+
+  if (Object.keys(profile).length === 0 && textureHints.length === 0) return null;
+  const materialName = typeof material.name === 'string' && material.name.trim() ? material.name.trim() : '';
+  return {
+    sourceMaterialIndex,
+    ...(materialName ? { materialName } : {}),
+    ...(Object.keys(profile).length > 0 ? { profile } : {}),
+    ...(textureHints.length > 0 ? { textureHints } : {}),
+  };
+}
+
+function readGltfRgbFactor(value) {
+  if (!Array.isArray(value) || value.length < 3) return null;
+  const [r, g, b] = value;
+  return Number.isFinite(r) && Number.isFinite(g) && Number.isFinite(b) ? { r, g, b } : null;
+}
+
+function normalizeGltfAlphaMode(value) {
+  if (value === 'MASK') return 'mask';
+  if (value === 'BLEND') return 'blend';
+  if (value === 'OPAQUE') return 'opaque';
+  return null;
+}
+
+function applyGltfTextureRef(gltf, textureInfo, context, profilePath, target, targetProperty, textureHints) {
+  const result = resolveGltfTextureRef(gltf, textureInfo, context, profilePath);
+  if (result.texture) target[targetProperty] = result.texture;
+  if (result.hint) textureHints.push(result.hint);
+  return result;
+}
+
+function resolveGltfTextureRef(gltf, textureInfo, context, profilePath) {
+  const textureIndex = Number.isInteger(textureInfo?.index) ? textureInfo.index : -1;
+  if (textureIndex < 0) return {};
+  const textures = Array.isArray(gltf?.textures) ? gltf.textures : [];
+  const images = Array.isArray(gltf?.images) ? gltf.images : [];
+  const texture = textures[textureIndex];
+  const imageIndex = Number.isInteger(texture?.source) ? texture.source : -1;
+  const image = imageIndex >= 0 ? images[imageIndex] : null;
+  const uri = typeof image?.uri === 'string' ? image.uri.trim() : '';
+  const baseHint = {
+    profilePath,
+    textureIndex,
+    ...(imageIndex >= 0 ? { imageIndex } : {}),
+    ...(uri ? { uri } : {}),
+    ...(Number.isInteger(image?.bufferView) ? { bufferView: image.bufferView } : {}),
+    ...(typeof image?.mimeType === 'string' && image.mimeType.trim() ? { mimeType: image.mimeType.trim() } : {}),
+  };
+  if (image?.bufferView != null) {
+    return { hint: { ...baseHint, reason: 'embedded-texture' } };
+  }
+  if (!uri) return { hint: { ...baseHint, reason: 'missing-image-uri' } };
+  if (/^data:/i.test(uri)) {
+    return { hint: { ...baseHint, reason: 'embedded-texture' } };
+  }
+  if (/^https?:\/\//i.test(uri) || uri.startsWith('/')) {
+    return { texture: { url: uri } };
+  }
+
+  let decodedUri = uri;
+  try {
+    decodedUri = decodeURIComponent(uri);
+  } catch {
+    return { hint: { ...baseHint, reason: 'unresolved-external-texture' } };
+  }
+  const sourceDir = path.dirname(String(context.sourcePath ?? ''));
+  const absolutePath = path.resolve(sourceDir, decodedUri);
+  const assetsDir = context.assetsDir ? path.resolve(context.assetsDir) : '';
+  const cwd = context.cwd ? path.resolve(context.cwd) : '';
+  const relativeToAssets = assetsDir ? path.relative(assetsDir, absolutePath) : '../';
+  if (assetsDir && cwd && relativeToAssets && !relativeToAssets.startsWith('..') && !path.isAbsolute(relativeToAssets)) {
+    const relativeToCwd = path.relative(cwd, absolutePath).split(path.sep).join('/');
+    return { texture: { url: `/${relativeToCwd}` } };
+  }
+  return { hint: { ...baseHint, reason: 'unresolved-external-texture' } };
 }
 
 function countGltfMaterialSlotOwnerPaths(nodes, meshes, parentByNode, rootSet) {
@@ -275,6 +464,27 @@ function createPreviousMaterialSlotIdMap(rawSlots) {
 function createGltfMaterialSlotId({ assetGuid, assetId, nodeIndex, meshIndex }) {
   const seed = `${assetGuid || assetId || 'asset'}:${nodeIndex}:${meshIndex}`;
   return `slot_${stableHashToken(seed)}`;
+}
+
+function createTextureAssetCapabilities(sourcePath, metadata) {
+  if (metadata.textureUsage === 'environment' || metadata.usage === 'environment') {
+    return { usage: 'environment', materialTexture: false, environmentTexture: true };
+  }
+  if (isRecord(metadata.capabilities) && metadata.capabilities.environmentTexture === true) {
+    return { usage: 'environment', materialTexture: false, environmentTexture: true };
+  }
+  const extension = path.extname(sourcePath).toLowerCase();
+  if (['.env', '.hdr', '.dds', '.ktx', '.ktx2'].includes(extension)) {
+    return { usage: 'environment', materialTexture: false, environmentTexture: true };
+  }
+  if (['.png', '.jpg', '.jpeg', '.webp'].includes(extension)) {
+    return { usage: 'material', materialTexture: true, environmentTexture: false };
+  }
+  return null;
+}
+
+function isRecord(value) {
+  return value != null && typeof value === 'object' && !Array.isArray(value);
 }
 
 function stableHashToken(value) {

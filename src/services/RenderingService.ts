@@ -8,13 +8,18 @@
 import { Scene } from '@babylonjs/core/scene';
 import { Camera } from '@babylonjs/core/Cameras/camera';
 import {
+  createBabylonEnvironmentTextureController,
   createBabylonDefaultPostProcessPipelineController,
+  resolveEditorSceneRuntimePreviewAssetUrl,
   resolveBabylonDefaultPostProcessVolumeStack,
+  type BabylonEnvironmentTextureController,
+  type BabylonEnvironmentTextureProfile,
   type BabylonDefaultPostProcessPipelineController,
 } from '@fps-games/editor/playable-sdk';
 
 // 导入配置
 import renderingConfig from '../config/rendering.json';
+import * as editorAssets from '../assets';
 
 /**
  * 全局渲染配置接口
@@ -28,6 +33,13 @@ interface GlobalVolumeConfig {
     intensity: number;
     iblIntensity: number;
     useCocosIBL: boolean;
+    texture?: {
+      textureAssetId?: string | null;
+      url?: string | null;
+    } | null;
+    textureAssetId?: string | null;
+    textureUrl?: string | null;
+    rotationY?: number;
   };
   lights: {
     hemispheric: {
@@ -71,6 +83,7 @@ interface GlobalVolumeConfig {
 export class RenderingService {
   private scene: Scene;
   private pipeline: BabylonDefaultPostProcessPipelineController | null = null;
+  private environmentTexture: BabylonEnvironmentTextureController | null = null;
   private config: GlobalVolumeConfig;
 
   constructor(scene: Scene) {
@@ -84,6 +97,10 @@ export class RenderingService {
    * @param cameras 要应用管线的相机列表
    */
   initialize(cameras: Camera[]): void {
+    this.environmentTexture = createBabylonEnvironmentTextureController(
+      this.scene as any,
+      this.createEnvironmentTextureProfile(),
+    );
     const resolved = resolveBabylonDefaultPostProcessVolumeStack(renderingConfig);
     this.pipeline = createBabylonDefaultPostProcessPipelineController(
       this.scene as any,
@@ -119,6 +136,13 @@ export class RenderingService {
   }
 
   /**
+   * 获取环境贴图 / IBL 配置
+   */
+  getEnvironmentConfig() {
+    return this.config.environment;
+  }
+
+  /**
    * 获取渲染配置
    */
   getRenderingConfig() {
@@ -135,5 +159,65 @@ export class RenderingService {
   dispose(): void {
     this.pipeline?.dispose();
     this.pipeline = null;
+    this.environmentTexture?.dispose();
+    this.environmentTexture = null;
   }
+
+  private createEnvironmentTextureProfile(): BabylonEnvironmentTextureProfile {
+    const environment = this.config.environment;
+    return {
+      textureUrl: resolveEnvironmentTextureUrl(environment),
+      intensity: readFiniteNumber(environment.iblIntensity ?? environment.intensity, 1),
+      rotationY: readFiniteNumber(environment.rotationY, 0),
+    };
+  }
+}
+
+function resolveEnvironmentTextureUrl(environment: GlobalVolumeConfig['environment']): string | null {
+  const texture = environment.texture && typeof environment.texture === 'object'
+    ? environment.texture
+    : null;
+  const textureAssetId = readString(texture?.textureAssetId)
+    || readString(environment.textureAssetId);
+  const textureUrl = readString(texture?.url)
+    || readString(environment.textureUrl);
+  if (!textureAssetId) return isEnvironmentTextureUrl(textureUrl) ? textureUrl : null;
+  if (!isEnvironmentTextureAssetId(textureAssetId)) return isEnvironmentTextureUrl(textureUrl) ? textureUrl : null;
+  const resolvedUrl = resolveEditorSceneRuntimePreviewAssetUrl(
+    editorAssets,
+    { assetId: textureAssetId },
+    'texture',
+  );
+  return resolvedUrl && isEnvironmentTextureUrl(resolvedUrl) ? resolvedUrl : null;
+}
+
+function isEnvironmentTextureAssetId(textureAssetId: string): boolean {
+  const catalogEntry = editorAssets.ASSET_CATALOG[textureAssetId] as { metadata?: unknown; relativePath?: string } | undefined;
+  const metadata = catalogEntry?.metadata && typeof catalogEntry.metadata === 'object' && !Array.isArray(catalogEntry.metadata)
+    ? catalogEntry.metadata as Record<string, unknown>
+    : {};
+  if (metadata.textureUsage === 'environment' || metadata.usage === 'environment') return true;
+  const capabilities = metadata.capabilities && typeof metadata.capabilities === 'object' && !Array.isArray(metadata.capabilities)
+    ? metadata.capabilities as Record<string, unknown>
+    : null;
+  if (capabilities?.environmentTexture === true) return true;
+  if (capabilities?.environmentTexture === false) return false;
+  const relativePath = typeof metadata.relativePath === 'string'
+    ? metadata.relativePath
+    : typeof catalogEntry?.relativePath === 'string'
+      ? catalogEntry.relativePath
+      : '';
+  return isEnvironmentTextureUrl(relativePath);
+}
+
+function isEnvironmentTextureUrl(textureUrl: string): boolean {
+  return /\.(env|hdr|dds|ktx|ktx2)(?:[?#].*)?$/i.test(textureUrl);
+}
+
+function readString(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function readFiniteNumber(value: unknown, fallback: number): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 }

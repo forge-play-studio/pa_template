@@ -257,6 +257,9 @@ function validateArtistMaterialProfile(
     add(path, 'material asset profile must be an object');
     return;
   }
+  if (profile.lightingModel != null && profile.lightingModel !== 'lit' && profile.lightingModel !== 'unlit') {
+    add(`${path}.lightingModel`, 'lightingModel must be lit or unlit');
+  }
   if (profile.baseColor != null) {
     if (!isRecord(profile.baseColor)) add(`${path}.baseColor`, 'baseColor must be an object');
     else {
@@ -270,12 +273,47 @@ function validateArtistMaterialProfile(
   for (const key of ['metallic', 'roughness']) {
     if (profile[key] != null && !isFiniteNumber(profile[key])) add(`${path}.${key}`, `${key} must be a finite number`);
   }
+  if (profile.normal != null) {
+    if (!isRecord(profile.normal)) add(`${path}.normal`, 'normal must be an object');
+    else {
+      validateMaterialTextureRef(profile.normal.texture, `${path}.normal.texture`, add);
+      if (profile.normal.strength != null && !isFiniteNumber(profile.normal.strength)) add(`${path}.normal.strength`, 'normal strength must be a finite number');
+    }
+  }
+  if (profile.metallicRoughness != null) {
+    if (!isRecord(profile.metallicRoughness)) add(`${path}.metallicRoughness`, 'metallicRoughness must be an object');
+    else validateMaterialTextureRef(profile.metallicRoughness.texture, `${path}.metallicRoughness.texture`, add);
+  }
+  if (profile.occlusion != null) {
+    if (!isRecord(profile.occlusion)) add(`${path}.occlusion`, 'occlusion must be an object');
+    else {
+      validateMaterialTextureRef(profile.occlusion.texture, `${path}.occlusion.texture`, add);
+      if (profile.occlusion.strength != null && !isFiniteNumber(profile.occlusion.strength)) add(`${path}.occlusion.strength`, 'occlusion strength must be a finite number');
+    }
+  }
   if (profile.emission != null) {
     if (!isRecord(profile.emission)) add(`${path}.emission`, 'emission must be an object');
     else {
       validateColor(profile.emission.color, `${path}.emission.color`, add);
       if (profile.emission.intensity != null && !isFiniteNumber(profile.emission.intensity)) add(`${path}.emission.intensity`, 'emission intensity must be a finite number');
+      validateMaterialTextureRef(profile.emission.texture, `${path}.emission.texture`, add);
       validateMaterialTextureRef(profile.emission.maskTexture, `${path}.emission.maskTexture`, add);
+    }
+  }
+  if (profile.alpha != null) {
+    if (!isRecord(profile.alpha)) add(`${path}.alpha`, 'alpha must be an object');
+    else {
+      if (
+        profile.alpha.mode != null
+        && profile.alpha.mode !== 'opaque'
+        && profile.alpha.mode !== 'mask'
+        && profile.alpha.mode !== 'blend'
+      ) {
+        add(`${path}.alpha.mode`, 'alpha mode must be opaque, mask, or blend');
+      }
+      if (profile.alpha.opacity != null && !isFiniteNumber(profile.alpha.opacity)) add(`${path}.alpha.opacity`, 'alpha opacity must be a finite number');
+      if (profile.alpha.cutoff != null && !isFiniteNumber(profile.alpha.cutoff)) add(`${path}.alpha.cutoff`, 'alpha cutoff must be a finite number');
+      validateMaterialTextureRef(profile.alpha.texture, `${path}.alpha.texture`, add);
     }
   }
 }

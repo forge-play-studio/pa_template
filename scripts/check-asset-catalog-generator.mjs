@@ -18,6 +18,7 @@ const invalidProjectModel = path.join(cwd, '错误项目资产.glb');
 const sourceTexture = path.join(cwd, '地贴.png');
 const preservedModel = path.join(assetsDir, '静态模型.glb');
 const slotMetadataModel = path.join(cwd, 'slot-metadata.gltf');
+const embeddedTextureSlotMetadataModel = path.join(cwd, 'embedded-texture-slot-metadata.gltf');
 const duplicateSlotMetadataModel = path.join(cwd, 'duplicate-slot-metadata.gltf');
 const emptySlotMetadataModel = path.join(cwd, 'empty-slot-metadata.gltf');
 const codeFile = path.join(assetsDir, 'index.ts');
@@ -35,7 +36,44 @@ await fs.writeFile(slotMetadataModel, JSON.stringify({
     { name: 'Body', mesh: 0 },
   ],
   meshes: [{ name: 'BodyMesh', primitives: [{ material: 0 }, { material: 1 }] }],
-  materials: [{ name: 'Paint' }, { name: 'Frame' }],
+  materials: [{
+    name: 'Paint',
+    pbrMetallicRoughness: {
+      baseColorFactor: [0.25, 0.5, 0.75, 0.8],
+      metallicFactor: 0.3,
+      roughnessFactor: 0.6,
+      baseColorTexture: { index: 0 },
+      metallicRoughnessTexture: { index: 1 },
+    },
+    normalTexture: { index: 2, scale: 0.4 },
+    occlusionTexture: { index: 3, strength: 0.7 },
+    emissiveFactor: [0.1, 0.2, 0.3],
+    emissiveTexture: { index: 4 },
+    alphaMode: 'MASK',
+    alphaCutoff: 0.33,
+  }, {
+    name: 'Frame',
+    pbrMetallicRoughness: {
+      baseColorFactor: [1, 0, 0, 0.25],
+    },
+    emissiveTexture: { index: 5 },
+  }],
+  textures: [
+    { source: 0 },
+    { source: 1 },
+    { source: 2 },
+    { source: 3 },
+    { source: 4 },
+    { source: 5 },
+  ],
+  images: [
+    { uri: '/src/assets/textures/body-base.png' },
+    { uri: '/src/assets/textures/body-metal-rough.png' },
+    { uri: '/src/assets/textures/body-normal.png' },
+    { uri: '/src/assets/textures/body-ao.png' },
+    { uri: '/src/assets/textures/body-emissive.png' },
+    { uri: '/src/assets/textures/frame-emissive.png' },
+  ],
 }));
 await fs.writeFile(duplicateSlotMetadataModel, JSON.stringify({
   scene: 0,
@@ -49,6 +87,25 @@ await fs.writeFile(duplicateSlotMetadataModel, JSON.stringify({
     { name: 'BoltB', primitives: [{ material: 1 }] },
   ],
   materials: [{ name: 'Metal' }, { name: 'Paint' }],
+}));
+await fs.writeFile(embeddedTextureSlotMetadataModel, JSON.stringify({
+  scene: 0,
+  scenes: [{ nodes: [0] }],
+  nodes: [
+    { name: 'MaskedBody', mesh: 0 },
+  ],
+  meshes: [{ name: 'MaskedBodyMesh', primitives: [{ material: 0 }] }],
+  materials: [{
+    name: 'Masked Paint',
+    pbrMetallicRoughness: {
+      baseColorTexture: { index: 0 },
+    },
+    alphaMode: 'MASK',
+  }],
+  textures: [{ source: 0 }],
+  images: [{ bufferView: 0, mimeType: 'image/png' }],
+  bufferViews: [{ buffer: 0, byteOffset: 0, byteLength: 4 }],
+  buffers: [{ byteLength: 4 }],
 }));
 await fs.writeFile(emptySlotMetadataModel, JSON.stringify({
   scene: 0,
@@ -275,6 +332,61 @@ assert.deepEqual(slotMetadata.materialSlots, [{
   sourceMaterialIndices: [0, 1],
   materialName: 'Paint',
   materialNames: ['Paint', 'Frame'],
+  sourceMaterialProfiles: [{
+    sourceMaterialIndex: 0,
+    materialName: 'Paint',
+    profile: {
+      baseColor: {
+        color: { r: 0.25, g: 0.5, b: 0.75 },
+        texture: { url: '/src/assets/textures/body-base.png' },
+        brightness: 1,
+        saturation: 1,
+        contrast: 1,
+        hue: 0,
+      },
+      normal: {
+        texture: { url: '/src/assets/textures/body-normal.png' },
+        strength: 0.4,
+      },
+      metallic: 0.3,
+      roughness: 0.6,
+      metallicRoughness: {
+        texture: { url: '/src/assets/textures/body-metal-rough.png' },
+      },
+      occlusion: {
+        texture: { url: '/src/assets/textures/body-ao.png' },
+        strength: 0.7,
+      },
+      emission: {
+        color: { r: 0.1, g: 0.2, b: 0.3 },
+        texture: { url: '/src/assets/textures/body-emissive.png' },
+        intensity: 1,
+      },
+      alpha: {
+        mode: 'mask',
+        texture: { url: '/src/assets/textures/body-base.png' },
+        opacity: 0.8,
+        cutoff: 0.33,
+      },
+    },
+  }, {
+    sourceMaterialIndex: 1,
+    materialName: 'Frame',
+    profile: {
+      baseColor: {
+        color: { r: 1, g: 0, b: 0 },
+        brightness: 1,
+        saturation: 1,
+        contrast: 1,
+        hue: 0,
+      },
+      metallic: 1,
+      roughness: 1,
+      emission: {
+        texture: { url: '/src/assets/textures/frame-emissive.png' },
+      },
+    },
+  }],
 }]);
 
 const duplicateSlotMetadata = await projectAssetCatalogConfig.resolveAssetMetadata({
@@ -301,6 +413,42 @@ assert.deepEqual(
   duplicateSlotMetadata.materialSlots.map(slot => slot.sourceMaterialIndices),
   [[0], [1]],
 );
+
+const embeddedTextureSlotMetadata = await projectAssetCatalogConfig.resolveAssetMetadata({
+  kind: 'model',
+  sourcePath: embeddedTextureSlotMetadataModel,
+  guid: '77777777-8888-4999-aaaa-bbbbbbbbbbbb',
+  assetId: 'asset_7777777788884999aaaabbbbbbbbbbbb',
+  existingMetadata: {},
+  payloadMetadata: {},
+});
+assert.deepEqual(embeddedTextureSlotMetadata.materialSlots[0].sourceMaterialProfiles, [{
+  sourceMaterialIndex: 0,
+  materialName: 'Masked Paint',
+  profile: {
+    metallic: 1,
+    roughness: 1,
+    alpha: {
+      mode: 'mask',
+      cutoff: 0.5,
+    },
+  },
+  textureHints: [{
+    profilePath: 'baseColor.texture',
+    textureIndex: 0,
+    imageIndex: 0,
+    bufferView: 0,
+    mimeType: 'image/png',
+    reason: 'embedded-texture',
+  }, {
+    profilePath: 'alpha.texture',
+    textureIndex: 0,
+    imageIndex: 0,
+    bufferView: 0,
+    mimeType: 'image/png',
+    reason: 'embedded-texture',
+  }],
+}]);
 
 const clearedSlotMetadata = await projectAssetCatalogConfig.resolveAssetMetadata({
   kind: 'model',

@@ -37,7 +37,27 @@ declare module '*.wasm?url' {
   export default src;
 }
 
-declare module '*.env' {
+declare module '*.env?url' {
+  const src: string;
+  export default src;
+}
+
+declare module '*.hdr?url' {
+  const src: string;
+  export default src;
+}
+
+declare module '*.dds?url' {
+  const src: string;
+  export default src;
+}
+
+declare module '*.ktx?url' {
+  const src: string;
+  export default src;
+}
+
+declare module '*.ktx2?url' {
   const src: string;
   export default src;
 }

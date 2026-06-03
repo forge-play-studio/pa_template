@@ -247,26 +247,84 @@ function normalizeArtistBaseColorProfile(value: unknown): ArtistMaterialProfile[
   return Object.keys(normalized).length > 0 ? normalized : undefined;
 }
 
+function normalizeArtistNormalProfile(value: unknown): ArtistMaterialProfile['normal'] | undefined {
+  if (!isRecord(value)) return undefined;
+  const normalized: NonNullable<ArtistMaterialProfile['normal']> = {};
+  const texture = normalizeArtistMaterialTextureRef(value.texture);
+  if (texture) normalized.texture = texture;
+  if (isFiniteNumber(value.strength)) normalized.strength = value.strength;
+  return Object.keys(normalized).length > 0 ? normalized : undefined;
+}
+
+function normalizeArtistMetallicRoughnessProfile(value: unknown): ArtistMaterialProfile['metallicRoughness'] | undefined {
+  if (!isRecord(value)) return undefined;
+  const normalized: NonNullable<ArtistMaterialProfile['metallicRoughness']> = {};
+  const texture = normalizeArtistMaterialTextureRef(value.texture);
+  if (texture) normalized.texture = texture;
+  return Object.keys(normalized).length > 0 ? normalized : undefined;
+}
+
+function normalizeArtistOcclusionProfile(value: unknown): ArtistMaterialProfile['occlusion'] | undefined {
+  if (!isRecord(value)) return undefined;
+  const normalized: NonNullable<ArtistMaterialProfile['occlusion']> = {};
+  const texture = normalizeArtistMaterialTextureRef(value.texture);
+  if (texture) normalized.texture = texture;
+  if (isFiniteNumber(value.strength)) normalized.strength = value.strength;
+  return Object.keys(normalized).length > 0 ? normalized : undefined;
+}
+
 function normalizeArtistEmissionProfile(value: unknown): ArtistMaterialProfile['emission'] | undefined {
   if (!isRecord(value)) return undefined;
   const normalized: NonNullable<ArtistMaterialProfile['emission']> = {};
   const color = normalizeColorRGB(value.color);
   if (color) normalized.color = color;
   if (isFiniteNumber(value.intensity)) normalized.intensity = value.intensity;
+  const texture = normalizeArtistMaterialTextureRef(value.texture);
+  if (texture) normalized.texture = texture;
   const maskTexture = normalizeArtistMaterialTextureRef(value.maskTexture);
   if (maskTexture) normalized.maskTexture = maskTexture;
+  return Object.keys(normalized).length > 0 ? normalized : undefined;
+}
+
+function normalizeArtistAlphaMode(value: unknown): NonNullable<ArtistMaterialProfile['alpha']>['mode'] | undefined {
+  return value === 'opaque' || value === 'mask' || value === 'blend' ? value : undefined;
+}
+
+function normalizeArtistMaterialLightingModel(value: unknown): ArtistMaterialProfile['lightingModel'] | undefined {
+  return value === 'lit' || value === 'unlit' ? value : undefined;
+}
+
+function normalizeArtistAlphaProfile(value: unknown): ArtistMaterialProfile['alpha'] | undefined {
+  if (!isRecord(value)) return undefined;
+  const normalized: NonNullable<ArtistMaterialProfile['alpha']> = {};
+  const mode = normalizeArtistAlphaMode(value.mode);
+  if (mode) normalized.mode = mode;
+  if (isFiniteNumber(value.opacity)) normalized.opacity = value.opacity;
+  if (isFiniteNumber(value.cutoff)) normalized.cutoff = value.cutoff;
+  const texture = normalizeArtistMaterialTextureRef(value.texture);
+  if (texture) normalized.texture = texture;
   return Object.keys(normalized).length > 0 ? normalized : undefined;
 }
 
 function normalizeArtistMaterialProfile(value: unknown): ArtistMaterialProfile | undefined {
   if (!isRecord(value)) return undefined;
   const normalized: ArtistMaterialProfile = {};
+  const lightingModel = normalizeArtistMaterialLightingModel(value.lightingModel);
+  if (lightingModel) normalized.lightingModel = lightingModel;
   const baseColor = normalizeArtistBaseColorProfile(value.baseColor);
   if (baseColor) normalized.baseColor = baseColor;
+  const normal = normalizeArtistNormalProfile(value.normal);
+  if (normal) normalized.normal = normal;
   if (isFiniteNumber(value.metallic)) normalized.metallic = value.metallic;
   if (isFiniteNumber(value.roughness)) normalized.roughness = value.roughness;
+  const metallicRoughness = normalizeArtistMetallicRoughnessProfile(value.metallicRoughness);
+  if (metallicRoughness) normalized.metallicRoughness = metallicRoughness;
+  const occlusion = normalizeArtistOcclusionProfile(value.occlusion);
+  if (occlusion) normalized.occlusion = occlusion;
   const emission = normalizeArtistEmissionProfile(value.emission);
   if (emission) normalized.emission = emission;
+  const alpha = normalizeArtistAlphaProfile(value.alpha);
+  if (alpha) normalized.alpha = alpha;
   return Object.keys(normalized).length > 0 ? normalized : undefined;
 }
 

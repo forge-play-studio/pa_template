@@ -685,7 +685,14 @@ function pruneMaterialSnapshot(snapshot: MaterialSnapshot): MaterialSnapshot {
   if (!snapshot) return null;
 
   const next = cloneJson(snapshot);
-  for (const textureKey of ['albedoTexture', 'normalTexture', 'metallicTexture'] as const) {
+  for (const textureKey of [
+    'albedoTexture',
+    'normalTexture',
+    'metallicTexture',
+    'occlusionTexture',
+    'emissiveTexture',
+    'opacityTexture',
+  ] as const) {
     const textureValue = next[textureKey];
     if (textureValue && typeof textureValue === 'object' && isEmptyObject(textureValue)) {
       delete next[textureKey];
@@ -786,26 +793,50 @@ function pruneMaterialBindingSnapshot(
   const override = next.override;
   if (override && typeof override === 'object') {
     if (override.baseColor && typeof override.baseColor === 'object') {
-      const texture = override.baseColor.texture;
-      if (texture && typeof texture === 'object') {
-        const url = typeof texture.url === 'string' ? texture.url.trim() : '';
-        if (url) texture.url = url;
-        else delete override.baseColor.texture;
-      }
+      pruneArtistMaterialTextureRef(override.baseColor, 'texture');
       if (isEmptyObject(override.baseColor)) delete override.baseColor;
     }
+    if (override.normal && typeof override.normal === 'object') {
+      pruneArtistMaterialTextureRef(override.normal, 'texture');
+      if (isEmptyObject(override.normal)) delete override.normal;
+    }
+    if (override.metallicRoughness && typeof override.metallicRoughness === 'object') {
+      pruneArtistMaterialTextureRef(override.metallicRoughness, 'texture');
+      if (isEmptyObject(override.metallicRoughness)) delete override.metallicRoughness;
+    }
+    if (override.occlusion && typeof override.occlusion === 'object') {
+      pruneArtistMaterialTextureRef(override.occlusion, 'texture');
+      if (isEmptyObject(override.occlusion)) delete override.occlusion;
+    }
     if (override.emission && typeof override.emission === 'object') {
-      const maskTexture = override.emission.maskTexture;
-      if (maskTexture && typeof maskTexture === 'object') {
-        const url = typeof maskTexture.url === 'string' ? maskTexture.url.trim() : '';
-        if (url) maskTexture.url = url;
-        else delete override.emission.maskTexture;
-      }
+      pruneArtistMaterialTextureRef(override.emission, 'texture');
+      pruneArtistMaterialTextureRef(override.emission, 'maskTexture');
       if (isEmptyObject(override.emission)) delete override.emission;
+    }
+    if (override.alpha && typeof override.alpha === 'object') {
+      pruneArtistMaterialTextureRef(override.alpha, 'texture');
+      if (isEmptyObject(override.alpha)) delete override.alpha;
     }
     if (isEmptyObject(override)) delete next.override;
   }
   return next.materialAssetId || next.override ? next : null;
+}
+
+function pruneArtistMaterialTextureRef(
+  owner: object,
+  key: string,
+): void {
+  const ownerRecord = owner as Record<string, unknown>;
+  const texture = ownerRecord[key];
+  if (!texture || typeof texture !== 'object' || Array.isArray(texture)) return;
+  const textureRecord = texture as Record<string, unknown>;
+  const url = typeof textureRecord.url === 'string' ? textureRecord.url.trim() : '';
+  const textureAssetId = typeof textureRecord.textureAssetId === 'string' ? textureRecord.textureAssetId.trim() : '';
+  if (url) textureRecord.url = url;
+  else delete textureRecord.url;
+  if (textureAssetId) textureRecord.textureAssetId = textureAssetId;
+  else delete textureRecord.textureAssetId;
+  if (Object.keys(textureRecord).length === 0) delete ownerRecord[key];
 }
 
 function ensureChildMaterials(value: VisualOverrideContainer): Record<string, MaterialOverrideConfig> {
@@ -1247,6 +1278,20 @@ function applyMaterialPropToSnapshot(
       }
       snapshot.alpha = value as number;
       return;
+    case 'material.alphaCutOff':
+      if (value == null) {
+        delete snapshot.alphaCutOff;
+        return;
+      }
+      snapshot.alphaCutOff = value as number;
+      return;
+    case 'material.transparencyMode':
+      if (value == null) {
+        delete snapshot.transparencyMode;
+        return;
+      }
+      snapshot.transparencyMode = value as number;
+      return;
     case 'material.backFaceCulling':
       if (value == null) {
         delete snapshot.backFaceCulling;
@@ -1266,7 +1311,14 @@ function applyMaterialPropToSnapshot(
         delete snapshot.normalTexture;
         return;
       }
-      snapshot.normalTexture = { url: value as string };
+      snapshot.normalTexture = { ...(snapshot.normalTexture ?? {}), url: value as string };
+      return;
+    case 'material.normalTexture.level':
+      if (value == null) {
+        if (snapshot.normalTexture) delete snapshot.normalTexture.level;
+        return;
+      }
+      snapshot.normalTexture = { ...(snapshot.normalTexture ?? {}), level: value as number };
       return;
     case 'material.metallicTexture.url':
       if (value == null) {
@@ -1274,6 +1326,27 @@ function applyMaterialPropToSnapshot(
         return;
       }
       snapshot.metallicTexture = { url: value as string };
+      return;
+    case 'material.occlusionTexture.url':
+      if (value == null) {
+        delete snapshot.occlusionTexture;
+        return;
+      }
+      snapshot.occlusionTexture = { url: value as string };
+      return;
+    case 'material.emissiveTexture.url':
+      if (value == null) {
+        delete snapshot.emissiveTexture;
+        return;
+      }
+      snapshot.emissiveTexture = { url: value as string };
+      return;
+    case 'material.opacityTexture.url':
+      if (value == null) {
+        delete snapshot.opacityTexture;
+        return;
+      }
+      snapshot.opacityTexture = { url: value as string };
       return;
     case 'material.pbr.albedoColor':
       if (value == null) {
@@ -2045,11 +2118,33 @@ function normalizeSceneNodePatchValue(path: string, value: unknown): unknown {
 
 function isArtistMaterialTexturePath(path: string): boolean {
   return path === 'overrides.materialBinding.override.emission.maskTexture.url'
+    || path === 'overrides.materialBinding.override.emission.maskTexture.textureAssetId'
+    || path === 'overrides.materialBinding.override.emission.texture.url'
+    || path === 'overrides.materialBinding.override.emission.texture.textureAssetId'
     || path === 'overrides.materialBinding.override.baseColor.texture.url'
-    || /^overrides\.materialSlotBindings\..+\.override\.emission\.maskTexture\.url$/.test(path)
-    || /^overrides\.materialSlotBindings\..+\.override\.baseColor\.texture\.url$/.test(path)
-    || /^overrides\.childMaterialBindings\..+\.override\.emission\.maskTexture\.url$/.test(path)
-    || /^overrides\.childMaterialBindings\..+\.override\.baseColor\.texture\.url$/.test(path);
+    || path === 'overrides.materialBinding.override.baseColor.texture.textureAssetId'
+    || path === 'overrides.materialBinding.override.normal.texture.url'
+    || path === 'overrides.materialBinding.override.normal.texture.textureAssetId'
+    || path === 'overrides.materialBinding.override.metallicRoughness.texture.url'
+    || path === 'overrides.materialBinding.override.metallicRoughness.texture.textureAssetId'
+    || path === 'overrides.materialBinding.override.occlusion.texture.url'
+    || path === 'overrides.materialBinding.override.occlusion.texture.textureAssetId'
+    || path === 'overrides.materialBinding.override.alpha.texture.url'
+    || path === 'overrides.materialBinding.override.alpha.texture.textureAssetId'
+    || /^overrides\.materialSlotBindings\..+\.override\.emission\.maskTexture\.(?:url|textureAssetId)$/.test(path)
+    || /^overrides\.materialSlotBindings\..+\.override\.emission\.texture\.(?:url|textureAssetId)$/.test(path)
+    || /^overrides\.materialSlotBindings\..+\.override\.baseColor\.texture\.(?:url|textureAssetId)$/.test(path)
+    || /^overrides\.materialSlotBindings\..+\.override\.normal\.texture\.(?:url|textureAssetId)$/.test(path)
+    || /^overrides\.materialSlotBindings\..+\.override\.metallicRoughness\.texture\.(?:url|textureAssetId)$/.test(path)
+    || /^overrides\.materialSlotBindings\..+\.override\.occlusion\.texture\.(?:url|textureAssetId)$/.test(path)
+    || /^overrides\.materialSlotBindings\..+\.override\.alpha\.texture\.(?:url|textureAssetId)$/.test(path)
+    || /^overrides\.childMaterialBindings\..+\.override\.emission\.maskTexture\.(?:url|textureAssetId)$/.test(path)
+    || /^overrides\.childMaterialBindings\..+\.override\.emission\.texture\.(?:url|textureAssetId)$/.test(path)
+    || /^overrides\.childMaterialBindings\..+\.override\.baseColor\.texture\.(?:url|textureAssetId)$/.test(path)
+    || /^overrides\.childMaterialBindings\..+\.override\.normal\.texture\.(?:url|textureAssetId)$/.test(path)
+    || /^overrides\.childMaterialBindings\..+\.override\.metallicRoughness\.texture\.(?:url|textureAssetId)$/.test(path)
+    || /^overrides\.childMaterialBindings\..+\.override\.occlusion\.texture\.(?:url|textureAssetId)$/.test(path)
+    || /^overrides\.childMaterialBindings\..+\.override\.alpha\.texture\.(?:url|textureAssetId)$/.test(path);
 }
 
 function resolveProjectSceneNodeFieldSchema(

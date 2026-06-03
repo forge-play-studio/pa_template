@@ -199,12 +199,16 @@ export interface SceneGroupNode extends SceneNodeBase {
 
 export interface MaterialTextureOverrideConfig {
   url?: string;
+  level?: number;
 }
 
 export interface ArtistMaterialTextureRef {
   url?: string;
   textureAssetId?: string;
 }
+
+export type ArtistMaterialAlphaMode = 'opaque' | 'mask' | 'blend';
+export type ArtistMaterialLightingModel = 'lit' | 'unlit';
 
 export interface ArtistBaseColorProfile {
   color?: ColorRGB;
@@ -215,17 +219,44 @@ export interface ArtistBaseColorProfile {
   hue?: number;
 }
 
+export interface ArtistNormalProfile {
+  texture?: ArtistMaterialTextureRef;
+  strength?: number;
+}
+
+export interface ArtistMetallicRoughnessProfile {
+  texture?: ArtistMaterialTextureRef;
+}
+
+export interface ArtistOcclusionProfile {
+  texture?: ArtistMaterialTextureRef;
+  strength?: number;
+}
+
 export interface ArtistEmissionProfile {
   color?: ColorRGB;
   intensity?: number;
+  texture?: ArtistMaterialTextureRef;
   maskTexture?: ArtistMaterialTextureRef;
 }
 
+export interface ArtistAlphaProfile {
+  mode?: ArtistMaterialAlphaMode;
+  opacity?: number;
+  cutoff?: number;
+  texture?: ArtistMaterialTextureRef;
+}
+
 export interface ArtistMaterialProfile {
+  lightingModel?: ArtistMaterialLightingModel;
   baseColor?: ArtistBaseColorProfile;
+  normal?: ArtistNormalProfile;
   metallic?: number;
   roughness?: number;
+  metallicRoughness?: ArtistMetallicRoughnessProfile;
+  occlusion?: ArtistOcclusionProfile;
   emission?: ArtistEmissionProfile;
+  alpha?: ArtistAlphaProfile;
 }
 
 export type SceneMaterialAssetKind = 'pbr' | 'standard';
@@ -306,6 +337,9 @@ export interface MaterialOverrideConfig {
   albedoTexture?: MaterialTextureOverrideConfig;
   normalTexture?: MaterialTextureOverrideConfig;
   metallicTexture?: MaterialTextureOverrideConfig;
+  occlusionTexture?: MaterialTextureOverrideConfig;
+  emissiveTexture?: MaterialTextureOverrideConfig;
+  opacityTexture?: MaterialTextureOverrideConfig;
   pbr?: PbrMaterialLightingOverrideConfig;
   standard?: StandardMaterialLightingOverrideConfig;
 }

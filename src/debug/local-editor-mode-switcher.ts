@@ -168,8 +168,14 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
   };
   const editorLightingPreviewAdapter = {
     getWorldAppearance: resolveEditorLightingPreviewProfile,
-    getWorldRendering: resolveEditorWorldRenderingProfile,
-    getRenderingPanelState: getEditorRenderingPanelState,
+    getWorldRendering: (document: EditorSceneDocument) => resolveEditorWorldRenderingProfile(
+      document,
+      { textureAssets: createEditorSceneInspectorTextureAssets(currentEditorAssetLibrary) },
+    ),
+    getRenderingPanelState: (document: EditorSceneDocument) => getEditorRenderingPanelState(
+      document,
+      { textureAssets: createEditorSceneInspectorTextureAssets(currentEditorAssetLibrary) },
+    ),
     onRenderingAction: applyEditorRenderingAction,
     onRenderingPropertyChange: applyEditorRenderingPropertyChange,
   } as Record<string, unknown>;
@@ -319,6 +325,7 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
         });
       },
       importPreviewAsset: importProjectionModelWithLoading,
+      resolveMaterialTextureUrl: texture => resolveEditorSceneTextureRefUrl(currentEditorAssetLibrary, texture),
       resolveAssetId: asset => asset.assetId,
       toBrowserAssetItem(asset) {
         return {
@@ -435,13 +442,53 @@ function createEditorSceneInspectorTextureAssets(
     .flatMap((asset) => {
       const url = resolveEditorSceneRuntimePreviewAssetUrl(editorAssets, asset, 'texture');
       if (!url) return [];
+      const environmentTexture = isEnvironmentTextureAsset(asset, url);
       return [{
         id: asset.assetId,
         label: asset.displayName || asset.assetId,
         url,
-        meta: asset.assetId,
+        meta: environmentTexture ? `${asset.assetId} · IBL` : asset.assetId,
+        usage: environmentTexture ? 'environment' : 'material',
+        capabilities: {
+          materialTexture: !environmentTexture,
+          environmentTexture,
+        },
       }];
     });
+}
+
+function resolveEditorSceneTextureRefUrl(
+  assets: readonly EditorSceneAssetLibraryItem[],
+  texture: { textureAssetId?: string | null; url?: string | null } | null | undefined,
+): string | null {
+  if (!texture || typeof texture !== 'object') return null;
+  const textureAssetId = typeof texture.textureAssetId === 'string' ? texture.textureAssetId.trim() : '';
+  if (textureAssetId) {
+    const asset = assets.find(candidate => candidate.kind === 'texture' && candidate.assetId === textureAssetId);
+    return asset ? resolveEditorSceneRuntimePreviewAssetUrl(editorAssets, asset, 'texture') ?? null : null;
+  }
+  const textureUrl = typeof texture.url === 'string' ? texture.url.trim() : '';
+  return textureUrl || null;
+}
+
+function isEnvironmentTextureAsset(asset: EditorSceneAssetLibraryItem, resolvedUrl: string): boolean {
+  const metadata = asset.metadata && typeof asset.metadata === 'object' && !Array.isArray(asset.metadata)
+    ? asset.metadata as Record<string, unknown>
+    : {};
+  if (metadata.textureUsage === 'environment' || metadata.usage === 'environment') return true;
+  const capabilities = metadata.capabilities && typeof metadata.capabilities === 'object' && !Array.isArray(metadata.capabilities)
+    ? metadata.capabilities as Record<string, unknown>
+    : null;
+  if (capabilities?.environmentTexture === true) return true;
+  if (capabilities?.environmentTexture === false) return false;
+  const candidates = [
+    resolvedUrl,
+    asset.displayName,
+    asset.assetId,
+    typeof metadata.relativePath === 'string' ? metadata.relativePath : '',
+    typeof metadata.originalFileName === 'string' ? metadata.originalFileName : '',
+  ];
+  return candidates.some(value => /\.(env|hdr|dds|ktx|ktx2)(?:[?#].*)?$/i.test(value));
 }
 
 function createProjectionNodes(editorScene: EditorSceneDocument): PlayableBabylonProjectionNode[] {
