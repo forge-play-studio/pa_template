@@ -1,3 +1,3 @@
 export {
-  resolveEditorWorldRenderingProfile,
+  createEditorRenderingCapability,
 } from './editor-rendering-profile';

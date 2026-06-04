@@ -39,6 +39,7 @@ import {
   type PlayableLocalEditorMultiPropertyPatchInput,
   type PlayableLocalEditorPropertyPatchInput,
   type PlayableLocalEditorTransformBatchPatchInput,
+  type PlayableLocalEditorTransformInspectorPreviewInput,
   type PlayableLocalEditorTransformPatchInput,
   type PlayableForgePlaySaveState,
   type PlayableBabylonProjectionImportContext,
@@ -84,6 +85,7 @@ import {
   getEditorSceneSerializedMultiObject,
   normalizeEditorSceneHierarchyDocument,
   reduceEditorSceneDocument,
+  toEditorSceneLocalTransformFromWorld,
   validateEditorSceneGroupSelection,
   validateEditorSceneHierarchyMove,
   validateEditorSceneReparent,
@@ -99,12 +101,9 @@ import {
 import { compileEditorSceneDocumentToSceneConfig } from '../fps-game-editor-adapter/editor-scene-compiler';
 import { resolveEditorLightingPreviewProfile } from '../fps-game-editor-adapter/editor-lighting-preview-profile';
 import {
-  applyEditorRenderingAction,
-  applyEditorRenderingPropertyChange,
-  getEditorRenderingPanelState,
+  createEditorRenderingCapability,
   hasEditorRenderingDraftChanges,
   resetEditorRenderingDraft,
-  resolveEditorWorldRenderingProfile,
 } from '../fps-game-editor-adapter/editor-rendering-profile';
 import * as editorAssets from '../assets';
 
@@ -168,17 +167,10 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
   };
   const editorLightingPreviewAdapter = {
     getWorldAppearance: resolveEditorLightingPreviewProfile,
-    getWorldRendering: (document: EditorSceneDocument) => resolveEditorWorldRenderingProfile(
-      document,
-      { textureAssets: createEditorSceneInspectorTextureAssets(currentEditorAssetLibrary) },
-    ),
-    getRenderingPanelState: (document: EditorSceneDocument) => getEditorRenderingPanelState(
-      document,
-      { textureAssets: createEditorSceneInspectorTextureAssets(currentEditorAssetLibrary) },
-    ),
-    onRenderingAction: applyEditorRenderingAction,
-    onRenderingPropertyChange: applyEditorRenderingPropertyChange,
   } as Record<string, unknown>;
+  const editorRenderingCapability = createEditorRenderingCapability({
+    getTextureAssets: () => createEditorSceneInspectorTextureAssets(currentEditorAssetLibrary),
+  });
   let currentEditorAssetLibrary: EditorSceneAssetLibraryItem[] = [];
   const platformAssetDropCache = createPlayablePlatformAssetDropCache();
   const rememberPlatformAssetDrop = (payload: Record<string, unknown>): void => {
@@ -262,6 +254,7 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
       transformCommands: {
         canCreateSerializedMultiPropertyPatch: canCreateEditorSceneSerializedMultiPropertyPatch,
         createSerializedMultiPropertyPatch: createEditorSceneSerializedMultiPropertyPatch,
+        createTransformInspectorPreview: createEditorSceneTransformInspectorPreview,
         createTransformPatch: createEditorSceneTransformPatch,
         createTransformBatchPatch: createEditorSceneTransformBatchPatch,
         createDuplicateSelectionPatch: createEditorSceneDuplicateSelectionPatch,
@@ -282,12 +275,7 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
         getSceneCameraPreviewRig: createSceneCameraPreviewRig,
         getWorldAppearance: editorLightingPreviewAdapter.getWorldAppearance as (document: EditorSceneDocument) => unknown | null,
       },
-      rendering: {
-        getWorldRendering: editorLightingPreviewAdapter.getWorldRendering as (document: EditorSceneDocument) => unknown | null,
-        getRenderingPanelState: editorLightingPreviewAdapter.getRenderingPanelState as (document: EditorSceneDocument) => unknown | null,
-        onRenderingAction: input => applyEditorRenderingAction(input as Parameters<typeof applyEditorRenderingAction>[0]),
-        onRenderingPropertyChange: input => applyEditorRenderingPropertyChange(input as Parameters<typeof applyEditorRenderingPropertyChange>[0]),
-      },
+      rendering: editorRenderingCapability,
     },
     persistenceAdapter: {
       async loadAuthoringSource() {
@@ -611,6 +599,12 @@ function createEditorSceneTransformPatch(
     ...result,
     patch: result.patch as EditorSceneDocumentPatch,
   };
+}
+
+function createEditorSceneTransformInspectorPreview(
+  input: PlayableLocalEditorTransformInspectorPreviewInput<EditorSceneDocument>,
+) {
+  return toEditorSceneLocalTransformFromWorld(input.document, input.targetId, input.transform);
 }
 
 function createEditorSceneTransformBatchPatch(
