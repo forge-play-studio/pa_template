@@ -8,10 +8,10 @@
     "generatedFrom": {
       "sourceId": "scene.main",
       "sourceType": "scene",
-      "revision": 43,
+      "revision": 45,
       "compilerId": "pa_template.editor-scene.compiler",
       "compilerVersion": "1",
-      "compiledAt": "2026-06-02T19:00:52.738Z"
+      "compiledAt": "2026-06-03T07:28:08.299Z"
     }
   },
   "gameplay": {
@@ -219,7 +219,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 43,
+          "revision": 45,
           "objectGuid": "go_2406b122-d63b-4971-bf66-7d78a8776543",
           "objectId": "main_camera",
           "component": "Transform"
@@ -275,7 +275,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 43,
+          "revision": 45,
           "objectGuid": "go_environment_light_default",
           "objectId": "environment_light",
           "component": "Transform"
@@ -321,7 +321,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 43,
+          "revision": 45,
           "objectGuid": "go_7017d029-9d69-4381-91ac-75093053caa9",
           "objectId": "sun_light",
           "component": "Transform"
@@ -367,7 +367,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 43,
+          "revision": 45,
           "objectGuid": "go_20efbb4a-c323-4ea3-911c-23c72827d7b9",
           "objectId": "plane",
           "component": "PrimitiveRenderer"
@@ -406,7 +406,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 43,
+          "revision": 45,
           "objectGuid": "go_ac4a2824-3625-468c-aeee-d7c75dedc814",
           "objectId": "cube",
           "component": "PrimitiveRenderer"
@@ -454,7 +454,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 43,
+          "revision": 45,
           "objectGuid": "go_cc80f1b1-57b9-4373-baba-eed140d90c8f",
           "objectId": "sphere",
           "component": "PrimitiveRenderer"
@@ -499,7 +499,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 43,
+          "revision": 45,
           "objectGuid": "go_68778bee-9b2d-44bb-9a37-cfa42efa2846",
           "objectId": "capsule",
           "component": "PrimitiveRenderer"
@@ -547,7 +547,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 43,
+          "revision": 45,
           "objectGuid": "go_cfaa94ff-8ca2-482b-a24a-748f236b5e8f",
           "objectId": "empty",
           "component": "Transform"
@@ -579,7 +579,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 43,
+          "revision": 45,
           "objectGuid": "go_6878ee87-145f-40b5-9eaf-4cc2a57f30db",
           "objectId": "cube_2",
           "component": "PrimitiveRenderer"
@@ -613,7 +613,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 43,
+          "revision": 45,
           "objectGuid": "go_74e1d56f-eb43-41ea-9c58-598ab57ebf8e",
           "objectId": "cube_2_copy_copy",
           "component": "PrimitiveRenderer"
@@ -647,7 +647,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 43,
+          "revision": 45,
           "objectGuid": "go_21cffc23-b664-4c23-892c-f0ad201c135f",
           "objectId": "cube_2_copy",
           "component": "PrimitiveRenderer"
@@ -681,7 +681,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 43,
+          "revision": 45,
           "objectGuid": "go_d5ccad9e-0ab6-494e-ba38-ea3fcc57ef12",
           "objectId": "cube_2_copy_2",
           "component": "PrimitiveRenderer"
@@ -715,7 +715,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 43,
+          "revision": 45,
           "objectGuid": "go_b2723960-87d5-4bfc-85dd-61b04847fa63",
           "objectId": "cube_2_copy_3",
           "component": "PrimitiveRenderer"
@@ -749,7 +749,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 43,
+          "revision": 45,
           "objectGuid": "go_59efe6d6-4b0e-4af9-9856-680e918cac51",
           "objectId": "cube_2_copy_4",
           "component": "PrimitiveRenderer"
@@ -783,7 +783,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 43,
+          "revision": 45,
           "objectGuid": "go_128f5be2-5e14-4ef1-9836-a36c73e6081b",
           "objectId": "cube_2_copy_5",
           "component": "PrimitiveRenderer"
@@ -817,7 +817,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 43,
+          "revision": 45,
           "objectGuid": "go_85b91a2b-39f4-4396-b171-d658b1b1fdfb",
           "objectId": "cube_2_copy_6",
           "component": "PrimitiveRenderer"
@@ -851,7 +851,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 43,
+          "revision": 45,
           "objectGuid": "go_49b2e186-ae84-49e3-8c61-0fbf3fb03c6c",
           "objectId": "cube_2_copy_7",
           "component": "PrimitiveRenderer"
@@ -885,7 +885,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 43,
+          "revision": 45,
           "objectGuid": "go_1b4c2594-f66a-42bb-a69a-c5d49a90293e",
           "objectId": "cube_2_copy_8",
           "component": "PrimitiveRenderer"
@@ -919,7 +919,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 43,
+          "revision": 45,
           "objectGuid": "go_0b484a77-a0a7-4636-95d5-320ef6bd01a8",
           "objectId": "cube_2_copy_9",
           "component": "PrimitiveRenderer"
@@ -953,7 +953,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 43,
+          "revision": 45,
           "objectGuid": "go_43c8ca9c-1d4c-4885-a452-53be8f5efa7f",
           "objectId": "cube_2_copy_10",
           "component": "PrimitiveRenderer"
@@ -987,7 +987,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 43,
+          "revision": 45,
           "objectGuid": "go_3417a114-eb94-425c-9490-b6acf8948620",
           "objectId": "empty_copy",
           "component": "Transform"
@@ -1019,7 +1019,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 43,
+          "revision": 45,
           "objectGuid": "go_95344ac7-7743-4593-ab7a-b5f449037a03",
           "objectId": "cube_2_copy_11",
           "component": "PrimitiveRenderer"
@@ -1053,7 +1053,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 43,
+          "revision": 45,
           "objectGuid": "go_e1ff2466-8601-4b30-a7f5-cae15010e4a5",
           "objectId": "cube_2_copy_2_copy",
           "component": "PrimitiveRenderer"
@@ -1087,7 +1087,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 43,
+          "revision": 45,
           "objectGuid": "go_888d3ae5-0fee-4c61-b6d5-894954707840",
           "objectId": "cube_2_copy_3_copy",
           "component": "PrimitiveRenderer"
@@ -1121,7 +1121,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 43,
+          "revision": 45,
           "objectGuid": "go_e9e164c4-8adb-492f-8ffc-daebd36e1ac3",
           "objectId": "cube_2_copy_4_copy",
           "component": "PrimitiveRenderer"
@@ -1155,7 +1155,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 43,
+          "revision": 45,
           "objectGuid": "go_adc9c95b-5d79-470b-880c-dd45e419e971",
           "objectId": "cube_2_copy_5_copy",
           "component": "PrimitiveRenderer"
@@ -1189,7 +1189,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 43,
+          "revision": 45,
           "objectGuid": "go_f1716e18-5648-4872-a3d0-f2a956dd4a09",
           "objectId": "cube_2_copy_6_copy",
           "component": "PrimitiveRenderer"
@@ -1223,7 +1223,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 43,
+          "revision": 45,
           "objectGuid": "go_a2e40862-e54f-485f-95dc-b19545500895",
           "objectId": "cube_2_copy_7_copy",
           "component": "PrimitiveRenderer"
@@ -1257,7 +1257,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 43,
+          "revision": 45,
           "objectGuid": "go_292f34fe-b5d4-4876-a83a-c558da75126f",
           "objectId": "cube_2_copy_8_copy",
           "component": "PrimitiveRenderer"
@@ -1291,7 +1291,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 43,
+          "revision": 45,
           "objectGuid": "go_f1a93353-e6e1-4603-becf-bcd95e61aaa9",
           "objectId": "cube_2_copy_9_copy",
           "component": "PrimitiveRenderer"
@@ -1325,7 +1325,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 43,
+          "revision": 45,
           "objectGuid": "go_ccfb94dc-e506-4560-92e9-2e10c79df75f",
           "objectId": "cube_2_copy_10_copy",
           "component": "PrimitiveRenderer"
@@ -1359,7 +1359,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 43,
+          "revision": 45,
           "objectGuid": "go_6edd28b4-f389-4685-ae16-6feb855b15ed",
           "objectId": "axe_and_bear_fence_prop",
           "component": "ModelRenderer"
@@ -1393,7 +1393,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 43,
+          "revision": 45,
           "objectGuid": "go_6697756a-c434-4b5e-b5c6-e81d8b9e5d26",
           "objectId": "lumber_order",
           "component": "ModelRenderer"
@@ -1439,7 +1439,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 43,
+          "revision": 45,
           "objectGuid": "go_ccb4f13b-5147-457d-b4bd-d20b403d6d26",
           "objectId": "lumber_order_2",
           "component": "ModelRenderer"
@@ -1473,7 +1473,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 43,
+          "revision": 45,
           "objectGuid": "go_fc8d5d2f-297d-47ce-8dde-b759d7161bd2",
           "objectId": "lumber_order_3",
           "component": "ModelRenderer"
@@ -1507,7 +1507,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 43,
+          "revision": 45,
           "objectGuid": "go_13c16726-5499-4156-ae36-2e51cacdf5f0",
           "objectId": "lumber_order_dark_log",
           "component": "ModelRenderer"
@@ -1541,7 +1541,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 43,
+          "revision": 45,
           "objectGuid": "go_608ad34e-9255-4a19-a1c4-6fc9b6e29118",
           "objectId": "lumber_order_conveyor_model",
           "component": "ModelRenderer"
@@ -1575,7 +1575,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 43,
+          "revision": 45,
           "objectGuid": "go_0900c087-f4a9-4b07-9ddc-a8f60d647022",
           "objectId": "axe_and_bear_tower_building",
           "component": "ModelRenderer"
@@ -1604,7 +1604,7 @@
         "overrides": {
           "materialSlotBindings": {
             "slot_3d5cd656": {
-              "materialAssetId": "mat_2bde5e541ec44277b9e818148ff58d1f"
+              "materialAssetId": "mat_a854601cca554ea5b29d9d6e98b98412"
             },
             "slot_42ea83aa": {
               "materialAssetId": "mat_77358ffa7835418da5358cd476358e67"
@@ -1619,7 +1619,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 43,
+          "revision": 45,
           "objectGuid": "go_ec74ca4a-2878-4628-9825-a61a5b4cf147",
           "objectId": "axe_and_bear_sm",
           "component": "ModelRenderer"
@@ -1653,7 +1653,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 43,
+          "revision": 45,
           "objectGuid": "go_fdbf39ff-cf04-4b96-87f5-3124b94879ce",
           "objectId": "axe_and_bear_tower_building_copy",
           "component": "ModelRenderer"
@@ -1682,7 +1682,7 @@
         "overrides": {
           "materialSlotBindings": {
             "slot_3d5cd656": {
-              "materialAssetId": "mat_2bde5e541ec44277b9e818148ff58d1f"
+              "materialAssetId": "mat_784f416f774f4fdcaa4f4495794f4302"
             },
             "slot_42ea83aa": {
               "materialAssetId": "mat_77358ffa7835418da5358cd476358e67"
@@ -1705,6 +1705,7 @@
           "type": "preset"
         },
         "profile": {
+          "lightingModel": "lit",
           "baseColor": {
             "color": {
               "r": 1,
@@ -1741,6 +1742,7 @@
           "type": "preset"
         },
         "profile": {
+          "lightingModel": "lit",
           "baseColor": {
             "color": {
               "r": 1,
@@ -2109,9 +2111,9 @@
         "profile": {
           "baseColor": {
             "color": {
-              "r": 1,
-              "g": 1,
-              "b": 1
+              "r": 0.9764705882352941,
+              "g": 0.20392156862745098,
+              "b": 0.20392156862745098
             },
             "brightness": 1,
             "saturation": 1,
@@ -2187,8 +2189,95 @@
             "contrast": 1,
             "hue": 0,
             "texture": {
-              "url": "/src/assets/imported/textures/texture_d77b8872bf7f4f2ab2e3ae1035c0d76b.jpg?v=1780368091669.1448"
+              "textureAssetId": "texture_03caa4754ebb4725a4f77470214d0bc7"
             }
+          },
+          "metallic": 0,
+          "roughness": 1,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_b6250ff36a854533b495b920831d5d86",
+        "guid": "b6250ff3-6a85-4533-b495-b920831d5d86",
+        "name": "Axe and Bear - Tower Building - Default PBR Material",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "duplicated",
+          "sourceMaterialAssetId": "mat_default_pbr"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 1,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          },
+          "normal": {
+            "texture": {
+              "textureAssetId": "texture_b2badd5637c34786b0031178c8034523"
+            }
+          },
+          "metallicRoughness": {
+            "texture": {
+              "textureAssetId": "texture_d77b8872bf7f4f2ab2e3ae1035c0d76b"
+            }
+          },
+          "occlusion": {
+            "texture": {
+              "textureAssetId": "texture_97ce653a39fe4fd1be45ba61acd7aa39"
+            }
+          },
+          "alpha": {
+            "texture": {
+              "textureAssetId": "texture_d58d713bf12d451095d55c604e79afd3"
+            }
+          }
+        }
+      },
+      {
+        "id": "mat_a854601cca554ea5b29d9d6e98b98412",
+        "guid": "a854601c-ca55-4ea5-b29d-9d6e98b98412",
+        "name": "Axe and Bear - Tower Building - 电厂框架",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "duplicated",
+          "sourceMaterialAssetId": "mat_784f416f774f4fdcaa4f4495794f4302"
+        },
+        "profile": {
+          "baseColor": {
+            "color": {
+              "r": 0.8823529411764706,
+              "g": 0.7764705882352941,
+              "b": 0.7764705882352941
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
           },
           "metallic": 0,
           "roughness": 1,
@@ -2207,6 +2296,6 @@
     "textures": []
   },
   "render": {},
-  "version": 41,
-  "updatedAt": "2026-06-02T19:00:52.739Z"
+  "version": 43,
+  "updatedAt": "2026-06-03T07:28:08.300Z"
 }

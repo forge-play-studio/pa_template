@@ -8,7 +8,9 @@
     "environment": {
       "intensity": 1,
       "iblIntensity": 1,
-      "useCocosIBL": false
+      "useCocosIBL": false,
+      "texture": null,
+      "rotationY": 0
     },
     "lights": {
       "hemispheric": {

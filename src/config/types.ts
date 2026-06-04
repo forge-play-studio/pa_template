@@ -212,7 +212,7 @@ export type ArtistMaterialLightingModel = 'lit' | 'unlit';
 
 export interface ArtistBaseColorProfile {
   color?: ColorRGB;
-  texture?: ArtistMaterialTextureRef;
+  texture?: ArtistMaterialTextureRef | null;
   brightness?: number;
   saturation?: number;
   contrast?: number;
@@ -220,31 +220,31 @@ export interface ArtistBaseColorProfile {
 }
 
 export interface ArtistNormalProfile {
-  texture?: ArtistMaterialTextureRef;
+  texture?: ArtistMaterialTextureRef | null;
   strength?: number;
 }
 
 export interface ArtistMetallicRoughnessProfile {
-  texture?: ArtistMaterialTextureRef;
+  texture?: ArtistMaterialTextureRef | null;
 }
 
 export interface ArtistOcclusionProfile {
-  texture?: ArtistMaterialTextureRef;
+  texture?: ArtistMaterialTextureRef | null;
   strength?: number;
 }
 
 export interface ArtistEmissionProfile {
   color?: ColorRGB;
   intensity?: number;
-  texture?: ArtistMaterialTextureRef;
-  maskTexture?: ArtistMaterialTextureRef;
+  texture?: ArtistMaterialTextureRef | null;
+  maskTexture?: ArtistMaterialTextureRef | null;
 }
 
 export interface ArtistAlphaProfile {
   mode?: ArtistMaterialAlphaMode;
   opacity?: number;
   cutoff?: number;
-  texture?: ArtistMaterialTextureRef;
+  texture?: ArtistMaterialTextureRef | null;
 }
 
 export interface ArtistMaterialProfile {

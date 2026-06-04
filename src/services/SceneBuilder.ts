@@ -16,6 +16,7 @@ import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
 import { PBRMaterial } from '@babylonjs/core/Materials/PBR/pbrMaterial';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
+import { MaterialPluginBase } from '@babylonjs/core/Materials/materialPluginBase';
 import { Texture } from '@babylonjs/core/Materials/Textures/texture';
 import { resolveTextureAssetUrl } from '../assets/index';
 import { Color3 } from '@babylonjs/core/Maths/math.color';
@@ -62,7 +63,7 @@ import {
   resolveMaterialOwnerNode,
 } from '@fps-games/editor/playable-sdk';
 
-const BABYLON_MATERIAL_RUNTIME = { Color3, Texture };
+const BABYLON_MATERIAL_RUNTIME = { Color3, MaterialPluginBase, Texture };
 
 const DEFAULT_CAMERA_FOV = 0.85;
 
@@ -1430,7 +1431,7 @@ export class SceneBuilder {
   }
 
   private applyArtistMaterialProfileToRuntimeMaterial(material: any, profile: ArtistMaterialProfile): void {
-    applyPlayableArtistMaterialProfileToRuntimeMaterial(material, this.scene, profile, {
+    applyPlayableArtistMaterialProfileToRuntimeMaterial(material, this.scene, profile as any, {
       babylon: BABYLON_MATERIAL_RUNTIME,
       resolveTextureUrl: resolveSceneBuilderMaterialTextureUrl,
     });

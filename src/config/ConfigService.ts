@@ -222,7 +222,8 @@ function normalizeTextureOverride(value: unknown): MaterialTextureOverrideConfig
   return { url };
 }
 
-function normalizeArtistMaterialTextureRef(value: unknown): ArtistMaterialTextureRef | undefined {
+function normalizeArtistMaterialTextureRef(value: unknown): ArtistMaterialTextureRef | null | undefined {
+  if (value === null) return null;
   if (!isRecord(value)) return undefined;
   const url = typeof value.url === 'string' ? value.url.trim() : '';
   const textureAssetId = typeof value.textureAssetId === 'string' ? value.textureAssetId.trim() : '';
@@ -239,7 +240,7 @@ function normalizeArtistBaseColorProfile(value: unknown): ArtistMaterialProfile[
   const color = normalizeColorRGB(value.color);
   if (color) normalized.color = color;
   const texture = normalizeArtistMaterialTextureRef(value.texture);
-  if (texture) normalized.texture = texture;
+  if (texture !== undefined) normalized.texture = texture;
   if (isFiniteNumber(value.brightness)) normalized.brightness = value.brightness;
   if (isFiniteNumber(value.saturation)) normalized.saturation = value.saturation;
   if (isFiniteNumber(value.contrast)) normalized.contrast = value.contrast;
@@ -251,7 +252,7 @@ function normalizeArtistNormalProfile(value: unknown): ArtistMaterialProfile['no
   if (!isRecord(value)) return undefined;
   const normalized: NonNullable<ArtistMaterialProfile['normal']> = {};
   const texture = normalizeArtistMaterialTextureRef(value.texture);
-  if (texture) normalized.texture = texture;
+  if (texture !== undefined) normalized.texture = texture;
   if (isFiniteNumber(value.strength)) normalized.strength = value.strength;
   return Object.keys(normalized).length > 0 ? normalized : undefined;
 }
@@ -260,7 +261,7 @@ function normalizeArtistMetallicRoughnessProfile(value: unknown): ArtistMaterial
   if (!isRecord(value)) return undefined;
   const normalized: NonNullable<ArtistMaterialProfile['metallicRoughness']> = {};
   const texture = normalizeArtistMaterialTextureRef(value.texture);
-  if (texture) normalized.texture = texture;
+  if (texture !== undefined) normalized.texture = texture;
   return Object.keys(normalized).length > 0 ? normalized : undefined;
 }
 
@@ -268,7 +269,7 @@ function normalizeArtistOcclusionProfile(value: unknown): ArtistMaterialProfile[
   if (!isRecord(value)) return undefined;
   const normalized: NonNullable<ArtistMaterialProfile['occlusion']> = {};
   const texture = normalizeArtistMaterialTextureRef(value.texture);
-  if (texture) normalized.texture = texture;
+  if (texture !== undefined) normalized.texture = texture;
   if (isFiniteNumber(value.strength)) normalized.strength = value.strength;
   return Object.keys(normalized).length > 0 ? normalized : undefined;
 }
@@ -280,9 +281,9 @@ function normalizeArtistEmissionProfile(value: unknown): ArtistMaterialProfile['
   if (color) normalized.color = color;
   if (isFiniteNumber(value.intensity)) normalized.intensity = value.intensity;
   const texture = normalizeArtistMaterialTextureRef(value.texture);
-  if (texture) normalized.texture = texture;
+  if (texture !== undefined) normalized.texture = texture;
   const maskTexture = normalizeArtistMaterialTextureRef(value.maskTexture);
-  if (maskTexture) normalized.maskTexture = maskTexture;
+  if (maskTexture !== undefined) normalized.maskTexture = maskTexture;
   return Object.keys(normalized).length > 0 ? normalized : undefined;
 }
 
@@ -302,7 +303,7 @@ function normalizeArtistAlphaProfile(value: unknown): ArtistMaterialProfile['alp
   if (isFiniteNumber(value.opacity)) normalized.opacity = value.opacity;
   if (isFiniteNumber(value.cutoff)) normalized.cutoff = value.cutoff;
   const texture = normalizeArtistMaterialTextureRef(value.texture);
-  if (texture) normalized.texture = texture;
+  if (texture !== undefined) normalized.texture = texture;
   return Object.keys(normalized).length > 0 ? normalized : undefined;
 }
 

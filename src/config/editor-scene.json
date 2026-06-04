@@ -5,7 +5,7 @@
     "authoringSource": {
       "sourceId": "scene.main",
       "sourceType": "scene",
-      "revision": 43
+      "revision": 45
     }
   },
   "assets": [
@@ -1497,7 +1497,7 @@
         "overrides": {
           "materialSlotBindings": {
             "slot_3d5cd656": {
-              "materialAssetId": "mat_2bde5e541ec44277b9e818148ff58d1f"
+              "materialAssetId": "mat_a854601cca554ea5b29d9d6e98b98412"
             },
             "slot_42ea83aa": {
               "materialAssetId": "mat_77358ffa7835418da5358cd476358e67"
@@ -1569,7 +1569,7 @@
         "overrides": {
           "materialSlotBindings": {
             "slot_3d5cd656": {
-              "materialAssetId": "mat_2bde5e541ec44277b9e818148ff58d1f"
+              "materialAssetId": "mat_784f416f774f4fdcaa4f4495794f4302"
             },
             "slot_42ea83aa": {
               "materialAssetId": "mat_77358ffa7835418da5358cd476358e67"
@@ -1592,6 +1592,7 @@
           "type": "preset"
         },
         "profile": {
+          "lightingModel": "lit",
           "baseColor": {
             "color": {
               "r": 1,
@@ -1628,6 +1629,7 @@
           "type": "preset"
         },
         "profile": {
+          "lightingModel": "lit",
           "baseColor": {
             "color": {
               "r": 1,
@@ -1996,9 +1998,9 @@
         "profile": {
           "baseColor": {
             "color": {
-              "r": 1,
-              "g": 1,
-              "b": 1
+              "r": 0.9764705882352941,
+              "g": 0.20392156862745098,
+              "b": 0.20392156862745098
             },
             "brightness": 1,
             "saturation": 1,
@@ -2074,8 +2076,95 @@
             "contrast": 1,
             "hue": 0,
             "texture": {
-              "url": "/src/assets/imported/textures/texture_d77b8872bf7f4f2ab2e3ae1035c0d76b.jpg?v=1780368091669.1448"
+              "textureAssetId": "texture_03caa4754ebb4725a4f77470214d0bc7"
             }
+          },
+          "metallic": 0,
+          "roughness": 1,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_b6250ff36a854533b495b920831d5d86",
+        "guid": "b6250ff3-6a85-4533-b495-b920831d5d86",
+        "name": "Axe and Bear - Tower Building - Default PBR Material",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "duplicated",
+          "sourceMaterialAssetId": "mat_default_pbr"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 1,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          },
+          "normal": {
+            "texture": {
+              "textureAssetId": "texture_b2badd5637c34786b0031178c8034523"
+            }
+          },
+          "metallicRoughness": {
+            "texture": {
+              "textureAssetId": "texture_d77b8872bf7f4f2ab2e3ae1035c0d76b"
+            }
+          },
+          "occlusion": {
+            "texture": {
+              "textureAssetId": "texture_97ce653a39fe4fd1be45ba61acd7aa39"
+            }
+          },
+          "alpha": {
+            "texture": {
+              "textureAssetId": "texture_d58d713bf12d451095d55c604e79afd3"
+            }
+          }
+        }
+      },
+      {
+        "id": "mat_a854601cca554ea5b29d9d6e98b98412",
+        "guid": "a854601c-ca55-4ea5-b29d-9d6e98b98412",
+        "name": "Axe and Bear - Tower Building - 电厂框架",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "duplicated",
+          "sourceMaterialAssetId": "mat_784f416f774f4fdcaa4f4495794f4302"
+        },
+        "profile": {
+          "baseColor": {
+            "color": {
+              "r": 0.8823529411764706,
+              "g": 0.7764705882352941,
+              "b": 0.7764705882352941
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
           },
           "metallic": 0,
           "roughness": 1,
