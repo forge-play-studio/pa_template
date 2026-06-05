@@ -14,6 +14,9 @@ importers:
       '@babylonjs/loaders':
         specifier: 8.52.1
         version: 8.52.1(@babylonjs/core@8.52.1)(babylonjs-gltf2interface@8.46.2)
+      '@fps-games/editor':
+        specifier: 0.1.4-beta.4
+        version: 0.1.4-beta.4
       brotli-dec-wasm:
         specifier: ^2.3.2
         version: 2.3.2
@@ -784,6 +787,17 @@ packages:
 
   '@fluentui/tokens@1.0.0-alpha.23':
     resolution: {integrity: sha512-uxrzF9Z+J10naP0pGS7zPmzSkspSS+3OJDmYIK3o1nkntQrgBXq3dBob4xSlTDm5aOQ0kw6EvB9wQgtlyy4eKQ==}
+
+  '@fps-games/editor@0.1.4-beta.4':
+    resolution: {integrity: sha512-eI8Y3YM6H3bR83O2ERgKLY5glTn8OLzda7JZmEIrhPDF1WY94B0e5NPKSuB78EM0shMfEmeQdOswDJjbgFZQ4A==}
+    bundledDependencies:
+      - '@fps-games/babylon-renderer'
+      - '@fps-games/editor-babylon'
+      - '@fps-games/editor-browser'
+      - '@fps-games/editor-core'
+      - '@fps-games/editor-forge-play'
+      - '@fps-games/editor-playable-sdk'
+      - '@fps-games/editor-protocol'
 
   '@griffel/core@1.20.1':
     resolution: {integrity: sha512-ld1mX04zpmeHn8agx4slSEh8kJ+8or3Y0x9gsJNKSKn6GdCkZBSiGUh+oBXCBn8RKzz8l60TA9IhVSStnyKekA==}
@@ -2607,6 +2621,8 @@ snapshots:
   '@fluentui/tokens@1.0.0-alpha.23':
     dependencies:
       '@swc/helpers': 0.5.20
+
+  '@fps-games/editor@0.1.4-beta.4': {}
 
   '@griffel/core@1.20.1':
     dependencies:
