@@ -68,6 +68,22 @@ function clearProjectRuntimeGlobals(): void {
   (window as any).__pendingEditorRuntime = null;
 }
 
+async function mountLocalEditorModeSwitcherForDev(): Promise<void> {
+  try {
+    const { mountLocalEditorModeSwitcher } = await import('./debug/local-editor-mode-switcher');
+    disposeLocalEditorModeSwitcher();
+    localEditorModeSwitcher = mountLocalEditorModeSwitcher({
+      root: document.body,
+      disposeGameWorld: disposeProjectGameWorld,
+      onBeforeReload: () => {
+        disposeLocalEditorModeSwitcher();
+      },
+    });
+  } catch (error) {
+    console.warn('[local-editor-mode-switcher] mount failed', error);
+  }
+}
+
 function delay(ms: number): Promise<void> {
   return new Promise(resolve => window.setTimeout(resolve, ms));
 }
@@ -160,18 +176,7 @@ async function init(): Promise<void> {
         })
         .catch((error) => console.warn('[runtime-lighting-debug-panel] mount failed', error));
 
-      void import('./debug/local-editor-mode-switcher')
-        .then(({ mountLocalEditorModeSwitcher }) => {
-          disposeLocalEditorModeSwitcher();
-          localEditorModeSwitcher = mountLocalEditorModeSwitcher({
-            root: document.body,
-            disposeGameWorld: disposeProjectGameWorld,
-            onBeforeReload: () => {
-              disposeLocalEditorModeSwitcher();
-            },
-          });
-        })
-        .catch((error) => console.warn('[local-editor-mode-switcher] mount failed', error));
+      await mountLocalEditorModeSwitcherForDev();
     }
 
   } catch (error) {
