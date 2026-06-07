@@ -629,7 +629,7 @@ export class SceneBuilder {
 
     const runtimeNode = this.createRuntimeNode(nodeConfig);
     runtimeNode.id = nodeConfig.id;
-    this.attachSceneNodeMetadata(runtimeNode, nodeConfig.id, nodeConfig.source);
+    this.attachSceneNodeMetadata(runtimeNode, nodeConfig.id, nodeConfig.source, nodeConfig.shadowMode);
     this.applyTransform(runtimeNode, nodeConfig.transform);
     runtimeNode.parent = parent;
     runtimeNode.setEnabled(nodeConfig.enabled !== false);
@@ -1216,12 +1216,27 @@ export class SceneBuilder {
     }
   }
 
-  private attachSceneNodeMetadata(node: TransformNode, nodeId: string, source?: SceneRuntimeSourceBinding): void {
+  private attachSceneNodeMetadata(
+    node: TransformNode,
+    nodeId: string,
+    source?: SceneRuntimeSourceBinding,
+    shadowMode?: SceneNodeConfig['shadowMode'],
+  ): void {
     const metadata = node.metadata && typeof node.metadata === 'object' ? node.metadata : {};
+    const editorProjection = metadata.editorProjection
+      && typeof metadata.editorProjection === 'object'
+      && !Array.isArray(metadata.editorProjection)
+      ? metadata.editorProjection as Record<string, unknown>
+      : {};
     const nextMetadata: Record<string, unknown> = {
       ...metadata,
       sceneNodeId: nodeId,
       nodeId,
+      editorProjection: {
+        ...editorProjection,
+        nodeId,
+        ...(shadowMode ? { shadowMode } : {}),
+      },
     };
     if (source) {
       nextMetadata.sourceBinding = structuredClone(source);

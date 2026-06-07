@@ -183,12 +183,15 @@ export interface SceneRuntimeSourceBinding extends SceneAuthoringSourceRef {
   propertyPath?: string;
 }
 
+export type SceneNodeShadowMode = 'default' | 'none' | 'blob' | 'static' | 'planar' | 'dynamic';
+
 export interface SceneNodeBase {
   id: string;
   name?: string;
   kind: 'group' | 'instance' | 'transform' | 'primitive';
   parentId?: string;
   enabled?: boolean;
+  shadowMode?: SceneNodeShadowMode;
   transform?: TransformConfig;
   source?: SceneRuntimeSourceBinding;
 }

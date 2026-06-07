@@ -66,6 +66,8 @@ export class SimplePlayer {
       mesh.isPickable = false;
       mesh.metadata = {
         ...(mesh.metadata && typeof mesh.metadata === 'object' ? mesh.metadata : {}),
+        disableBlobShadow: true,
+        disableStaticProjectedShadow: true,
         disablePlanarShadow: true,
       };
     }

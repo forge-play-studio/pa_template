@@ -4730,7 +4730,11 @@ function isBlockedEditorSceneSystemFieldPatch(
 }
 
 function isEditorSceneProjectionShapePath(path: string): boolean {
-  return path === 'transformType' || path.startsWith('primitive.') || path.startsWith('camera.') || path.startsWith('light.');
+  return path === 'shadowMode'
+    || path === 'transformType'
+    || path.startsWith('primitive.')
+    || path.startsWith('camera.')
+    || path.startsWith('light.');
 }
 
 function hasEditorSceneCamera(document: EditorSceneDocument, exceptId?: string): boolean {

@@ -13,11 +13,17 @@ import { Scene } from '@babylonjs/core/scene';
 import { ShadowGenerator } from '@babylonjs/core/Lights/Shadows/shadowGenerator';
 import { CascadedShadowGenerator } from '@babylonjs/core/Lights/Shadows/cascadedShadowGenerator';
 import {
+  createBlobShadowSystem,
   createPlanarShadowSystem,
+  createStaticProjectedShadowSystem,
+  type BlobShadowOptions,
   type PlanarShadowOptions,
+  type StaticProjectedShadowOptions,
 } from '@fps-games/editor/playable-sdk';
 import {
+  createBlobShadowOptionsFromRenderingProfile,
   createPlanarShadowOptionsFromRenderingProfile,
+  createStaticProjectedShadowOptionsFromRenderingProfile,
   normalizeRenderingProfile,
   type NormalizedRenderingProfile,
 } from '../rendering/rendering-profile';
@@ -66,6 +72,7 @@ interface ShadowOrtho {
 }
 
 interface ShadowsConfig {
+  defaultMode: SceneShadowMode;
   enabled: boolean;
   useCsm: boolean;
   useBlobShadow: boolean;
@@ -83,6 +90,8 @@ interface ShadowsConfig {
   shadowOrtho: ShadowOrtho;
   csm: CSMSettings;
   planar: NormalizedRenderingProfile['shadows']['planar'];
+  blob: NormalizedRenderingProfile['shadows']['blob'];
+  staticProjected: NormalizedRenderingProfile['shadows']['staticProjected'];
 }
 
 interface ShadowMeshesConfig {
@@ -102,6 +111,28 @@ interface RuntimePlanarShadowSystem {
   dispose(): void;
 }
 
+interface RuntimeBlobShadowSystem {
+  initialize(): void;
+  refresh(): void;
+  setOptions(options: Partial<BlobShadowOptions>): void;
+  addCaster(mesh: unknown): void;
+  removeCaster(mesh: unknown): void;
+  dispose(): void;
+}
+
+interface RuntimeStaticProjectedShadowSystem {
+  initialize(): void;
+  refresh(): void;
+  setOptions(options: Partial<StaticProjectedShadowOptions>): void;
+  addCaster(mesh: unknown): void;
+  removeCaster(mesh: unknown): void;
+  invalidateCaster(mesh: unknown): void;
+  dispose(): void;
+}
+
+type SceneShadowMode = 'none' | 'blob' | 'static' | 'planar' | 'dynamic';
+type ShadowServiceMode = 'none' | 'blob' | 'static' | 'legacy' | 'planar' | 'mixed';
+
 // ============================================================
 // ShadowService 类
 // ============================================================
@@ -116,15 +147,16 @@ export class ShadowService {
   private camera: Camera | null;
   private light: DirectionalLight;
   private shadowGenerator: ShadowGenerator | null = null;
+  private blobShadowSystem: RuntimeBlobShadowSystem | null = null;
+  private staticProjectedShadowSystem: RuntimeStaticProjectedShadowSystem | null = null;
   private planarShadowSystem: RuntimePlanarShadowSystem | null = null;
   private renderingProfile: NormalizedRenderingProfile;
   private config: ShadowsConfig;
   private meshConfig: ShadowMeshesConfig;
   private shadowReceivers: string[];
-  private shadowCasters: string[];
   private excluded: string[];
   private newMeshObserver: Observer<AbstractMesh> | null = null;
-  private mode: 'none' | 'legacy' | 'planar' = 'none';
+  private mode: ShadowServiceMode = 'none';
 
   constructor(scene: Scene, light: DirectionalLight, camera?: Camera | null) {
     this.scene = scene;
@@ -134,7 +166,6 @@ export class ShadowService {
     this.config = this.renderingProfile.shadows;
     this.meshConfig = this.renderingProfile.shadowMeshes;
     this.shadowReceivers = this.meshConfig.shadowReceivers || [];
-    this.shadowCasters = this.meshConfig.shadowCasters || [];
     this.excluded = this.meshConfig.excludeFromShadow || [];
   }
 
@@ -146,23 +177,19 @@ export class ShadowService {
    * 初始化阴影系统
    */
   initialize(): void {
-    if (this.isPlanarEnabled()) {
-      this.initializePlanarShadows();
-      return;
-    }
+    if (this.config.blob.enabled) this.initializeBlobShadows();
+    if (this.config.staticProjected.enabled) this.initializeStaticProjectedShadows();
+    if (this.isPlanarEnabled()) this.initializePlanarShadows();
+    if (this.config.enabled) this.initializeLegacyShadows();
+    else this.scene.shadowsEnabled = false;
 
-    if (!this.config.enabled) {
-      this.scene.shadowsEnabled = false;
-      this.mode = 'none';
-      return;
-    }
-
-    this.initializeLegacyShadows();
+    this.mode = this.resolveServiceMode();
+    this.applyShadowMeshes();
+    this.attachNewMeshObserver();
   }
 
   private initializeLegacyShadows(): void {
     this.scene.shadowsEnabled = true;
-    this.mode = 'legacy';
 
     // 确保光源不被父节点影响（对阴影关键）
     this.light.parent = null;
@@ -230,12 +257,6 @@ export class ShadowService {
     this.light.orthoTop = this.config.shadowOrtho.top;
     this.light.orthoBottom = this.config.shadowOrtho.bottom;
 
-    // 应用阴影网格配置
-    this.applyShadowMeshes();
-
-    // 监听新网格添加
-    this.attachNewMeshObserver();
-
   }
 
   /**
@@ -244,12 +265,10 @@ export class ShadowService {
    * 在场景模型加载后调用
    */
   refreshShadowMeshes(): void {
-    if (this.planarShadowSystem) {
-      this.planarShadowSystem.refresh();
-      return;
-    }
-    if (!this.shadowGenerator) return;
     this.applyShadowMeshes();
+    this.blobShadowSystem?.refresh();
+    this.staticProjectedShadowSystem?.refresh();
+    this.planarShadowSystem?.refresh();
   }
 
   /**
@@ -259,7 +278,7 @@ export class ShadowService {
     return this.shadowGenerator;
   }
 
-  getShadowMode(): 'none' | 'legacy' | 'planar' {
+  getShadowMode(): ShadowServiceMode {
     return this.mode;
   }
 
@@ -272,26 +291,14 @@ export class ShadowService {
    * 手动添加阴影投射者
    */
   addShadowCaster(mesh: AbstractMesh): void {
-    if (this.planarShadowSystem) {
-      this.planarShadowSystem.addCaster(mesh);
-      return;
-    }
-    if (this.shadowGenerator) {
-      this.shadowGenerator.addShadowCaster(mesh, true);
-    }
+    this.applyShadowToMesh(mesh);
   }
 
   /**
    * 手动移除阴影投射者
    */
   removeShadowCaster(mesh: AbstractMesh): void {
-    if (this.planarShadowSystem) {
-      this.planarShadowSystem.removeCaster(mesh);
-      return;
-    }
-    if (this.shadowGenerator) {
-      this.shadowGenerator.removeShadowCaster(mesh, true);
-    }
+    this.removeMeshFromShadowSystems(mesh);
   }
 
   /**
@@ -314,16 +321,33 @@ export class ShadowService {
    */
   private attachNewMeshObserver(): void {
     this.newMeshObserver = this.scene.onNewMeshAddedObservable.add((mesh) => {
-      if (!this.shadowGenerator) return;
-      this.applyShadowToMesh(mesh);
+      queueMicrotask(() => {
+        if (mesh.isDisposed()) return;
+        this.applyShadowToMesh(mesh);
+      });
     });
   }
 
-  private initializePlanarShadows(): void {
-    this.scene.shadowsEnabled = false;
-    this.mode = 'planar';
+  private initializeBlobShadows(): void {
+    this.blobShadowSystem = createBlobShadowSystem(
+      this.scene as any,
+      this.createBlobShadowOptions(),
+    ) as unknown as RuntimeBlobShadowSystem;
+    this.blobShadowSystem.initialize();
+  }
+
+  private initializeStaticProjectedShadows(): void {
     this.light.parent = null;
-    this.light.shadowEnabled = false;
+    this.staticProjectedShadowSystem = createStaticProjectedShadowSystem(
+      this.scene as any,
+      this.light as any,
+      this.createStaticProjectedShadowOptions(),
+    ) as unknown as RuntimeStaticProjectedShadowSystem;
+    this.staticProjectedShadowSystem.initialize();
+  }
+
+  private initializePlanarShadows(): void {
+    this.light.parent = null;
     this.planarShadowSystem = createPlanarShadowSystem(
       this.scene as any,
       this.light as any,
@@ -336,22 +360,8 @@ export class ShadowService {
    * 应用阴影配置到所有网格
    */
   private applyShadowMeshes(): void {
-    if (!this.shadowGenerator) return;
-
     for (const mesh of this.scene.meshes) {
-      if (this.isExcluded(mesh.name)) {
-        mesh.receiveShadows = false;
-        this.shadowGenerator.removeShadowCaster(mesh, true);
-        continue;
-      }
-
-      if (this.isShadowReceiver(mesh.name)) {
-        mesh.receiveShadows = true;
-      }
-
-      if (this.isShadowCaster(mesh.name)) {
-        this.shadowGenerator.addShadowCaster(mesh, true);
-      }
+      this.applyShadowToMesh(mesh);
     }
   }
 
@@ -359,19 +369,43 @@ export class ShadowService {
    * 应用阴影配置到单个网格
    */
   private applyShadowToMesh(mesh: AbstractMesh): void {
-    if (this.isExcluded(mesh.name)) {
+    this.removeMeshFromShadowSystems(mesh);
+    if (this.isGeneratedShadowExcluded(mesh)) {
       mesh.receiveShadows = false;
-      this.shadowGenerator?.removeShadowCaster(mesh, true);
       return;
     }
 
-    if (this.isShadowReceiver(mesh.name)) {
-      mesh.receiveShadows = true;
+    const receiveShadows = this.isShadowReceiver(mesh.name);
+    mesh.receiveShadows = receiveShadows && !!this.shadowGenerator;
+    if (this.planarShadowSystem) {
+      if (receiveShadows) this.planarShadowSystem.addReceiver(mesh);
+      else this.planarShadowSystem.removeReceiver(mesh);
     }
 
-    if (this.isShadowCaster(mesh.name)) {
-      this.shadowGenerator?.addShadowCaster(mesh, true);
+    const mode = this.resolveMeshShadowMode(mesh);
+    if (mode === 'blob') {
+      this.blobShadowSystem?.addCaster(mesh);
+      return;
     }
+    if (mode === 'static') {
+      this.staticProjectedShadowSystem?.addCaster(mesh);
+      return;
+    }
+    if (mode === 'planar') {
+      this.planarShadowSystem?.addCaster(mesh);
+      return;
+    }
+    if (mode === 'dynamic' && this.shadowGenerator) {
+      this.shadowGenerator.addShadowCaster(mesh, true);
+    }
+  }
+
+  private removeMeshFromShadowSystems(mesh: AbstractMesh): void {
+    this.blobShadowSystem?.removeCaster(mesh);
+    this.staticProjectedShadowSystem?.removeCaster(mesh);
+    this.planarShadowSystem?.removeCaster(mesh);
+    this.planarShadowSystem?.removeReceiver(mesh);
+    this.shadowGenerator?.removeShadowCaster(mesh, true);
   }
 
   /**
@@ -382,17 +416,76 @@ export class ShadowService {
   }
 
   /**
-   * 检查网格是否为阴影投射者
-   */
-  private isShadowCaster(name: string): boolean {
-    return this.isNameMatched(name, this.shadowCasters);
-  }
-
-  /**
    * 检查网格是否被排除
    */
   private isExcluded(name: string): boolean {
     return this.isNameMatched(name, this.excluded);
+  }
+
+  private isGeneratedShadowExcluded(mesh: AbstractMesh): boolean {
+    if (this.isExcluded(mesh.name)) return true;
+    for (const node of this.walkNodeAndParents(mesh)) {
+      const metadata = this.readMetadata(node);
+      if (
+        metadata?.blobShadowInternal === true
+        || metadata?.staticProjectedShadowInternal === true
+        || metadata?.planarShadowInternal === true
+      ) return true;
+      const projection = this.readEditorProjectionMetadata(node);
+      if (projection?.runtimeKind === 'camera' || projection?.runtimeKind === 'light') return true;
+      if (
+        metadata?.disableBlobShadow === true
+        && metadata?.disableStaticProjectedShadow === true
+        && metadata?.disablePlanarShadow === true
+        && projection?.nodeId !== 'root'
+        && projection?.helperKind !== 'root'
+      ) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private resolveMeshShadowMode(mesh: AbstractMesh): SceneShadowMode {
+    const mode = this.readMeshShadowMode(mesh);
+    if (!mode || mode === 'default') return this.config.defaultMode ?? 'static';
+    return mode;
+  }
+
+  private readMeshShadowMode(mesh: AbstractMesh): SceneShadowMode | 'default' | null {
+    for (const node of this.walkNodeAndParents(mesh)) {
+      const mode = this.readEditorProjectionMetadata(node)?.shadowMode;
+      if (mode === 'default' || mode === 'none' || mode === 'blob' || mode === 'static' || mode === 'planar' || mode === 'dynamic') {
+        return mode;
+      }
+    }
+    return null;
+  }
+
+  private walkNodeAndParents(mesh: AbstractMesh): unknown[] {
+    const nodes: unknown[] = [];
+    const seen = new Set<unknown>();
+    let cursor: unknown = mesh;
+    while (cursor && typeof cursor === 'object' && !seen.has(cursor)) {
+      nodes.push(cursor);
+      seen.add(cursor);
+      cursor = (cursor as { parent?: unknown }).parent;
+    }
+    return nodes;
+  }
+
+  private readEditorProjectionMetadata(node: unknown): Record<string, unknown> | null {
+    return this.readObject(this.readMetadata(node)?.editorProjection);
+  }
+
+  private readMetadata(node: unknown): Record<string, unknown> | null {
+    return this.readObject((node as { metadata?: unknown })?.metadata);
+  }
+
+  private readObject(value: unknown): Record<string, unknown> | null {
+    return value && typeof value === 'object' && !Array.isArray(value)
+      ? value as Record<string, unknown>
+      : null;
   }
 
   /**
@@ -419,8 +512,41 @@ export class ShadowService {
     });
   }
 
+  private createBlobShadowOptions(): Partial<BlobShadowOptions> {
+    const sceneRootId = configService.getSceneRootId();
+    return createBlobShadowOptionsFromRenderingProfile(this.renderingProfile, {
+      enabled: this.config.blob.enabled,
+      autoDetectAllCasters: false,
+      additionalCasterIncludePatterns: [],
+      additionalExcludePatterns: this.excluded,
+      additionalRootBoundaryPatterns: [sceneRootId, 'scene_builder_root'],
+    });
+  }
+
+  private createStaticProjectedShadowOptions(): Partial<StaticProjectedShadowOptions> {
+    const sceneRootId = configService.getSceneRootId();
+    return createStaticProjectedShadowOptionsFromRenderingProfile(this.renderingProfile, {
+      enabled: this.config.staticProjected.enabled,
+      autoDetectAllCasters: false,
+      additionalCasterIncludePatterns: [],
+      additionalExcludePatterns: this.excluded,
+      additionalRootBoundaryPatterns: [sceneRootId, 'scene_builder_root'],
+    });
+  }
+
   private isPlanarEnabled(): boolean {
     return this.renderingProfile.shadows.planar.enabled;
+  }
+
+  private resolveServiceMode(): ShadowServiceMode {
+    const modes: ShadowServiceMode[] = [];
+    if (this.blobShadowSystem) modes.push('blob');
+    if (this.staticProjectedShadowSystem) modes.push('static');
+    if (this.planarShadowSystem) modes.push('planar');
+    if (this.shadowGenerator) modes.push('legacy');
+    if (modes.length === 0) return 'none';
+    if (modes.length === 1) return modes[0];
+    return 'mixed';
   }
 
   // ============================================================
@@ -439,6 +565,16 @@ export class ShadowService {
     if (this.shadowGenerator) {
       this.shadowGenerator.dispose();
       this.shadowGenerator = null;
+    }
+
+    if (this.blobShadowSystem) {
+      this.blobShadowSystem.dispose();
+      this.blobShadowSystem = null;
+    }
+
+    if (this.staticProjectedShadowSystem) {
+      this.staticProjectedShadowSystem.dispose();
+      this.staticProjectedShadowSystem = null;
     }
 
     if (this.planarShadowSystem) {

@@ -205,6 +205,8 @@ function createTargetMarker(scene: NonNullable<ReturnType<Game['getScene']>>): T
   const rootNode = new TransformNode('cameraDebugTargetMarker', scene);
   rootNode.metadata = {
     ...(rootNode.metadata && typeof rootNode.metadata === 'object' ? rootNode.metadata : {}),
+    disableBlobShadow: true,
+    disableStaticProjectedShadow: true,
     disablePlanarShadow: true,
   };
   const material = new StandardMaterial('cameraDebugTargetMarker.material', scene);
@@ -228,6 +230,8 @@ function createTargetMarker(scene: NonNullable<ReturnType<Game['getScene']>>): T
     arm.renderingGroupId = 2;
     arm.metadata = {
       ...(arm.metadata && typeof arm.metadata === 'object' ? arm.metadata : {}),
+      disableBlobShadow: true,
+      disableStaticProjectedShadow: true,
       disablePlanarShadow: true,
     };
   };
