@@ -2,6 +2,7 @@ import {
   createPlayableLocalEditorHost,
   createPlayablePlatformAssetDropCache,
   createPlayableBabylonEditorGrid,
+  createBabylonAssetContainerProjectionImporter,
   formatPlayableEditorDoctorReport,
   inspectPlayableEditorHostCompatibilityReport,
   createEditorSceneRuntimePreviewMainCameraRig,
@@ -46,6 +47,7 @@ import {
   type PlayableBabylonProjectionImportResult,
   type PlayableBabylonProjectionNode,
   type PlayableBabylonSceneCameraPreviewRig,
+  type BabylonAssetContainerProjectionImportEvent,
   type PlayableLocalEditorLoadingOverlayContent,
   type PlayablePlatformAssetDropPoint,
   type PlayablePlatformAssetExternal,
@@ -115,7 +117,18 @@ type ProjectGameRestartContext = {
 
 type ProjectGameRestartWindow = Window & {
   __restartProjectGame?: (context?: ProjectGameRestartContext) => Promise<void> | void;
+  __localEditorProjectionImportStats?: EditorProjectionImportStats;
 };
+
+interface EditorProjectionImportStats {
+  importModelCalls: number;
+  containerLoads: number;
+  containerCacheHits: number;
+  instantiateCalls: number;
+  fallbackCount: number;
+  lastCacheKey: string | null;
+  lastError: string | null;
+}
 
 export interface LocalEditorModeSwitcherOptions {
   root?: HTMLElement;
@@ -151,6 +164,48 @@ const EDITOR_LOADING_OVERLAY_CONTENT: Record<'enter' | 'saveScene' | 'saveAndRun
     description: '正在检查资产库并实例化模型或贴图，请稍候，完成前请勿继续操作',
   },
 };
+
+const editorProjectionImportStats: EditorProjectionImportStats = {
+  importModelCalls: 0,
+  containerLoads: 0,
+  containerCacheHits: 0,
+  instantiateCalls: 0,
+  fallbackCount: 0,
+  lastCacheKey: null,
+  lastError: null,
+};
+
+type EditorSceneRuntimePreviewImportPlan = NonNullable<ReturnType<typeof createEditorSceneRuntimePreviewImportPlan>>;
+
+const editorProjectionImportPlanCache = new WeakMap<object, EditorSceneRuntimePreviewImportPlan>();
+
+const editorProjectionModelImporter = createBabylonAssetContainerProjectionImporter({
+  loadContainer: async (context) => {
+    const importPlan = resolveCachedEditorProjectionImportPlan(context);
+    if (!importPlan || importPlan.kind === 'groundDecal') {
+      throw new Error('[LocalEditor] Missing model import plan for projection asset container');
+    }
+    await import('@babylonjs/loaders/glTF');
+    const { SceneLoader } = await import('@babylonjs/core/Loading/sceneLoader');
+    const pathInfo = await editorAssets.getModelPathAndFileAsync(importPlan.url);
+    return SceneLoader.LoadAssetContainerAsync(
+      pathInfo.path,
+      pathInfo.filename,
+      context.scene,
+      undefined,
+      pathInfo.isDataUrl || pathInfo.isCompressed ? '.glb' : undefined,
+    );
+  },
+  resolveCacheKey: (context) => {
+    const importPlan = resolveCachedEditorProjectionImportPlan(context);
+    const assetId = readEditorSceneRuntimePreviewAssetId(context.asset) ?? '';
+    const sourceId = typeof context.asset.sourceId === 'string' ? context.asset.sourceId : '';
+    return importPlan && importPlan.kind !== 'groundDecal'
+      ? `pa-template:model:${assetId}:${sourceId}:${importPlan.url}`
+      : `pa-template:model:${assetId}:${sourceId}`;
+  },
+  onEvent: handleEditorProjectionImportEvent,
+});
 
 export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOptions): LocalEditorModeSwitcher {
   const sceneMainSourceDriver = createSceneMainSourceDriver();
@@ -337,6 +392,7 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
       cameraRadius: 12,
       clearColor: { r: 0.055, g: 0.07, b: 0.09, a: 1 },
       useRightHandedSystem: true,
+      selectionEdgesPrewarm: 'lazy',
     },
     createGrid: createEditorGrid,
     lifecycle: {
@@ -499,36 +555,65 @@ function createSceneCameraPreviewRig(
 async function importEditorProjectionModel(
   context: PlayableBabylonProjectionImportContext,
 ): Promise<PlayableBabylonProjectionImportResult | null> {
+  editorProjectionImportStats.importModelCalls += 1;
+  publishEditorProjectionImportStats();
   const assetId = readEditorSceneRuntimePreviewAssetId(context.asset);
-  if (!assetId) return null;
-  const assetsModule = await import('../assets');
-  const importPlan = createEditorSceneRuntimePreviewImportPlan({
-    assetsModule,
-    asset: context.asset,
-    nodeId: context.node.id,
-  });
+  if (!assetId) {
+    editorProjectionImportStats.fallbackCount += 1;
+    publishEditorProjectionImportStats();
+    return null;
+  }
+  const importPlan = resolveCachedEditorProjectionImportPlan(context);
   if (!importPlan) {
     const kind = readEditorSceneRuntimePreviewAssetKind(context.asset) === 'texture' ? 'texture' : 'model';
+    editorProjectionImportStats.fallbackCount += 1;
+    publishEditorProjectionImportStats();
     warnProjectionAssetUrlMissing(context.asset, kind);
     return null;
   }
   if (importPlan.kind === 'groundDecal') return createGroundDecalProjectionResult(context, importPlan.decal);
 
-  await import('@babylonjs/loaders/glTF');
-  const { SceneLoader } = await import('@babylonjs/core/Loading/sceneLoader');
-  const pathInfo = await assetsModule.getModelPathAndFileAsync(importPlan.url);
-  return SceneLoader.ImportMeshAsync(
-    '',
-    pathInfo.path,
-    pathInfo.filename,
-    context.scene,
-    undefined,
-    pathInfo.isDataUrl || pathInfo.isCompressed ? '.glb' : undefined,
-  );
+  return await editorProjectionModelImporter(context) ?? null;
 }
 
 function warnProjectionAssetUrlMissing(asset: unknown, kind: 'model' | 'texture'): void {
   console.warn('[LocalEditor] Missing projection asset URL', createEditorSceneRuntimePreviewMissingAssetUrlDiagnostic(asset, kind));
+}
+
+function resolveCachedEditorProjectionImportPlan(
+  context: PlayableBabylonProjectionImportContext,
+): EditorSceneRuntimePreviewImportPlan | null {
+  const cached = editorProjectionImportPlanCache.get(context);
+  if (cached) return cached;
+  const importPlan = createEditorSceneRuntimePreviewImportPlan({
+    assetsModule: editorAssets,
+    asset: context.asset,
+    nodeId: context.node.id,
+  });
+  if (importPlan) editorProjectionImportPlanCache.set(context, importPlan);
+  return importPlan;
+}
+
+function handleEditorProjectionImportEvent(event: BabylonAssetContainerProjectionImportEvent): void {
+  editorProjectionImportStats.lastCacheKey = event.cacheKey;
+  if (event.type === 'container-load-start') {
+    editorProjectionImportStats.containerLoads += 1;
+    editorProjectionImportStats.lastError = null;
+  } else if (event.type === 'container-cache-hit') {
+    editorProjectionImportStats.containerCacheHits += 1;
+  } else if (event.type === 'instantiate') {
+    editorProjectionImportStats.instantiateCalls += 1;
+  } else if (event.type === 'container-load-failure') {
+    editorProjectionImportStats.fallbackCount += 1;
+    editorProjectionImportStats.lastError = event.error instanceof Error
+      ? event.error.message
+      : String(event.error);
+  }
+  publishEditorProjectionImportStats();
+}
+
+function publishEditorProjectionImportStats(): void {
+  (window as ProjectGameRestartWindow).__localEditorProjectionImportStats = { ...editorProjectionImportStats };
 }
 
 async function createGroundDecalProjectionResult(
