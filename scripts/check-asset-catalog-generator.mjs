@@ -16,7 +16,7 @@ const sourceModel = path.join(cwd, '中文模型.glb');
 const explicitProjectModel = path.join(cwd, '显式项目资产.glb');
 const invalidProjectModel = path.join(cwd, '错误项目资产.glb');
 const sourceTexture = path.join(cwd, '地贴.png');
-const projectLocalModel = path.join(assetsDir, '搬运工.glb');
+const projectLocalModel = path.join(assetsDir, '项目内模型.glb');
 const preservedModel = path.join(assetsDir, '静态模型.glb');
 const slotMetadataModel = path.join(cwd, 'slot-metadata.gltf');
 const embeddedTextureSlotMetadataModel = path.join(cwd, 'embedded-texture-slot-metadata.gltf');
@@ -219,8 +219,8 @@ const projectLocalPayload = path.join(cwd, 'project-local-payload.json');
 await fs.writeFile(projectLocalPayload, JSON.stringify({
   sourcePath: projectLocalModel,
   assetPath: projectLocalModel,
-  assetName: '搬运工.glb',
-  displayName: '搬运工',
+  assetName: '项目内模型.glb',
+  displayName: '项目内模型',
   assetType: 'model',
   guid: projectLocalGuid,
   projectAssetId: projectLocalAssetId,
@@ -263,7 +263,7 @@ assert.equal(explicitProject.assetId, explicitProjectAssetId);
 assert.equal(explicitProject.external.platformAssetId, 'raw_model_explicit');
 assert.equal(projectLocal.assetId, projectLocalAssetId);
 assert.equal(projectLocal.external.platformAssetId, 'raw_project_local_model');
-assert.equal(projectLocal.assetUrl, '/assets/搬运工.glb');
+assert.equal(projectLocal.assetUrl, '/assets/项目内模型.glb');
 assert.equal(projectLocal.targetPath, projectLocalModel);
 assert.equal(preserved.assetId, preservedAssetId);
 assert.equal(preserved.assetUrl, '/assets/静态模型.glb');
@@ -278,7 +278,7 @@ assert.match(texture.assetId, /^texture_[a-f0-9]{32}$/);
 assert.equal(texture.targetPath, path.join(importedDir, 'textures', `${texture.assetId}.png`));
 assert.equal(await fileExists(texture.targetPath), true);
 assert.equal(manifestByAssetId.get(texture.assetId)?.relativePath, `../imported/textures/${texture.assetId}.png`);
-assert.equal(manifestByAssetId.get(projectLocalAssetId)?.relativePath, '../搬运工.glb');
+assert.equal(manifestByAssetId.get(projectLocalAssetId)?.relativePath, '../项目内模型.glb');
 assert.equal(await fileExists(path.join(importedDir, `${projectLocalAssetId}.glb`)), false);
 assert.equal(await fs.readFile(projectLocalModel, 'utf8'), 'project-local-glb-bytes');
 assert.equal(manifest.some((entry) => Object.hasOwn(entry, 'sourceId')), false);
