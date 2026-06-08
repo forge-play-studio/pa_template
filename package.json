@@ -1,10 +1,20 @@
 {
   "name": "pa_template",
   "version": "0.1.0",
-  "description": "Playable ad project base with platform bridge and project-side editor package",
+  "description": "Playable ad project base with fps-games local editor integration",
   "type": "module",
   "scripts": {
     "dev": "vite --host",
+    "dev:editor-local": "vite --host 0.0.0.0 --port 3006 --strictPort",
+    "asset:register": "node scripts/register-asset.mjs",
+    "asset:unregister": "node scripts/register-asset.mjs --unregister",
+    "asset:migrate-guid": "node scripts/asset-registry/migrate-asset-guid-catalog.mjs",
+    "test:asset-guid-migration": "node scripts/check-asset-guid-migration.mjs",
+    "test:asset-catalog-generator": "node scripts/check-asset-catalog-generator.mjs",
+    "test:asset-runtime-catalog": "node scripts/check-asset-runtime-catalog.mjs",
+    "test:asset-manager-guid-external": "node scripts/check-asset-manager-guid-external.mjs",
+    "test:editor-canonical-assets": "node scripts/check-editor-canonical-assets.mjs",
+    "test:asset-registry-unregister": "node scripts/check-asset-registry-unregister-guard.mjs",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit"
@@ -30,7 +40,7 @@
   "dependencies": {
     "@babylonjs/core": "8.52.1",
     "@babylonjs/loaders": "8.52.1",
-    "@fps-games/editor": "^0.1.4-beta.4",
+    "@fps-games/editor": "0.1.4-beta.4",
     "brotli-dec-wasm": "^2.3.2"
   }
 }

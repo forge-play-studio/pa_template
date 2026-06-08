@@ -55,6 +55,47 @@ export interface TransformConfig {
 
 export type TransformType = 'plain' | 'light' | 'camera' | 'groundDecal';
 
+export type ScenePrimitiveShape = 'cube' | 'sphere' | 'plane' | 'capsule';
+
+export type SceneCameraProjection = 'orthographic' | 'perspective';
+
+export interface SceneCameraRigConfig {
+  projection?: SceneCameraProjection;
+  alpha: number;
+  beta: number;
+  radius: number;
+  orthoSize: number;
+  fov?: number;
+  targetOffset?: Position3D;
+  minZ?: number;
+  maxZ?: number;
+  lowerBetaLimit?: number;
+  upperBetaLimit?: number;
+  lowerRadiusLimit?: number;
+  upperRadiusLimit?: number;
+  inertia?: number;
+  targetScreenOffset?: {
+    x: number;
+    y: number;
+  };
+}
+
+export interface SceneDirectionalLightConfig {
+  type: 'directional';
+  intensity: number;
+  direction: Position3D;
+  diffuseColor?: ColorRGB;
+}
+
+export interface SceneHemisphericLightConfig {
+  type: 'hemispheric';
+  intensity: number;
+  diffuseColor?: ColorRGB;
+  groundColor?: ColorRGB;
+}
+
+export type SceneLightConfig = SceneHemisphericLightConfig | SceneDirectionalLightConfig;
+
 // ============================================================
 // World Bounds
 // ============================================================
@@ -100,24 +141,59 @@ export interface SceneAssetDefaults {
 
 export type SceneAssetMaterialMode = 'shared' | 'instance';
 
+export interface AssetExternalRef {
+  platformAssetId?: string;
+  assetPath?: string;
+  assetUrl?: string;
+  [key: string]: unknown;
+}
+
 export interface SceneAssetConfig {
   id: string;
+  guid?: string;
   type: 'glb';
-  sourceId: string;
+  external?: AssetExternalRef;
   displayName?: string;
+  category?: string;
   warmupCount?: number;
   singleton?: boolean;
   materialMode?: SceneAssetMaterialMode;
   defaults?: SceneAssetDefaults;
+  metadata?: Record<string, unknown>;
 }
+
+export type SceneAuthoringSourceType = 'scene' | 'effect' | 'material' | 'gameplay-config' | 'code';
+
+export interface SceneAuthoringSourceRef {
+  sourceId: string;
+  sourceType: SceneAuthoringSourceType | string;
+  revision?: number;
+}
+
+export interface SceneCompiledArtifactProvenance extends SceneAuthoringSourceRef {
+  compilerId: string;
+  compilerVersion: string;
+  compiledAt: string;
+}
+
+export interface SceneRuntimeSourceBinding extends SceneAuthoringSourceRef {
+  objectGuid?: string;
+  objectId?: string;
+  component?: string;
+  propertyPath?: string;
+}
+
+export type SceneNodeShadowMode = 'default' | 'none' | 'blob' | 'static' | 'planar' | 'dynamic';
 
 export interface SceneNodeBase {
   id: string;
   name?: string;
-  kind: 'group' | 'instance' | 'transform';
+  kind: 'group' | 'instance' | 'transform' | 'primitive';
   parentId?: string;
   enabled?: boolean;
+  shadowMode?: SceneNodeShadowMode;
   transform?: TransformConfig;
+  source?: SceneRuntimeSourceBinding;
 }
 
 export interface SceneGroupNode extends SceneNodeBase {
@@ -126,6 +202,99 @@ export interface SceneGroupNode extends SceneNodeBase {
 
 export interface MaterialTextureOverrideConfig {
   url?: string;
+  level?: number;
+}
+
+export interface ArtistMaterialTextureRef {
+  url?: string;
+  textureAssetId?: string;
+}
+
+export type ArtistMaterialAlphaMode = 'opaque' | 'mask' | 'blend';
+export type ArtistMaterialLightingModel = 'lit' | 'unlit';
+
+export interface ArtistBaseColorProfile {
+  color?: ColorRGB;
+  texture?: ArtistMaterialTextureRef | null;
+  brightness?: number;
+  saturation?: number;
+  contrast?: number;
+  hue?: number;
+}
+
+export interface ArtistNormalProfile {
+  texture?: ArtistMaterialTextureRef | null;
+  strength?: number;
+}
+
+export interface ArtistMetallicRoughnessProfile {
+  texture?: ArtistMaterialTextureRef | null;
+}
+
+export interface ArtistOcclusionProfile {
+  texture?: ArtistMaterialTextureRef | null;
+  strength?: number;
+}
+
+export interface ArtistEmissionProfile {
+  color?: ColorRGB;
+  intensity?: number;
+  texture?: ArtistMaterialTextureRef | null;
+  maskTexture?: ArtistMaterialTextureRef | null;
+}
+
+export interface ArtistAlphaProfile {
+  mode?: ArtistMaterialAlphaMode;
+  opacity?: number;
+  cutoff?: number;
+  texture?: ArtistMaterialTextureRef | null;
+}
+
+export interface ArtistMaterialProfile {
+  lightingModel?: ArtistMaterialLightingModel;
+  baseColor?: ArtistBaseColorProfile;
+  normal?: ArtistNormalProfile;
+  metallic?: number;
+  roughness?: number;
+  metallicRoughness?: ArtistMetallicRoughnessProfile;
+  occlusion?: ArtistOcclusionProfile;
+  emission?: ArtistEmissionProfile;
+  alpha?: ArtistAlphaProfile;
+}
+
+export type SceneMaterialAssetKind = 'pbr' | 'standard';
+export type SceneMaterialAssetSystemPreset = 'default-pbr' | 'default-standard';
+
+export interface SceneMaterialAssetSystemConfig {
+  readonly?: boolean;
+  preset?: SceneMaterialAssetSystemPreset;
+}
+
+export type SceneMaterialAssetOriginType = 'imported' | 'created' | 'duplicated' | 'preset';
+
+export interface SceneMaterialAssetOriginConfig {
+  type: SceneMaterialAssetOriginType;
+  sourceAssetGuid?: string;
+  sourceAssetId?: string;
+  sourceSlotId?: string;
+  sourceMaterialIndex?: number;
+  sourceMaterialName?: string;
+  sourceMaterialAssetId?: string;
+}
+
+export interface SceneMaterialAssetConfig {
+  id: string;
+  guid?: string;
+  name: string;
+  profile: ArtistMaterialProfile;
+  materialKind?: SceneMaterialAssetKind;
+  system?: SceneMaterialAssetSystemConfig;
+  origin?: SceneMaterialAssetOriginConfig;
+}
+
+export interface SceneNodeMaterialBindingConfig {
+  materialAssetId?: string;
+  override?: ArtistMaterialProfile;
 }
 
 export interface PbrMaterialLightingOverrideConfig {
@@ -136,6 +305,12 @@ export interface PbrMaterialLightingOverrideConfig {
   emissiveColor?: ColorRGB;
   ambientColor?: ColorRGB;
   lightFalloff?: number;
+  directIntensity?: number;
+  emissiveIntensity?: number;
+  environmentIntensity?: number;
+  specularIntensity?: number;
+  metallicF0Factor?: number;
+  indexOfRefraction?: number;
 }
 
 export interface StandardMaterialLightingOverrideConfig {
@@ -153,11 +328,21 @@ export interface MaterialOverrideConfig {
   emissiveColor?: ColorRGB;
   metallic?: number;
   roughness?: number;
+  contrast?: number;
+  brightness?: number;
+  saturation?: number;
+  hue?: number;
+  colorDensity?: number;
   alpha?: number;
+  alphaCutOff?: number;
+  transparencyMode?: number;
   backFaceCulling?: boolean;
   albedoTexture?: MaterialTextureOverrideConfig;
   normalTexture?: MaterialTextureOverrideConfig;
   metallicTexture?: MaterialTextureOverrideConfig;
+  occlusionTexture?: MaterialTextureOverrideConfig;
+  emissiveTexture?: MaterialTextureOverrideConfig;
+  opacityTexture?: MaterialTextureOverrideConfig;
   pbr?: PbrMaterialLightingOverrideConfig;
   standard?: StandardMaterialLightingOverrideConfig;
 }
@@ -182,6 +367,9 @@ export interface OutlineOverrideConfig {
 }
 
 export interface SceneNodeVisualOverrides {
+  materialBinding?: SceneNodeMaterialBindingConfig;
+  materialSlotBindings?: Record<string, SceneNodeMaterialBindingConfig>;
+  childMaterialBindings?: Record<string, SceneNodeMaterialBindingConfig>;
   material?: MaterialOverrideConfig;
   childMaterials?: Record<string, MaterialOverrideConfig>;
   childTransforms?: Record<string, TransformConfig>;
@@ -197,6 +385,14 @@ export interface SceneInstanceNode extends SceneNodeBase {
   overrides?: SceneNodeVisualOverrides;
 }
 
+export interface ScenePrimitiveNode extends SceneNodeBase {
+  kind: 'primitive';
+  primitive: {
+    shape: ScenePrimitiveShape;
+  };
+  overrides?: SceneNodeVisualOverrides;
+}
+
 export interface SceneTransformNode extends SceneNodeBase {
   kind: 'transform';
   transformType?: TransformType;
@@ -208,15 +404,21 @@ export interface SceneTransformNode extends SceneNodeBase {
     };
     textureId?: string;
     color?: ColorRGB;
+    alphaIndex?: number;
+    diffuseTextureLevel?: number;
+    emissiveTextureLevel?: number;
   };
+  camera?: SceneCameraRigConfig;
+  light?: SceneLightConfig;
 }
 
-export type SceneNodeConfig = SceneGroupNode | SceneInstanceNode | SceneTransformNode;
+export type SceneNodeConfig = SceneGroupNode | SceneInstanceNode | SceneTransformNode | ScenePrimitiveNode;
 
 export interface SceneDocumentScene {
   rootId: string;
   assets: SceneAssetConfig[];
   nodes: SceneNodeConfig[];
+  materialAssets?: SceneMaterialAssetConfig[];
   materials: SceneSharedMaterialConfig[];
   textures: Record<string, unknown>[];
 }
@@ -297,13 +499,17 @@ export interface SceneRenderConfig {
   [key: string]: unknown;
 }
 
+export interface SceneConfigMeta extends Record<string, unknown> {
+  generatedFrom?: SceneCompiledArtifactProvenance;
+}
+
 // ============================================================
 // Root Config Files
 // ============================================================
 
 export interface SceneConfig {
   schemaVersion?: number;
-  meta?: Record<string, unknown>;
+  meta?: SceneConfigMeta;
   gameplay?: SceneGameplayConfig;
   scene?: SceneDocumentScene;
   render?: SceneRenderConfig;

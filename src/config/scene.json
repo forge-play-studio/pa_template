@@ -4,6 +4,14 @@
     "playableAdInfo": {
       "ctaUrl": "",
       "notes": "Scaffold scene json: 填写你的 CTA 链接或 endcard 信息"
+    },
+    "generatedFrom": {
+      "sourceId": "scene.main",
+      "sourceType": "scene",
+      "revision": 50,
+      "compilerId": "pa_template.editor-scene.compiler",
+      "compilerVersion": "1",
+      "compiledAt": "2026-06-08T05:32:30.052Z"
     }
   },
   "gameplay": {
@@ -24,9 +32,297 @@
   "scene": {
     "rootId": "root",
     "assets": [],
-    "nodes": [],
+    "nodes": [
+      {
+        "id": "main_camera",
+        "name": "Main Camera",
+        "parentId": "root",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 50,
+          "objectGuid": "go_2406b122-d63b-4971-bf66-7d78a8776543",
+          "objectId": "main_camera",
+          "component": "Transform"
+        },
+        "transform": {
+          "position": {
+            "x": 0,
+            "y": 5,
+            "z": -8
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "transform",
+        "transformType": "camera",
+        "camera": {
+          "projection": "orthographic",
+          "alpha": 0.7854,
+          "beta": 0.7854,
+          "radius": 27,
+          "orthoSize": 5,
+          "fov": 0.85,
+          "targetOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "minZ": 1,
+          "maxZ": 10000,
+          "lowerBetaLimit": 0.1,
+          "upperBetaLimit": 1.45,
+          "lowerRadiusLimit": 3.5,
+          "upperRadiusLimit": 56,
+          "inertia": 0.9,
+          "targetScreenOffset": {
+            "x": 0,
+            "y": 0
+          }
+        }
+      },
+      {
+        "id": "environment_light",
+        "name": "Environment Light",
+        "parentId": "root",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 50,
+          "objectGuid": "go_environment_light_default",
+          "objectId": "environment_light",
+          "component": "Transform"
+        },
+        "transform": {
+          "position": {
+            "x": 0,
+            "y": 3,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "transform",
+        "transformType": "light",
+        "light": {
+          "type": "hemispheric",
+          "intensity": 0.75,
+          "diffuseColor": {
+            "r": 1,
+            "g": 1,
+            "b": 1
+          },
+          "groundColor": {
+            "r": 0.5607843137254902,
+            "g": 0.6078431372549019,
+            "b": 0.7176470588235294
+          }
+        }
+      },
+      {
+        "id": "sun_light",
+        "name": "Directional Light",
+        "parentId": "root",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 50,
+          "objectGuid": "go_7017d029-9d69-4381-91ac-75093053caa9",
+          "objectId": "sun_light",
+          "component": "Transform"
+        },
+        "transform": {
+          "position": {
+            "x": 0,
+            "y": 4,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "transform",
+        "transformType": "light",
+        "light": {
+          "type": "directional",
+          "intensity": 2,
+          "direction": {
+            "x": 0.35944184840597154,
+            "y": -0.8290376503546882,
+            "z": -0.42836681933697457
+          },
+          "diffuseColor": {
+            "r": 1,
+            "g": 0.9490196078431372,
+            "b": 0.8470588235294118
+          }
+        }
+      },
+      {
+        "id": "plane",
+        "name": "Plane",
+        "parentId": "root",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 50,
+          "objectGuid": "go_20efbb4a-c323-4ea3-911c-23c72827d7b9",
+          "objectId": "plane",
+          "component": "PrimitiveRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": -3.078279733657837,
+            "y": 7.105427357601002e-15,
+            "z": 0.0016481704078614712
+          },
+          "rotation": {
+            "z": 0,
+            "x": 0,
+            "y": 0
+          },
+          "scale": {
+            "x": 20,
+            "y": 20,
+            "z": 20
+          }
+        },
+        "kind": "primitive",
+        "primitive": {
+          "shape": "plane"
+        }
+      },
+      {
+        "id": "cube",
+        "name": "Cube",
+        "parentId": "root",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 50,
+          "objectGuid": "go_ac4a2824-3625-468c-aeee-d7c75dedc814",
+          "objectId": "cube",
+          "component": "PrimitiveRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 5.044337272644043,
+            "y": 0.5,
+            "z": 2.5112922191619873
+          },
+          "rotation": {
+            "z": 0,
+            "x": 0,
+            "y": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "primitive",
+        "primitive": {
+          "shape": "cube"
+        }
+      },
+      {
+        "id": "sphere",
+        "name": "Sphere",
+        "parentId": "root",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 50,
+          "objectGuid": "go_cc80f1b1-57b9-4373-baba-eed140d90c8f",
+          "objectId": "sphere",
+          "component": "PrimitiveRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 2.4597203731536874,
+            "y": 0.4743744730949402,
+            "z": 2.6745195388793945
+          },
+          "rotation": {
+            "z": 0,
+            "x": 0,
+            "y": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "primitive",
+        "primitive": {
+          "shape": "sphere"
+        }
+      },
+      {
+        "id": "capsule",
+        "name": "Capsule",
+        "parentId": "root",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 50,
+          "objectGuid": "go_68778bee-9b2d-44bb-9a37-cfa42efa2846",
+          "objectId": "capsule",
+          "component": "PrimitiveRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 3.2070908546447754,
+            "y": 0.9894341230392456,
+            "z": 4.6153435707092285
+          },
+          "rotation": {
+            "z": 0,
+            "x": 0,
+            "y": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "primitive",
+        "primitive": {
+          "shape": "capsule"
+        }
+      }
+    ],
+    "materialAssets": [],
     "materials": [],
     "textures": []
   },
-  "render": {}
+  "render": {},
+  "version": 47,
+  "updatedAt": "2026-06-08T05:32:30.052Z"
 }

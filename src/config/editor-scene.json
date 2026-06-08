@@ -1,0 +1,309 @@
+{
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Project Editor Scene",
+    "authoringSource": {
+      "sourceId": "scene.main",
+      "sourceType": "scene",
+      "revision": 50
+    }
+  },
+  "assets": [],
+  "scene": {
+    "gameObjects": [
+      {
+        "id": "root",
+        "name": "Root",
+        "active": true,
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          }
+        ],
+        "guid": "go_0a88d3f6-cb95-48de-96b7-f96d715f596e"
+      },
+      {
+        "id": "main_camera",
+        "name": "Main Camera",
+        "kind": "transform",
+        "parentId": "root",
+        "active": true,
+        "transformType": "camera",
+        "camera": {
+          "projection": "orthographic",
+          "alpha": 0.7854,
+          "beta": 0.7854,
+          "radius": 27,
+          "orthoSize": 5,
+          "fov": 0.85,
+          "targetOffset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "minZ": 1,
+          "maxZ": 10000,
+          "lowerBetaLimit": 0.1,
+          "upperBetaLimit": 1.45,
+          "lowerRadiusLimit": 3.5,
+          "upperRadiusLimit": 56,
+          "inertia": 0.9,
+          "targetScreenOffset": {
+            "x": 0,
+            "y": 0
+          },
+          "inspectorLanguage": "zh"
+        },
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": 0,
+              "y": 5,
+              "z": -8
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          }
+        ],
+        "guid": "go_2406b122-d63b-4971-bf66-7d78a8776543"
+      },
+      {
+        "id": "environment_light",
+        "name": "Environment Light",
+        "kind": "transform",
+        "parentId": "root",
+        "active": true,
+        "transformType": "light",
+        "light": {
+          "type": "hemispheric",
+          "intensity": 0.75,
+          "diffuseColor": {
+            "r": 1,
+            "g": 1,
+            "b": 1
+          },
+          "groundColor": {
+            "r": 0.5607843137254902,
+            "g": 0.6078431372549019,
+            "b": 0.7176470588235294
+          },
+          "inspectorLanguage": "zh"
+        },
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": 0,
+              "y": 3,
+              "z": 0
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          }
+        ],
+        "guid": "go_environment_light_default"
+      },
+      {
+        "id": "sun_light",
+        "name": "Directional Light",
+        "kind": "transform",
+        "parentId": "root",
+        "active": true,
+        "transformType": "light",
+        "light": {
+          "type": "directional",
+          "intensity": 2,
+          "direction": {
+            "x": 0.35944184840597154,
+            "y": -0.8290376503546882,
+            "z": -0.42836681933697457
+          },
+          "diffuseColor": {
+            "r": 1,
+            "g": 0.9490196078431372,
+            "b": 0.8470588235294118
+          },
+          "inspectorLanguage": "zh"
+        },
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": 0,
+              "y": 4,
+              "z": 0
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          }
+        ],
+        "guid": "go_7017d029-9d69-4381-91ac-75093053caa9"
+      },
+      {
+        "id": "plane",
+        "guid": "go_20efbb4a-c323-4ea3-911c-23c72827d7b9",
+        "name": "Plane",
+        "kind": "primitive",
+        "parentId": "root",
+        "active": true,
+        "primitive": {
+          "shape": "plane"
+        },
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": -3.078279733657837,
+              "y": 7.105427357601002e-15,
+              "z": 0.0016481704078614712
+            },
+            "rotation": {
+              "z": 0,
+              "x": 0,
+              "y": 0
+            },
+            "scale": {
+              "x": 20,
+              "y": 20,
+              "z": 20
+            }
+          }
+        ]
+      },
+      {
+        "id": "cube",
+        "guid": "go_ac4a2824-3625-468c-aeee-d7c75dedc814",
+        "name": "Cube",
+        "kind": "primitive",
+        "parentId": "root",
+        "active": true,
+        "primitive": {
+          "shape": "cube"
+        },
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": 5.044337272644043,
+              "y": 0.5,
+              "z": 2.5112922191619873
+            },
+            "rotation": {
+              "z": 0,
+              "x": 0,
+              "y": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          }
+        ]
+      },
+      {
+        "id": "sphere",
+        "guid": "go_cc80f1b1-57b9-4373-baba-eed140d90c8f",
+        "name": "Sphere",
+        "kind": "primitive",
+        "parentId": "root",
+        "active": true,
+        "primitive": {
+          "shape": "sphere"
+        },
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": 2.4597203731536874,
+              "y": 0.4743744730949402,
+              "z": 2.6745195388793945
+            },
+            "rotation": {
+              "z": 0,
+              "x": 0,
+              "y": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          }
+        ]
+      },
+      {
+        "id": "capsule",
+        "guid": "go_68778bee-9b2d-44bb-9a37-cfa42efa2846",
+        "name": "Capsule",
+        "kind": "primitive",
+        "parentId": "root",
+        "active": true,
+        "primitive": {
+          "shape": "capsule"
+        },
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": 3.2070908546447754,
+              "y": 0.9894341230392456,
+              "z": 4.6153435707092285
+            },
+            "rotation": {
+              "z": 0,
+              "x": 0,
+              "y": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          }
+        ]
+      }
+    ],
+    "materialAssets": []
+  }
+}

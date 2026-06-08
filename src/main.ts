@@ -5,7 +5,7 @@
 
 import { LoadingScreen } from './ui';
 import { Game } from './core/Game';
-import { registerProjectEditorPlugin, registerProjectEditorRuntimeBridge } from './editor-package';
+import type { LocalEditorModeSwitcher } from './debug/local-editor-mode-switcher';
 
 // ============================================================
 // 全局实例
@@ -17,57 +17,98 @@ let game: Game | null = null;
 /** 加载屏幕 */
 let loadingScreen: LoadingScreen | null = null;
 
-function installBridgeInspectorPatch(): void {
-  if (!import.meta.env.DEV) return;
+/** DEV-only local editor/game mode switcher */
+let localEditorModeSwitcher: LocalEditorModeSwitcher | null = null;
 
-  const w = window as any;
-  let attempts = 0;
-  const maxAttempts = 120;
+/** DEV-only runtime camera debug panel */
+let cameraDebugPanel: { dispose(): void } | null = null;
 
-  const tryPatch = () => {
-    const editor = w.__bridge?.editor;
-    if (!editor) {
-      if (attempts < maxAttempts) {
-        attempts++;
-        window.setTimeout(tryPatch, 250);
-      }
-      return;
-    }
+/** DEV-only runtime lighting debug panel */
+let lightingDebugPanel: { dispose(): void } | null = null;
 
-    if (editor.__localInspectorLoadPatched) return;
+/** 确保沙盒/动态注入场景下入口只启动一次 */
+let initStarted = false;
 
-    const ensureLocalInspector = async () => {
-      const localInspector = typeof w.ensureInspectorReady === 'function'
-        ? await w.ensureInspectorReady()
-        : null;
-      if (localInspector?.ShowInspector) {
-        w.INSPECTOR = localInspector;
-      }
-      return localInspector;
-    };
+/** 当前初始化任务，用于重启入口等待游戏世界真正 ready */
+let initPromise: Promise<void> | null = null;
 
-    if (typeof editor.showInspector === 'function') {
-      const originalShowInspector = editor.showInspector.bind(editor);
-      editor.showInspector = async (...args: unknown[]) => {
-        await ensureLocalInspector();
-        return originalShowInspector(...args);
-      };
-    }
+type ProjectGameRestartContext = {
+  reason?: string;
+};
 
-    if (typeof editor.loadV2 === 'function') {
-      const originalLoadV2 = editor.loadV2.bind(editor);
-      editor.loadV2 = async (...args: unknown[]) => {
-        const localInspector = await ensureLocalInspector();
-        if (localInspector?.ShowInspector) {
-          return localInspector;
-        }
-        return originalLoadV2(...args);
-      };
-    }
-    editor.__localInspectorLoadPatched = true;
-  };
+async function registerRuntimeEditorBridge(): Promise<void> {
+  const editorModule = await import('./fps-game-editor-adapter/runtime');
+  editorModule.registerProjectFpsGameEditorRuntimeBridge();
+}
 
-  tryPatch();
+function disposeLocalEditorModeSwitcher(): void {
+  localEditorModeSwitcher?.dispose();
+  localEditorModeSwitcher = null;
+}
+
+function disposeCameraDebugPanel(): void {
+  cameraDebugPanel?.dispose();
+  cameraDebugPanel = null;
+}
+
+function disposeLightingDebugPanel(): void {
+  lightingDebugPanel?.dispose();
+  lightingDebugPanel = null;
+}
+
+function clearLoadingScreen(): void {
+  loadingScreen?.dispose();
+  loadingScreen = null;
+}
+
+function clearProjectRuntimeGlobals(): void {
+  window.gameInstance = null;
+  window.game = null;
+  (window as any).__bridgeProjectRuntime = null;
+  (window as any).__pendingEditorRuntime = null;
+}
+
+async function mountLocalEditorModeSwitcherForDev(): Promise<void> {
+  try {
+    const { mountLocalEditorModeSwitcher } = await import('./debug/local-editor-mode-switcher');
+    disposeLocalEditorModeSwitcher();
+    localEditorModeSwitcher = mountLocalEditorModeSwitcher({
+      root: document.body,
+      disposeGameWorld: disposeProjectGameWorld,
+      onBeforeReload: () => {
+        disposeLocalEditorModeSwitcher();
+      },
+    });
+  } catch (error) {
+    console.warn('[local-editor-mode-switcher] mount failed', error);
+  }
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise(resolve => window.setTimeout(resolve, ms));
+}
+
+async function waitForSceneReadyBeforeDispose(targetGame: Game): Promise<void> {
+  const scene = targetGame.getScene();
+  const readyPromise = scene?.whenReadyAsync?.();
+  if (!readyPromise || typeof readyPromise.then !== 'function') return;
+  await Promise.race([
+    readyPromise.catch(() => undefined),
+    delay(750),
+  ]);
+}
+
+async function disposeProjectGameWorld(): Promise<void> {
+  const gameToDispose = game;
+  game = null;
+  clearProjectRuntimeGlobals();
+  disposeLightingDebugPanel();
+  disposeCameraDebugPanel();
+  if (gameToDispose) {
+    await waitForSceneReadyBeforeDispose(gameToDispose);
+    gameToDispose.dispose();
+  }
+  clearLoadingScreen();
 }
 
 // ============================================================
@@ -83,10 +124,10 @@ async function init(): Promise<void> {
     if (import.meta.env.DEV) {
       const BABYLON = await import('@babylonjs/core');
       (window as any).BABYLON = BABYLON;
-      installBridgeInspectorPatch();
     }
 
     // 创建并显示加载页面
+    clearLoadingScreen();
     loadingScreen = new LoadingScreen();
 
     // 创建游戏实例
@@ -94,13 +135,15 @@ async function init(): Promise<void> {
       canvasId: 'renderCanvas',
       debug: true,
       enableAudio: true,
+      showPlayerPlaceholder: false,
     });
 
     // 初始化游戏（包括资源加载和场景构建）
     await game.init();
 
-    registerProjectEditorPlugin();
-    registerProjectEditorRuntimeBridge();
+    if (import.meta.env.VITE_ENABLE_LEGACY_RUNTIME_EDITOR === 'true') {
+      await registerRuntimeEditorBridge();
+    }
 
     // 隐藏加载页面
     loadingScreen?.hide();
@@ -110,23 +153,99 @@ async function init(): Promise<void> {
 
     // 暴露给调试
     window.gameInstance = game;
+    window.game = game;
+
+    if (import.meta.env.DEV) {
+      void import('./debug/camera-debug-panel')
+        .then(({ mountCameraDebugPanel }) => {
+          disposeCameraDebugPanel();
+          cameraDebugPanel = mountCameraDebugPanel({
+            root: document.body,
+            getGame: () => game,
+          });
+        })
+        .catch((error) => console.warn('[camera-debug-panel] mount failed', error));
+
+      void import('./debug/runtime-lighting-debug-panel')
+        .then(({ mountRuntimeLightingDebugPanel }) => {
+          disposeLightingDebugPanel();
+          lightingDebugPanel = mountRuntimeLightingDebugPanel({
+            root: document.body,
+            getGame: () => game,
+          });
+        })
+        .catch((error) => console.warn('[runtime-lighting-debug-panel] mount failed', error));
+
+      await mountLocalEditorModeSwitcherForDev();
+    }
 
   } catch (error) {
     console.error('[Main] Failed to initialize game:', error);
     // 发生错误时也隐藏加载页面
-    loadingScreen?.hide();
+    clearLoadingScreen();
   }
+}
+
+function hasRenderCanvas(): boolean {
+  return document.getElementById('renderCanvas') instanceof HTMLCanvasElement;
+}
+
+function waitForDomReadyAndStart(): Promise<void> {
+  if (document.readyState !== 'loading') return Promise.resolve();
+  return new Promise((resolve) => {
+    document.addEventListener('DOMContentLoaded', () => {
+      void startInitOnce().then(resolve);
+    }, { once: true });
+  });
+}
+
+function startInitOnce(): Promise<void> {
+  if (initStarted) return initPromise ?? Promise.resolve();
+  if (!hasRenderCanvas()) return waitForDomReadyAndStart();
+  initStarted = true;
+  initPromise = init().finally(() => {
+    initPromise = null;
+  });
+  return initPromise;
+}
+
+async function restartProjectGame(_context?: ProjectGameRestartContext): Promise<void> {
+  await disposeProjectGameWorld();
+  initStarted = false;
+  initPromise = null;
+  await startInitOnce();
 }
 
 // ============================================================
 // 启动
 // ============================================================
 
-// 等待 DOM 加载完成
+window.__restartProjectGame = restartProjectGame;
+
+// 等待 DOM 加载完成；平台沙盒 srcdoc/动态注入时 DOMContentLoaded 可能已被错过，所以加微任务兜底。
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', init);
+  document.addEventListener('DOMContentLoaded', () => {
+    void startInitOnce();
+  }, { once: true });
+  queueMicrotask(() => {
+    void startInitOnce();
+  });
 } else {
-  init();
+  void startInitOnce();
+}
+
+if (import.meta.env.DEV) {
+  const disposeDevTools = () => {
+    disposeLocalEditorModeSwitcher();
+    disposeCameraDebugPanel();
+    disposeLightingDebugPanel();
+  };
+  const disposeDevToolsForHotReload = () => {
+    window.removeEventListener('beforeunload', disposeDevTools);
+    disposeDevTools();
+  };
+  window.addEventListener('beforeunload', disposeDevTools);
+  import.meta.hot?.dispose(disposeDevToolsForHotReload);
 }
 
 // ============================================================
@@ -137,6 +256,10 @@ declare global {
   interface Window {
     /** 游戏实例 */
     gameInstance: Game | null;
+    /** 兼容部分平台脚本读取 window.game */
+    game: Game | null;
+    /** 沙盒/编辑器切回游戏模式时使用的无刷新重启入口 */
+    __restartProjectGame?: (context?: ProjectGameRestartContext) => Promise<void>;
     /** Babylon.js 命名空间 (仅开发模式) */
     BABYLON?: any;
     ensureInspectorReady?: () => Promise<any>;

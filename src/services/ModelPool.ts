@@ -57,7 +57,7 @@ export interface ModelConfig {
 }
 
 export interface ModelWarmupAssetConfig {
-  sourceId: string;
+  id: string;
   warmupCount?: number;
   singleton?: boolean;
 }
@@ -263,9 +263,9 @@ export class ModelPool {
   /**
    * 从 scene.assets 预热池化模型。
    *
-   * - 使用 sourceId 作为 ModelPool key，与 SceneBuilder acquire() 保持一致。
+   * - 使用 scene asset id / canonical assetId 作为 ModelPool key，与 SceneBuilder acquire() 保持一致。
    * - singleton 资产不预热，因为它们通过 acquireOnce() 管理生命周期。
-   * - 同一 sourceId 多次出现时，warmupCount 会累加为同一池的空闲目标数。
+   * - 同一 assetId 多次出现时，warmupCount 会累加为同一池的空闲目标数。
    */
   warmupFromSceneAssets(assets: ModelWarmupAssetConfig[]): ModelWarmupResult[] {
     const warmupCounts = new Map<string, number>();
@@ -273,7 +273,7 @@ export class ModelPool {
     for (const asset of assets) {
       if (asset.singleton) continue;
 
-      const modelId = asset.sourceId?.trim();
+      const modelId = asset.id?.trim();
       if (!modelId) continue;
 
       const count = this.normalizeWarmupCount(asset.warmupCount);

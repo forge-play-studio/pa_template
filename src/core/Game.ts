@@ -67,6 +67,7 @@ export interface GameOptions {
   canvasId: string;
   debug?: boolean;
   enableAudio?: boolean;
+  showPlayerPlaceholder?: boolean;
 }
 
 export class Game {
@@ -103,6 +104,7 @@ export class Game {
   private isPaused = false;
   private lastTime = 0;
   private enableAudio: boolean;
+  private showPlayerPlaceholder: boolean;
 
   constructor(options: GameOptions) {
     const el = document.getElementById(options.canvasId);
@@ -112,6 +114,7 @@ export class Game {
     this.canvas = el;
 
     this.enableAudio = options.enableAudio ?? false;
+    this.showPlayerPlaceholder = options.showPlayerPlaceholder ?? true;
 
     this.engine = new Engine(this.canvas, true, {
       preserveDrawingBuffer: true,
@@ -203,8 +206,8 @@ export class Game {
     const modelIds = [...new Set(
       configService
         .getSceneAssets()
-        .map((asset) => asset.sourceId)
-        .filter((sourceId): sourceId is string => typeof sourceId === 'string' && sourceId.length > 0),
+        .map((asset) => asset.id)
+        .filter((assetId): assetId is string => typeof assetId === 'string' && assetId.length > 0),
     )];
     if (modelIds.length === 0) return;
 
@@ -227,6 +230,7 @@ export class Game {
       position: startPos,
       speed: 4.2,
       radius: 0.35,
+      visible: this.showPlayerPlaceholder,
     });
 
     // 摄像机跟随（ArcRotateCamera：target 跟随）
@@ -375,6 +379,10 @@ export class Game {
 
   getSceneBuilder(): SceneBuilder | null {
     return this.sceneBuilder;
+  }
+
+  getShadowService(): ShadowService | null {
+    return this.shadowService;
   }
 
   getInputService(): InputService | null {

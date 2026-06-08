@@ -12,12 +12,22 @@ import { Observer } from '@babylonjs/core/Misc/observable';
 import { Scene } from '@babylonjs/core/scene';
 import { ShadowGenerator } from '@babylonjs/core/Lights/Shadows/shadowGenerator';
 import { CascadedShadowGenerator } from '@babylonjs/core/Lights/Shadows/cascadedShadowGenerator';
+import {
+  createPlanarShadowSystem,
+  type PlanarShadowOptions,
+} from '@fps-games/editor/playable-sdk';
+import {
+  createPlanarShadowOptionsFromRenderingProfile,
+  normalizeRenderingProfile,
+  type NormalizedRenderingProfile,
+} from '../rendering/rendering-profile';
 
 // 副作用导入：注册阴影场景组件
 import '@babylonjs/core/Lights/Shadows/shadowGeneratorSceneComponent';
 
 // 导入配置
 import renderingConfig from '../config/rendering.json';
+import { configService } from '../config/ConfigService';
 
 // ============================================================
 // 类型定义
@@ -72,12 +82,24 @@ interface ShadowsConfig {
   };
   shadowOrtho: ShadowOrtho;
   csm: CSMSettings;
+  planar: NormalizedRenderingProfile['shadows']['planar'];
 }
 
 interface ShadowMeshesConfig {
   shadowReceivers: string[];
   shadowCasters: string[];
   excludeFromShadow: string[];
+}
+
+interface RuntimePlanarShadowSystem {
+  initialize(): void;
+  refresh(): void;
+  setOptions(options: Partial<PlanarShadowOptions>): void;
+  addCaster(mesh: unknown): void;
+  removeCaster(mesh: unknown): void;
+  addReceiver(mesh: unknown): void;
+  removeReceiver(mesh: unknown): void;
+  dispose(): void;
 }
 
 // ============================================================
@@ -94,19 +116,23 @@ export class ShadowService {
   private camera: Camera | null;
   private light: DirectionalLight;
   private shadowGenerator: ShadowGenerator | null = null;
+  private planarShadowSystem: RuntimePlanarShadowSystem | null = null;
+  private renderingProfile: NormalizedRenderingProfile;
   private config: ShadowsConfig;
   private meshConfig: ShadowMeshesConfig;
   private shadowReceivers: string[];
   private shadowCasters: string[];
   private excluded: string[];
   private newMeshObserver: Observer<AbstractMesh> | null = null;
+  private mode: 'none' | 'legacy' | 'planar' = 'none';
 
   constructor(scene: Scene, light: DirectionalLight, camera?: Camera | null) {
     this.scene = scene;
     this.light = light;
     this.camera = camera || null;
-    this.config = renderingConfig.shadows as ShadowsConfig;
-    this.meshConfig = renderingConfig.shadowMeshes as ShadowMeshesConfig;
+    this.renderingProfile = normalizeRenderingProfile(renderingConfig);
+    this.config = this.renderingProfile.shadows;
+    this.meshConfig = this.renderingProfile.shadowMeshes;
     this.shadowReceivers = this.meshConfig.shadowReceivers || [];
     this.shadowCasters = this.meshConfig.shadowCasters || [];
     this.excluded = this.meshConfig.excludeFromShadow || [];
@@ -120,12 +146,23 @@ export class ShadowService {
    * 初始化阴影系统
    */
   initialize(): void {
-    if (!this.config.enabled) {
-      this.scene.shadowsEnabled = false;
+    if (this.isPlanarEnabled()) {
+      this.initializePlanarShadows();
       return;
     }
 
+    if (!this.config.enabled) {
+      this.scene.shadowsEnabled = false;
+      this.mode = 'none';
+      return;
+    }
+
+    this.initializeLegacyShadows();
+  }
+
+  private initializeLegacyShadows(): void {
     this.scene.shadowsEnabled = true;
+    this.mode = 'legacy';
 
     // 确保光源不被父节点影响（对阴影关键）
     this.light.parent = null;
@@ -207,6 +244,10 @@ export class ShadowService {
    * 在场景模型加载后调用
    */
   refreshShadowMeshes(): void {
+    if (this.planarShadowSystem) {
+      this.planarShadowSystem.refresh();
+      return;
+    }
     if (!this.shadowGenerator) return;
     this.applyShadowMeshes();
   }
@@ -218,10 +259,23 @@ export class ShadowService {
     return this.shadowGenerator;
   }
 
+  getShadowMode(): 'none' | 'legacy' | 'planar' {
+    return this.mode;
+  }
+
+  setDirectionalLightEnabled(enabled: boolean): void {
+    if (!this.planarShadowSystem || !this.isPlanarEnabled()) return;
+    this.planarShadowSystem.setOptions({ enabled });
+  }
+
   /**
    * 手动添加阴影投射者
    */
   addShadowCaster(mesh: AbstractMesh): void {
+    if (this.planarShadowSystem) {
+      this.planarShadowSystem.addCaster(mesh);
+      return;
+    }
     if (this.shadowGenerator) {
       this.shadowGenerator.addShadowCaster(mesh, true);
     }
@@ -231,6 +285,10 @@ export class ShadowService {
    * 手动移除阴影投射者
    */
   removeShadowCaster(mesh: AbstractMesh): void {
+    if (this.planarShadowSystem) {
+      this.planarShadowSystem.removeCaster(mesh);
+      return;
+    }
     if (this.shadowGenerator) {
       this.shadowGenerator.removeShadowCaster(mesh, true);
     }
@@ -240,6 +298,10 @@ export class ShadowService {
    * 设置网格为阴影接收者
    */
   setShadowReceiver(mesh: AbstractMesh, receive: boolean): void {
+    if (this.planarShadowSystem) {
+      if (receive) this.planarShadowSystem.addReceiver(mesh);
+      else this.planarShadowSystem.removeReceiver(mesh);
+    }
     mesh.receiveShadows = receive;
   }
 
@@ -257,32 +319,38 @@ export class ShadowService {
     });
   }
 
+  private initializePlanarShadows(): void {
+    this.scene.shadowsEnabled = false;
+    this.mode = 'planar';
+    this.light.parent = null;
+    this.light.shadowEnabled = false;
+    this.planarShadowSystem = createPlanarShadowSystem(
+      this.scene as any,
+      this.light as any,
+      this.createPlanarShadowOptions(),
+    ) as unknown as RuntimePlanarShadowSystem;
+    this.planarShadowSystem.initialize();
+  }
+
   /**
    * 应用阴影配置到所有网格
    */
   private applyShadowMeshes(): void {
     if (!this.shadowGenerator) return;
 
-    let receiverCount = 0;
-    let casterCount = 0;
-    let excludedCount = 0;
-
     for (const mesh of this.scene.meshes) {
       if (this.isExcluded(mesh.name)) {
         mesh.receiveShadows = false;
         this.shadowGenerator.removeShadowCaster(mesh, true);
-        excludedCount++;
         continue;
       }
 
       if (this.isShadowReceiver(mesh.name)) {
         mesh.receiveShadows = true;
-        receiverCount++;
       }
 
       if (this.isShadowCaster(mesh.name)) {
         this.shadowGenerator.addShadowCaster(mesh, true);
-        casterCount++;
       }
     }
   }
@@ -339,6 +407,22 @@ export class ShadowService {
     return false;
   }
 
+  private createPlanarShadowOptions(): Partial<PlanarShadowOptions> {
+    const sceneRootId = configService.getSceneRootId();
+    return createPlanarShadowOptionsFromRenderingProfile(this.renderingProfile, {
+      enabled: this.light.isEnabled(),
+      autoDetectAllCasters: false,
+      additionalCasterIncludePatterns: [sceneRootId, 'scene_builder_root'],
+      additionalExcludePatterns: this.excluded,
+      additionalReceiverPatterns: this.shadowReceivers,
+      additionalRootBoundaryPatterns: [sceneRootId, 'scene_builder_root'],
+    });
+  }
+
+  private isPlanarEnabled(): boolean {
+    return this.renderingProfile.shadows.planar.enabled;
+  }
+
   // ============================================================
   // 生命周期
   // ============================================================
@@ -355,6 +439,11 @@ export class ShadowService {
     if (this.shadowGenerator) {
       this.shadowGenerator.dispose();
       this.shadowGenerator = null;
+    }
+
+    if (this.planarShadowSystem) {
+      this.planarShadowSystem.dispose();
+      this.planarShadowSystem = null;
     }
 
   }

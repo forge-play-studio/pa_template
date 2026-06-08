@@ -1,22 +1,34 @@
 {
   "globalVolume": {
+    "enabled": true,
     "imageProcessing": {
-      "exposure": 1.0,
-      "contrast": 1.0
+      "exposure": 0.82,
+      "contrast": 1.05
     },
     "environment": {
-      "intensity": 1.0,
-      "iblIntensity": 1.0,
-      "useCocosIBL": false
+      "intensity": 1,
+      "iblIntensity": 1,
+      "useCocosIBL": false,
+      "texture": null,
+      "rotationY": 0
     },
     "lights": {
       "hemispheric": {
         "intensity": 0.8,
-        "skyLightColor": { "r": 1, "g": 1, "b": 1, "a": 1 }
+        "skyLightColor": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        }
       },
       "directional": {
         "intensity": 1.2,
-        "direction": { "x": -0.3, "y": -1.0, "z": -0.2 }
+        "direction": {
+          "x": -0.3,
+          "y": -1,
+          "z": -0.2
+        }
       }
     },
     "rendering": {
@@ -29,20 +41,29 @@
     },
     "postProcessing": {
       "bloom": {
-        "enabled": false,
-        "threshold": 0.9,
-        "weight": 0.2,
-        "kernel": 64,
-        "scale": 0.5
+        "enabled": true,
+        "threshold": 0.15,
+        "weight": 0.08,
+        "kernel": 32,
+        "scale": 0.35
       }
     },
     "camera": {
       "fov": 0.85,
       "radius": null,
-      "target": { "x": 0, "y": 0, "z": 0 }
+      "target": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      }
+    },
+    "antialiasing": {
+      "samples": 4
+    },
+    "toneMapping": {
+      "type": "khr-pbr-neutral"
     }
   },
-
   "shadows": {
     "enabled": false,
     "useCsm": false,
@@ -56,12 +77,16 @@
       "useBlurExponentialShadowMap": true,
       "shadowMinZ": 1,
       "shadowMaxZ": 60,
-      "shadowColor": { "r": 0, "g": 0, "b": 0 }
+      "shadowColor": {
+        "r": 0,
+        "g": 0,
+        "b": 0
+      }
     },
     "blobSettings": {
       "opacity": 0.2,
       "yOffset": 0.02,
-      "sizeMultiplier": 1.0,
+      "sizeMultiplier": 1,
       "minSize": 0.25
     },
     "shadowRange": {
@@ -79,15 +104,50 @@
       "lambda": 0.5,
       "cascadeBlendPercentage": 0.1,
       "stabilizeCascades": true
+    },
+    "planar": {
+      "enabled": true,
+      "plane": {
+        "normal": {
+          "x": 0,
+          "y": 1,
+          "z": 0
+        },
+        "height": 0,
+        "heightMode": "receiver",
+        "bias": 0.4
+      },
+      "appearance": {
+        "color": {
+          "r": 0.050980392156862744,
+          "g": 0.050980392156862744,
+          "b": 0.050980392156862744,
+          "a": 0.35
+        }
+      },
+      "projection": {
+        "footprintScale": 1
+      },
+      "stencil": {
+        "enabled": true,
+        "receiverRenderingGroup": 0,
+        "shadowRenderingGroup": 1
+      },
+      "casters": {
+        "excludePatterns": [],
+        "rootBoundaryPatterns": [],
+        "minVolume": 0.001
+      },
+      "receivers": {
+        "patterns": []
+      }
     }
   },
-
   "shadowMeshes": {
     "shadowReceivers": [],
     "shadowCasters": [],
     "excludeFromShadow": []
   },
-
   "materials": {
     "sceneMaterials": {},
     "plantMaterials": {}

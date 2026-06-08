@@ -9,13 +9,13 @@
 
 1. 作为新项目起点
 2. 默认接入当前平台 `bridge/editor`
-3. 默认提供项目侧完整 `editor-package` 框架
-4. 默认覆盖 runtime bridge / selection / document / adapter / save 主链
+3. 默认接入 `@fps-games/editor` 本地编辑器模式
+4. 默认提供 GUID asset catalog / canonical asset adapter / scene authoring 主链
 
 注意：
 
-- 这不等于新项目已经自动打通平台 workspace 的 inspector 链路
-- 新项目仍需要按接入文档补齐本地 inspector 注入、版本对齐和 workspace 验收
+- 这不等于新项目已经完成具体 gameplay、素材和平台 workspace 最终验收
+- 新项目仍需要按自己的玩法、资源和平台环境完成验收
 
 ## 当前包含
 
@@ -24,24 +24,23 @@
 3. 最小 `scene.json` 与 `ConfigService`
 4. Gameplay Binding contract 类型、默认入口、查询服务和基础校验
 5. Project gameplay composition hook：`src/gameplay/createProjectGameplay.ts`
-6. 项目侧 `editor-package`
-7. project editor runtime / edit session / selection / inspector host 骨架
-8. document/history/export/commit 主链
-9. `sceneNode` adapter 与 duplicate 主链
-10. 新项目尽早验证编辑器闭环所需的基础结构
-11. dev-only 本地 inspector 注入链
-12. `showInspector()` / `loadV2()` 前的 inspector preload patch
-13. 默认 Vite plugin 初始化链：`bridge / inspector / glb / modelCache / stripBabylon / viteSingleFile`
-14. 可直接启用的构建增强插件：`thirdPartyWhitelist / locale / optimizePng / visualizer`
-15. `ZoneSystem`：消费当前 `SceneConfig` 中的 `gameplay.zones`，并维护 enter/tick/leave 区域状态
+6. 项目侧 `src/fps-game-editor-adapter`
+7. dev-only `src/debug/local-editor-mode-switcher.ts`
+8. GUID asset catalog 与 `src/assets/imported` 资产落地目录
+9. document/history/export/commit 主链
+10. `sceneNode` adapter 与 duplicate 主链
+11. 新项目尽早验证编辑器闭环所需的基础结构
+12. 默认 Vite plugin 初始化链：`bridge / inspector / glb / modelCache / stripBabylon / viteSingleFile`
+13. 可直接启用的构建增强插件：`thirdPartyWhitelist / locale / optimizePng / visualizer`
+14. `ZoneSystem`：消费当前 `SceneConfig` 中的 `gameplay.zones`，并维护 enter/tick/leave 区域状态
 
 当前不应默认假设已经完整包含：
 
 1. platform workspace 页面上的最终验收结果
-2. 所有项目零改造即可直接跑通的最终 inspector 适配
+2. 所有项目零改造即可直接跑通的最终平台接入
 
-换句话说，`pa_template` 当前提供的是“带本地 inspector 注入链的完整编辑器框架模板”，不是“所有项目复制后零改造即可直接跑通”的成品接入。
-新项目复制后，仍需要按自己的 runtime 和平台环境补齐适配层。
+换句话说，`pa_template` 当前提供的是“带本地编辑器和 canonical asset 边界的项目模板”，不是“所有项目复制后零改造即可直接上线”的成品项目。
+新项目复制后，仍需要按自己的 gameplay、资源和平台环境完成验收。
 
 ## 目录结构
 
@@ -156,16 +155,16 @@ zone 检测能力默认内置，但只负责矩形区域几何检测和 `enter/t
 3. 如果改成左手系，模型朝向、旋转、变换和后续能力接入都会变复杂
 4. 编辑器、运行时节点、模型资源三者统一使用一套坐标规则，更稳定
 
-### `editor-package/`
+### `fps-game-editor-adapter/`
 
-放项目侧编辑器能力和对平台暴露的接口。
+放项目侧编辑器能力和对 `@fps-games/editor` 暴露的接口。
 
 适合放：
 
 1. document
-2. adapter
-3. runtime / runtime-core
-4. editor plugin / runtime 注册
+2. canonical asset adapter
+3. editor scene compiler / session
+4. editor plugin / runtime bridge
 5. export / commit / duplicate / undo / redo 主链
 
 ### `entities/`
@@ -297,7 +296,7 @@ brew install webp optipng
 1. `src/config/types.ts`
 2. `src/config/scene.json`
 3. `src/config/ConfigService.ts`
-4. `src/editor-package/adapter.ts`
+4. `src/fps-game-editor-adapter/`
 5. `src/core/Game.ts`
 
 新项目初始化后，建议尽早完成一次编辑器闭环验证：
@@ -310,9 +309,9 @@ brew install webp optipng
 
 如果项目要宣称“编辑器已接好”，至少还要额外确认：
 
-1. 不只是本地开发页可用，而是平台 workspace 页点击 `Edit` 后 inspector 真正出现
-2. `@babylonjs/core` 和 `@babylonjs/inspector` 使用同版本稳定版本
-3. 项目侧本地 inspector 链不只依赖 `loadV2()`，还要覆盖 workspace 的真实入口
+1. 本地编辑器模式可进入、保存、退出并回到游戏
+2. 中文或任意文件名资源导入后只显示 canonical project asset
+3. 场景保存后 `src/config/editor-scene.json` 与 `src/config/scene.json` 都符合预期
 
 如果项目需要额外能力：
 
@@ -322,11 +321,11 @@ brew install webp optipng
 
 ## 相关规范
 
-模板规范维护在本仓 [`docs`](./docs)：
+模板规范维护在团队 wiki：
 
-1. [GAME_ARCHITECTURE_STANDARD.md](./docs/standards/GAME_ARCHITECTURE_STANDARD.md)
-2. [EDITOR_PACKAGE_INTEGRATION.md](./docs/standards/EDITOR_PACKAGE_INTEGRATION.md)
-3. [SCENE_EDITING_INTEGRATION.md](./docs/standards/SCENE_EDITING_INTEGRATION.md)
-4. [SCENE_JSON_STANDARD.md](./docs/standards/SCENE_JSON_STANDARD.md)
+1. [First Playable Workflow](https://github.com/forge-play-studio/wiki/blob/main/sources/docs/guides/gameplay/FIRST_PLAYABLE_WORKFLOW.md)
+2. [Gameplay docs index](https://github.com/forge-play-studio/wiki/blob/main/sources/docs/guides/gameplay/README.md)
+3. [Gameplay Object Standard](https://github.com/forge-play-studio/wiki/blob/main/sources/docs/standards/GAMEPLAY_OBJECT_STANDARD.md)
+4. [Gameplay Binding Standard](https://github.com/forge-play-studio/wiki/blob/main/sources/docs/standards/GAMEPLAY_BINDING_STANDARD.md)
 
 可选 ability 的通用规则维护在 [`pa_abilities`](https://github.com/forge-play-studio/pa_abilities) 根 README。
