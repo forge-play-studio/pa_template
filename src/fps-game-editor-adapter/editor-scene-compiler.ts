@@ -161,7 +161,6 @@ function compileGameObject(
     ...(gameObject.name ? { name: gameObject.name } : {}),
     ...(gameObject.parentId ? { parentId: gameObject.parentId } : {}),
     ...(gameObject.active === false ? { enabled: false } : {}),
-    ...(gameObject.shadowMode ? { shadowMode: gameObject.shadowMode } : {}),
     source,
     ...(transform
       ? {

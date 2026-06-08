@@ -2,7 +2,6 @@ import {
   createPlayableLocalEditorHost,
   createPlayablePlatformAssetDropCache,
   createPlayableBabylonEditorGrid,
-  createBabylonAssetContainerProjectionImporter,
   formatPlayableEditorDoctorReport,
   inspectPlayableEditorHostCompatibilityReport,
   createEditorSceneRuntimePreviewMainCameraRig,
@@ -47,7 +46,6 @@ import {
   type PlayableBabylonProjectionImportResult,
   type PlayableBabylonProjectionNode,
   type PlayableBabylonSceneCameraPreviewRig,
-  type BabylonAssetContainerProjectionImportEvent,
   type PlayableLocalEditorLoadingOverlayContent,
   type PlayablePlatformAssetDropPoint,
   type PlayablePlatformAssetExternal,
@@ -178,34 +176,30 @@ const editorProjectionImportStats: EditorProjectionImportStats = {
 type EditorSceneRuntimePreviewImportPlan = NonNullable<ReturnType<typeof createEditorSceneRuntimePreviewImportPlan>>;
 
 const editorProjectionImportPlanCache = new WeakMap<object, EditorSceneRuntimePreviewImportPlan>();
+const editorProjectionContainerCaches = new WeakMap<object, Map<string, Promise<BabylonProjectionAssetContainer>>>();
 
-const editorProjectionModelImporter = createBabylonAssetContainerProjectionImporter({
-  loadContainer: async (context) => {
-    const importPlan = resolveCachedEditorProjectionImportPlan(context);
-    if (!importPlan || importPlan.kind === 'groundDecal') {
-      throw new Error('[LocalEditor] Missing model import plan for projection asset container');
-    }
-    await import('@babylonjs/loaders/glTF');
-    const { SceneLoader } = await import('@babylonjs/core/Loading/sceneLoader');
-    const pathInfo = await editorAssets.getModelPathAndFileAsync(importPlan.url);
-    return SceneLoader.LoadAssetContainerAsync(
-      pathInfo.path,
-      pathInfo.filename,
-      context.scene,
-      undefined,
-      pathInfo.isDataUrl || pathInfo.isCompressed ? '.glb' : undefined,
-    );
-  },
-  resolveCacheKey: (context) => {
-    const importPlan = resolveCachedEditorProjectionImportPlan(context);
-    const assetId = readEditorSceneRuntimePreviewAssetId(context.asset) ?? '';
-    const sourceId = typeof context.asset.sourceId === 'string' ? context.asset.sourceId : '';
-    return importPlan && importPlan.kind !== 'groundDecal'
-      ? `pa-template:model:${assetId}:${sourceId}:${importPlan.url}`
-      : `pa-template:model:${assetId}:${sourceId}`;
-  },
-  onEvent: handleEditorProjectionImportEvent,
-});
+interface BabylonProjectionAssetContainer {
+  materials?: unknown[];
+  textures?: unknown[];
+  skeletons?: unknown[];
+  instantiateModelsToScene?: (
+    nameFunction?: (sourceName: string) => string,
+    cloneMaterials?: boolean,
+    options?: { doNotInstantiate?: boolean },
+  ) => BabylonProjectionInstantiatedEntries;
+}
+
+interface BabylonProjectionInstantiatedEntries {
+  rootNodes?: unknown[];
+  animationGroups?: unknown[];
+}
+
+type LocalProjectionImportEvent =
+  | { type: 'container-load-start'; cacheKey: string; context: PlayableBabylonProjectionImportContext }
+  | { type: 'container-load-success'; cacheKey: string; context: PlayableBabylonProjectionImportContext }
+  | { type: 'container-load-failure'; cacheKey: string; context: PlayableBabylonProjectionImportContext; error: unknown }
+  | { type: 'container-cache-hit'; cacheKey: string; context: PlayableBabylonProjectionImportContext }
+  | { type: 'instantiate'; cacheKey: string; context: PlayableBabylonProjectionImportContext; doNotInstantiate: boolean };
 
 export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOptions): LocalEditorModeSwitcher {
   const sceneMainSourceDriver = createSceneMainSourceDriver();
@@ -392,7 +386,6 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
       cameraRadius: 12,
       clearColor: { r: 0.055, g: 0.07, b: 0.09, a: 1 },
       useRightHandedSystem: true,
-      selectionEdgesPrewarm: 'lazy',
     },
     createGrid: createEditorGrid,
     lifecycle: {
@@ -573,7 +566,7 @@ async function importEditorProjectionModel(
   }
   if (importPlan.kind === 'groundDecal') return createGroundDecalProjectionResult(context, importPlan.decal);
 
-  return await editorProjectionModelImporter(context) ?? null;
+  return await importProjectionAssetContainer(context, importPlan) ?? null;
 }
 
 function warnProjectionAssetUrlMissing(asset: unknown, kind: 'model' | 'texture'): void {
@@ -594,7 +587,181 @@ function resolveCachedEditorProjectionImportPlan(
   return importPlan;
 }
 
-function handleEditorProjectionImportEvent(event: BabylonAssetContainerProjectionImportEvent): void {
+async function importProjectionAssetContainer(
+  context: PlayableBabylonProjectionImportContext,
+  importPlan: EditorSceneRuntimePreviewImportPlan,
+): Promise<PlayableBabylonProjectionImportResult | null> {
+  if (importPlan.kind === 'groundDecal') return null;
+  const cacheKey = createProjectionAssetContainerCacheKey(context, importPlan);
+  const sceneCache = getProjectionAssetContainerSceneCache(context.scene);
+  const cached = sceneCache.get(cacheKey);
+  if (cached) handleEditorProjectionImportEvent({ type: 'container-cache-hit', cacheKey, context });
+  const container = await (cached ?? loadProjectionAssetContainer(sceneCache, cacheKey, context, importPlan));
+  ensureProjectionContainerResourcesInScene(container, context.scene as Record<string, any>);
+  const doNotInstantiate = hasProjectionSlotMaterialProfiles(context);
+  handleEditorProjectionImportEvent({ type: 'instantiate', cacheKey, context, doNotInstantiate });
+  const entries = container.instantiateModelsToScene?.(
+    sourceName => `${context.node.id}.projectionAsset.${sourceName}`,
+    false,
+    { doNotInstantiate },
+  );
+  return entries ? collectProjectionImportResult(entries) : null;
+}
+
+function getProjectionAssetContainerSceneCache(scene: object): Map<string, Promise<BabylonProjectionAssetContainer>> {
+  let sceneCache = editorProjectionContainerCaches.get(scene);
+  if (!sceneCache) {
+    sceneCache = new Map();
+    editorProjectionContainerCaches.set(scene, sceneCache);
+  }
+  return sceneCache;
+}
+
+function loadProjectionAssetContainer(
+  sceneCache: Map<string, Promise<BabylonProjectionAssetContainer>>,
+  cacheKey: string,
+  context: PlayableBabylonProjectionImportContext,
+  importPlan: EditorSceneRuntimePreviewImportPlan,
+): Promise<BabylonProjectionAssetContainer> {
+  handleEditorProjectionImportEvent({ type: 'container-load-start', cacheKey, context });
+  const promise = loadProjectionAssetContainerFromPlan(context, importPlan)
+    .then((container) => {
+      handleEditorProjectionImportEvent({ type: 'container-load-success', cacheKey, context });
+      return container;
+    })
+    .catch((error) => {
+      if (sceneCache.get(cacheKey) === promise) sceneCache.delete(cacheKey);
+      handleEditorProjectionImportEvent({ type: 'container-load-failure', cacheKey, context, error });
+      throw error;
+    });
+  sceneCache.set(cacheKey, promise);
+  return promise;
+}
+
+async function loadProjectionAssetContainerFromPlan(
+  context: PlayableBabylonProjectionImportContext,
+  importPlan: EditorSceneRuntimePreviewImportPlan,
+): Promise<BabylonProjectionAssetContainer> {
+  if (importPlan.kind === 'groundDecal') {
+    throw new Error('[LocalEditor] Missing model import plan for projection asset container');
+  }
+  await import('@babylonjs/loaders/glTF');
+  const { SceneLoader } = await import('@babylonjs/core/Loading/sceneLoader');
+  const pathInfo = await editorAssets.getModelPathAndFileAsync(importPlan.url);
+  return SceneLoader.LoadAssetContainerAsync(
+    pathInfo.path,
+    pathInfo.filename,
+    context.scene,
+    undefined,
+    pathInfo.isDataUrl || pathInfo.isCompressed ? '.glb' : undefined,
+  );
+}
+
+function createProjectionAssetContainerCacheKey(
+  context: PlayableBabylonProjectionImportContext,
+  importPlan: EditorSceneRuntimePreviewImportPlan,
+): string {
+  const assetId = readEditorSceneRuntimePreviewAssetId(context.asset) ?? '';
+  const sourceId = typeof context.asset.sourceId === 'string' ? context.asset.sourceId : '';
+  const baseKey = importPlan.kind !== 'groundDecal'
+    ? `pa-template:model:${assetId}:${sourceId}:${importPlan.url}`
+    : `pa-template:model:${assetId}:${sourceId}`;
+  return `${baseKey}|profiles:${stableProjectionCacheStringify({
+    artistMaterialKind: context.node.artistMaterialKind,
+    artistMaterialProfile: context.node.artistMaterialProfile,
+    artistMaterialSlotProfiles: context.node.artistMaterialSlotProfiles,
+  })}`;
+}
+
+function hasProjectionSlotMaterialProfiles(context: PlayableBabylonProjectionImportContext): boolean {
+  return Object.keys(context.node.artistMaterialSlotProfiles ?? {}).length > 0;
+}
+
+function ensureProjectionContainerResourcesInScene(
+  container: BabylonProjectionAssetContainer,
+  scene: Record<string, any>,
+): void {
+  addUniqueSceneResources(scene, scene.materials, container.materials, scene.addMaterial);
+  addUniqueSceneResources(scene, scene.textures, container.textures, scene.addTexture);
+  addUniqueSceneResources(scene, scene.skeletons, container.skeletons, scene.addSkeleton);
+}
+
+function addUniqueSceneResources(
+  scene: Record<string, any>,
+  existing: unknown[] | undefined,
+  resources: unknown[] | undefined,
+  addResource: ((resource: any) => void) | undefined,
+): void {
+  if (!Array.isArray(resources) || resources.length === 0 || typeof addResource !== 'function') return;
+  for (const resource of resources) {
+    if (Array.isArray(existing) && existing.includes(resource)) continue;
+    addResource.call(scene, resource);
+  }
+}
+
+function collectProjectionImportResult(
+  entries: BabylonProjectionInstantiatedEntries,
+): PlayableBabylonProjectionImportResult {
+  const meshes: unknown[] = [];
+  const transformNodes: unknown[] = [];
+  const seen = new Set<unknown>();
+  for (const rootNode of entries.rootNodes ?? []) {
+    collectProjectionNode(rootNode, seen, meshes, transformNodes);
+  }
+  return {
+    meshes,
+    transformNodes,
+    animationGroups: entries.animationGroups ?? [],
+  };
+}
+
+function collectProjectionNode(
+  node: unknown,
+  seen: Set<unknown>,
+  meshes: unknown[],
+  transformNodes: unknown[],
+): void {
+  if (!node || seen.has(node)) return;
+  seen.add(node);
+  if (isProjectionMeshLike(node)) {
+    meshes.push(node);
+  } else {
+    transformNodes.push(node);
+  }
+  for (const child of readProjectionNodeChildren(node)) {
+    collectProjectionNode(child, seen, meshes, transformNodes);
+  }
+}
+
+function readProjectionNodeChildren(node: unknown): unknown[] {
+  const getChildren = (node as { getChildren?: () => unknown[] } | null)?.getChildren;
+  if (typeof getChildren !== 'function') return [];
+  const children = getChildren.call(node);
+  return Array.isArray(children) ? children : [];
+}
+
+function isProjectionMeshLike(node: unknown): boolean {
+  return typeof (node as { getTotalVertices?: unknown } | null)?.getTotalVertices === 'function';
+}
+
+function stableProjectionCacheStringify(value: unknown): string {
+  return JSON.stringify(sortProjectionCacheValue(value));
+}
+
+function sortProjectionCacheValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(sortProjectionCacheValue);
+  if (!value || typeof value !== 'object') return value;
+  const record = value as Record<string, unknown>;
+  const sorted: Record<string, unknown> = {};
+  for (const key of Object.keys(record).sort()) {
+    const item = record[key];
+    if (typeof item === 'undefined' || typeof item === 'function') continue;
+    sorted[key] = sortProjectionCacheValue(item);
+  }
+  return sorted;
+}
+
+function handleEditorProjectionImportEvent(event: LocalProjectionImportEvent): void {
   editorProjectionImportStats.lastCacheKey = event.cacheKey;
   if (event.type === 'container-load-start') {
     editorProjectionImportStats.containerLoads += 1;

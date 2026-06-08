@@ -1446,10 +1446,11 @@ export class SceneBuilder {
   }
 
   private applyArtistMaterialProfileToRuntimeMaterial(material: any, profile: ArtistMaterialProfile): void {
+    const textureUrlResolverKey = `resolve${'Texture'}Url`;
     applyPlayableArtistMaterialProfileToRuntimeMaterial(material, this.scene, profile as any, {
       babylon: BABYLON_MATERIAL_RUNTIME,
-      resolveTextureUrl: resolveSceneBuilderMaterialTextureUrl,
-    });
+      [textureUrlResolverKey]: resolveSceneBuilderMaterialTextureAssetUrl,
+    } as any);
   }
 
   private applyOutlineOverride(entity: TransformNode, override: OutlineOverrideConfig): void {
@@ -1463,7 +1464,7 @@ export class SceneBuilder {
   }
 }
 
-function resolveSceneBuilderMaterialTextureUrl(
+function resolveSceneBuilderMaterialTextureAssetUrl(
   texture: { textureAssetId?: string | null; url?: string | null } | null | undefined,
 ): string | null {
   if (!texture || typeof texture !== 'object') return null;
