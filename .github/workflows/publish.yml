@@ -1,0 +1,109 @@
+name: Publish game package (project-package)
+
+# 把脚手架的依赖变更分发给已存在的沙盒（forge-play v4 upgrade service）。
+# 这个仓（pa_template）是游戏脚手架 SoT；它自己的 package.json 即 project-package
+# 的 artifact —— 沙盒侧 package_json_overlay 直接 merge 其 dependencies /
+# devDependencies 进 /home/user/code/package.json（保留用户 pin），不重启 opencode
+# （vite HMR 自处理）。
+#
+# build → smoke → upload to Supabase Storage (bucket=upgrades)
+# → insert row into `upgrades` table via PostgREST (service key)
+# → Supabase Realtime fans the insert out to browsers as upgrade.available.
+#
+# project-opencode（prompts）由 fps-game-prompt 仓发布，不在这里。
+# 设计 doc: forge-play docs/plan-prompt-distribution.md
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'package.json'
+  workflow_dispatch: {}
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 2 }
+
+      - name: Parse severity + sha
+        id: meta
+        run: |
+          set -e
+          echo "sha=${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+          msg=$(git log -1 --format='%s%n%b' "$GITHUB_SHA")
+          sev="routine"
+          if echo "$msg" | grep -qi '\[critical\]'; then sev="critical"; fi
+          if echo "$msg" | grep -qi '\[recommended\]'; then sev="recommended"; fi
+          echo "severity=$sev" >> "$GITHUB_OUTPUT"
+          echo "Detected severity: $sev"
+
+      - name: Build artifact (the package.json itself)
+        id: build
+        run: |
+          set -e
+          mkdir -p out
+          cp package.json out/project-package.json
+          sha=$(sha256sum out/project-package.json | cut -d' ' -f1)
+          echo "sha256=$sha" >> "$GITHUB_OUTPUT"
+          echo "project-package sha256=$sha"
+
+      - uses: actions/setup-node@v4
+        with: { node-version: 24 }
+
+      - name: Smoke
+        run: |
+          node -e "const p=JSON.parse(require('fs').readFileSync('out/project-package.json','utf8')); if(!p.dependencies && !p.devDependencies){throw new Error('package.json has no deps/devDeps')}" \
+            || { echo "✗ package.json has no dependencies"; exit 1; }
+          echo "✓ project-package smoke passed"
+
+      - name: Upload artifact to Supabase Storage
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SERVICE_KEY:  ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          set -e
+          SHA=${{ steps.meta.outputs.sha }}
+          remote="project-package/v-$SHA/package.json"
+          echo "→ $remote"
+          code=$(curl -s -o /tmp/up.out -w "%{http_code}" -X POST \
+            "$SUPABASE_URL/storage/v1/object/upgrades/$remote" \
+            -H "Authorization: Bearer $SERVICE_KEY" \
+            -H "Content-Type: application/json" \
+            -H "x-upsert: false" \
+            --data-binary "@out/project-package.json")
+          if [ "$code" = "200" ] || [ "$code" = "201" ]; then echo "  ✓ uploaded ($code)"
+          elif [ "$code" = "409" ] || grep -q "Duplicate" /tmp/up.out 2>/dev/null; then echo "  ✓ already exists (immutable, $code)"
+          else echo "  ✗ failed ($code): $(cat /tmp/up.out)"; exit 1; fi
+
+      - name: Register release in upgrades table
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SERVICE_KEY:  ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          set -e
+          SHA=${{ steps.meta.outputs.sha }}
+          PUB="$SUPABASE_URL/storage/v1/object/public/upgrades"
+          CHANGELOG=$(git log -1 --format='%s' "$GITHUB_SHA")
+          body=$(jq -n \
+            --arg m "project-package" --arg s "$SHA" --arg h "${{ steps.build.outputs.sha256 }}" \
+            --arg u "$PUB/project-package/v-$SHA/package.json" \
+            --arg sev "${{ steps.meta.outputs.severity }}" --arg cl "$CHANGELOG" \
+            --argjson meta '{"apply_mode":"package_json_overlay","apply_target":"/home/user/code/package.json"}' \
+            '{module:$m, sha:$s, sha256:$h, artifact_url:$u, metadata:$meta, severity:$sev, changelog:$cl, published_at:(now|todate)}')
+          code=$(curl -s -o /tmp/reg.out -w "%{http_code}" -X POST \
+            "$SUPABASE_URL/rest/v1/upgrades" \
+            -H "apikey: $SERVICE_KEY" -H "Authorization: Bearer $SERVICE_KEY" \
+            -H "Content-Type: application/json" -H "Prefer: return=minimal" \
+            -d "$body")
+          if [ "$code" = "201" ] || [ "$code" = "200" ]; then echo "  ✓ registered project-package"
+          elif [ "$code" = "409" ]; then echo "  ✓ already registered (same sha)"
+          else echo "  ✗ register failed ($code): $(cat /tmp/reg.out)"; exit 1; fi
+
+      - name: Summary
+        run: |
+          echo "## Published project-package" >> "$GITHUB_STEP_SUMMARY"
+          echo "Sha: \`${{ steps.meta.outputs.sha }}\`  Severity: \`${{ steps.meta.outputs.severity }}\`  sha256: \`${{ steps.build.outputs.sha256 }}\`" >> "$GITHUB_STEP_SUMMARY"

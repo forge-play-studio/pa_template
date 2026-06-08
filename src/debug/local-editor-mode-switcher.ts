@@ -24,7 +24,6 @@ import {
   readPlayablePlatformAssetKind,
   readPlayablePlatformAssetPath,
   readPlayablePlatformAssetPlacement,
-  readPlayablePlatformRawAssetId,
   readEditorSceneRuntimePreviewAssetId,
   readEditorSceneRuntimePreviewAssetKind,
   resolveEditorSceneRuntimePreviewAssetUrl,
@@ -662,10 +661,9 @@ function createProjectionAssetContainerCacheKey(
   importPlan: EditorSceneRuntimePreviewImportPlan,
 ): string {
   const assetId = readEditorSceneRuntimePreviewAssetId(context.asset) ?? '';
-  const sourceId = typeof context.asset.sourceId === 'string' ? context.asset.sourceId : '';
   const baseKey = importPlan.kind !== 'groundDecal'
-    ? `pa-template:model:${assetId}:${sourceId}:${importPlan.url}`
-    : `pa-template:model:${assetId}:${sourceId}`;
+    ? `pa-template:model:${assetId}:${importPlan.url}`
+    : `pa-template:model:${assetId}`;
   return `${baseKey}|profiles:${stableProjectionCacheStringify({
     artistMaterialKind: context.node.artistMaterialKind,
     artistMaterialProfile: context.node.artistMaterialProfile,
@@ -1127,7 +1125,7 @@ async function findExistingPlatformEditorAsset(
   payload: Record<string, unknown>,
 ): Promise<{ guid?: string; assetId: string; external?: PlayablePlatformAssetExternal } | null> {
   const projectAssetId = readOptionalString(payload.projectAssetId);
-  const platformAssetId = readPlayablePlatformRawAssetId(payload);
+  const platformAssetId = readProjectPlatformRawAssetId(payload);
   const expectedKind = readPlayablePlatformAssetKind(payload) === 'texture' ? 'texture' : 'model';
   const assetPath = readPlayablePlatformAssetPath(payload);
 
@@ -1150,6 +1148,10 @@ async function findExistingPlatformEditorAsset(
   } catch {}
 
   return null;
+}
+
+function readProjectPlatformRawAssetId(payload: Record<string, unknown>): string | undefined {
+  return readOptionalString(payload.platformAssetId) ?? readOptionalString(payload.assetId);
 }
 
 async function resolvePlatformAssetId(payload: Record<string, unknown>): Promise<string> {
