@@ -16,6 +16,7 @@ const sourceModel = path.join(cwd, '中文模型.glb');
 const explicitProjectModel = path.join(cwd, '显式项目资产.glb');
 const invalidProjectModel = path.join(cwd, '错误项目资产.glb');
 const sourceTexture = path.join(cwd, '地贴.png');
+const projectLocalModel = path.join(assetsDir, '搬运工.glb');
 const preservedModel = path.join(assetsDir, '静态模型.glb');
 const slotMetadataModel = path.join(cwd, 'slot-metadata.gltf');
 const embeddedTextureSlotMetadataModel = path.join(cwd, 'embedded-texture-slot-metadata.gltf');
@@ -115,6 +116,7 @@ await fs.writeFile(emptySlotMetadataModel, JSON.stringify({
   materials: [],
 }));
 await fs.mkdir(assetsDir, { recursive: true });
+await fs.writeFile(projectLocalModel, 'project-local-glb-bytes');
 await fs.writeFile(preservedModel, 'preserved-glb-bytes');
 await fs.writeFile(codeFile, 'export const untouched = true;\n');
 
@@ -211,6 +213,20 @@ await fs.writeFile(texturePayload, JSON.stringify({
   assetType: 'texture',
 }));
 const texture = await registerAsset(config, { payload: texturePayload });
+const projectLocalGuid = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';
+const projectLocalAssetId = createAssetId('model', projectLocalGuid);
+const projectLocalPayload = path.join(cwd, 'project-local-payload.json');
+await fs.writeFile(projectLocalPayload, JSON.stringify({
+  sourcePath: projectLocalModel,
+  assetPath: projectLocalModel,
+  assetName: '搬运工.glb',
+  displayName: '搬运工',
+  assetType: 'model',
+  guid: projectLocalGuid,
+  projectAssetId: projectLocalAssetId,
+  platformAssetId: 'raw_project_local_model',
+}));
+const projectLocal = await registerAsset(config, { payload: projectLocalPayload });
 const preservedGuid = '22222222-3333-4444-8555-666666666666';
 const preservedAssetId = 'asset_22222222333344448555666666666666';
 const preservedHash = `sha256:${crypto.createHash('sha256').update(await fs.readFile(preservedModel)).digest('hex')}`;
@@ -238,19 +254,33 @@ await fs.writeFile(preservedPayload, JSON.stringify({
 const preserved = await registerAsset(config, { payload: preservedPayload });
 const manifest = await loadManifest(config);
 const generated = await fs.readFile(config.registryPath, 'utf8');
+const manifestByAssetId = new Map(manifest.map((entry) => [entry.assetId, entry]));
 
-assert.equal(manifest.length, 4);
+assert.equal(manifest.length, 5);
 assert.equal(model.kind, 'model');
 assert.equal(texture.kind, 'texture');
 assert.equal(explicitProject.assetId, explicitProjectAssetId);
 assert.equal(explicitProject.external.platformAssetId, 'raw_model_explicit');
+assert.equal(projectLocal.assetId, projectLocalAssetId);
+assert.equal(projectLocal.external.platformAssetId, 'raw_project_local_model');
+assert.equal(projectLocal.assetUrl, '/assets/搬运工.glb');
+assert.equal(projectLocal.targetPath, projectLocalModel);
 assert.equal(preserved.assetId, preservedAssetId);
 assert.equal(preserved.assetUrl, '/assets/静态模型.glb');
 assert.equal(preserved.targetPath, preservedModel);
 assert.match(model.assetId, /^asset_[a-f0-9]{32}$/);
 assert.notEqual(model.assetId, 'raw_model_1');
 assert.equal(model.external.platformAssetId, 'raw_model_1');
+assert.equal(model.targetPath, path.join(importedDir, `${model.assetId}.glb`));
+assert.equal(await fileExists(model.targetPath), true);
+assert.equal(manifestByAssetId.get(model.assetId)?.relativePath, `../imported/${model.assetId}.glb`);
 assert.match(texture.assetId, /^texture_[a-f0-9]{32}$/);
+assert.equal(texture.targetPath, path.join(importedDir, 'textures', `${texture.assetId}.png`));
+assert.equal(await fileExists(texture.targetPath), true);
+assert.equal(manifestByAssetId.get(texture.assetId)?.relativePath, `../imported/textures/${texture.assetId}.png`);
+assert.equal(manifestByAssetId.get(projectLocalAssetId)?.relativePath, '../搬运工.glb');
+assert.equal(await fileExists(path.join(importedDir, `${projectLocalAssetId}.glb`)), false);
+assert.equal(await fs.readFile(projectLocalModel, 'utf8'), 'project-local-glb-bytes');
 assert.equal(manifest.some((entry) => Object.hasOwn(entry, 'sourceId')), false);
 assert.match(generated, /GENERATED_ASSET_CATALOG/);
 assert.doesNotMatch(generated, /sourceId/);
@@ -464,3 +494,12 @@ assert.equal(clearedSlotMetadata, null);
 
 await fs.rm(tempRoot, { recursive: true, force: true });
 console.log('asset catalog generator check passed');
+
+async function fileExists(filePath) {
+  try {
+    await fs.access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}

@@ -180,7 +180,12 @@ export async function registerAsset(config, args, errorCodes = {}) {
     });
   }
   const targetFileName = `${assetId}${sourceExtension}`;
-  const targetRelativePath = existing?.relativePath ?? config.relativeImportedPath(kind, targetFileName);
+  const targetRelativePath = resolveTargetRelativePath(config, {
+    existing,
+    sourcePath,
+    kind,
+    targetFileName,
+  });
   const targetPath = resolveCatalogAssetPath(config, targetRelativePath, kind, 'target_path');
   const now = new Date().toISOString();
 
@@ -188,7 +193,10 @@ export async function registerAsset(config, args, errorCodes = {}) {
   let registeredEntry = null;
   try {
     await fs.mkdir(path.dirname(targetPath), { recursive: true });
-    const shouldCopy = !existing || existing.contentHash !== audit.contentHash || !(await fileExists(targetPath));
+    const targetMatchesSource = isSamePath(sourcePath, targetPath);
+    const targetExists = targetMatchesSource || await fileExists(targetPath);
+    const targetNeedsRefresh = !existing || existing.contentHash !== audit.contentHash || !targetExists;
+    const shouldCopy = !targetMatchesSource && targetNeedsRefresh;
     if (shouldCopy) {
       await fs.copyFile(sourcePath, targetPath);
       copiedNewTarget = !existing;
@@ -221,7 +229,7 @@ export async function registerAsset(config, args, errorCodes = {}) {
         assetId,
       }),
       createdAt: existing?.createdAt ?? now,
-      updatedAt: shouldCopy ? now : (existing?.updatedAt ?? now),
+      updatedAt: targetNeedsRefresh ? now : (existing?.updatedAt ?? now),
     });
     if (!nextEntry) throw new AssetRegistryError('invalid_manifest_entry', { assetId, guid });
     registeredEntry = nextEntry;
@@ -371,6 +379,33 @@ function normalizeSupportedExtensions(config) {
 function resolveSourceExtension(config, sourcePath) {
   const lowerPath = sourcePath.toLowerCase();
   return normalizeSupportedExtensions(config).find((extension) => lowerPath.endsWith(extension)) ?? null;
+}
+
+function resolveTargetRelativePath(config, { existing, sourcePath, kind, targetFileName }) {
+  if (existing?.relativePath) return existing.relativePath;
+  return resolveReusableProjectAssetRelativePath(config, sourcePath, kind)
+    ?? config.relativeImportedPath(kind, targetFileName);
+}
+
+function resolveReusableProjectAssetRelativePath(config, sourcePath, kind) {
+  const assetRoot = config.assetRootDir ?? config.assetsDir;
+  if (!assetRoot) return null;
+
+  const absoluteSource = path.resolve(sourcePath);
+  if (!isInsideOrSamePath(path.resolve(assetRoot), absoluteSource)) return null;
+  if (isInsideOrSamePath(path.resolve(config.generatedDir), absoluteSource)) return null;
+  assertAssetKindExtension(kind, absoluteSource, 'source_path');
+
+  return path.relative(config.generatedDir, absoluteSource).split(path.sep).join('/');
+}
+
+function isInsideOrSamePath(parent, child) {
+  const relative = path.relative(parent, child);
+  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+}
+
+function isSamePath(left, right) {
+  return path.relative(path.resolve(left), path.resolve(right)) === '';
 }
 
 function assertInside(parent, child, label) {
