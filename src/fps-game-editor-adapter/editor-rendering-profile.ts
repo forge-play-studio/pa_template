@@ -1,11 +1,12 @@
 import {
+  collectEditorSceneRenderingAlphaIndexMigrationTargetIds,
   createPlayableBabylonRenderingCapability,
   type EditorSceneRenderingPanelLanguage,
-  type EditorSceneRenderingProfile,
   type EditorSceneRenderingTextureAsset,
   type PlayableBabylonRenderingSetConfigInput,
   type PlayableLocalEditorPatchResult,
   type PlayableLocalEditorRenderingCapability,
+  resolveEditorSceneRenderingAlphaIndexPresetValueMigration,
 } from '@fps-games/editor/playable-sdk';
 import type { EditorSceneDocument } from './editor-scene-document';
 import {
@@ -54,17 +55,22 @@ export function createEditorRenderingCapability(
 
 function createRenderingAlphaPresetMigrationDocumentPatch(
   input: PlayableBabylonRenderingSetConfigInput<EditorSceneDocument>,
-  previousProfile: EditorSceneRenderingProfile,
+  previousProfile: ReturnType<typeof getActiveRenderingProfile>,
 ): PlayableLocalEditorPatchResult<EditorSceneDocumentPatch> | null {
   if (input.action) return null;
-  const migration = resolveRenderingAlphaPresetValueMigration(input.changedPaths, previousProfile, input.change);
+  const migration = resolveEditorSceneRenderingAlphaIndexPresetValueMigration({
+    changedPaths: input.changedPaths,
+    previousProfile,
+    change: input.change,
+  });
   if (!migration) return null;
-  const targetIds = input.document.scene.gameObjects
-    .filter((gameObject) => (
-      readEditorSceneObjectRenderingGroupId(gameObject.rendering?.renderingGroupId) === migration.renderingGroupId
-      && gameObject.rendering?.alphaIndex === migration.fromAlphaIndex
-    ))
-    .map(gameObject => gameObject.id);
+  const targetIds = collectEditorSceneRenderingAlphaIndexMigrationTargetIds(
+    input.document.scene.gameObjects,
+    {
+      renderingGroupId: migration.renderingGroupId,
+      fromAlphaIndex: migration.fromAlphaIndex,
+    },
+  );
   if (targetIds.length === 0) return null;
   return {
     label: `Migrate rendering alphaIndex ${migration.fromAlphaIndex} to ${migration.toAlphaIndex}`,
@@ -78,36 +84,6 @@ function createRenderingAlphaPresetMigrationDocumentPatch(
     changedIds: targetIds,
     reprojectIds: targetIds,
   };
-}
-
-function resolveRenderingAlphaPresetValueMigration(
-  changedPaths: readonly string[],
-  previousProfile: EditorSceneRenderingProfile,
-  change: PlayableBabylonRenderingSetConfigInput<EditorSceneDocument>['change'],
-): { renderingGroupId: 0 | 1 | 2 | 3; fromAlphaIndex: number; toAlphaIndex: number } | null {
-  const alphaIndexPath = changedPaths.find(path => /^renderingGroups\.slots\.[0-3]\.alphaIndexPresets\.\d+\.alphaIndex$/.test(path));
-  if (!alphaIndexPath) return null;
-  if (change?.path !== alphaIndexPath) return null;
-  const match = alphaIndexPath.match(/^renderingGroups\.slots\.([0-3])\.alphaIndexPresets\.(\d+)\.alphaIndex$/);
-  if (!match) return null;
-  const renderingGroupId = Number(match[1]) as 0 | 1 | 2 | 3;
-  const presetIndex = Number(match[2]);
-  const previousPreset = previousProfile.renderingGroups.slots
-    .find(slot => slot.renderingGroupId === renderingGroupId)
-    ?.alphaIndexPresets[presetIndex];
-  const nextAlphaIndex = change.value;
-  if (typeof nextAlphaIndex !== 'number' || !Number.isFinite(nextAlphaIndex)) return null;
-  if (!previousPreset || !Number.isFinite(previousPreset.alphaIndex) || !Number.isFinite(nextAlphaIndex)) return null;
-  if (previousPreset.alphaIndex === nextAlphaIndex) return null;
-  return {
-    renderingGroupId,
-    fromAlphaIndex: previousPreset.alphaIndex,
-    toAlphaIndex: nextAlphaIndex,
-  };
-}
-
-function readEditorSceneObjectRenderingGroupId(value: unknown): 0 | 1 | 2 | 3 {
-  return value === 1 || value === 2 || value === 3 ? value : 0;
 }
 
 export function resetEditorRenderingDraft(): void {

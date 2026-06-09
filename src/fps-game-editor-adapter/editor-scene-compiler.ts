@@ -4,6 +4,7 @@ import type {
 import {
   resolveEditorSceneMaterialAssetIntegrity,
   resolveEditorSceneMaterialSlotReimportDiff,
+  resolveEditorSceneGameObjectRendering,
 } from '@fps-games/editor/playable-sdk';
 import type {
   EditorSceneAsset,
@@ -216,30 +217,7 @@ function compileGameObject(
 }
 
 function compileEditorSceneRendering(gameObject: EditorSceneGameObject): SceneNodeConfig['rendering'] | undefined {
-  const rendering = gameObject.rendering && typeof gameObject.rendering === 'object' && !Array.isArray(gameObject.rendering)
-    ? gameObject.rendering
-    : undefined;
-  const alphaIndex = typeof rendering?.alphaIndex === 'number' && Number.isFinite(rendering.alphaIndex)
-    ? rendering.alphaIndex
-    : readEditorSceneLegacyGroundDecalAlphaIndex(gameObject);
-  const compiled: NonNullable<SceneNodeConfig['rendering']> = {};
-  if (
-    rendering?.renderingGroupId === 0
-    || rendering?.renderingGroupId === 1
-    || rendering?.renderingGroupId === 2
-    || rendering?.renderingGroupId === 3
-  ) {
-    compiled.renderingGroupId = rendering.renderingGroupId;
-  }
-  if (typeof alphaIndex === 'number' && Number.isFinite(alphaIndex)) compiled.alphaIndex = alphaIndex;
-  return Object.keys(compiled).length > 0 ? compiled : undefined;
-}
-
-function readEditorSceneLegacyGroundDecalAlphaIndex(gameObject: EditorSceneGameObject): number | undefined {
-  const groundDecal = gameObject.groundDecal;
-  if (!groundDecal || typeof groundDecal !== 'object' || Array.isArray(groundDecal)) return undefined;
-  const alphaIndex = (groundDecal as Record<string, unknown>).alphaIndex;
-  return typeof alphaIndex === 'number' && Number.isFinite(alphaIndex) ? alphaIndex : undefined;
+  return resolveEditorSceneGameObjectRendering(gameObject);
 }
 
 function compileEditorSceneVisualOverrides(

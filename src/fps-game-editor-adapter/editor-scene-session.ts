@@ -72,6 +72,7 @@ import {
   isEditorSceneMaterialAssetReadonlyForInspector as isPlayableEditorSceneMaterialAssetReadonlyForInspector,
   isEditorSceneRootGameObject as isPlayableEditorSceneRootGameObject,
   isEditorSceneRootGameObjectId as isPlayableEditorSceneRootGameObjectId,
+  migrateEditorSceneDocumentRenderingAlphaIndex as migratePlayableEditorSceneDocumentRenderingAlphaIndex,
   normalizeEditorSceneFieldInspectorValue as normalizePlayableEditorSceneFieldInspectorValue,
   normalizeEditorSceneHierarchyDocument as normalizePlayableEditorSceneHierarchyDocument,
   normalizeEditorSceneMaterialAssetValue as normalizePlayableEditorSceneMaterialAssetValue,
@@ -1141,30 +1142,13 @@ function patchEditorSceneRenderingAlphaIndexMigration(
   document: EditorSceneDocument,
   patch: Extract<EditorSceneDocumentPatch, { kind: 'game-object.rendering-alpha-index-migration' }>,
 ): EditorSceneDocument {
-  const targetIds = new Set(patch.targetIds);
-  if (targetIds.size === 0) return document;
-  return {
-    ...document,
-    scene: {
-      ...document.scene,
-      gameObjects: document.scene.gameObjects.map((gameObject) => {
-        if (!targetIds.has(gameObject.id)) return gameObject;
-        if (readEditorSceneRenderingGroupId(gameObject.rendering?.renderingGroupId) !== patch.renderingGroupId) return gameObject;
-        if (gameObject.rendering?.alphaIndex !== patch.fromAlphaIndex) return gameObject;
-        return {
-          ...gameObject,
-          rendering: {
-            ...(gameObject.rendering ?? {}),
-            alphaIndex: patch.toAlphaIndex,
-          },
-        };
-      }),
-    },
-  };
-}
-
-function readEditorSceneRenderingGroupId(value: unknown): 0 | 1 | 2 | 3 {
-  return value === 1 || value === 2 || value === 3 ? value : 0;
+  return migratePlayableEditorSceneDocumentRenderingAlphaIndex({
+    document,
+    targetIds: patch.targetIds,
+    renderingGroupId: patch.renderingGroupId,
+    fromAlphaIndex: patch.fromAlphaIndex,
+    toAlphaIndex: patch.toAlphaIndex,
+  });
 }
 
 function createEditorSceneDocumentMutationOptions(): PlayableEditorSceneDocumentMutationOptions<EditorSceneDocument, EditorSceneGameObject> {
