@@ -133,6 +133,7 @@ export function validateSceneJsonV2(
     if (nonEmptyString(node.id)) validateNodeParentCycle(node.id, scene, `${path}.parentId`, add);
     validateRuntimeSourceBinding(node.source, `${path}.source`, add);
     validateTransform(node.transform, `${path}.transform`, add);
+    validateNodeRendering(node.rendering, `${path}.rendering`, add);
     if (node.kind === 'instance') {
       if (!isRecord(node.instance)) add(`${path}.instance`, 'instance node must contain instance object');
       else if (!assetIds.has(node.instance.assetId)) {
@@ -678,6 +679,26 @@ function validateGroundDecal(value: unknown, path: string, add: (path: string, m
     if (value[key] != null && (typeof value[key] !== 'number' || !Number.isFinite(value[key]))) {
       add(`${path}.${key}`, `${key} must be a finite number`);
     }
+  }
+}
+
+function validateNodeRendering(value: unknown, path: string, add: (path: string, message: string) => void): void {
+  if (value == null) return;
+  if (!isRecord(value)) {
+    add(path, 'rendering must be an object');
+    return;
+  }
+  if (
+    value.renderingGroupId != null
+    && value.renderingGroupId !== 0
+    && value.renderingGroupId !== 1
+    && value.renderingGroupId !== 2
+    && value.renderingGroupId !== 3
+  ) {
+    add(`${path}.renderingGroupId`, 'renderingGroupId must be 0, 1, 2, or 3');
+  }
+  if (value.alphaIndex != null && (typeof value.alphaIndex !== 'number' || !Number.isFinite(value.alphaIndex))) {
+    add(`${path}.alphaIndex`, 'alphaIndex must be a finite number');
   }
 }
 

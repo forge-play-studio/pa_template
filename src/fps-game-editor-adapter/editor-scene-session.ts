@@ -175,6 +175,13 @@ export type EditorSceneDocumentPatch =
     value: unknown;
   }
   | {
+    kind: 'game-object.rendering-alpha-index-migration';
+    targetIds: string[];
+    renderingGroupId: 0 | 1 | 2 | 3;
+    fromAlphaIndex: number;
+    toAlphaIndex: number;
+  }
+  | {
     kind: 'scene.material-asset.field';
     materialAssetId: string;
     path: string;
@@ -1119,12 +1126,45 @@ function reduceEditorSceneDocumentUnchecked(
         command.patch.materialAsset,
       );
     }
+    if (command.patch.kind === 'game-object.rendering-alpha-index-migration') {
+      return patchEditorSceneRenderingAlphaIndexMigration(document, command.patch);
+    }
   }
   return reducePlayableEditorSceneDocumentMutation(
     document,
     command as DocumentCommand<EditorSceneDocument, PlayableEditorSceneDocumentMutationPatch<EditorSceneGameObject>>,
     createEditorSceneDocumentMutationOptions(),
   );
+}
+
+function patchEditorSceneRenderingAlphaIndexMigration(
+  document: EditorSceneDocument,
+  patch: Extract<EditorSceneDocumentPatch, { kind: 'game-object.rendering-alpha-index-migration' }>,
+): EditorSceneDocument {
+  const targetIds = new Set(patch.targetIds);
+  if (targetIds.size === 0) return document;
+  return {
+    ...document,
+    scene: {
+      ...document.scene,
+      gameObjects: document.scene.gameObjects.map((gameObject) => {
+        if (!targetIds.has(gameObject.id)) return gameObject;
+        if (readEditorSceneRenderingGroupId(gameObject.rendering?.renderingGroupId) !== patch.renderingGroupId) return gameObject;
+        if (gameObject.rendering?.alphaIndex !== patch.fromAlphaIndex) return gameObject;
+        return {
+          ...gameObject,
+          rendering: {
+            ...(gameObject.rendering ?? {}),
+            alphaIndex: patch.toAlphaIndex,
+          },
+        };
+      }),
+    },
+  };
+}
+
+function readEditorSceneRenderingGroupId(value: unknown): 0 | 1 | 2 | 3 {
+  return value === 1 || value === 2 || value === 3 ? value : 0;
 }
 
 function createEditorSceneDocumentMutationOptions(): PlayableEditorSceneDocumentMutationOptions<EditorSceneDocument, EditorSceneGameObject> {
@@ -2543,6 +2583,7 @@ function createEditorSceneInspectorSections(
     nodeKind,
     extraValidators: PROJECT_EDITOR_SCENE_INSPECTOR_EXTRA_VALIDATORS,
     rootTransform: EDITOR_SCENE_ROOT_TRANSFORM,
+    renderingProfile: getActiveRenderingProfile(),
   });
   if (nodeKind === 'transform' && (gameObject.transformType === 'groundDecal' || gameObject.groundDecal)) {
     sections.push({
@@ -4732,6 +4773,7 @@ function isBlockedEditorSceneSystemFieldPatch(
 function isEditorSceneProjectionShapePath(path: string): boolean {
   return path === 'shadowMode'
     || path === 'transformType'
+    || path.startsWith('rendering.')
     || path.startsWith('primitive.')
     || path.startsWith('camera.')
     || path.startsWith('light.');

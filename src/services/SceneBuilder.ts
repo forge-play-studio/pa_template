@@ -637,6 +637,7 @@ export class SceneBuilder {
 
     if (nodeConfig.kind === 'transform') {
       this.attachTransformRuntime(nodeConfig, runtimeNode);
+      this.applySceneNodeRendering(nodeConfig, runtimeNode);
       this.applyNodeMaterialEntries(nodeConfig, runtimeNode);
       this.applySceneNodeOverrides(nodeConfig, runtimeNode);
       this.sceneNodeCleanup.set(nodeConfig.id, null);
@@ -644,6 +645,7 @@ export class SceneBuilder {
     }
 
     if (nodeConfig.kind === 'primitive') {
+      this.applySceneNodeRendering(nodeConfig, runtimeNode);
       this.applyNodeMaterialEntries(nodeConfig, runtimeNode);
       this.applySceneNodeOverrides(nodeConfig, runtimeNode);
       this.sceneNodeCleanup.set(nodeConfig.id, null);
@@ -739,10 +741,14 @@ export class SceneBuilder {
     this.applyTransform(attached.modelNode, attached.asset.defaults?.transform);
     this.applyChildTransforms(attached.modelNode, nodeConfig.overrides?.childTransforms);
     this.applySharedMaterialOverrides(attached.asset, attached.modelNode);
+    const restoreRendering = this.applySceneNodeRendering(nodeConfig, runtimeNode, attached.modelNode);
     this.applyNodeMaterialEntries(nodeConfig, runtimeNode);
     this.applySharedOutlineOverrides(attached.asset, attached.modelNode);
     this.applySceneNodeOverrides(nodeConfig, runtimeNode, attached.asset);
-    this.sceneNodeCleanup.set(nodeConfig.id, attached.cleanup);
+    this.sceneNodeCleanup.set(nodeConfig.id, () => {
+      restoreRendering?.();
+      attached.cleanup();
+    });
     return runtimeNode;
   }
 
@@ -766,10 +772,14 @@ export class SceneBuilder {
     this.applyTransform(attached.modelNode, attached.asset.defaults?.transform);
     this.applyChildTransforms(attached.modelNode, nodeConfig.overrides?.childTransforms);
     this.applySharedMaterialOverrides(attached.asset, attached.modelNode);
+    const restoreRendering = this.applySceneNodeRendering(nodeConfig, runtimeNode, attached.modelNode);
     this.applyNodeMaterialEntries(nodeConfig, runtimeNode);
     this.applySharedOutlineOverrides(attached.asset, attached.modelNode);
     this.applySceneNodeOverrides(nodeConfig, runtimeNode, attached.asset);
-    this.sceneNodeCleanup.set(nodeConfig.id, attached.cleanup);
+    this.sceneNodeCleanup.set(nodeConfig.id, () => {
+      restoreRendering?.();
+      attached.cleanup();
+    });
     return runtimeNode;
   }
 
@@ -1161,10 +1171,6 @@ export class SceneBuilder {
   private attachTransformRuntime(nodeConfig: SceneTransformNode, runtimeNode: TransformNode): void {
     if (nodeConfig.transformType !== 'groundDecal' || !nodeConfig.groundDecal) return;
 
-    if (typeof nodeConfig.groundDecal.alphaIndex === 'number' && Number.isFinite(nodeConfig.groundDecal.alphaIndex)) {
-      (runtimeNode as any).alphaIndex = nodeConfig.groundDecal.alphaIndex;
-    }
-
     const mat = new StandardMaterial(`${nodeConfig.id}_mat`, this.scene);
     const color = nodeConfig.groundDecal.color ?? { r: 1, g: 1, b: 1 };
     mat.diffuseColor = new Color3(color.r, color.g, color.b);
@@ -1192,6 +1198,50 @@ export class SceneBuilder {
     }
 
     (runtimeNode as any).material = mat;
+  }
+
+  private applySceneNodeRendering(
+    nodeConfig: SceneInstanceNode | SceneTransformNode | ScenePrimitiveNode,
+    rootNode: TransformNode,
+    contentRoot?: TransformNode | null,
+  ): (() => void) | null {
+    const rendering = this.resolveSceneNodeRendering(nodeConfig);
+    if (!rendering) return null;
+    const restoreCallbacks: Array<() => void> = [];
+    for (const mesh of collectSceneBuilderRenderingMeshes(rootNode, contentRoot)) {
+      restoreCallbacks.push(applySceneBuilderRenderingToMesh(mesh, rendering));
+    }
+    return restoreCallbacks.length > 0
+      ? () => {
+          for (const restore of restoreCallbacks.reverse()) restore();
+        }
+      : null;
+  }
+
+  private resolveSceneNodeRendering(
+    nodeConfig: SceneInstanceNode | SceneTransformNode | ScenePrimitiveNode,
+  ): NonNullable<SceneNodeConfig['rendering']> | null {
+    const rendering = nodeConfig.rendering;
+    const resolved: NonNullable<SceneNodeConfig['rendering']> = {};
+    if (
+      rendering?.renderingGroupId === 0
+      || rendering?.renderingGroupId === 1
+      || rendering?.renderingGroupId === 2
+      || rendering?.renderingGroupId === 3
+    ) {
+      resolved.renderingGroupId = rendering.renderingGroupId;
+    }
+    if (typeof rendering?.alphaIndex === 'number' && Number.isFinite(rendering.alphaIndex)) {
+      resolved.alphaIndex = rendering.alphaIndex;
+    } else if (
+      nodeConfig.kind === 'transform'
+      && nodeConfig.transformType === 'groundDecal'
+      && typeof nodeConfig.groundDecal?.alphaIndex === 'number'
+      && Number.isFinite(nodeConfig.groundDecal.alphaIndex)
+    ) {
+      resolved.alphaIndex = nodeConfig.groundDecal.alphaIndex;
+    }
+    return Object.keys(resolved).length > 0 ? resolved : null;
   }
 
   private resolveNodeMaterialOwner(rootNode: TransformNode, ownerNodePath: string): any | null {
@@ -1471,6 +1521,47 @@ function resolveSceneBuilderMaterialTextureUrl(
   if (textureAssetId) return resolveTextureAssetUrl(textureAssetId) ?? null;
   const textureUrl = typeof texture.url === 'string' ? texture.url.trim() : '';
   return textureUrl || null;
+}
+
+function collectSceneBuilderRenderingMeshes(rootNode: TransformNode, contentRoot?: TransformNode | null): any[] {
+  const meshes: any[] = [];
+  const seen = new Set<any>();
+  const append = (node: any): void => {
+    if (!node || seen.has(node)) return;
+    seen.add(node);
+    if (isSceneBuilderRenderingMesh(node)) meshes.push(node);
+    const childMeshes = typeof node.getChildMeshes === 'function' ? node.getChildMeshes(false) : [];
+    if (Array.isArray(childMeshes)) {
+      for (const child of childMeshes) append(child);
+    }
+  };
+  append(rootNode);
+  if (contentRoot && contentRoot !== rootNode) append(contentRoot);
+  return meshes;
+}
+
+function isSceneBuilderRenderingMesh(node: any): boolean {
+  return !!node && typeof node === 'object' && typeof node.getTotalVertices === 'function';
+}
+
+function applySceneBuilderRenderingToMesh(mesh: any, rendering: NonNullable<SceneNodeConfig['rendering']>): () => void {
+  const previousRenderingGroupId = mesh.renderingGroupId;
+  const previousAlphaIndex = mesh.alphaIndex;
+  if (
+    rendering.renderingGroupId === 0
+    || rendering.renderingGroupId === 1
+    || rendering.renderingGroupId === 2
+    || rendering.renderingGroupId === 3
+  ) {
+    mesh.renderingGroupId = rendering.renderingGroupId;
+  }
+  if (typeof rendering.alphaIndex === 'number' && Number.isFinite(rendering.alphaIndex)) {
+    mesh.alphaIndex = rendering.alphaIndex;
+  }
+  return () => {
+    mesh.renderingGroupId = previousRenderingGroupId;
+    mesh.alphaIndex = previousAlphaIndex;
+  };
 }
 
 function readFiniteNumber(value: unknown, fallback: number): number {
