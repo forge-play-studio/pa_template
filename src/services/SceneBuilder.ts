@@ -46,6 +46,7 @@ import {
   type SceneHemisphericLightConfig,
   type SceneInstanceNode,
   type SceneMaterialAssetKind,
+  type SceneMarkerConfig,
   type SceneNodeMaterialBindingConfig,
   type ScenePrimitiveNode,
   type SceneSharedMaterialConfig,
@@ -1159,6 +1160,9 @@ export class SceneBuilder {
   }
 
   private attachTransformRuntime(nodeConfig: SceneTransformNode, runtimeNode: TransformNode): void {
+    if (nodeConfig.marker) {
+      this.attachMarkerRuntime(nodeConfig.marker, runtimeNode);
+    }
     if (nodeConfig.transformType !== 'groundDecal' || !nodeConfig.groundDecal) return;
 
     if (typeof nodeConfig.groundDecal.alphaIndex === 'number' && Number.isFinite(nodeConfig.groundDecal.alphaIndex)) {
@@ -1192,6 +1196,16 @@ export class SceneBuilder {
     }
 
     (runtimeNode as any).material = mat;
+  }
+
+  private attachMarkerRuntime(marker: SceneMarkerConfig, runtimeNode: TransformNode): void {
+    const markerConfig = structuredClone(marker);
+    (runtimeNode as any).marker = markerConfig;
+    const metadata = runtimeNode.metadata && typeof runtimeNode.metadata === 'object' ? runtimeNode.metadata : {};
+    runtimeNode.metadata = {
+      ...metadata,
+      sceneMarker: structuredClone(markerConfig),
+    };
   }
 
   private resolveNodeMaterialOwner(rootNode: TransformNode, ownerNodePath: string): any | null {

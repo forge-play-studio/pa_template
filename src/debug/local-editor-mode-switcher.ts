@@ -73,6 +73,7 @@ import {
   createEditorSceneGroupSelectionPatch,
   createEditorSceneHierarchyMovePatch,
   createEditorSceneInspectorPropertyPatch,
+  createEditorSceneMarkerGraphPatch,
   createEditorScenePlacedAssetPatch,
   createEditorSceneAssetActionPatch,
   createEditorSceneRenamePatch,
@@ -82,11 +83,15 @@ import {
   getEditorSceneHierarchyItems,
   getEditorSceneInspectorMultiObject,
   getEditorSceneInspectorObject,
+  getEditorSceneMarkerGraph,
+  getEditorSceneMarkerTypeCatalog,
+  getEditorSceneRelationTypeCatalog,
   getEditorSceneRuntimeInspectorSections,
   getEditorSceneSerializedObject,
   getEditorSceneSerializedMultiObject,
   normalizeEditorSceneHierarchyDocument,
   reduceEditorSceneDocument,
+  syncEditorSceneMarkerGraphDocument,
   toEditorSceneLocalTransformFromWorld,
   validateEditorSceneGroupSelection,
   validateEditorSceneHierarchyMove,
@@ -270,8 +275,10 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
       documentLifecycle: {
         prepareDocument: (document, assets) => {
           currentEditorAssetLibrary = assets;
-          return normalizeEditorSceneHierarchyDocument(
-            ensureEditorSceneEnvironmentDefaults(enrichEditorSceneDocumentAssets(document, assets)),
+          return syncEditorSceneMarkerGraphDocument(
+            normalizeEditorSceneHierarchyDocument(
+              ensureEditorSceneEnvironmentDefaults(enrichEditorSceneDocumentAssets(document, assets)),
+            ),
           );
         },
         summarize: summarizeEditorScene,
@@ -289,6 +296,12 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
         ),
         getInspectorMultiObject: getEditorSceneInspectorMultiObject,
         getRuntimeInspectorSections: getEditorSceneRuntimeInspectorSections,
+      },
+      markerGraph: {
+        getMarkerGraph: getEditorSceneMarkerGraph,
+        getMarkerTypeCatalog: getEditorSceneMarkerTypeCatalog,
+        getRelationTypeCatalog: getEditorSceneRelationTypeCatalog,
+        createMarkerGraphPatch: createEditorSceneMarkerGraphPatch,
       },
       assetBrowser: {
         getBrowserAssetItems: createEditorSceneBrowserAssetItems,

@@ -12,6 +12,11 @@ import type {
   SceneNodeVisualOverrides,
   SceneTransformNode,
 } from '../config';
+import type {
+  SpatialMarkerJsonObject,
+  SpatialMarkerLocalFrame,
+} from '@fps-games/editor-protocol';
+import type { SpatialMarkerGraph } from '@fps-games/editor/playable-sdk';
 import {
   cloneEditorSceneDocument as clonePlayableEditorSceneDocument,
   findEditorSceneModelRenderer as findPlayableEditorSceneModelRenderer,
@@ -29,6 +34,7 @@ import {
   type EditorScenePrimitiveRenderer as PlayableEditorScenePrimitiveRenderer,
   type EditorSceneTransformComponent as PlayableEditorSceneTransformComponent,
   type EditorSceneVec3 as PlayableEditorSceneVec3,
+  type SpatialMarkerTargetRef,
   type AuthoringSourceRef,
 } from '@fps-games/editor/playable-sdk';
 
@@ -68,6 +74,50 @@ export interface EditorScenePrimitiveRenderer extends PlayableEditorScenePrimiti
   shape: ScenePrimitiveShape;
 }
 
+export interface EditorSceneMarkerBoxGeometry {
+  kind: 'box';
+  size: EditorSceneVec3;
+}
+
+export interface EditorSceneMarkerPointGeometry {
+  kind: 'point';
+  coordinateSpace?: 'world' | 'local';
+  position?: EditorSceneVec3;
+  offset?: EditorSceneVec3;
+  target?: SpatialMarkerTargetRef;
+}
+
+export interface EditorSceneMarkerObjectBoundsGeometry {
+  kind: 'object-bounds';
+  target: SpatialMarkerTargetRef;
+}
+
+export interface EditorSceneMarkerPolyhedronGeometry {
+  kind: 'polyhedron';
+  coordinateSpace?: 'world';
+  vertices: EditorSceneVec3[];
+  faces?: number[][];
+}
+
+export type EditorSceneMarkerGeometry =
+  | EditorSceneMarkerBoxGeometry
+  | EditorSceneMarkerPointGeometry
+  | EditorSceneMarkerObjectBoundsGeometry
+  | EditorSceneMarkerPolyhedronGeometry;
+
+export interface EditorSceneMarkerConfig {
+  schemaVersion: 1;
+  type: string;
+  kind?: string;
+  tags?: string[];
+  note?: string;
+  color?: ColorRGB;
+  target?: SpatialMarkerTargetRef;
+  semanticFrame?: SpatialMarkerLocalFrame;
+  geometry: EditorSceneMarkerGeometry;
+  metadata?: SpatialMarkerJsonObject;
+}
+
 export type EditorSceneLightInspectorLanguage = 'zh' | 'en';
 
 export interface EditorSceneCameraRig extends SceneCameraRigConfig, PlayableEditorSceneCameraRig {}
@@ -101,6 +151,7 @@ export interface EditorSceneGameObject extends PlayableEditorSceneGameObject<Sce
   camera?: EditorSceneCameraRig;
   light?: EditorSceneLight;
   primitive?: EditorScenePrimitiveRenderer;
+  marker?: EditorSceneMarkerConfig;
   groundDecal?: SceneTransformNode['groundDecal'];
   overrides?: SceneNodeVisualOverrides;
   components: EditorSceneComponent[];
@@ -118,6 +169,7 @@ export interface EditorSceneDocument extends PlayableEditorSceneDocument<
   assets: EditorSceneAsset[];
   scene: {
     gameObjects: EditorSceneGameObject[];
+    markerGraph?: SpatialMarkerGraph;
     materialAssets?: SceneMaterialAssetConfig[];
   };
 }

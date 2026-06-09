@@ -19,6 +19,7 @@ import {
   type SerializedMultiObject,
   type SerializedObject,
   type SerializedPropertyPatch,
+  type PlayableLocalEditorMarkerGraphCommand,
   combineEditorTransforms,
   createIdentityEditorTransform,
   getTopLevelSceneGraphNodeIds,
@@ -165,6 +166,25 @@ import {
   readDirectionalLightAngles,
 } from './editor-lighting-utils';
 import { getActiveRenderingProfile } from '../rendering/editor-rendering-profile-store';
+import {
+  createEditorSceneMarkerGraphPatch,
+  getEditorSceneMarkerGraph,
+  getEditorSceneMarkerTypeCatalog,
+  getEditorSceneRelationTypeCatalog,
+  isEditorSceneMarkerGameObject,
+  migrateEditorSceneMarkerGraphMarkersToGameObjects,
+  reduceEditorSceneMarkerGraphPatch,
+  syncEditorSceneMarkerGraphDocument,
+} from './editor-scene-marker-graph';
+
+export {
+  createEditorSceneMarkerGraphPatch,
+  getEditorSceneMarkerGraph,
+  getEditorSceneMarkerTypeCatalog,
+  getEditorSceneRelationTypeCatalog,
+  migrateEditorSceneMarkerGraphMarkersToGameObjects,
+  syncEditorSceneMarkerGraphDocument,
+};
 
 export type EditorSceneDocumentPatch =
   | ({ kind: 'serialized-property' } & SerializedPropertyPatch)
@@ -193,6 +213,10 @@ export type EditorSceneDocumentPatch =
     targetId: string;
     bindingPath: string;
     materialAsset: SceneMaterialAssetConfig;
+  }
+  | {
+    kind: 'scene.marker-graph';
+    command: PlayableLocalEditorMarkerGraphCommand;
   }
   | {
     kind: 'game-object.create-from-asset';
@@ -1081,7 +1105,9 @@ export function reduceEditorSceneDocument(
 ): EditorSceneDocument {
   return ensureEditorSceneGameObjectGuids(
     normalizeEditorSceneRootTransformDocument(
-      reduceEditorSceneDocumentUnchecked(document, command),
+      syncEditorSceneMarkerGraphDocument(
+        reduceEditorSceneDocumentUnchecked(document, command),
+      ),
     ),
   );
 }
@@ -1117,6 +1143,12 @@ function reduceEditorSceneDocumentUnchecked(
         command.patch.targetId,
         command.patch.bindingPath,
         command.patch.materialAsset,
+      );
+    }
+    if (command.patch.kind === 'scene.marker-graph') {
+      return reduceEditorSceneMarkerGraphPatch(
+        document,
+        command.patch.command,
       );
     }
   }
@@ -1252,7 +1284,7 @@ export function ensureEditorSceneEnvironmentDefaults(document: EditorSceneDocume
   gameObjects = importedMaterialDefaults.gameObjects;
   changed = changed || importedMaterialDefaults.changed;
 
-  return changed
+  const nextDocument = changed
     ? {
         ...documentWithGuids,
         scene: {
@@ -1262,6 +1294,7 @@ export function ensureEditorSceneEnvironmentDefaults(document: EditorSceneDocume
         },
       }
     : documentWithGuids;
+  return syncEditorSceneMarkerGraphDocument(nextDocument);
 }
 
 export function repairEditorSceneMaterialAssetsFromSceneConfig(
@@ -1681,8 +1714,10 @@ export function getEditorSceneHierarchyItems(document: EditorSceneDocument): Sce
   const gameObjectsById = new Map(document.scene.gameObjects.map(gameObject => [gameObject.id, gameObject]));
   const result: SceneGraphTreeItem[] = [];
   for (const item of items) {
-    result.push(item);
     const gameObject = gameObjectsById.get(item.id);
+    result.push(gameObject && isEditorSceneMarkerGameObject(gameObject)
+      ? { ...item, role: 'marker', icon: 'view-overlay' }
+      : item);
     if (!gameObject || readEditorSceneNodeKind(gameObject) === 'primitive') continue;
     const slots = collectEditorSceneChildMaterialSlots(document, gameObject);
     for (const [slotIndex, slot] of slots.entries()) {
@@ -1960,8 +1995,9 @@ export function getEditorSceneInspectorObject(
     selection: {
       targetIds: [gameObject.id],
       activeId: gameObject.id,
-      targetKind: readEditorSceneNodeKind(gameObject),
+      targetKind: isEditorSceneMarkerGameObject(gameObject) ? 'marker' : readEditorSceneNodeKind(gameObject),
       document,
+      ...(isEditorSceneMarkerGameObject(gameObject) ? { capabilities: ['markerGraph'] } : {}),
     },
     sections: createEditorSceneInspectorSections(document, gameObject, context),
   };
@@ -2591,7 +2627,10 @@ function createEditorSceneInspectorSections(
       if (shadowSummarySection) sections.push(shadowSummarySection);
     }
   }
-  if (nodeKind === 'instance' || nodeKind === 'primitive' || (nodeKind === 'transform' && !isEditorSceneCameraGameObject(gameObject) && !isEditorSceneLightGameObject(gameObject))) {
+  if (isEditorSceneMarkerGameObject(gameObject)) {
+    sections.push(createMarkerInspectorSection(document, gameObject, nodeKind));
+  }
+  if (nodeKind === 'instance' || nodeKind === 'primitive' || (nodeKind === 'transform' && !isEditorSceneCameraGameObject(gameObject) && !isEditorSceneLightGameObject(gameObject) && !isEditorSceneMarkerGameObject(gameObject))) {
     sections.push(...createArtistMaterialInspectorSections(document, gameObject, nodeKind, context));
     const outlineEffect = gameObject.overrides?.outline ? 'active' : 'default';
     const outlineDisabledReason = outlineEffect === 'default' ? OUTLINE_DEFAULT_DISABLED_REASON : undefined;
@@ -3949,6 +3988,95 @@ function createOutlineInspectorProperties(
   return properties;
 }
 
+function createMarkerInspectorSection(
+  document: EditorSceneDocument,
+  gameObject: EditorSceneGameObject & { marker: NonNullable<EditorSceneGameObject['marker']> },
+  nodeKind: SceneNodeConfig['kind'],
+): InspectorSection<EditorSceneDocument> {
+  const marker = gameObject.marker;
+  const markerTypeOptions = createMarkerTypeInspectorOptions(document, marker.type);
+  const properties: InspectorProperty<EditorSceneDocument>[] = [
+    createDocumentInspectorProperty(document, nodeKind, {
+      path: 'marker.type',
+      label: 'Type',
+      valueType: 'enum',
+      control: markerTypeOptions.length > 0 ? 'enum' : 'string',
+      value: marker.type,
+      options: markerTypeOptions.length > 0 ? markerTypeOptions : undefined,
+      commitMode: 'change',
+      order: 0,
+    }),
+    createReadonlyInspectorProperty('marker.kind', 'Kind', marker.kind ?? 'region', 1),
+    createDocumentInspectorProperty(document, nodeKind, {
+      path: 'marker.tags',
+      label: 'Tags',
+      valueType: 'string',
+      control: 'string',
+      value: marker.tags?.join(', ') ?? '',
+      commitMode: 'blur',
+      placeholder: 'tag, another-tag',
+      order: 2,
+    }),
+    createDocumentInspectorProperty(document, nodeKind, {
+      path: 'marker.color',
+      label: 'Color',
+      valueType: 'color',
+      control: 'color',
+      value: marker.color ?? { r: 0.1, g: 0.85, b: 1 },
+      commitMode: 'immediate',
+      order: 3,
+    }),
+    createDocumentInspectorProperty(document, nodeKind, {
+      path: 'marker.note',
+      label: 'Note',
+      valueType: 'string',
+      control: 'string',
+      value: marker.note ?? '',
+      commitMode: 'blur',
+      placeholder: 'Optional marker note',
+      order: 4,
+    }),
+    createReadonlyInspectorProperty('marker.geometry.kind', 'Geometry', marker.geometry.kind, 5),
+  ];
+  if (marker.geometry.kind === 'box') {
+    properties.push(createDocumentInspectorProperty(document, nodeKind, {
+      path: 'marker.geometry.size',
+      label: 'Size',
+      valueType: 'vec3',
+      control: 'vec3',
+      value: marker.geometry.size,
+      commitMode: 'live',
+      min: 0.001,
+      step: 0.1,
+      order: 6,
+    }));
+  }
+  return {
+    id: 'marker',
+    title: 'Marker',
+    order: 35,
+    placement: 'body',
+    persistence: 'document',
+    summary: marker.type,
+    collapsedByDefault: false,
+    properties,
+  };
+}
+
+function createMarkerTypeInspectorOptions(
+  document: EditorSceneDocument,
+  currentType: string,
+): Array<{ label: string; value: string }> {
+  const options = getEditorSceneMarkerTypeCatalog(document).map(definition => ({
+    label: definition.label || definition.type,
+    value: definition.type,
+  }));
+  if (currentType && !options.some(option => option.value === currentType)) {
+    options.push({ label: currentType, value: currentType });
+  }
+  return options;
+}
+
 function createDocumentInspectorProperty(
   document: EditorSceneDocument | null,
   nodeKind: SceneNodeConfig['kind'],
@@ -4118,6 +4246,16 @@ function normalizeEditorSceneInspectorValue(path: string, value: unknown): unkno
   if (isDirectionalLightAnglePath(path)) {
     return normalizeDirectionalLightAngleValue(path, value);
   }
+  if (path === 'marker.type' && typeof value === 'string') {
+    return value.trim();
+  }
+  if (path === 'marker.tags') {
+    return normalizeMarkerTagsInspectorValue(value);
+  }
+  if (path === 'marker.note' && typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed ? trimmed : null;
+  }
   if (
     (
       path === 'overrides.materialBinding.materialAssetId'
@@ -4136,6 +4274,18 @@ function normalizeEditorSceneInspectorValue(path: string, value: unknown): unkno
     return trimmed ? trimmed : null;
   }
   return normalizePlayableEditorSceneFieldInspectorValue(path, value);
+}
+
+function normalizeMarkerTagsInspectorValue(value: unknown): string[] | null {
+  const tags = Array.isArray(value)
+    ? value
+    : typeof value === 'string'
+      ? value.split(',')
+      : [];
+  const normalized = tags
+    .map(tag => typeof tag === 'string' ? tag.trim() : '')
+    .filter((tag, index, all) => tag.length > 0 && all.indexOf(tag) === index);
+  return normalized.length > 0 ? normalized : null;
 }
 
 const EDITOR_SCENE_FIELD_MUTATION_OPTIONS: PlayableEditorSceneFieldMutationOptions<EditorSceneDocument, EditorSceneGameObject> = {

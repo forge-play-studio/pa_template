@@ -189,6 +189,359 @@
     }
   ],
   "scene": {
+    "markerGraph": {
+      "schemaVersion": 1,
+      "markers": [
+        {
+          "id": "marker_collection_area_test",
+          "kind": "region",
+          "markerType": "collection-area",
+          "label": "Collection Area Test",
+          "tags": [
+            "test",
+            "resource"
+          ],
+          "geometry": {
+            "kind": "box",
+            "coordinateSpace": "world",
+            "center": {
+              "x": 3.6,
+              "y": 1,
+              "z": 3.4
+            },
+            "size": {
+              "x": 5.8,
+              "y": 2,
+              "z": 4.8
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            }
+          },
+          "metadata": {
+            "color": {
+              "r": 0.1,
+              "g": 0.85,
+              "b": 1
+            },
+            "note": "MVP test region for binding collectible objects."
+          }
+        },
+        {
+          "id": "marker_collection_entrance_test",
+          "kind": "point",
+          "markerType": "entrance",
+          "label": "Collection Entrance Test",
+          "tags": [
+            "test",
+            "entry"
+          ],
+          "geometry": {
+            "kind": "box",
+            "coordinateSpace": "world",
+            "center": {
+              "x": 3.6,
+              "y": 0.5,
+              "z": 0.6
+            },
+            "size": {
+              "x": 1.2,
+              "y": 1,
+              "z": 0.4
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            }
+          },
+          "metadata": {
+            "color": {
+              "r": 0.35,
+              "g": 0.9,
+              "b": 0.25
+            },
+            "note": "Entry marker for the collection area."
+          }
+        },
+        {
+          "id": "marker_collection_exit_test",
+          "kind": "point",
+          "markerType": "exit",
+          "label": "Collection Exit Test",
+          "tags": [
+            "test",
+            "exit"
+          ],
+          "geometry": {
+            "kind": "box",
+            "coordinateSpace": "world",
+            "center": {
+              "x": 3.6,
+              "y": 0.5,
+              "z": 6.2
+            },
+            "size": {
+              "x": 1.2,
+              "y": 1,
+              "z": 0.4
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            }
+          },
+          "metadata": {
+            "color": {
+              "r": 1,
+              "g": 0.55,
+              "b": 0.18
+            },
+            "note": "Exit marker for the collection area."
+          }
+        },
+        {
+          "id": "marker_trade_zone_test",
+          "kind": "region",
+          "markerType": "trade-zone",
+          "label": "Trade Zone Test",
+          "tags": [
+            "test",
+            "commerce"
+          ],
+          "geometry": {
+            "kind": "box",
+            "coordinateSpace": "world",
+            "center": {
+              "x": -5.4,
+              "y": 1,
+              "z": 1.9
+            },
+            "size": {
+              "x": 4,
+              "y": 2,
+              "z": 3.5
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            }
+          },
+          "metadata": {
+            "color": {
+              "r": 1,
+              "g": 0.82,
+              "b": 0.15
+            },
+            "note": "Trade zone marker used to test editable marker appearance."
+          }
+        },
+        {
+          "id": "marker_cube_effect_socket_test",
+          "kind": "anchor",
+          "markerType": "effect-socket",
+          "label": "Cube Effect Socket Test",
+          "tags": [
+            "test",
+            "effect"
+          ],
+          "geometry": {
+            "kind": "box",
+            "coordinateSpace": "world",
+            "center": {
+              "x": 5.05,
+              "y": 1.25,
+              "z": 2.05
+            },
+            "size": {
+              "x": 0.55,
+              "y": 0.55,
+              "z": 0.55
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0.7853981633974483,
+              "z": 0
+            }
+          },
+          "semanticFrame": {
+            "origin": {
+              "x": 5.05,
+              "y": 1.25,
+              "z": 2.05
+            },
+            "forward": {
+              "x": 0.7071,
+              "y": 0,
+              "z": 0.7071
+            },
+            "right": {
+              "x": 0.7071,
+              "y": 0,
+              "z": -0.7071
+            },
+            "up": {
+              "x": 0,
+              "y": 1,
+              "z": 0
+            },
+            "label": "Cube front-top socket"
+          },
+          "metadata": {
+            "color": {
+              "r": 0.75,
+              "g": 0.35,
+              "b": 1
+            },
+            "note": "Effect socket marker for testing relative direction and attachment."
+          }
+        }
+      ],
+      "relations": [
+        {
+          "id": "rel_collection_contains_cube",
+          "type": "contains",
+          "from": {
+            "kind": "marker",
+            "id": "marker_collection_area_test",
+            "label": "Collection Area Test"
+          },
+          "to": {
+            "kind": "scene-object",
+            "id": "cube",
+            "label": "Cube"
+          },
+          "directed": true
+        },
+        {
+          "id": "rel_collection_contains_sphere",
+          "type": "contains",
+          "from": {
+            "kind": "marker",
+            "id": "marker_collection_area_test",
+            "label": "Collection Area Test"
+          },
+          "to": {
+            "kind": "scene-object",
+            "id": "sphere",
+            "label": "Sphere"
+          },
+          "directed": true
+        },
+        {
+          "id": "rel_collection_contains_capsule",
+          "type": "contains",
+          "from": {
+            "kind": "marker",
+            "id": "marker_collection_area_test",
+            "label": "Collection Area Test"
+          },
+          "to": {
+            "kind": "scene-object",
+            "id": "capsule",
+            "label": "Capsule"
+          },
+          "directed": true
+        },
+        {
+          "id": "rel_collection_entrance_of_area",
+          "type": "entrance-of",
+          "from": {
+            "kind": "marker",
+            "id": "marker_collection_entrance_test",
+            "label": "Collection Entrance Test"
+          },
+          "to": {
+            "kind": "marker",
+            "id": "marker_collection_area_test",
+            "label": "Collection Area Test"
+          },
+          "directed": true
+        },
+        {
+          "id": "rel_collection_exit_of_area",
+          "type": "exit-of",
+          "from": {
+            "kind": "marker",
+            "id": "marker_collection_exit_test",
+            "label": "Collection Exit Test"
+          },
+          "to": {
+            "kind": "marker",
+            "id": "marker_collection_area_test",
+            "label": "Collection Area Test"
+          },
+          "directed": true
+        },
+        {
+          "id": "rel_collection_near_trade_zone",
+          "type": "near",
+          "from": {
+            "kind": "marker",
+            "id": "marker_collection_area_test",
+            "label": "Collection Area Test"
+          },
+          "to": {
+            "kind": "marker",
+            "id": "marker_trade_zone_test",
+            "label": "Trade Zone Test"
+          },
+          "directed": false
+        },
+        {
+          "id": "rel_trade_zone_contains_cube_2",
+          "type": "contains",
+          "from": {
+            "kind": "marker",
+            "id": "marker_trade_zone_test",
+            "label": "Trade Zone Test"
+          },
+          "to": {
+            "kind": "scene-object",
+            "id": "cube_2",
+            "label": "Cube"
+          },
+          "directed": true
+        },
+        {
+          "id": "rel_effect_socket_attached_to_cube",
+          "type": "attached-to",
+          "from": {
+            "kind": "marker",
+            "id": "marker_cube_effect_socket_test",
+            "label": "Cube Effect Socket Test"
+          },
+          "to": {
+            "kind": "scene-object",
+            "id": "cube",
+            "label": "Cube"
+          },
+          "directed": true
+        },
+        {
+          "id": "rel_effect_socket_faces_collection_area",
+          "type": "faces",
+          "from": {
+            "kind": "marker",
+            "id": "marker_cube_effect_socket_test",
+            "label": "Cube Effect Socket Test"
+          },
+          "to": {
+            "kind": "marker",
+            "id": "marker_collection_area_test",
+            "label": "Collection Area Test"
+          },
+          "directed": true
+        }
+      ],
+      "metadata": {
+        "createdFor": "issue-305-mvp-local-test"
+      }
+    },
     "gameObjects": [
       {
         "id": "root",

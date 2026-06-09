@@ -24,6 +24,7 @@ import type {
   SceneConfig,
   SceneGroupNode,
   SceneInstanceNode,
+  SceneMarkerConfig,
   SceneMaterialAssetConfig,
   SceneNodeMaterialBindingConfig,
   SceneNodeConfig,
@@ -193,6 +194,7 @@ function compileGameObject(
         ...(gameObject.transformType ? { transformType: gameObject.transformType } : {}),
         ...(gameObject.camera ? { camera: compileEditorSceneCamera(gameObject.camera) } : {}),
         ...(gameObject.light ? { light: compileEditorSceneLight(gameObject.light) } : {}),
+        ...(gameObject.marker ? { marker: compileEditorSceneMarker(gameObject) } : {}),
         ...(gameObject.groundDecal ? { groundDecal: structuredClone(gameObject.groundDecal) } : {}),
         ...(visualOverrides ? { overrides: visualOverrides } : {}),
       } satisfies SceneTransformNode;
@@ -211,6 +213,13 @@ function compileGameObject(
     },
     ...(visualOverrides ? { overrides: visualOverrides } : {}),
   } satisfies SceneInstanceNode;
+}
+
+function compileEditorSceneMarker(gameObject: EditorSceneGameObject): SceneMarkerConfig {
+  return {
+    ...structuredClone(gameObject.marker!),
+    label: gameObject.name ?? gameObject.id,
+  } as SceneMarkerConfig;
 }
 
 function compileEditorSceneVisualOverrides(
