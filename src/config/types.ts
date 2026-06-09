@@ -519,6 +519,7 @@ export interface SceneConfig {
   gameplay?: SceneGameplayConfig;
   scene?: SceneDocumentScene;
   render?: SceneRenderConfig;
+  staticShadows?: unknown;
 }
 
 export interface GameConfig {

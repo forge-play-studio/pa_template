@@ -1,6 +1,8 @@
 import {
   collectEditorSceneRenderingAlphaIndexMigrationTargetIds,
   createPlayableBabylonRenderingCapability,
+  createEditorSceneStaticShadowArtifactDraftStore,
+  type EditorSceneStaticShadowArtifact,
   type EditorSceneRenderingPanelLanguage,
   type EditorSceneRenderingTextureAsset,
   type PlayableBabylonRenderingSetConfigInput,
@@ -22,10 +24,13 @@ import {
   resetActiveRenderingConfigDraft,
   setActiveRenderingConfig,
 } from '../rendering/editor-rendering-profile-store';
+import { configService } from '../config/ConfigService';
 
 type EditorRenderingCapabilityOptions = {
   getTextureAssets?: () => readonly EditorSceneRenderingTextureAsset[];
 };
+
+const staticShadowArtifactDraft = createEditorSceneStaticShadowArtifactDraftStore(configService.getStaticShadowArtifact());
 
 export function createEditorRenderingCapability(
   options: EditorRenderingCapabilityOptions = {},
@@ -39,10 +44,12 @@ export function createEditorRenderingCapability(
       return documentPatch ? { documentPatch } : undefined;
     },
     resetConfig: () => resetActiveRenderingConfigDraft(),
-    isDirty: () => isRenderingProfileDirty(),
+    isDirty: () => isRenderingProfileDirty() || isStaticShadowArtifactDirty(),
     getPanelState: () => getEditorRenderingProfileState(),
     getTextureAssets: () => options.getTextureAssets?.() ?? [],
     getLanguage: ({ document }) => resolveEditorRenderingPanelLanguage(document),
+    getStaticShadowArtifact: () => getActiveStaticShadowArtifact(),
+    setStaticShadowArtifact: ({ artifact }) => setActiveStaticShadowArtifact(artifact),
     shadowPreview: {
       directionalLightNodeId: EDITOR_SCENE_SUN_LIGHT_ID,
       enabled: ({ document }) => {
@@ -88,10 +95,27 @@ function createRenderingAlphaPresetMigrationDocumentPatch(
 
 export function resetEditorRenderingDraft(): void {
   resetActiveRenderingConfigDraft();
+  staticShadowArtifactDraft.reset();
 }
 
 export function hasEditorRenderingDraftChanges(): boolean {
-  return isRenderingProfileDirty();
+  return isRenderingProfileDirty() || isStaticShadowArtifactDirty();
+}
+
+export function getActiveStaticShadowArtifact(): EditorSceneStaticShadowArtifact | null {
+  return staticShadowArtifactDraft.get();
+}
+
+export function setActiveStaticShadowArtifact(value: unknown): void {
+  staticShadowArtifactDraft.set(value);
+}
+
+export function markActiveStaticShadowArtifactSaved(value: unknown = staticShadowArtifactDraft.get()): void {
+  staticShadowArtifactDraft.markSaved(value);
+}
+
+export function isStaticShadowArtifactDirty(): boolean {
+  return staticShadowArtifactDraft.isDirty();
 }
 
 function resolveEditorRenderingPanelLanguage(

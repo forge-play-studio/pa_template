@@ -839,6 +839,10 @@ export class ConfigService {
     return this.sceneConfig;
   }
 
+  getStaticShadowArtifact(): unknown {
+    return this.sceneConfig.staticShadows ?? null;
+  }
+
   replaceSceneConfig(sceneConfig: SceneConfig): void {
     this.sceneConfig = sceneConfig;
     this.buildIndexes();

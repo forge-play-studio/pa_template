@@ -15,9 +15,14 @@ import { CascadedShadowGenerator } from '@babylonjs/core/Lights/Shadows/cascaded
 import {
   createBlobShadowSystem,
   createPlanarShadowSystem,
-  createStaticProjectedShadowSystem,
+  createStaticProjectedShadowBakeHashes,
+  createStaticProjectedShadowArtifactSystem,
   type BlobShadowOptions,
   type PlanarShadowOptions,
+  type StaticProjectedShadowArtifact,
+  type StaticProjectedShadowArtifactHashInput,
+  type StaticProjectedShadowArtifactOptions,
+  type StaticProjectedShadowArtifactSystem,
   type StaticProjectedShadowOptions,
 } from '@fps-games/editor/playable-sdk';
 import {
@@ -120,15 +125,10 @@ interface RuntimeBlobShadowSystem {
   dispose(): void;
 }
 
-interface RuntimeStaticProjectedShadowSystem {
-  initialize(): void;
-  refresh(): void;
-  setOptions(options: Partial<StaticProjectedShadowOptions>): void;
-  addCaster(mesh: unknown): void;
-  removeCaster(mesh: unknown): void;
-  invalidateCaster(mesh: unknown): void;
-  dispose(): void;
-}
+type RuntimeStaticProjectedShadowArtifactSystem = Pick<
+  StaticProjectedShadowArtifactSystem,
+  'initialize' | 'setArtifact' | 'setOptions' | 'dispose'
+>;
 
 type SceneShadowMode = 'none' | 'blob' | 'static' | 'planar' | 'dynamic';
 type ShadowServiceMode = 'none' | 'blob' | 'static' | 'legacy' | 'planar' | 'mixed';
@@ -148,7 +148,7 @@ export class ShadowService {
   private light: DirectionalLight;
   private shadowGenerator: ShadowGenerator | null = null;
   private blobShadowSystem: RuntimeBlobShadowSystem | null = null;
-  private staticProjectedShadowSystem: RuntimeStaticProjectedShadowSystem | null = null;
+  private staticProjectedShadowArtifactSystem: RuntimeStaticProjectedShadowArtifactSystem | null = null;
   private planarShadowSystem: RuntimePlanarShadowSystem | null = null;
   private renderingProfile: NormalizedRenderingProfile;
   private config: ShadowsConfig;
@@ -263,11 +263,14 @@ export class ShadowService {
    * 刷新阴影网格配置
    *
    * 在场景模型加载后调用
-   */
+    */
   refreshShadowMeshes(): void {
     this.applyShadowMeshes();
     this.blobShadowSystem?.refresh();
-    this.staticProjectedShadowSystem?.refresh();
+    this.staticProjectedShadowArtifactSystem?.setOptions(this.createStaticProjectedShadowArtifactOptions());
+    this.staticProjectedShadowArtifactSystem?.setArtifact(
+      configService.getStaticShadowArtifact() as StaticProjectedShadowArtifact | null,
+    );
     this.planarShadowSystem?.refresh();
   }
 
@@ -338,12 +341,12 @@ export class ShadowService {
 
   private initializeStaticProjectedShadows(): void {
     this.light.parent = null;
-    this.staticProjectedShadowSystem = createStaticProjectedShadowSystem(
+    this.staticProjectedShadowArtifactSystem = createStaticProjectedShadowArtifactSystem(
       this.scene as any,
-      this.light as any,
-      this.createStaticProjectedShadowOptions(),
-    ) as unknown as RuntimeStaticProjectedShadowSystem;
-    this.staticProjectedShadowSystem.initialize();
+      configService.getStaticShadowArtifact() as StaticProjectedShadowArtifact | null,
+      this.createStaticProjectedShadowArtifactOptions(),
+    ) as unknown as RuntimeStaticProjectedShadowArtifactSystem;
+    this.staticProjectedShadowArtifactSystem.initialize();
   }
 
   private initializePlanarShadows(): void {
@@ -388,7 +391,7 @@ export class ShadowService {
       return;
     }
     if (mode === 'static') {
-      this.staticProjectedShadowSystem?.addCaster(mesh);
+      // Static projected shadows are runtime artifact overlays; individual meshes are only bake sources in editor/build-time.
       return;
     }
     if (mode === 'planar') {
@@ -402,7 +405,6 @@ export class ShadowService {
 
   private removeMeshFromShadowSystems(mesh: AbstractMesh): void {
     this.blobShadowSystem?.removeCaster(mesh);
-    this.staticProjectedShadowSystem?.removeCaster(mesh);
     this.planarShadowSystem?.removeCaster(mesh);
     this.planarShadowSystem?.removeReceiver(mesh);
     this.shadowGenerator?.removeShadowCaster(mesh, true);
@@ -448,7 +450,7 @@ export class ShadowService {
 
   private resolveMeshShadowMode(mesh: AbstractMesh): SceneShadowMode {
     const mode = this.readMeshShadowMode(mesh);
-    if (!mode || mode === 'default') return this.config.defaultMode ?? 'static';
+    if (!mode || mode === 'default') return this.config.defaultMode ?? 'none';
     return mode;
   }
 
@@ -534,6 +536,36 @@ export class ShadowService {
     });
   }
 
+  private createStaticProjectedShadowArtifactOptions(): Partial<StaticProjectedShadowArtifactOptions> {
+    const options = this.createStaticProjectedShadowOptions();
+    return {
+      enabled: options.enabled ?? this.config.staticProjected.enabled,
+      appearance: options.appearance,
+      bake: {
+        blur: options.bake?.blur,
+      },
+      expectedHashes: this.createStaticProjectedShadowExpectedHashes(options),
+      debug: options.debug,
+    };
+  }
+
+  private createStaticProjectedShadowExpectedHashes(
+    options: Partial<StaticProjectedShadowOptions>,
+  ): StaticProjectedShadowArtifactHashInput | null {
+    try {
+      return createStaticProjectedShadowBakeHashes({
+        scene: this.scene as any,
+        directionalLight: this.light as any,
+        options,
+      });
+    } catch (error) {
+      if (options.debug) {
+        console.warn('[ShadowService] Failed to validate static shadow artifact hashes.', error);
+      }
+      return null;
+    }
+  }
+
   private isPlanarEnabled(): boolean {
     return this.renderingProfile.shadows.planar.enabled;
   }
@@ -541,7 +573,7 @@ export class ShadowService {
   private resolveServiceMode(): ShadowServiceMode {
     const modes: ShadowServiceMode[] = [];
     if (this.blobShadowSystem) modes.push('blob');
-    if (this.staticProjectedShadowSystem) modes.push('static');
+    if (this.staticProjectedShadowArtifactSystem) modes.push('static');
     if (this.planarShadowSystem) modes.push('planar');
     if (this.shadowGenerator) modes.push('legacy');
     if (modes.length === 0) return 'none';
@@ -572,9 +604,9 @@ export class ShadowService {
       this.blobShadowSystem = null;
     }
 
-    if (this.staticProjectedShadowSystem) {
-      this.staticProjectedShadowSystem.dispose();
-      this.staticProjectedShadowSystem = null;
+    if (this.staticProjectedShadowArtifactSystem) {
+      this.staticProjectedShadowArtifactSystem.dispose();
+      this.staticProjectedShadowArtifactSystem = null;
     }
 
     if (this.planarShadowSystem) {
