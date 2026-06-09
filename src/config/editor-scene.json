@@ -5,7 +5,7 @@
     "authoringSource": {
       "sourceId": "scene.main",
       "sourceType": "scene",
-      "revision": 50
+      "revision": 51
     }
   },
   "assets": [],
@@ -208,7 +208,8 @@
               "z": 20
             }
           }
-        ]
+        ],
+        "shadowMode": "static"
       },
       {
         "id": "cube",
@@ -239,7 +240,8 @@
               "z": 1
             }
           }
-        ]
+        ],
+        "shadowMode": "static"
       },
       {
         "id": "sphere",
@@ -270,7 +272,8 @@
               "z": 1
             }
           }
-        ]
+        ],
+        "shadowMode": "static"
       },
       {
         "id": "capsule",
@@ -301,9 +304,83 @@
               "z": 1
             }
           }
-        ]
+        ],
+        "shadowMode": "static"
       }
     ],
-    "materialAssets": []
+    "materialAssets": [
+      {
+        "id": "mat_default_pbr",
+        "guid": "00000000-0000-4000-8000-000000000001",
+        "name": "Default PBR Material",
+        "materialKind": "pbr",
+        "system": {
+          "readonly": true,
+          "preset": "default-pbr"
+        },
+        "origin": {
+          "type": "preset"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 1,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_default_standard",
+        "guid": "00000000-0000-4000-8000-000000000002",
+        "name": "Default Standard Material",
+        "materialKind": "standard",
+        "system": {
+          "readonly": true,
+          "preset": "default-standard"
+        },
+        "origin": {
+          "type": "preset"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      }
+    ]
   }
 }

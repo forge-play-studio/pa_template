@@ -10,6 +10,7 @@ import {
   loadSceneMainSource as loadPlayableSceneMainSource,
   saveSceneMainSource as savePlayableSceneMainSource,
   validateSceneMainDocument,
+  type SceneMainSourceCompanionConfigs,
   type SceneMainSourceDriverLoadResult as PlayableSceneMainSourceDriverLoadResult,
   type SceneMainSourceSaveMode,
   type SceneMainSourceSaveOptions as PlayableSceneMainSourceSaveOptions,
@@ -25,7 +26,13 @@ import {
   markActiveRenderingConfigSaved,
   setActiveRenderingConfigError,
 } from '../rendering/editor-rendering-profile-store';
+import {
+  getActiveStaticShadowArtifact,
+  isStaticShadowArtifactDirty,
+  markActiveStaticShadowArtifactSaved,
+} from './editor-rendering-profile';
 import type { EditorSceneRuntimeInputDrift } from './editor-authoring-source';
+import { configService } from '../config/ConfigService';
 
 export type { SceneMainSourceSaveMode };
 export { validateSceneMainDocument };
@@ -45,6 +52,7 @@ export interface SceneMainSourceSaveOptions extends PlayableSceneMainSourceSaveO
 
 export interface SceneMainSourceSaveResult extends AuthoringSourceSaveResult<EditorSceneDocument> {
   compiledArtifact?: CompiledArtifact;
+  companionConfigs?: SceneMainSourceCompanionConfigs;
   expectedVersion?: number;
   renderingConfig?: Record<string, unknown>;
   sceneJsonText?: string;
@@ -59,6 +67,7 @@ export function createSceneMainSourceDriver(
     sourceType: 'scene',
     async load() {
       const loaded = await loadSceneMainSource(request);
+      markActiveStaticShadowArtifactSaved(loaded.companionConfigs?.staticShadows ?? null);
       return {
         source: loaded.source,
         document: loaded.document,
@@ -78,11 +87,18 @@ export function createSceneMainSourceDriver(
     },
     async save({ document }) {
       const renderingConfig = isRenderingProfileDirty() ? getActiveRenderingConfig() : null;
+      const staticShadowArtifactDirty = isStaticShadowArtifactDirty();
+      const staticShadowArtifact = staticShadowArtifactDirty ? getActiveStaticShadowArtifact() : null;
       let saved: SceneMainSourceSaveResult;
       try {
         saved = await saveSceneMainSource(request, document, {
-          ...(renderingConfig
-            ? { companionConfigs: { rendering: renderingConfig } }
+          ...(renderingConfig || staticShadowArtifactDirty
+            ? {
+                companionConfigs: {
+                  ...(renderingConfig ? { rendering: renderingConfig } : {}),
+                  ...(staticShadowArtifactDirty ? { staticShadows: staticShadowArtifact } : {}),
+                },
+              }
             : {}),
         });
       } catch (error) {
@@ -90,7 +106,11 @@ export function createSceneMainSourceDriver(
         throw error;
       }
       if (renderingConfig) markActiveRenderingConfigSaved(saved.renderingConfig ?? renderingConfig);
+      if (staticShadowArtifactDirty) {
+        markActiveStaticShadowArtifactSaved(saved.companionConfigs?.staticShadows ?? staticShadowArtifact);
+      }
       lastCompiledArtifact = saved.compiledArtifact ?? null;
+      syncRuntimeSceneConfigForCurrentTab(saved.compiledArtifact?.data);
       return {
         source: saved.source,
         document: saved.document,
@@ -192,4 +212,19 @@ function summarizeSceneConfig(sceneConfig: SceneConfig): string {
   const assets = sceneConfig.scene?.assets.length ?? 0;
   const nodes = sceneConfig.scene?.nodes.length ?? 0;
   return `version=${version}, assets=${assets}, nodes=${nodes}`;
+}
+
+function syncRuntimeSceneConfigForCurrentTab(value: unknown): void {
+  if (!isSceneConfig(value)) return;
+  configService.replaceSceneConfig(structuredClone(value) as SceneConfig);
+}
+
+function isSceneConfig(value: unknown): value is SceneConfig {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const record = value as Partial<SceneConfig>;
+  return record.schemaVersion === 2
+    && !!record.scene
+    && typeof record.scene === 'object'
+    && Array.isArray(record.scene.nodes)
+    && Array.isArray(record.scene.assets);
 }

@@ -141,6 +141,12 @@
       "receivers": {
         "patterns": []
       }
+    },
+    "blob": {
+      "enabled": true
+    },
+    "staticProjected": {
+      "enabled": true
     }
   },
   "shadowMeshes": {

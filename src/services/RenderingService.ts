@@ -8,13 +8,11 @@
 import { Scene } from '@babylonjs/core/scene';
 import { Camera } from '@babylonjs/core/Cameras/camera';
 import {
-  createBabylonEnvironmentTextureController,
-  createBabylonDefaultPostProcessPipelineController,
   resolveEditorSceneRuntimePreviewAssetUrl,
-  resolveBabylonDefaultPostProcessVolumeStack,
-  type BabylonEnvironmentTextureController,
-  type BabylonEnvironmentTextureProfile,
-  type BabylonDefaultPostProcessPipelineController,
+  createPlayableBabylonRuntimeRenderingControllers,
+  createPlayableBabylonWorldRendering,
+  type EditorSceneRenderingTextureAsset,
+  type PlayableBabylonRuntimeRenderingControllers,
 } from '@fps-games/editor/playable-sdk';
 
 // 导入配置
@@ -82,8 +80,7 @@ interface GlobalVolumeConfig {
  */
 export class RenderingService {
   private scene: Scene;
-  private pipeline: BabylonDefaultPostProcessPipelineController | null = null;
-  private environmentTexture: BabylonEnvironmentTextureController | null = null;
+  private controllers: PlayableBabylonRuntimeRenderingControllers | null = null;
   private config: GlobalVolumeConfig;
 
   constructor(scene: Scene) {
@@ -97,17 +94,18 @@ export class RenderingService {
    * @param cameras 要应用管线的相机列表
    */
   initialize(cameras: Camera[]): void {
-    this.environmentTexture = createBabylonEnvironmentTextureController(
-      this.scene as any,
-      this.createEnvironmentTextureProfile(),
-    );
-    const resolved = resolveBabylonDefaultPostProcessVolumeStack(renderingConfig);
-    this.pipeline = createBabylonDefaultPostProcessPipelineController(
-      this.scene as any,
-      cameras as any,
-      resolved.profile,
-      { name: 'defaultPipeline' },
-    );
+    const worldRendering = createPlayableBabylonWorldRendering(RUNTIME_RENDERING_DOCUMENT, {
+      getConfig: () => renderingConfig,
+      setConfig: () => undefined,
+      getTextureAssets: () => createRuntimeRenderingTextureAssets(),
+      shadowPreview: false,
+    });
+    this.controllers = createPlayableBabylonRuntimeRenderingControllers({
+      scene: this.scene as any,
+      cameras: cameras as any[],
+      initialRendering: worldRendering,
+      postProcess: { name: 'defaultPipeline' },
+    });
   }
 
   // ============================================================
@@ -118,7 +116,7 @@ export class RenderingService {
    * 获取渲染管线实例
    */
   getPipeline(): unknown | null {
-    return this.pipeline?.getPipeline() ?? null;
+    return this.controllers?.postProcess.getPipeline() ?? null;
   }
 
   /**
@@ -157,44 +155,42 @@ export class RenderingService {
    * 销毁渲染管线
    */
   dispose(): void {
-    this.pipeline?.dispose();
-    this.pipeline = null;
-    this.environmentTexture?.dispose();
-    this.environmentTexture = null;
-  }
-
-  private createEnvironmentTextureProfile(): BabylonEnvironmentTextureProfile {
-    const environment = this.config.environment;
-    return {
-      textureUrl: resolveEnvironmentTextureUrl(environment),
-      intensity: readFiniteNumber(environment.iblIntensity ?? environment.intensity, 1),
-      rotationY: readFiniteNumber(environment.rotationY, 0),
-    };
+    this.controllers?.dispose();
+    this.controllers = null;
   }
 }
 
-function resolveEnvironmentTextureUrl(environment: GlobalVolumeConfig['environment']): string | null {
-  const texture = environment.texture && typeof environment.texture === 'object'
-    ? environment.texture
-    : null;
-  const textureAssetId = readString(texture?.textureAssetId)
-    || readString(environment.textureAssetId);
-  const textureUrl = readString(texture?.url)
-    || readString(environment.textureUrl);
-  if (!textureAssetId) return isEnvironmentTextureUrl(textureUrl) ? textureUrl : null;
-  if (!isEnvironmentTextureAssetId(textureAssetId)) return isEnvironmentTextureUrl(textureUrl) ? textureUrl : null;
-  const resolvedUrl = resolveEditorSceneRuntimePreviewAssetUrl(
-    editorAssets,
-    { assetId: textureAssetId },
-    'texture',
-  );
-  return resolvedUrl && isEnvironmentTextureUrl(resolvedUrl) ? resolvedUrl : null;
+const RUNTIME_RENDERING_DOCUMENT = Object.freeze({ source: 'runtime' });
+
+function createRuntimeRenderingTextureAssets(): EditorSceneRenderingTextureAsset[] {
+  return Object.values(editorAssets.ASSET_CATALOG)
+    .filter(entry => entry.kind === 'texture' || entry.kind === 'image')
+    .flatMap((entry) => {
+      const url = entry.kind === 'texture'
+        ? resolveEditorSceneRuntimePreviewAssetUrl(editorAssets, { assetId: entry.assetId }, 'texture')
+        : editorAssets.resolveImageAssetUrl(entry.assetId);
+      if (!url) return [];
+      const environmentTexture = isEnvironmentTextureAsset(entry, url);
+      return [{
+        id: entry.assetId,
+        label: entry.displayName || entry.assetId,
+        url,
+        meta: environmentTexture ? `${entry.assetId} · IBL` : entry.assetId,
+        usage: environmentTexture ? 'environment' : 'material',
+        capabilities: {
+          materialTexture: !environmentTexture,
+          environmentTexture,
+        },
+      }];
+    });
 }
 
-function isEnvironmentTextureAssetId(textureAssetId: string): boolean {
-  const catalogEntry = editorAssets.ASSET_CATALOG[textureAssetId] as { metadata?: unknown; relativePath?: string } | undefined;
-  const metadata = catalogEntry?.metadata && typeof catalogEntry.metadata === 'object' && !Array.isArray(catalogEntry.metadata)
-    ? catalogEntry.metadata as Record<string, unknown>
+function isEnvironmentTextureAsset(
+  asset: editorAssets.AssetCatalogEntry,
+  resolvedUrl: string,
+): boolean {
+  const metadata = asset.metadata && typeof asset.metadata === 'object' && !Array.isArray(asset.metadata)
+    ? asset.metadata as Record<string, unknown>
     : {};
   if (metadata.textureUsage === 'environment' || metadata.usage === 'environment') return true;
   const capabilities = metadata.capabilities && typeof metadata.capabilities === 'object' && !Array.isArray(metadata.capabilities)
@@ -202,22 +198,16 @@ function isEnvironmentTextureAssetId(textureAssetId: string): boolean {
     : null;
   if (capabilities?.environmentTexture === true) return true;
   if (capabilities?.environmentTexture === false) return false;
-  const relativePath = typeof metadata.relativePath === 'string'
-    ? metadata.relativePath
-    : typeof catalogEntry?.relativePath === 'string'
-      ? catalogEntry.relativePath
-      : '';
-  return isEnvironmentTextureUrl(relativePath);
+  const candidates = [
+    resolvedUrl,
+    asset.displayName,
+    asset.assetId,
+    typeof metadata.relativePath === 'string' ? metadata.relativePath : '',
+    typeof metadata.originalFileName === 'string' ? metadata.originalFileName : '',
+  ];
+  return candidates.some(isEnvironmentTextureUrl);
 }
 
 function isEnvironmentTextureUrl(textureUrl: string): boolean {
   return /\.(env|hdr|dds|ktx|ktx2)(?:[?#].*)?$/i.test(textureUrl);
-}
-
-function readString(value: unknown): string {
-  return typeof value === 'string' ? value.trim() : '';
-}
-
-function readFiniteNumber(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 }
