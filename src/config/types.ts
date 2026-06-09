@@ -185,6 +185,11 @@ export interface SceneRuntimeSourceBinding extends SceneAuthoringSourceRef {
 
 export type SceneNodeShadowMode = 'default' | 'none' | 'blob' | 'static' | 'planar' | 'dynamic';
 
+export interface SceneNodeRenderingConfig {
+  renderingGroupId?: number;
+  alphaIndex?: number;
+}
+
 export interface SceneNodeBase {
   id: string;
   name?: string;
@@ -192,6 +197,7 @@ export interface SceneNodeBase {
   parentId?: string;
   enabled?: boolean;
   shadowMode?: SceneNodeShadowMode;
+  rendering?: SceneNodeRenderingConfig;
   transform?: TransformConfig;
   source?: SceneRuntimeSourceBinding;
 }
@@ -513,6 +519,7 @@ export interface SceneConfig {
   gameplay?: SceneGameplayConfig;
   scene?: SceneDocumentScene;
   render?: SceneRenderConfig;
+  staticShadows?: unknown;
 }
 
 export interface GameConfig {

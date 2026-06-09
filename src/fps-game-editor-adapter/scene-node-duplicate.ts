@@ -4,6 +4,9 @@ import type {
   SceneInstanceNode,
   SceneNodeConfig,
 } from '../config';
+import {
+  createUniqueEditorSceneGameObjectDisplayName,
+} from '@fps-games/editor/playable-sdk';
 import type {
   ProjectEditorPluginContext,
   ProjectPersistentBinding,
@@ -98,9 +101,20 @@ function removeRuntimeSceneNode(nodeId: string, context?: ProjectEditorPluginCon
   return sceneBuilder?.removeSceneNode?.(nodeId) ?? false;
 }
 
-function createDuplicateInstanceId(sourceId: string, sceneConfig: SceneConfig): string {
+function createDuplicateInstanceName(source: SceneInstanceNode, sceneConfig: SceneConfig): string {
+  return createUniqueEditorSceneGameObjectDisplayName(
+    ensureSceneNodes(sceneConfig).map((node) => node.name ?? node.id),
+    source.name,
+    {
+      alwaysAppendSuffix: true,
+      fallbackName: source.id,
+    },
+  );
+}
+
+function createDuplicateInstanceId(name: string, sceneConfig: SceneConfig): string {
   const existingIds = new Set(ensureSceneNodes(sceneConfig).map((node) => node.id));
-  const baseId = `${sourceId}_copy`;
+  const baseId = sanitizeSceneNodeId(name);
   if (!existingIds.has(baseId)) return baseId;
 
   let suffix = 2;
@@ -108,6 +122,15 @@ function createDuplicateInstanceId(sourceId: string, sceneConfig: SceneConfig): 
     suffix += 1;
   }
   return `${baseId}_${suffix}`;
+}
+
+function sanitizeSceneNodeId(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    || 'game_object';
 }
 
 function getDuplicateOffset(node: any): Position3D {
@@ -118,10 +141,12 @@ function getDuplicateOffset(node: any): Position3D {
 function buildDuplicatedSceneNode(
   source: SceneInstanceNode,
   nextId: string,
+  nextName: string,
   node: any,
 ): SceneInstanceNode {
   const duplicated = cloneJson(source);
   duplicated.id = nextId;
+  duplicated.name = nextName;
   const offset = getDuplicateOffset(node);
   const originalPosition = duplicated.transform?.position ?? { x: 0, y: 0, z: 0 };
   duplicated.transform = {
@@ -150,9 +175,11 @@ export function createSceneNodeDuplicateEntry(args: {
 
   const sourceInstance = sceneNodes[sourceIndex];
   if (sourceInstance.kind !== 'instance') return null;
+  const duplicateName = createDuplicateInstanceName(sourceInstance, args.workingCopy);
   const duplicatedInstance = buildDuplicatedSceneNode(
     sourceInstance,
-    createDuplicateInstanceId(args.binding.nodeId, args.workingCopy),
+    createDuplicateInstanceId(duplicateName, args.workingCopy),
+    duplicateName,
     args.node,
   );
 

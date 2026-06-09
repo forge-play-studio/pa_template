@@ -37,7 +37,6 @@ import {
   createEditorSceneCreatePrimitivePatch as createPlayableEditorSceneCreatePrimitivePatch,
   createEditorSceneDeleteSubtreePatch as createPlayableEditorSceneDeleteSubtreePatch,
   createEditorSceneDuplicateSelectionPatch as createPlayableEditorSceneDuplicateSelectionPatch,
-  createEditorSceneFieldInspectorValidator as createPlayableEditorSceneFieldInspectorValidator,
   createEditorSceneGroupSelectionPatch as createPlayableEditorSceneGroupSelectionPatch,
   createEditorSceneHierarchyMovePatch as createPlayableEditorSceneHierarchyMovePatch,
   createEditorSceneCreatedMaterialAsset as createPlayableEditorSceneCreatedMaterialAsset,
@@ -54,6 +53,7 @@ import {
   createEditorSceneRuntimeInspectorSnapshot as createPlayableEditorSceneRuntimeInspectorSnapshot,
   createEditorSceneRuntimeInspectorSections as createPlayableEditorSceneRuntimeInspectorSections,
   createEditorSceneSerializedMultiObject as createPlayableEditorSceneSerializedMultiObject,
+  createEditorSceneSerializedMultiInspectorSections as createPlayableEditorSceneSerializedMultiInspectorSections,
   createEditorSceneSerializedObject as createPlayableEditorSceneSerializedObject,
   createEditorSceneTexturePickerControlOptions as createPlayableEditorSceneTexturePickerControlOptions,
   deleteEditorSceneMaterialAsset as deletePlayableEditorSceneMaterialAsset,
@@ -75,6 +75,7 @@ import {
   normalizeEditorSceneFieldInspectorValue as normalizePlayableEditorSceneFieldInspectorValue,
   normalizeEditorSceneHierarchyDocument as normalizePlayableEditorSceneHierarchyDocument,
   normalizeEditorSceneMaterialAssetValue as normalizePlayableEditorSceneMaterialAssetValue,
+  migrateEditorSceneDocumentRenderingAlphaIndex as migratePlayableEditorSceneDocumentRenderingAlphaIndex,
   radiansToEditorSceneDegrees as radiansToPlayableEditorSceneDegrees,
   parseEditorSceneDuplicateMaterialAssetValue as parsePlayableEditorSceneDuplicateMaterialAssetValue,
   parseEditorSceneMaterialAssetFieldPath as parsePlayableEditorSceneMaterialAssetFieldPath,
@@ -173,6 +174,21 @@ export type EditorSceneDocumentPatch =
     targetId: string;
     path: string;
     value: unknown;
+  }
+  | {
+    kind: 'game-object.field-batch';
+    fields: Array<{
+      targetId: string;
+      path: string;
+      value: unknown;
+    }>;
+  }
+  | {
+    kind: 'game-object.rendering-alpha-index-migration';
+    targetIds: string[];
+    renderingGroupId: 0 | 1 | 2 | 3;
+    fromAlphaIndex: number;
+    toAlphaIndex: number;
   }
   | {
     kind: 'scene.material-asset.field';
@@ -1119,12 +1135,34 @@ function reduceEditorSceneDocumentUnchecked(
         command.patch.materialAsset,
       );
     }
+    if (command.patch.kind === 'game-object.field-batch') {
+      return command.patch.fields.reduce(
+        (nextDocument, field) => patchEditorSceneGameObjectField(nextDocument, field.targetId, field.path, field.value),
+        document,
+      );
+    }
+    if (command.patch.kind === 'game-object.rendering-alpha-index-migration') {
+      return patchEditorSceneRenderingAlphaIndexMigration(document, command.patch);
+    }
   }
   return reducePlayableEditorSceneDocumentMutation(
     document,
     command as DocumentCommand<EditorSceneDocument, PlayableEditorSceneDocumentMutationPatch<EditorSceneGameObject>>,
     createEditorSceneDocumentMutationOptions(),
   );
+}
+
+function patchEditorSceneRenderingAlphaIndexMigration(
+  document: EditorSceneDocument,
+  patch: Extract<EditorSceneDocumentPatch, { kind: 'game-object.rendering-alpha-index-migration' }>,
+): EditorSceneDocument {
+  return migratePlayableEditorSceneDocumentRenderingAlphaIndex({
+    document,
+    targetIds: patch.targetIds,
+    renderingGroupId: patch.renderingGroupId,
+    fromAlphaIndex: patch.fromAlphaIndex,
+    toAlphaIndex: patch.toAlphaIndex,
+  });
 }
 
 function createEditorSceneDocumentMutationOptions(): PlayableEditorSceneDocumentMutationOptions<EditorSceneDocument, EditorSceneGameObject> {
@@ -1974,6 +2012,10 @@ export function getEditorSceneInspectorMultiObject(
 ): InspectorObject<EditorSceneDocument> | null {
   const serialized = getEditorSceneSerializedMultiObject(document, gameObjectIds, activeId);
   if (!serialized) return null;
+  const sections = createPlayableEditorSceneSerializedMultiInspectorSections<EditorSceneDocument>({
+    document,
+    serialized,
+  });
   return {
     targetIds: serialized.targetIds,
     activeId,
@@ -1984,27 +2026,7 @@ export function getEditorSceneInspectorMultiObject(
       activeId,
       document,
     },
-    sections: [{
-      id: 'transform',
-      title: 'Transform',
-      order: 20,
-      placement: 'body',
-      persistence: 'document',
-      properties: serialized.properties.map((property, order) => ({
-        path: property.path,
-        label: property.label,
-        valueType: property.valueType,
-        control: 'number',
-        value: property.value,
-        mixed: property.mixed,
-        readOnly: false,
-        persistence: 'document',
-        commitMode: 'live',
-        order,
-        step: property.path.startsWith('transform.rotation.') ? 1 : 0.1,
-        validate: createEditorSceneInspectorValidator('group', property.path),
-      })),
-    }],
+    sections,
   };
 }
 
@@ -4042,19 +4064,6 @@ function validateProjectEditorSceneInspectorField(input: {
       : { ok: false, message: `Invalid value for scene node field: ${input.path}.` };
   }
   return null;
-}
-
-function createEditorSceneInspectorValidator(
-  nodeKind: SceneNodeConfig['kind'],
-  path: string,
-  document?: EditorSceneDocument | null,
-): (value: unknown) => InspectorValidationResult {
-  return createPlayableEditorSceneFieldInspectorValidator<EditorSceneDocument, SceneNodeConfig['kind']>({
-    path,
-    nodeKind,
-    document,
-    extraValidators: PROJECT_EDITOR_SCENE_INSPECTOR_EXTRA_VALIDATORS,
-  });
 }
 
 function isMaterialAssetBindingPath(path: string): boolean {

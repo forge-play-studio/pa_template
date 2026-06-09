@@ -769,6 +769,9 @@ export class ConfigService {
   }
 
   private normalizeSceneNode(node: SceneNodeConfig): void {
+    const rendering = normalizeSceneNodeRendering(node.rendering);
+    if (rendering) node.rendering = rendering;
+    else delete node.rendering;
     if (node.kind !== 'instance' && node.kind !== 'transform' && node.kind !== 'primitive') return;
     this.normalizeSceneVisualNode(node);
     if (node.kind === 'transform') {
@@ -834,6 +837,10 @@ export class ConfigService {
 
   getSceneDocument(): SceneConfig {
     return this.sceneConfig;
+  }
+
+  getStaticShadowArtifact(): unknown {
+    return this.sceneConfig.staticShadows ?? null;
   }
 
   replaceSceneConfig(sceneConfig: SceneConfig): void {
@@ -958,3 +965,15 @@ export class ConfigService {
 }
 
 export const configService = new ConfigService();
+
+function normalizeSceneNodeRendering(value: unknown): SceneNodeConfig['rendering'] | undefined {
+  if (!isRecord(value)) return undefined;
+  const normalized: NonNullable<SceneNodeConfig['rendering']> = {};
+  if (value.renderingGroupId === 0 || value.renderingGroupId === 1 || value.renderingGroupId === 2 || value.renderingGroupId === 3) {
+    normalized.renderingGroupId = value.renderingGroupId;
+  }
+  if (typeof value.alphaIndex === 'number' && Number.isFinite(value.alphaIndex)) {
+    normalized.alphaIndex = value.alphaIndex;
+  }
+  return Object.keys(normalized).length > 0 ? normalized : undefined;
+}

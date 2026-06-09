@@ -14,7 +14,11 @@ import {
   handlePlayableAuthoringServerRequest,
   inspectPlayableEditorPackageAliasPlan,
   PLAYABLE_EDITOR_PACKAGE_IDS,
+  readEditorSceneStaticShadowArtifact,
+  readSceneMainSourceSaveCompanionConfigs,
   readSceneMainSourceRenderingConfig,
+  readSceneMainSourceStaticShadowsArtifact,
+  SCENE_MAIN_SOURCE_STATIC_SHADOWS_COMPANION_CONFIG_KEY,
   type PlayableEditorPackageAliasPlan,
   type PlayableAuthoringServerResponse,
 } from '@fps-games/editor/playable-sdk';
@@ -288,11 +292,13 @@ function projectAuthoringApiPlugin() {
             const normalizedEditorScene = editorScene
               ? repairEditorSceneMaterialAssetsFromSceneConfig(ensureEditorSceneAuthoringSource(editorScene), runtimeScene)
               : editorScene;
+            const companionConfigs = readSceneMainSourceSaveCompanionConfigs(normalizedEditorScene);
             return {
               ok: true,
               editorScenePath,
               scenePath,
               editorScene: normalizedEditorScene,
+              ...(Object.keys(companionConfigs).length > 0 ? { companionConfigs } : {}),
               drift: normalizedEditorScene ? detectEditorSceneRuntimeInputDrift(normalizedEditorScene, runtimeScene) : null,
               summary: summarizeEditorScene(normalizedEditorScene),
             };
@@ -327,7 +333,15 @@ function projectAuthoringApiPlugin() {
             return { ok: true, cmd, result };
           },
           async saveEditorScene({ mode: saveMode, rawEditorScene, body }) {
+            const companionConfigPayload = readSceneMainSourceSaveCompanionConfigs(body);
             const renderingConfig = readSceneMainSourceRenderingConfig(body);
+            const hasStaticShadowArtifactPayload = Object.prototype.hasOwnProperty.call(
+              companionConfigPayload,
+              SCENE_MAIN_SOURCE_STATIC_SHADOWS_COMPANION_CONFIG_KEY,
+            );
+            const staticShadowArtifact = readEditorSceneStaticShadowArtifact(
+              companionConfigPayload[SCENE_MAIN_SOURCE_STATIC_SHADOWS_COMPANION_CONFIG_KEY],
+            );
             const editorScenePath = resolve(__dirname, 'src/config/editor-scene.json');
             const scenePath = resolve(__dirname, 'src/config/scene.json');
             const renderingConfigPath = resolve(__dirname, 'src/config/rendering.json');
@@ -351,20 +365,37 @@ function projectAuthoringApiPlugin() {
             const editorScene = bumpEditorSceneAuthoringSourceRevision(
               repairedEditorScene,
             );
+            const runtimeStaticShadowArtifact = hasStaticShadowArtifactPayload
+              ? staticShadowArtifact
+              : staticShadowArtifact
+                ?? readSceneMainSourceStaticShadowsArtifact(rawEditorScene)
+                ?? readEditorSceneStaticShadowArtifact(readRecord(previousSceneConfig).staticShadows);
+            const persistedEditorScene = withEditorSceneCompanionConfigs(editorScene, {
+              staticShadows: runtimeStaticShadowArtifact,
+            });
             const compiled = compileEditorSceneDocumentToSceneConfig(editorScene, previousSceneConfig);
-            assertSceneJsonV2(compiled.sceneConfig);
+            const compiledSceneConfig = runtimeStaticShadowArtifact
+              ? {
+                  ...compiled.sceneConfig,
+                  staticShadows: runtimeStaticShadowArtifact,
+                }
+              : {
+                  ...compiled.sceneConfig,
+                };
+            if (!runtimeStaticShadowArtifact) delete (compiledSceneConfig as Record<string, unknown>).staticShadows;
+            assertSceneJsonV2(compiledSceneConfig);
 
             const previousVersion = typeof previousSceneConfig.version === 'number' ? previousSceneConfig.version : undefined;
             const version = typeof previousVersion === 'number' ? previousVersion + 1 : 1;
             const updatedAt = new Date().toISOString();
-            const savedEditorSceneText = `${JSON.stringify(editorScene, null, 2)}\n`;
+            const savedEditorSceneText = `${JSON.stringify(persistedEditorScene, null, 2)}\n`;
             const savedSceneJsonText = saveMode === 'local-commit-save'
               ? `${JSON.stringify({
-                ...compiled.sceneConfig,
+                ...compiledSceneConfig,
                 version,
                 updatedAt,
               }, null, 2)}\n`
-              : `${JSON.stringify(compiled.sceneConfig, null, 2)}\n`;
+              : `${JSON.stringify(compiledSceneConfig, null, 2)}\n`;
 
             await writeFile(editorScenePath, savedEditorSceneText, 'utf8');
             if (saveMode === 'local-commit-save') {
@@ -397,13 +428,16 @@ function projectAuthoringApiPlugin() {
               scenePath,
               expectedVersion: previousVersion,
               ...(saveMode === 'local-commit-save' ? { version, updatedAt } : {}),
-              editorScene,
-              ...(renderingConfig && saveMode === 'local-commit-save' ? {
+              editorScene: persistedEditorScene,
+              ...((renderingConfig || hasStaticShadowArtifactPayload) && saveMode === 'local-commit-save' ? {
                 companionConfigs: {
-                  rendering: renderingConfig,
+                  ...(renderingConfig ? { rendering: renderingConfig } : {}),
+                  ...(hasStaticShadowArtifactPayload ? { staticShadows: runtimeStaticShadowArtifact } : {}),
                 },
-                renderingConfig,
-                renderingSummary: summarizeRenderingProfile(normalizedRenderingConfig),
+                ...(renderingConfig ? {
+                  renderingConfig,
+                  renderingSummary: summarizeRenderingProfile(normalizedRenderingConfig),
+                } : {}),
               } : {}),
               sceneJsonText: savedSceneJsonText,
               summary: {
@@ -464,6 +498,30 @@ async function handleRenderingProfileAuthoringRoute(
       return { renderingConfigPath };
     },
   });
+}
+
+function withEditorSceneCompanionConfigs(
+  editorScene: Record<string, unknown>,
+  companionConfigs: Record<string, unknown>,
+): Record<string, unknown> {
+  const nextCompanionConfigs = {
+    ...readSceneMainSourceSaveCompanionConfigs(editorScene),
+  };
+  delete nextCompanionConfigs.rendering;
+  for (const [key, value] of Object.entries(companionConfigs)) {
+    if (value == null) {
+      delete nextCompanionConfigs[key];
+    } else {
+      nextCompanionConfigs[key] = value as Record<string, unknown>;
+    }
+  }
+  const nextEditorScene = { ...editorScene };
+  if (Object.keys(nextCompanionConfigs).length > 0) {
+    nextEditorScene.companionConfigs = nextCompanionConfigs;
+  } else {
+    delete nextEditorScene.companionConfigs;
+  }
+  return nextEditorScene;
 }
 
 function readRecord(value: unknown): Record<string, unknown> {
