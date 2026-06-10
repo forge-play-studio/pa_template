@@ -216,8 +216,10 @@ function compileGameObject(
 }
 
 function compileEditorSceneMarker(gameObject: EditorSceneGameObject): SceneMarkerConfig {
+  const marker = structuredClone(gameObject.marker!);
+  if (marker.geometry.kind === 'box') marker.geometry = { kind: 'box' };
   return {
-    ...structuredClone(gameObject.marker!),
+    ...marker,
     label: gameObject.name ?? gameObject.id,
   } as SceneMarkerConfig;
 }

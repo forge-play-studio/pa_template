@@ -76,7 +76,6 @@ export interface EditorScenePrimitiveRenderer extends PlayableEditorScenePrimiti
 
 export interface EditorSceneMarkerBoxGeometry {
   kind: 'box';
-  size: EditorSceneVec3;
 }
 
 export interface EditorSceneMarkerPointGeometry {

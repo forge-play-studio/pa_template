@@ -126,6 +126,8 @@ export function reduceEditorSceneMarkerGraphPatch(
 }
 
 export function syncEditorSceneMarkerGraphDocument(document: EditorSceneDocument): EditorSceneDocument {
+  const normalizedMarkerObjects = normalizeEditorSceneMarkerGameObjects(document);
+  if (normalizedMarkerObjects !== document) return syncEditorSceneMarkerGraphDocument(normalizedMarkerObjects);
   const migrated = migrateEditorSceneMarkerGraphMarkersToGameObjects(document);
   if (migrated !== document) return syncEditorSceneMarkerGraphDocument(migrated);
   if (!document.scene.markerGraph) return document;
@@ -292,6 +294,67 @@ function deleteEditorSceneMarkerGameObject(
   };
 }
 
+function normalizeEditorSceneMarkerGameObjects(document: EditorSceneDocument): EditorSceneDocument {
+  let changed = false;
+  const gameObjects = document.scene.gameObjects.map((gameObject) => {
+    if (!isEditorSceneMarkerGameObject(gameObject)) return gameObject;
+    const normalized = normalizeEditorSceneMarkerGameObject(document, gameObject);
+    if (normalized !== gameObject) changed = true;
+    return normalized;
+  });
+  return changed
+    ? {
+        ...document,
+        scene: {
+          ...document.scene,
+          gameObjects,
+        },
+      }
+    : document;
+}
+
+function normalizeEditorSceneMarkerGameObject(
+  document: EditorSceneDocument,
+  gameObject: EditorSceneGameObject & { marker: EditorSceneMarkerConfig },
+): EditorSceneGameObject {
+  if (gameObject.marker.geometry.kind !== 'box') return gameObject;
+  const authoredGeometry = gameObject.marker.geometry as EditorSceneMarkerConfig['geometry'] & {
+    coordinateSpace?: unknown;
+    center?: unknown;
+    size?: unknown;
+    rotation?: unknown;
+  };
+  const hasLegacyBoxFields = 'coordinateSpace' in authoredGeometry
+    || 'center' in authoredGeometry
+    || 'size' in authoredGeometry
+    || 'rotation' in authoredGeometry;
+  if (!hasLegacyBoxFields) return gameObject;
+
+  const currentTransform = getEditorSceneGameObjectWorldTransform(document, gameObject.id);
+  const currentScale = currentTransform?.scale ?? readMarkerGameObjectScale(gameObject);
+  const geometry: SpatialMarkerGeometry = {
+    kind: 'box',
+    coordinateSpace: 'world',
+    center: isVec3Like(authoredGeometry.center)
+      ? cloneVec3(authoredGeometry.center)
+      : cloneVec3(currentTransform?.position ?? createVec3(0, 0, 0)),
+    size: isVec3Like(authoredGeometry.size)
+      ? normalizeMarkerBoxSize(authoredGeometry.size)
+      : normalizeMarkerBoxSize(currentScale),
+    rotation: isVec3Like(authoredGeometry.rotation)
+      ? cloneVec3(authoredGeometry.rotation)
+      : cloneVec3(currentTransform?.rotation ?? createVec3(0, 0, 0)),
+  };
+  return {
+    ...gameObject,
+    marker: {
+      ...gameObject.marker,
+      geometry: { kind: 'box' },
+    },
+    components: patchMarkerGameObjectTransformComponents(document, gameObject, gameObject.components, geometry),
+  };
+}
+
 function normalizeEditorSceneMarkerGraph(graph: SpatialMarkerGraph | null | undefined): SpatialMarkerGraph {
   if (!graph) {
     return {
@@ -312,18 +375,18 @@ function createMarkerGameObjectFromSpatialMarker(
   marker: SpatialMarkerNode,
   gameObjectId: string,
 ): EditorSceneGameObject {
+  const markerTransform = {
+    position: readSpatialMarkerTransformPosition(marker.geometry),
+    rotation: readSpatialMarkerTransformRotation(marker.geometry),
+    scale: readSpatialMarkerTransformScale(marker.geometry, createVec3(1, 1, 1)),
+  };
   return {
     id: gameObjectId,
     name: marker.label || marker.id,
     kind: 'transform',
     active: true,
     marker: createEditorSceneMarkerConfig(marker),
-    components: [{
-      type: 'Transform',
-      position: readSpatialMarkerTransformPosition(marker.geometry),
-      rotation: readSpatialMarkerTransformRotation(marker.geometry),
-      scale: createVec3(1, 1, 1),
-    }],
+    components: [{ type: 'Transform', ...markerTransform }],
   };
 }
 
@@ -351,7 +414,7 @@ function patchMarkerGameObjectTransformComponents(
   const worldTransform = {
     position: readSpatialMarkerTransformPosition(geometry),
     rotation: readSpatialMarkerTransformRotation(geometry),
-    scale: currentScale,
+    scale: readSpatialMarkerTransformScale(geometry, currentScale),
   };
   const localTransform = toEditorSceneLocalTransformForParent(document, gameObject.parentId, worldTransform) ?? worldTransform;
   let patched = false;
@@ -362,7 +425,7 @@ function patchMarkerGameObjectTransformComponents(
       ...component,
       position: localTransform.position,
       rotation: localTransform.rotation,
-      scale: component.scale ?? localTransform.scale,
+      scale: localTransform.scale,
     };
   });
   return patched
@@ -422,13 +485,14 @@ function createSpatialMarkerGeometryFromGameObject(
   const transform = getEditorSceneGameObjectWorldTransform(document, gameObject.id);
   const position = transform?.position ?? createVec3(0, 0, 0);
   const rotation = transform?.rotation ?? createVec3(0, 0, 0);
+  const scale = transform?.scale ?? readMarkerGameObjectScale(gameObject);
   switch (marker.geometry.kind) {
     case 'box':
       return {
         kind: 'box',
         coordinateSpace: 'world',
         center: cloneVec3(position),
-        size: cloneVec3(marker.geometry.size),
+        size: normalizeMarkerBoxSize(scale),
         rotation: cloneVec3(rotation),
       };
     case 'point':
@@ -483,7 +547,6 @@ function createEditorSceneMarkerGeometry(geometry: SpatialMarkerGeometry): Edito
     case 'box':
       return {
         kind: 'box',
-        size: cloneVec3(geometry.size),
       };
     case 'point':
       return {
@@ -524,6 +587,23 @@ function readSpatialMarkerTransformRotation(geometry: SpatialMarkerGeometry): Ed
   return geometry.kind === 'box' && geometry.rotation
     ? cloneVec3(geometry.rotation)
     : createVec3(0, 0, 0);
+}
+
+function readSpatialMarkerTransformScale(
+  geometry: SpatialMarkerGeometry,
+  fallback: EditorSceneVec3,
+): EditorSceneVec3 {
+  return geometry.kind === 'box'
+    ? normalizeMarkerBoxSize(geometry.size)
+    : cloneVec3(fallback);
+}
+
+function normalizeMarkerBoxSize(size: EditorSceneVec3): EditorSceneVec3 {
+  return {
+    x: Math.max(0.000001, Math.abs(size.x)),
+    y: Math.max(0.000001, Math.abs(size.y)),
+    z: Math.max(0.000001, Math.abs(size.z)),
+  };
 }
 
 function rewriteMarkerRelationIds(

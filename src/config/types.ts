@@ -395,7 +395,6 @@ export interface ScenePrimitiveNode extends SceneNodeBase {
 
 export interface SceneMarkerBoxGeometryConfig {
   kind: 'box';
-  size: Position3D;
 }
 
 export interface SceneMarkerPointGeometryConfig {

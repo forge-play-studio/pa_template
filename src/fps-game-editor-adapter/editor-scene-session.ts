@@ -4038,19 +4038,6 @@ function createMarkerInspectorSection(
     }),
     createReadonlyInspectorProperty('marker.geometry.kind', 'Geometry', marker.geometry.kind, 5),
   ];
-  if (marker.geometry.kind === 'box') {
-    properties.push(createDocumentInspectorProperty(document, nodeKind, {
-      path: 'marker.geometry.size',
-      label: 'Size',
-      valueType: 'vec3',
-      control: 'vec3',
-      value: marker.geometry.size,
-      commitMode: 'live',
-      min: 0.001,
-      step: 0.1,
-      order: 6,
-    }));
-  }
   return {
     id: 'marker',
     title: 'Marker',
