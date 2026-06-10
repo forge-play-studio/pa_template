@@ -36,6 +36,7 @@
 15. 标准 first playable gameplay 骨架：3C、Resources、Backpack、Area、Queue、Economy、Upgrade、Guide、EndCondition
 16. 默认调试入口：`DebugActionRegistry`，用于项目侧 debug 面板或 console quick action 触发
 17. 默认运行时节点查询封装：`RuntimeNodeService`，用于从 gameplay binding / scene node 稳定拿 runtime node
+18. 默认 debug 面板基础设施：`src/debug/debug-panel-layout.ts` 和 `src/debug/runtime-gameplay-debug-panels.ts`
 
 当前不应默认假设已经完整包含：
 
@@ -170,6 +171,28 @@ zone 检测能力默认内置，但只负责矩形区域几何检测和 `enter/t
 3. editor scene compiler / session
 4. editor plugin / runtime bridge
 5. export / commit / duplicate / undo / redo 主链
+
+### `debug/`
+
+放 dev-only 调试入口、调参面板、runtime diagnostics、quick action 面板和源码配置保存辅助。
+
+当前默认包含：
+
+1. `camera-debug-panel.ts`：编辑器相机 runtime 调试面板。
+2. `runtime-lighting-debug-panel.ts`：编辑器灯光 runtime 调试面板。
+3. `local-editor-mode-switcher.ts`：本地编辑器/游戏模式切换入口。
+4. `debug-panel-layout.ts`：项目 gameplay debug 面板的共享底部 dock、global hide/show 和 panel container helper。
+5. `runtime-gameplay-debug-panels.ts`：项目 gameplay debug 面板统一 dev-only mount 入口。
+
+具体玩法阶段的 debug 面板不在模板里默认写死。开发 Ready phase 时，builder 应按项目 `gameplay.md` 的 `Debug & Tuning` 合同，先使用 `debug-panel` skill，再在 `src/debug/runtime-<feature>-debug-panel.ts` 生成面板，并把 mount 注册到 `runtime-gameplay-debug-panels.ts`。
+
+debug 面板职责边界：
+
+1. 面板只负责调参、诊断、preview、Reset、Save 和 quick action UI。
+2. 业务规则留在对应 `systems/`、`services/` 或 `entities/`。
+3. quick action 通过 `DebugActionRegistry` 或 system/service debug API 调用，不在面板里复制玩法逻辑。
+4. numeric tuning 的持久化应写回源码配置。当前 dev server 已提供 `/__debug_panel_config`，允许读写 `src/config/*.json`。
+5. 面板必须由 `src/main.ts` 的 dev-only dynamic import 链路加载，不要在 production-owned 文件里静态 import debug module 的值。
 
 ### `entities/`
 
@@ -318,6 +341,15 @@ zone 检测能力默认内置，但只负责矩形区域几何检测和 `enter/t
 4. 用 `window.__paDebugActions['area.toggleBounds']()` 验收区域分类和 bounds 数据。
 5. 用 `window.__paDebugActions['queue.sellOnce']()` 验收 Queue -> Economy -> HUD 的现金链路。
 6. 用 `window.__paDebugActions['upgrade.complete']({ id: '<upgradeId>' })` 或站在 upgrade area 验收升级状态、milestone、Guide 和 EndCondition。
+
+阶段需要 runtime debug 面板时：
+
+1. `gameplay.md` 必须先写清 `Debug & Tuning`：面板名、owner system/service、controls、quick actions、diagnostics、source config save path 和验收用途。
+2. builder 必须先使用 `debug-panel` skill。
+3. 具体面板放在 `src/debug/runtime-<feature>-debug-panel.ts`。
+4. 多个面板共用 `debug-panel-layout.ts`，不要各自写固定坐标。
+5. 面板统一从 `runtime-gameplay-debug-panels.ts` 注册，并通过 `src/main.ts` 的 dev-only dynamic import 加载。
+6. 面板调业务动作时优先调用 `DebugActionRegistry` 注册的 action；需要调 runtime 数值时，系统或配置模块应提供 preview setter。
 
 ### `ui/`
 

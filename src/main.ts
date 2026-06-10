@@ -26,6 +26,9 @@ let cameraDebugPanel: { dispose(): void } | null = null;
 /** DEV-only runtime lighting debug panel */
 let lightingDebugPanel: { dispose(): void } | null = null;
 
+/** DEV-only gameplay debug panels */
+let gameplayDebugPanels: { dispose(): void } | null = null;
+
 /** 确保沙盒/动态注入场景下入口只启动一次 */
 let initStarted = false;
 
@@ -54,6 +57,11 @@ function disposeCameraDebugPanel(): void {
 function disposeLightingDebugPanel(): void {
   lightingDebugPanel?.dispose();
   lightingDebugPanel = null;
+}
+
+function disposeGameplayDebugPanels(): void {
+  gameplayDebugPanels?.dispose();
+  gameplayDebugPanels = null;
 }
 
 function clearLoadingScreen(): void {
@@ -102,6 +110,7 @@ async function disposeProjectGameWorld(): Promise<void> {
   const gameToDispose = game;
   game = null;
   clearProjectRuntimeGlobals();
+  disposeGameplayDebugPanels();
   disposeLightingDebugPanel();
   disposeCameraDebugPanel();
   if (gameToDispose) {
@@ -176,6 +185,16 @@ async function init(): Promise<void> {
         })
         .catch((error) => console.warn('[runtime-lighting-debug-panel] mount failed', error));
 
+      void import('./debug/runtime-gameplay-debug-panels')
+        .then(({ mountRuntimeGameplayDebugPanels }) => {
+          disposeGameplayDebugPanels();
+          gameplayDebugPanels = mountRuntimeGameplayDebugPanels({
+            root: document.body,
+            getGame: () => game,
+          });
+        })
+        .catch((error) => console.warn('[runtime-gameplay-debug-panels] mount failed', error));
+
       await mountLocalEditorModeSwitcherForDev();
     }
 
@@ -237,6 +256,7 @@ if (document.readyState === 'loading') {
 if (import.meta.env.DEV) {
   const disposeDevTools = () => {
     disposeLocalEditorModeSwitcher();
+    disposeGameplayDebugPanels();
     disposeCameraDebugPanel();
     disposeLightingDebugPanel();
   };
