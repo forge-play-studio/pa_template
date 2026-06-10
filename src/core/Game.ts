@@ -59,6 +59,7 @@ import { SimplePlayer } from '../entities';
 
 import { configService } from '../config';
 import type { SceneConfig } from '../config';
+import { loadProjectEditorDocument } from '../editor-package/document';
 
 export interface GameOptions {
   canvasId: string;
@@ -323,6 +324,24 @@ export class Game {
    */
   getAnimationService(): AnimationService | null {
     return this.animationService;
+  }
+
+  async restoreSceneFromData(sceneConfig: SceneConfig): Promise<void> {
+    configService.replaceSceneConfig(sceneConfig);
+    loadProjectEditorDocument(sceneConfig);
+
+    if (!this.sceneBuilder) return;
+
+    await this.preloadModelsFromConfig();
+    await this.sceneBuilder.loadSceneFromDocument();
+
+    this.materialConfigService?.applyAllConfigs();
+    this.materialConfigService?.logMissingMaterials();
+    this.shadowService?.refreshShadowMeshes();
+
+    this.sceneVfxService?.dispose();
+    this.sceneVfxService = new SceneVfxService(this.scene);
+    this.sceneVfxService.initFromConfig();
   }
 
   onEditorDocumentCommitted(sceneConfig: SceneConfig): void {

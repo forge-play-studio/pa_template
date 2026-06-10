@@ -65,6 +65,12 @@ const OUTLINE_FIELD_PATHS = [
   'outline.renderOutline',
   'outline.outlineWidth',
   'outline.outlineColor',
+  'outline.renderOverlay',
+  'outline.overlayColor',
+  'outline.overlayAlpha',
+  'outline.edgesRendering',
+  'outline.edgesWidth',
+  'outline.edgesColor',
 ] as const;
 
 function vecEq(
@@ -92,6 +98,16 @@ function cloneColor3(value: any): { r: number; g: number; b: number } | null {
   const b = typeof value.b === 'number' ? value.b : (typeof value._b === 'number' ? value._b : null);
   if (r == null || g == null || b == null) return null;
   return { r, g, b };
+}
+
+function cloneColor4(value: any): { r: number; g: number; b: number; a: number } | null {
+  if (!value || typeof value !== 'object') return null;
+  const r = typeof value.r === 'number' ? value.r : (typeof value._r === 'number' ? value._r : null);
+  const g = typeof value.g === 'number' ? value.g : (typeof value._g === 'number' ? value._g : null);
+  const b = typeof value.b === 'number' ? value.b : (typeof value._b === 'number' ? value._b : null);
+  const a = typeof value.a === 'number' ? value.a : (typeof value._a === 'number' ? value._a : null);
+  if (r == null || g == null || b == null || a == null) return null;
+  return { r, g, b, a };
 }
 
 function readTextureUrl(value: any): string | null {
@@ -198,6 +214,38 @@ function snapshotOutline(node: RuntimeNode | null): Record<string, unknown> {
       }
       case 'outline.outlineColor': {
         const color = cloneColor3((target as any).outlineColor);
+        if (color) out[fieldPath] = color;
+        break;
+      }
+      case 'outline.renderOverlay': {
+        out[fieldPath] = !!(target as any).renderOverlay;
+        break;
+      }
+      case 'outline.overlayAlpha': {
+        const alpha = (target as any).overlayAlpha;
+        if (typeof alpha === 'number' && Number.isFinite(alpha)) {
+          out[fieldPath] = alpha;
+        }
+        break;
+      }
+      case 'outline.overlayColor': {
+        const color = cloneColor3((target as any).overlayColor);
+        if (color) out[fieldPath] = color;
+        break;
+      }
+      case 'outline.edgesRendering': {
+        out[fieldPath] = !!(target as any).edgesRenderer;
+        break;
+      }
+      case 'outline.edgesWidth': {
+        const width = (target as any).edgesWidth;
+        if (typeof width === 'number' && Number.isFinite(width)) {
+          out[fieldPath] = width;
+        }
+        break;
+      }
+      case 'outline.edgesColor': {
+        const color = cloneColor4((target as any).edgesColor);
         if (color) out[fieldPath] = color;
         break;
       }

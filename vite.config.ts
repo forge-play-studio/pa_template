@@ -30,6 +30,54 @@ const allowedThirdPartyPackages = [
   'brotli-dec-wasm',
 ];
 
+// Vite 6 server.headers / cors middleware doesn't reach `?import&url`
+// transform responses (they short-circuit before the headers middleware).
+// Patch writeHead + end on every response so ACAO is injected at the
+// last moment before flush, after vite's transform logic has run.
+function forceCorsPlugin() {
+  const middleware = (_req: any, res: any, next: any) => {
+    const inject = () => {
+      if (res.headersSent) return;
+      try {
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+      } catch {}
+    };
+    const origWriteHead = res.writeHead.bind(res);
+    res.writeHead = function (...args: any[]) {
+      inject();
+      return origWriteHead(...args);
+    };
+    const origEnd = res.end.bind(res);
+    res.end = function (...args: any[]) {
+      inject();
+      return origEnd(...args);
+    };
+    inject();
+    next();
+  };
+  return {
+    name: 'force-cors-on-all',
+    configureServer(server: any) {
+      server.middlewares.use(middleware);
+      // Other plugins (e.g. modelCachePlugin) unshift themselves to the
+      // front of the stack and short-circuit on .png/.glb without calling
+      // next(). Return a post-hook so we get the LAST unshift and end up
+      // at position 0 — our writeHead/end hooks then persist on `res`
+      // for every downstream handler.
+      return () => {
+        const stack = (server.middlewares as any).stack;
+        if (!Array.isArray(stack)) return;
+        const idx = stack.findIndex((l: any) => l.handle === middleware);
+        if (idx > 0) {
+          const [layer] = stack.splice(idx, 1);
+          stack.unshift(layer);
+        }
+      };
+    },
+  };
+}
+
 export default defineConfig({
   define: {
     __LITE_BUILD__: JSON.stringify(liteBuild),
@@ -42,6 +90,9 @@ export default defineConfig({
     __BUNDLED_LOCALES__: JSON.stringify(bundledLocales),
   },
   plugins: [
+    // MUST be first: force ACAO on every dev response (incl. ?import&url
+    // transforms that bypass vite's own headers middleware).
+    forceCorsPlugin(),
     // 平台 bridge 自动注入（仅开发模式）
     bridgePlugin({
       port: 8080,
@@ -188,6 +239,8 @@ export default defineConfig({
     cors: true,
     allowedHosts: ['.e2b.app'],
     headers: {
+      'Access-Control-Allow-Origin': '*',
+      // 已经在你那边设了的可以保留：
       'Cross-Origin-Resource-Policy': 'cross-origin',
       'Cross-Origin-Embedder-Policy': 'credentialless',
     },

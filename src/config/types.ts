@@ -174,6 +174,12 @@ export interface OutlineOverrideConfig {
   renderOutline?: boolean;
   outlineWidth?: number;
   outlineColor?: ColorRGB;
+  renderOverlay?: boolean;
+  overlayColor?: ColorRGB;
+  overlayAlpha?: number;
+  edgesRendering?: boolean;
+  edgesWidth?: number;
+  edgesColor?: ColorRGBA;
 }
 
 export interface SceneNodeVisualOverrides {

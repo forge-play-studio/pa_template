@@ -20,6 +20,7 @@ import type {
   PbrMaterialLightingOverrideConfig,
   OutlineOverrideConfig,
   ColorRGB,
+  ColorRGBA,
   SceneSharedMaterialConfig,
   SceneNodeConfig,
   StandardMaterialLightingOverrideConfig,
@@ -50,6 +51,15 @@ function normalizeColorRGB(value: unknown): ColorRGB | undefined {
   const b = typeof value.b === 'number' && Number.isFinite(value.b) ? value.b : undefined;
   if (r == null || g == null || b == null) return undefined;
   return { r, g, b };
+}
+
+function normalizeColorRGBA(value: unknown): ColorRGBA | undefined {
+  if (!isRecord(value)) return undefined;
+  const rgb = normalizeColorRGB(value);
+  if (!rgb) return undefined;
+  const a = typeof value.a === 'number' && Number.isFinite(value.a) ? value.a : undefined;
+  if (a == null) return undefined;
+  return { ...rgb, a };
 }
 
 function normalizePosition3D(value: unknown): TransformConfig['position'] | undefined {
@@ -196,11 +206,27 @@ function normalizeOutlineOverride(value: unknown): OutlineOverrideConfig | undef
   if (typeof value.renderOutline === 'boolean') {
     normalized.renderOutline = value.renderOutline;
   }
+  if (typeof value.renderOverlay === 'boolean') {
+    normalized.renderOverlay = value.renderOverlay;
+  }
+  if (typeof value.edgesRendering === 'boolean') {
+    normalized.edgesRendering = value.edgesRendering;
+  }
   if (typeof value.outlineWidth === 'number' && Number.isFinite(value.outlineWidth)) {
     normalized.outlineWidth = value.outlineWidth;
   }
+  if (typeof value.overlayAlpha === 'number' && Number.isFinite(value.overlayAlpha)) {
+    normalized.overlayAlpha = value.overlayAlpha;
+  }
+  if (typeof value.edgesWidth === 'number' && Number.isFinite(value.edgesWidth)) {
+    normalized.edgesWidth = value.edgesWidth;
+  }
   const outlineColor = normalizeColorRGB(value.outlineColor);
   if (outlineColor) normalized.outlineColor = outlineColor;
+  const overlayColor = normalizeColorRGB(value.overlayColor);
+  if (overlayColor) normalized.overlayColor = overlayColor;
+  const edgesColor = normalizeColorRGBA(value.edgesColor);
+  if (edgesColor) normalized.edgesColor = edgesColor;
 
   return Object.keys(normalized).length > 0 ? normalized : undefined;
 }

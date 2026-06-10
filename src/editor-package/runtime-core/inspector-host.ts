@@ -6,7 +6,7 @@ import { applyOutlinePropertyChange, isOutlinePropertyKey } from './outline-adap
 import { syncInspectorToolState } from './inspector-adapter';
 
 const INSPECTOR_V2_URL = 'https://preview.babylonjs.com/inspector/babylon.inspector-v2.bundle.js';
-const CONTEXT_SELECTION = 'context:selection';
+const SELECTION_CHANGED = 'selection:changed';
 
 type InspectorToken = { dispose(): void; isDisposed?: boolean } | null;
 
@@ -397,9 +397,14 @@ export function createProjectInspectorHost(options: CreateProjectInspectorHostOp
   let propertyChangedObservable: any = null;
   let propertyChangedObserver: any = null;
 
-  function emitContextSelection(node: any | null): void {
-    const messenger = window.__bridge?.messenger;
-    messenger?.send?.(CONTEXT_SELECTION, serializeNode(node) as any);
+  function emitSelectionChanged(node: any | null): void {
+    // Wire shape: bridge envelope event { name: 'selection:changed', ...EntitySnapshot }.
+    // Per the v2 wire taxonomy, selection events use the standard EVENT
+    // frame type (not a custom top-level type) so all consumers can
+    // discriminate on payload.name uniformly.
+    const messenger = window.__bridge?.messenger as { event?: (name: string, data: Record<string, any>) => void } | undefined;
+    const snapshot = serializeNode(node);
+    messenger?.event?.(SELECTION_CHANGED, (snapshot ?? { id: null, name: '', type: '' }) as any);
   }
 
   function unbindDblclick(): void {
@@ -470,7 +475,7 @@ export function createProjectInspectorHost(options: CreateProjectInspectorHostOp
 
       const canvas = scene?.getEngine?.()?.getRenderingCanvas?.() ?? null;
       if (rawTarget === canvas || target.closest?.('#inspector-host, #babylon-inspector-container')) {
-        emitContextSelection(selected);
+        emitSelectionChanged(selected);
       }
     };
     document.addEventListener('dblclick', dblclickHandler);

@@ -1,4 +1,4 @@
-import type { ColorRGB, Position3D, Scale3D } from '../config';
+import type { ColorRGB, ColorRGBA, Position3D, Scale3D } from '../config';
 
 export type ProjectPersistentBinding = {
   kind: 'sceneNode';
@@ -49,10 +49,17 @@ export type ProjectMaterialValue =
 export type ProjectOutlineProp =
   | 'outline.renderOutline'
   | 'outline.outlineWidth'
-  | 'outline.outlineColor';
+  | 'outline.outlineColor'
+  | 'outline.renderOverlay'
+  | 'outline.overlayColor'
+  | 'outline.overlayAlpha'
+  | 'outline.edgesRendering'
+  | 'outline.edgesWidth'
+  | 'outline.edgesColor';
 
 export type ProjectOutlineValue =
   | ColorRGB
+  | ColorRGBA
   | number
   | boolean
   | null;
@@ -85,6 +92,9 @@ export interface ProjectEditorRuntimeApi {
   init(scene: any): void;
   showInspector(): Promise<void> | void;
   hideInspector(): void;
+  getSceneData?(): Record<string, any> | null;
+  dispatchSceneChange?(source?: string): Record<string, any> | null;
+  restoreSceneData?(sceneData: Record<string, any> | string): Promise<boolean> | boolean;
   setTool?(tool: 'pick' | 'move' | 'rotate' | 'scale'): void;
   getSelectedEntity?(): any | null;
   selectEntity?(entity: any | null, syncInspector?: boolean): void;

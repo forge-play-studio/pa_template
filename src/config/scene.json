@@ -8,11 +8,47 @@
   },
   "gameplay": {
     "worldBounds": {
-      "minX": -6,
-      "maxX": 6,
-      "minZ": -6,
-      "maxZ": 6
+      "minX": -12,
+      "maxX": 12,
+      "minZ": -10,
+      "maxZ": 10
     },
+    "groundOverlayPlanes": [
+      {
+        "id": "main_ground",
+        "position": {
+          "x": 0,
+          "y": -0.02,
+          "z": 0
+        },
+        "size": {
+          "width": 22,
+          "depth": 18
+        },
+        "color": {
+          "r": 0.34,
+          "g": 0.48,
+          "b": 0.28
+        }
+      },
+      {
+        "id": "yard_pad",
+        "position": {
+          "x": -1.3,
+          "y": 0.01,
+          "z": 0.8
+        },
+        "size": {
+          "width": 9,
+          "depth": 6
+        },
+        "color": {
+          "r": 0.42,
+          "g": 0.42,
+          "b": 0.38
+        }
+      }
+    ],
     "tuning": {
       "sceneVfx": {
         "effects": {}
@@ -21,8 +57,382 @@
   },
   "scene": {
     "rootId": "root",
-    "assets": [],
-    "nodes": [],
+    "assets": [
+      {
+        "id": "gas_station",
+        "type": "glb",
+        "sourceId": "gas_station",
+        "displayName": "Gas Station"
+      },
+      {
+        "id": "gas_car",
+        "type": "glb",
+        "sourceId": "gas_car",
+        "displayName": "Gas Car"
+      },
+      {
+        "id": "oil_well",
+        "type": "glb",
+        "sourceId": "oil_well",
+        "displayName": "Oil Well"
+      },
+      {
+        "id": "container",
+        "type": "glb",
+        "sourceId": "container",
+        "displayName": "Container"
+      },
+      {
+        "id": "container_3",
+        "type": "glb",
+        "sourceId": "container_3",
+        "displayName": "Container 3"
+      },
+      {
+        "id": "cargo_ship",
+        "type": "glb",
+        "sourceId": "cargo_ship",
+        "displayName": "Cargo Ship"
+      },
+      {
+        "id": "crane",
+        "type": "glb",
+        "sourceId": "crane",
+        "displayName": "Crane"
+      },
+      {
+        "id": "rail_segment",
+        "type": "glb",
+        "sourceId": "rail_segment",
+        "displayName": "Rail Segment"
+      },
+      {
+        "id": "train",
+        "type": "glb",
+        "sourceId": "train",
+        "displayName": "Train"
+      },
+      {
+        "id": "youtong",
+        "type": "glb",
+        "sourceId": "youtong",
+        "displayName": "Oil Barrel"
+      },
+      {
+        "id": "pine_tree",
+        "type": "glb",
+        "sourceId": "pine_tree",
+        "displayName": "Pine Tree"
+      },
+      {
+        "id": "grass",
+        "type": "glb",
+        "sourceId": "grass",
+        "displayName": "Grass"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "station_01",
+        "name": "Gas Station",
+        "kind": "instance",
+        "instance": {
+          "assetId": "gas_station"
+        },
+        "transform": {
+          "position": {
+            "x": -7.2,
+            "y": 0,
+            "z": -5.2
+          },
+          "rotationDeg": {
+            "x": 0,
+            "y": 25,
+            "z": 0
+          },
+          "scale": 0.12
+        }
+      },
+      {
+        "id": "car_01",
+        "name": "Service Car",
+        "kind": "instance",
+        "instance": {
+          "assetId": "gas_car"
+        },
+        "transform": {
+          "position": {
+            "x": -2.8,
+            "y": 0,
+            "z": -6.1
+          },
+          "rotationDeg": {
+            "x": 0,
+            "y": -30,
+            "z": 0
+          },
+          "scale": 0.16
+        }
+      },
+      {
+        "id": "oil_well_01",
+        "name": "Oil Well",
+        "kind": "instance",
+        "instance": {
+          "assetId": "oil_well"
+        },
+        "transform": {
+          "position": {
+            "x": 6.7,
+            "y": 0,
+            "z": -4.7
+          },
+          "rotationDeg": {
+            "x": 0,
+            "y": -20,
+            "z": 0
+          },
+          "scale": 0.13
+        }
+      },
+      {
+        "id": "crane_01",
+        "name": "Crane",
+        "kind": "instance",
+        "instance": {
+          "assetId": "crane"
+        },
+        "transform": {
+          "position": {
+            "x": 7.4,
+            "y": 0,
+            "z": 1.8
+          },
+          "rotationDeg": {
+            "x": 0,
+            "y": 35,
+            "z": 0
+          },
+          "scale": 0.09
+        }
+      },
+      {
+        "id": "container_01",
+        "name": "Container A",
+        "kind": "instance",
+        "instance": {
+          "assetId": "container"
+        },
+        "transform": {
+          "position": {
+            "x": -6.1,
+            "y": 0,
+            "z": 1.6
+          },
+          "rotationDeg": {
+            "x": 0,
+            "y": 10,
+            "z": 0
+          },
+          "scale": 0.18
+        }
+      },
+      {
+        "id": "container_02",
+        "name": "Container B",
+        "kind": "instance",
+        "instance": {
+          "assetId": "container_3"
+        },
+        "transform": {
+          "position": {
+            "x": -8.0,
+            "y": 0,
+            "z": 4.9
+          },
+          "rotationDeg": {
+            "x": 0,
+            "y": 10,
+            "z": 0
+          },
+          "scale": 0.18
+        }
+      },
+      {
+        "id": "rail_01",
+        "name": "Rail Segment",
+        "kind": "instance",
+        "instance": {
+          "assetId": "rail_segment"
+        },
+        "transform": {
+          "position": {
+            "x": 0.2,
+            "y": 0.01,
+            "z": 6.3
+          },
+          "rotationDeg": {
+            "x": 0,
+            "y": 90,
+            "z": 0
+          },
+          "scale": 0.13
+        }
+      },
+      {
+        "id": "train_01",
+        "name": "Train",
+        "kind": "instance",
+        "instance": {
+          "assetId": "train"
+        },
+        "transform": {
+          "position": {
+            "x": 2.3,
+            "y": 0.05,
+            "z": 6.2
+          },
+          "rotationDeg": {
+            "x": 0,
+            "y": 90,
+            "z": 0
+          },
+          "scale": 0.1
+        }
+      },
+      {
+        "id": "ship_01",
+        "name": "Cargo Ship",
+        "kind": "instance",
+        "instance": {
+          "assetId": "cargo_ship"
+        },
+        "transform": {
+          "position": {
+            "x": 8.4,
+            "y": 0,
+            "z": 5.5
+          },
+          "rotationDeg": {
+            "x": 0,
+            "y": -55,
+            "z": 0
+          },
+          "scale": 0.1
+        }
+      },
+      {
+        "id": "barrel_01",
+        "name": "Oil Barrel A",
+        "kind": "instance",
+        "instance": {
+          "assetId": "youtong"
+        },
+        "transform": {
+          "position": {
+            "x": 0.4,
+            "y": 0,
+            "z": -5.0
+          },
+          "scale": 0.22
+        }
+      },
+      {
+        "id": "barrel_02",
+        "name": "Oil Barrel B",
+        "kind": "instance",
+        "instance": {
+          "assetId": "youtong"
+        },
+        "transform": {
+          "position": {
+            "x": 4.1,
+            "y": 0,
+            "z": -1.7
+          },
+          "rotationDeg": {
+            "x": 0,
+            "y": 35,
+            "z": 0
+          },
+          "scale": 0.22
+        }
+      },
+      {
+        "id": "tree_01",
+        "name": "Pine Tree A",
+        "kind": "instance",
+        "instance": {
+          "assetId": "pine_tree"
+        },
+        "transform": {
+          "position": {
+            "x": -8.4,
+            "y": 0,
+            "z": -1.6
+          },
+          "scale": 0.16
+        }
+      },
+      {
+        "id": "tree_02",
+        "name": "Pine Tree B",
+        "kind": "instance",
+        "instance": {
+          "assetId": "pine_tree"
+        },
+        "transform": {
+          "position": {
+            "x": 3.8,
+            "y": 0,
+            "z": 3.7
+          },
+          "rotationDeg": {
+            "x": 0,
+            "y": 65,
+            "z": 0
+          },
+          "scale": 0.15
+        }
+      },
+      {
+        "id": "grass_01",
+        "name": "Grass Patch A",
+        "kind": "instance",
+        "instance": {
+          "assetId": "grass"
+        },
+        "transform": {
+          "position": {
+            "x": -4.2,
+            "y": 0,
+            "z": 6.8
+          },
+          "scale": 0.2
+        }
+      },
+      {
+        "id": "grass_02",
+        "name": "Grass Patch B",
+        "kind": "instance",
+        "instance": {
+          "assetId": "grass"
+        },
+        "transform": {
+          "position": {
+            "x": 6.2,
+            "y": 0,
+            "z": -0.2
+          },
+          "rotationDeg": {
+            "x": 0,
+            "y": 40,
+            "z": 0
+          },
+          "scale": 0.18
+        }
+      }
+    ],
     "materials": [],
     "textures": []
   },

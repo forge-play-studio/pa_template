@@ -17,7 +17,7 @@ import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import { Texture } from '@babylonjs/core/Materials/Textures/texture';
 import { TextureAssets } from '../assets/index';
-import { Color3 } from '@babylonjs/core/Maths/math.color';
+import { Color3, Color4 } from '@babylonjs/core/Maths/math.color';
 import { ArcRotateCamera } from '@babylonjs/core/Cameras/arcRotateCamera';
 import { Camera } from '@babylonjs/core/Cameras/camera';
 import { HemisphericLight } from '@babylonjs/core/Lights/hemisphericLight';
@@ -971,8 +971,24 @@ export class SceneBuilder {
     if (override.renderOutline !== undefined) {
       (target as any).renderOutline = override.renderOutline;
     }
+    if (override.renderOverlay !== undefined) {
+      (target as any).renderOverlay = override.renderOverlay;
+    }
+    if (override.edgesRendering !== undefined) {
+      if (override.edgesRendering) {
+        (target as any).enableEdgesRendering?.();
+      } else {
+        (target as any).disableEdgesRendering?.();
+      }
+    }
     if (override.outlineWidth !== undefined) {
       (target as any).outlineWidth = override.outlineWidth;
+    }
+    if (override.overlayAlpha !== undefined) {
+      (target as any).overlayAlpha = override.overlayAlpha;
+    }
+    if (override.edgesWidth !== undefined) {
+      (target as any).edgesWidth = override.edgesWidth;
     }
     if (override.outlineColor) {
       const color = override.outlineColor;
@@ -981,6 +997,24 @@ export class SceneBuilder {
         current.copyFromFloats(color.r, color.g, color.b);
       } else {
         (target as any).outlineColor = new Color3(color.r, color.g, color.b);
+      }
+    }
+    if (override.overlayColor) {
+      const color = override.overlayColor;
+      const current = (target as any).overlayColor;
+      if (current?.copyFromFloats) {
+        current.copyFromFloats(color.r, color.g, color.b);
+      } else {
+        (target as any).overlayColor = new Color3(color.r, color.g, color.b);
+      }
+    }
+    if (override.edgesColor) {
+      const color = override.edgesColor;
+      const current = (target as any).edgesColor;
+      if (current?.copyFromFloats) {
+        current.copyFromFloats(color.r, color.g, color.b, color.a);
+      } else {
+        (target as any).edgesColor = new Color4(color.r, color.g, color.b, color.a);
       }
     }
   }

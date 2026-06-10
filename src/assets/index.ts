@@ -19,6 +19,18 @@
 
 import blankPng from './placeholders/blank.png?url';
 import silentWav from './placeholders/silent.wav?url';
+import gasStationGlb from './加油站.glb?url';
+import gasCarGlb from './加油废车.glb?url';
+import oilWellGlb from './油井.glb?url';
+import containerGlb from './集装箱.glb?url';
+import container3Glb from './集装箱3.glb?url';
+import cargoShipGlb from './货船.glb?url';
+import craneGlb from './吊机.glb?url';
+import railSegmentGlb from './火车轨道.glb?url';
+import trainGlb from './火车.glb?url';
+import youtongGlb from './YOUTong.glb?url';
+import pineTreeGlb from './低多边形卡通风格松树_TREE.glb?url';
+import grassGlb from './低多边形卡通风格绿色植被_SM_SM_cao.glb?url';
 
 // ============================================================
 // Models
@@ -36,13 +48,29 @@ import silentWav from './placeholders/silent.wav?url';
  * ```
  */
 export const MODEL_URL_MAP: Record<string, string> = {
-  // 示例：
-  // hero: heroModel,
+  gas_station: gasStationGlb,
+  gas_car: gasCarGlb,
+  oil_well: oilWellGlb,
+  container: containerGlb,
+  container_3: container3Glb,
+  cargo_ship: cargoShipGlb,
+  crane: craneGlb,
+  rail_segment: railSegmentGlb,
+  train: trainGlb,
+  youtong: youtongGlb,
+  pine_tree: pineTreeGlb,
+  grass: grassGlb,
 };
 
 /** 根据 modelId 获取资源 URL */
 export function resolveModelUrl(modelId: string): string | undefined {
   return MODEL_URL_MAP[modelId];
+}
+
+/** 运行时注册模型 URL（例如拖入页面的 GLB data URL） */
+export function registerModelUrl(modelId: string, url: string): void {
+  if (!modelId || !url) return;
+  MODEL_URL_MAP[modelId] = url;
 }
 
 /** 获取所有已注册的模型 ID */
@@ -144,8 +172,10 @@ export async function getModelPathAndFileAsync(url: string): Promise<ModelPathIn
     return splitUrlToPathAndFile(usableUrl, true);
   }
 
-  // 2) 其他 data URL (base64 内联)
-  if (url.startsWith('data:')) {
+  // 2) data: / blob: URLs — both lack a real file extension in the URL,
+  //    so babylon can't sniff the plugin. Mark as data-url style so the
+  //    AssetLoader passes `.glb` as an explicit pluginExtension hint.
+  if (url.startsWith('data:') || url.startsWith('blob:')) {
     return {
       path: '',
       filename: url,

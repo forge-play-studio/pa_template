@@ -7,6 +7,7 @@ import {
   ensureProjectEditorDocumentLoaded,
   exportProjectEditorDocument,
   isProjectEditorDocumentDirty,
+  loadProjectEditorDocument,
   redoProjectEditorDocumentChange,
   undoProjectEditorDocumentChange,
 } from './document';
@@ -16,21 +17,26 @@ import { createProjectRuntimeMonitor, type ProjectRuntimeMonitorChange } from '.
 import { createProjectSelectionController } from './runtime-core/selection-controller';
 
 const COMMAND_NAME = {
-  MODE_CHANGE: 'mode.change',
-  UNDO: 'history.undo',
-  REDO: 'history.redo',
-  DOCUMENT_EXPORT: 'document.export',
-  DOCUMENT_COMMIT: 'document.commit',
-  INSPECTOR_FLUSH: 'inspector.flush',
+  // forge-play contract commands (see docs/editor-game-api.md):
+  MODE_CHANGE: 'mode:change',
+  DOCUMENT_RESTORE: 'document:restore',
+  DOCUMENT_EXPORT: 'document:export',
+  DOCUMENT_COMMIT: 'document:commit',
+  // pa_template internal extensions (must use template prefix):
+  UNDO: 'babylon:historyUndo',
+  REDO: 'babylon:historyRedo',
+  INSPECTOR_FLUSH: 'babylon:inspectorFlush',
 } as const;
 
 const EVENT_NAME = {
-  DOCUMENT_EXPORTED: 'document.exported',
-  INSPECTOR_FLUSHED: 'inspector.flushed',
-} as const;
-
-const POST_MSG = {
-  CONTEXT_CHANGE: 'context:change',
+  // forge-play contract events:
+  MODE_CHANGED: 'mode:changed',
+  DOCUMENT_CHANGED: 'document:changed',
+  DOCUMENT_EXPORTED: 'document:exported',
+  SELECTION_CHANGED: 'selection:changed',
+  EDIT_APPLIED: 'edit:applied',
+  // pa_template internal extensions:
+  INSPECTOR_FLUSHED: 'babylon:inspectorFlushed',
 } as const;
 
 const MODE = {
@@ -71,12 +77,23 @@ function summarizeCommitArgs(args: ProjectEditorDocumentCommitArgs): Record<stri
 
 function emitBridgeEvent(name: string, data: Record<string, any>): void {
   const messenger = window.__bridge?.messenger as { event?: (eventName: string, payload: Record<string, any>) => void } | undefined;
-  messenger?.event?.(name, data);
+  if (messenger?.event) {
+    messenger.event(name, data);
+    return;
+  }
+
+  try {
+    window.parent?.postMessage?.({
+      source: 'forge-play-game-bridge',
+      type: 'event',
+      payload: { name, ...data },
+      timestamp: Date.now(),
+    }, '*');
+  } catch {}
 }
 
-function emitContextChange(data: Record<string, any>): void {
-  const messenger = window.__bridge?.messenger as { send?: (type: string, payload: Record<string, any>) => void } | undefined;
-  messenger?.send?.(POST_MSG.CONTEXT_CHANGE, data);
+function emitEditApplied(data: Record<string, any>): void {
+  emitBridgeEvent(EVENT_NAME.EDIT_APPLIED, data);
 }
 
 function resolveProjectPluginContext(scene?: any | null) {
@@ -165,7 +182,7 @@ function buildContextChanges(changes: ProjectRuntimeMonitorChange[]): Record<str
 }
 
 function publishDocumentStatus(): void {
-  emitContextChange({
+  emitEditApplied({
     changes: [],
     documentStatus: {
       dirty: isProjectEditorDocumentDirty(),
@@ -173,6 +190,18 @@ function publishDocumentStatus(): void {
       canRedo: canRedoProjectEditorDocumentChange(),
     },
   });
+}
+
+function parseSceneData(sceneData: Record<string, any> | string): Record<string, any> | null {
+  if (typeof sceneData === 'string') {
+    try {
+      const parsed = JSON.parse(sceneData);
+      return parsed && typeof parsed === 'object' ? parsed as Record<string, any> : null;
+    } catch {
+      return null;
+    }
+  }
+  return sceneData && typeof sceneData === 'object' ? sceneData : null;
 }
 
 function warmupInspectorReady(): void {
@@ -228,6 +257,29 @@ export function createProjectEditorRuntimeBridge(): ProjectEditorRuntime {
     },
   });
   (window as any).__bridgeProjectSelectionController = projectSelection;
+  const getSceneData = (): Record<string, any> | null => {
+    ensureProjectEditorDocumentLoaded();
+    const exported = exportProjectEditorDocument();
+    if (!hasSceneJsonText(exported)) return null;
+    return parseSceneData(exported.sceneJsonText);
+  };
+  const dispatchSceneChange = (source = 'manual'): Record<string, any> | null => {
+    const sceneData = getSceneData();
+    if (!sceneData) return null;
+    const payload = {
+      source,
+      scene: sceneData,
+      sceneJsonText: `${JSON.stringify(sceneData, null, 2)}\n`,
+      documentStatus: {
+        dirty: isProjectEditorDocumentDirty(),
+        canUndo: canUndoProjectEditorDocumentChange(),
+        canRedo: canRedoProjectEditorDocumentChange(),
+      },
+      timestamp: Date.now(),
+    };
+    emitBridgeEvent(EVENT_NAME.DOCUMENT_CHANGED, payload);
+    return payload;
+  };
   projectInspectorHost = createProjectInspectorHost({
     getScene: () => pendingScene,
     getSelectionController: () => projectSelection,
@@ -247,7 +299,7 @@ export function createProjectEditorRuntimeBridge(): ProjectEditorRuntime {
     getScene: () => pendingScene,
     getGame: () => resolveProjectPluginContext(pendingScene).game,
     getSelectedEntity: () => projectSelection.getSelectedEntity?.() ?? lastKnownSelection,
-    emitModeChange: (mode) => emitBridgeEvent(COMMAND_NAME.MODE_CHANGE, { mode }),
+    emitModeChange: (mode) => emitBridgeEvent(EVENT_NAME.MODE_CHANGED, { mode }),
     onSetTool: (tool) => {
       projectInspectorHost.syncTool(tool);
     },
@@ -282,7 +334,7 @@ export function createProjectEditorRuntimeBridge(): ProjectEditorRuntime {
       rememberSelection(node);
     },
     onChangesFlushed: (changes) => {
-      emitContextChange({
+      emitEditApplied({
         changes: buildContextChanges(changes),
         documentStatus: {
           dirty: isProjectEditorDocumentDirty(),
@@ -290,6 +342,9 @@ export function createProjectEditorRuntimeBridge(): ProjectEditorRuntime {
           canRedo: canRedoProjectEditorDocumentChange(),
         },
       });
+    },
+    onDocumentChanged: () => {
+      dispatchSceneChange('runtime-change');
     },
   });
   selfRuntime = {
@@ -312,6 +367,47 @@ export function createProjectEditorRuntimeBridge(): ProjectEditorRuntime {
       },
       hideInspector(): void {
         projectInspectorHost.hide();
+      },
+      getSceneData,
+      dispatchSceneChange,
+      async restoreSceneData(sceneData: Record<string, any> | string): Promise<boolean> {
+        const parsed = parseSceneData(sceneData);
+        if (!parsed) {
+          console.warn('[ProjectEditor][Runtime] restoreSceneData ignored: invalid scene data');
+          return false;
+        }
+
+        // Protect <canvas id="renderCanvas">: restoreSceneFromData rebuilds the
+        // scene and projectInspectorHost.init swaps the scene reference, which
+        // triggers a FluentProvider/inspector-v2 React re-render. That re-render
+        // doesn't preserve the canvas DOM node, so Babylon ends up rendering
+        // into a detached canvas (black screen, but activeRenderLoops=1 + fps>0).
+        // Capture parent before, reattach after if it got dropped.
+        const canvas = document.getElementById('renderCanvas') as HTMLCanvasElement | null;
+        const canvasParent = canvas?.parentNode ?? document.body;
+
+        const wasEditing = !!selfRuntime.Edit.active;
+        loadProjectEditorDocument(parsed as any);
+        const game = resolveProjectPluginContext(pendingScene).game as any;
+        if (game && typeof game.restoreSceneFromData === 'function') {
+          await game.restoreSceneFromData(parsed);
+          pendingScene = typeof game.getScene === 'function' ? game.getScene() : (game.scene ?? pendingScene);
+        }
+        projectMonitor.reset();
+        rememberSelection(null);
+        projectInspectorHost.init(pendingScene);
+        if (wasEditing) {
+          projectMonitor.start();
+        }
+        publishDocumentStatus();
+        dispatchSceneChange('restore');
+
+        if (canvas && !canvas.isConnected && canvasParent && (canvasParent as Node).isConnected) {
+          (canvasParent as Node).appendChild(canvas);
+          try { game?.engine?.resize?.(); } catch {}
+        }
+
+        return true;
       },
       setTool(tool: 'pick' | 'move' | 'rotate' | 'scale'): void {
         projectInspectorHost.syncTool(tool);
@@ -356,6 +452,7 @@ export function createProjectEditorRuntimeBridge(): ProjectEditorRuntime {
         rememberSelection(rootNode);
         projectMonitor.rebase(rootNode);
         publishDocumentStatus();
+        dispatchSceneChange('duplicate');
         return true;
       },
       undo(): boolean {
@@ -381,6 +478,7 @@ export function createProjectEditorRuntimeBridge(): ProjectEditorRuntime {
           }
           projectMonitor.rebase(projectSelection.getSelectedEntity?.() ?? lastKnownSelection);
           publishDocumentStatus();
+          dispatchSceneChange('undo');
           return true;
         }
         return false;
@@ -408,6 +506,7 @@ export function createProjectEditorRuntimeBridge(): ProjectEditorRuntime {
           }
           projectMonitor.rebase(projectSelection.getSelectedEntity?.() ?? lastKnownSelection);
           publishDocumentStatus();
+          dispatchSceneChange('redo');
           return true;
         }
         return false;
@@ -526,6 +625,16 @@ export function createProjectEditorRuntimeBridge(): ProjectEditorRuntime {
 
       if (name === COMMAND_NAME.DOCUMENT_COMMIT) {
         selfRuntime.Editor.commitSavedDocument(toCommitArgs(params));
+        return;
+      }
+
+      if (name === COMMAND_NAME.DOCUMENT_RESTORE) {
+        const sceneData = (params as { sceneData?: Record<string, any> | string }).sceneData;
+        if (sceneData == null) {
+          console.warn('[ProjectEditor][Runtime] document:restore ignored: missing sceneData');
+          return;
+        }
+        await selfRuntime.Editor.restoreSceneData?.(sceneData);
         return;
       }
 

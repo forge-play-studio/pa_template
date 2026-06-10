@@ -24,8 +24,10 @@ export function registerProjectEditorRuntime(runtime: ProjectEditorRuntime): voi
   window.__pendingEditorRuntime = runtime;
 }
 
-export function registerProjectEditorRuntimeBridge(): void {
-  registerProjectEditorRuntime(createProjectEditorRuntimeBridge());
+export function registerProjectEditorRuntimeBridge(): ProjectEditorRuntime {
+  const runtime = createProjectEditorRuntimeBridge();
+  registerProjectEditorRuntime(runtime);
+  return runtime;
 }
 
 export { paScaffoldEditorPlugin } from './adapter';

@@ -1,7 +1,8 @@
-import { Color3 } from '@babylonjs/core/Maths/math.color';
+import { Color3, Color4 } from '@babylonjs/core/Maths/math.color';
 
 import type {
   ColorRGB,
+  ColorRGBA,
 } from '../../config';
 import type {
   ProjectOutlineProp,
@@ -14,6 +15,13 @@ export const OUTLINE_PROPERTY_KEYS = [
   'renderOutline',
   'outlineColor',
   'outlineWidth',
+  'renderOverlay',
+  'overlayColor',
+  'overlayAlpha',
+  'edgesRendering',
+  'edgesRenderer',
+  'edgesWidth',
+  'edgesColor',
 ] as const;
 
 export type OutlinePropertyKey = (typeof OUTLINE_PROPERTY_KEYS)[number];
@@ -27,6 +35,12 @@ export const OUTLINE_CANONICAL_PATHS = [
   'outline.renderOutline',
   'outline.outlineWidth',
   'outline.outlineColor',
+  'outline.renderOverlay',
+  'outline.overlayColor',
+  'outline.overlayAlpha',
+  'outline.edgesRendering',
+  'outline.edgesWidth',
+  'outline.edgesColor',
 ] as const satisfies readonly ProjectOutlineProp[];
 
 export type CanonicalOutlineChange = {
@@ -222,6 +236,12 @@ function normalizeOutlinePropertyKey(propertyKey: unknown): ProjectOutlineProp |
   if (trimmed === 'renderOutline') return 'outline.renderOutline';
   if (trimmed === 'outlineWidth') return 'outline.outlineWidth';
   if (trimmed === 'outlineColor') return 'outline.outlineColor';
+  if (trimmed === 'renderOverlay') return 'outline.renderOverlay';
+  if (trimmed === 'overlayColor') return 'outline.overlayColor';
+  if (trimmed === 'overlayAlpha') return 'outline.overlayAlpha';
+  if (trimmed === 'edgesRendering' || trimmed === 'edgesRenderer') return 'outline.edgesRendering';
+  if (trimmed === 'edgesWidth') return 'outline.edgesWidth';
+  if (trimmed === 'edgesColor') return 'outline.edgesColor';
   return null;
 }
 
@@ -243,18 +263,47 @@ function normalizeColor3(value: unknown): ProjectOutlineValue | typeof SKIP {
   return { r, g, b };
 }
 
+function normalizeColor4(value: unknown): ProjectOutlineValue | typeof SKIP {
+  if (value == null) return null;
+  if (!value || typeof value !== 'object') return SKIP;
+  const source = value as {
+    r?: unknown;
+    g?: unknown;
+    b?: unknown;
+    a?: unknown;
+    _r?: unknown;
+    _g?: unknown;
+    _b?: unknown;
+    _a?: unknown;
+  };
+  const r = typeof source.r === 'number' ? source.r : typeof source._r === 'number' ? source._r : null;
+  const g = typeof source.g === 'number' ? source.g : typeof source._g === 'number' ? source._g : null;
+  const b = typeof source.b === 'number' ? source.b : typeof source._b === 'number' ? source._b : null;
+  const a = typeof source.a === 'number' ? source.a : typeof source._a === 'number' ? source._a : null;
+  if (r == null || g == null || b == null || a == null) return SKIP;
+  return { r, g, b, a };
+}
+
 function normalizeOutlineValue(
   path: ProjectOutlineProp,
   value: unknown,
 ): ProjectOutlineValue | typeof SKIP {
   switch (path) {
     case 'outline.renderOutline':
+    case 'outline.renderOverlay':
       return typeof value === 'boolean' ? value : SKIP;
+    case 'outline.edgesRendering':
+      return typeof value === 'boolean' ? value : !!value;
     case 'outline.outlineWidth':
+    case 'outline.overlayAlpha':
+    case 'outline.edgesWidth':
       if (value == null) return null;
       return typeof value === 'number' && Number.isFinite(value) ? value : SKIP;
     case 'outline.outlineColor':
+    case 'outline.overlayColor':
       return normalizeColor3(value);
+    case 'outline.edgesColor':
+      return normalizeColor4(value);
     default:
       return SKIP;
   }
@@ -329,6 +378,62 @@ export function applyOutlineValueToRuntimeNode(
         (target as any).outlineColor = new Color3(color.r, color.g, color.b);
       }
       return true;
+    case 'outline.renderOverlay':
+      if (typeof value !== 'boolean') return false;
+      (target as any).renderOverlay = value;
+      return true;
+    case 'outline.overlayAlpha':
+      if (value == null) {
+        Reflect.deleteProperty(target, 'overlayAlpha');
+        return true;
+      }
+      if (typeof value !== 'number' || !Number.isFinite(value)) return false;
+      (target as any).overlayAlpha = value;
+      return true;
+    case 'outline.overlayColor':
+      if (value == null) {
+        Reflect.deleteProperty(target, 'overlayColor');
+        return true;
+      }
+      if (!value || typeof value !== 'object') return false;
+      const overlayColor = value as ColorRGB;
+      const currentOverlay = (target as any).overlayColor;
+      if (currentOverlay?.copyFromFloats) {
+        currentOverlay.copyFromFloats(overlayColor.r, overlayColor.g, overlayColor.b);
+      } else {
+        (target as any).overlayColor = new Color3(overlayColor.r, overlayColor.g, overlayColor.b);
+      }
+      return true;
+    case 'outline.edgesRendering':
+      if (typeof value !== 'boolean') return false;
+      if (value) {
+        (target as any).enableEdgesRendering?.();
+      } else {
+        (target as any).disableEdgesRendering?.();
+      }
+      return true;
+    case 'outline.edgesWidth':
+      if (value == null) {
+        Reflect.deleteProperty(target, 'edgesWidth');
+        return true;
+      }
+      if (typeof value !== 'number' || !Number.isFinite(value)) return false;
+      (target as any).edgesWidth = value;
+      return true;
+    case 'outline.edgesColor':
+      if (value == null) {
+        Reflect.deleteProperty(target, 'edgesColor');
+        return true;
+      }
+      if (!value || typeof value !== 'object') return false;
+      const edgesColor = value as ColorRGBA;
+      const currentEdges = (target as any).edgesColor;
+      if (currentEdges?.copyFromFloats) {
+        currentEdges.copyFromFloats(edgesColor.r, edgesColor.g, edgesColor.b, edgesColor.a);
+      } else {
+        (target as any).edgesColor = new Color4(edgesColor.r, edgesColor.g, edgesColor.b, edgesColor.a);
+      }
+      return true;
     default:
       return false;
   }
@@ -340,9 +445,15 @@ export function applyOutlinePropertyChange(args: OutlinePropertyChangeArgs): Out
   const { target } = resolved;
   if (!target) return resolved;
 
-  try {
-    (target as any)[property] = value;
-  } catch {}
+  const path = normalizeOutlinePropertyKey(property);
+  const normalized = path ? normalizeOutlineValue(path, value) : SKIP;
+  if (path && normalized !== SKIP) {
+    applyOutlineValueToRuntimeNode(target, path, normalized);
+  } else {
+    try {
+      (target as any)[property] = value;
+    } catch {}
+  }
 
   if (target !== entity) {
     restoreOriginalOutlineValue(entity, property, initialValue);

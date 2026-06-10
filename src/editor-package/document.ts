@@ -951,6 +951,20 @@ function applyOutlinePropToSnapshot(
       }
       snapshot.renderOutline = !!value;
       return;
+    case 'outline.renderOverlay':
+      if (value == null) {
+        delete snapshot.renderOverlay;
+        return;
+      }
+      snapshot.renderOverlay = !!value;
+      return;
+    case 'outline.edgesRendering':
+      if (value == null) {
+        delete snapshot.edgesRendering;
+        return;
+      }
+      snapshot.edgesRendering = !!value;
+      return;
     case 'outline.outlineWidth':
       if (value == null) {
         delete snapshot.outlineWidth;
@@ -960,12 +974,44 @@ function applyOutlinePropToSnapshot(
         snapshot.outlineWidth = value;
       }
       return;
+    case 'outline.overlayAlpha':
+      if (value == null) {
+        delete snapshot.overlayAlpha;
+        return;
+      }
+      if (typeof value === 'number' && Number.isFinite(value)) {
+        snapshot.overlayAlpha = value;
+      }
+      return;
+    case 'outline.edgesWidth':
+      if (value == null) {
+        delete snapshot.edgesWidth;
+        return;
+      }
+      if (typeof value === 'number' && Number.isFinite(value)) {
+        snapshot.edgesWidth = value;
+      }
+      return;
     case 'outline.outlineColor':
       if (value == null) {
         delete snapshot.outlineColor;
         return;
       }
       snapshot.outlineColor = cloneJson(value as ColorRGB);
+      return;
+    case 'outline.overlayColor':
+      if (value == null) {
+        delete snapshot.overlayColor;
+        return;
+      }
+      snapshot.overlayColor = cloneJson(value as ColorRGB);
+      return;
+    case 'outline.edgesColor':
+      if (value == null) {
+        delete snapshot.edgesColor;
+        return;
+      }
+      snapshot.edgesColor = cloneJson(value as any);
       return;
     default:
       return;
