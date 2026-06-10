@@ -10,6 +10,7 @@ import {
   createEditorSceneRuntimePreviewMissingAssetUrlDiagnostic,
   createEditorSceneRuntimePreviewNode,
   createEditorSceneRuntimePreviewNodes,
+  EDITOR_SCENE_STATIC_SHADOW_BAKE_ACTION_PATH,
   createEditorSceneMaterialBrowserAssetItems as createPlayableEditorSceneMaterialBrowserAssetItems,
   createEditorSceneSerializedMultiTransformPatch as createPlayableEditorSceneSerializedMultiTransformPatch,
   createEditorSceneTransformBatchPatch as createPlayableEditorSceneTransformBatchPatch,
@@ -808,7 +809,9 @@ function createEditorSceneSerializedPropertyPatch(
 function canCreateEditorSceneSerializedMultiPropertyPatch(
   input: PlayableLocalEditorMultiPropertyCapabilityInput<EditorSceneDocument>,
 ): boolean {
-  return input.path.startsWith('transform.') || isEditorSceneSerializedMultiFieldPath(input.path);
+  return input.path.startsWith('transform.')
+    || isEditorSceneSerializedMultiFieldPath(input.path)
+    || input.path === EDITOR_SCENE_STATIC_SHADOW_BAKE_ACTION_PATH;
 }
 
 function createEditorSceneSerializedMultiPropertyPatch(

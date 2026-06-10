@@ -52,8 +52,8 @@ import {
   createEditorSceneReparentPatch as createPlayableEditorSceneReparentPatch,
   createEditorSceneRuntimeInspectorSnapshot as createPlayableEditorSceneRuntimeInspectorSnapshot,
   createEditorSceneRuntimeInspectorSections as createPlayableEditorSceneRuntimeInspectorSections,
+  createEditorSceneSerializedMultiInspectorObject as createPlayableEditorSceneSerializedMultiInspectorObject,
   createEditorSceneSerializedMultiObject as createPlayableEditorSceneSerializedMultiObject,
-  createEditorSceneSerializedMultiInspectorSections as createPlayableEditorSceneSerializedMultiInspectorSections,
   createEditorSceneSerializedObject as createPlayableEditorSceneSerializedObject,
   createEditorSceneTexturePickerControlOptions as createPlayableEditorSceneTexturePickerControlOptions,
   deleteEditorSceneMaterialAsset as deletePlayableEditorSceneMaterialAsset,
@@ -65,6 +65,7 @@ import {
   getEditorSceneHierarchyItems as getPlayableEditorSceneHierarchyItems,
   findEditorSceneMaterialAsset as findPlayableEditorSceneMaterialAsset,
   findEditorSceneInspectorTextureAsset as findPlayableEditorSceneInspectorTextureAsset,
+  EDITOR_SCENE_SHADOW_INSPECTOR_LANGUAGE_PATH as PLAYABLE_EDITOR_SCENE_SHADOW_INSPECTOR_LANGUAGE_PATH,
   isEditorSceneCameraGameObject as isPlayableEditorSceneCameraGameObject,
   isEditorSceneArtistMaterialPatchPath as isPlayableEditorSceneArtistMaterialPatchPath,
   isEditorSceneGroupLikeGameObject as isPlayableEditorSceneGroupLikeGameObject,
@@ -72,6 +73,7 @@ import {
   isEditorSceneMaterialAssetReadonlyForInspector as isPlayableEditorSceneMaterialAssetReadonlyForInspector,
   isEditorSceneRootGameObject as isPlayableEditorSceneRootGameObject,
   isEditorSceneRootGameObjectId as isPlayableEditorSceneRootGameObjectId,
+  isEditorSceneShadowMode as isPlayableEditorSceneShadowMode,
   normalizeEditorSceneFieldInspectorValue as normalizePlayableEditorSceneFieldInspectorValue,
   normalizeEditorSceneHierarchyDocument as normalizePlayableEditorSceneHierarchyDocument,
   normalizeEditorSceneMaterialAssetValue as normalizePlayableEditorSceneMaterialAssetValue,
@@ -101,6 +103,7 @@ import {
   toEditorSceneInspectorSafeValue as toPlayableEditorSceneInspectorSafeValue,
   applyEditorSceneSerializedPropertyPatch as applyPlayableEditorSceneSerializedPropertyPatch,
   patchEditorSceneGameObjectField as patchPlayableEditorSceneGameObjectField,
+  patchEditorSceneGameObjectsField as patchPlayableEditorSceneGameObjectsField,
   validateEditorSceneMaterialAssetFieldValue as validatePlayableEditorSceneMaterialAssetFieldValue,
   validateEditorSceneFieldInspectorValue as validatePlayableEditorSceneFieldInspectorValue,
   validateEditorSceneGroupSelection as validatePlayableEditorSceneGroupSelection,
@@ -1137,7 +1140,12 @@ function reduceEditorSceneDocumentUnchecked(
     }
     if (command.patch.kind === 'game-object.field-batch') {
       return command.patch.fields.reduce(
-        (nextDocument, field) => patchEditorSceneGameObjectField(nextDocument, field.targetId, field.path, field.value),
+        (nextDocument, field) => patchEditorSceneGameObjectsField(
+          nextDocument,
+          [field.targetId],
+          field.path,
+          field.value,
+        ),
         document,
       );
     }
@@ -2010,24 +2018,11 @@ export function getEditorSceneInspectorMultiObject(
   gameObjectIds: string[],
   activeId: string | null,
 ): InspectorObject<EditorSceneDocument> | null {
-  const serialized = getEditorSceneSerializedMultiObject(document, gameObjectIds, activeId);
-  if (!serialized) return null;
-  const sections = createPlayableEditorSceneSerializedMultiInspectorSections<EditorSceneDocument>({
+  return createPlayableEditorSceneSerializedMultiInspectorObject<EditorSceneDocument>({
     document,
-    serialized,
-  });
-  return {
-    targetIds: serialized.targetIds,
+    selectedIds: gameObjectIds,
     activeId,
-    label: serialized.label,
-    document,
-    selection: {
-      targetIds: serialized.targetIds,
-      activeId,
-      document,
-    },
-    sections,
-  };
+  });
 }
 
 export interface EditorSceneInspectorPropertyPatchInput {
@@ -2565,6 +2560,7 @@ function createEditorSceneInspectorSections(
     nodeKind,
     extraValidators: PROJECT_EDITOR_SCENE_INSPECTOR_EXTRA_VALIDATORS,
     rootTransform: EDITOR_SCENE_ROOT_TRANSFORM,
+    renderingProfile: getActiveRenderingProfile(),
   });
   if (nodeKind === 'transform' && (gameObject.transformType === 'groundDecal' || gameObject.groundDecal)) {
     sections.push({
@@ -4021,6 +4017,11 @@ function validateProjectEditorSceneInspectorField(input: {
   value: unknown;
   document?: EditorSceneDocument | null;
 }): InspectorValidationResult | null {
+  if (input.path === 'shadowMode') {
+    return input.value == null || isPlayableEditorSceneShadowMode(input.value)
+      ? { ok: true, value: input.value }
+      : { ok: false, message: 'Invalid value for scene node field: shadowMode.' };
+  }
   if (input.path === 'camera.inspectorLanguage') {
     return input.value === 'zh' || input.value === 'en'
       ? { ok: true, value: input.value }
@@ -4036,10 +4037,10 @@ function validateProjectEditorSceneInspectorField(input: {
       ? { ok: true, value: input.value }
       : { ok: false, message: `Invalid value for scene node field: ${input.path}.` };
   }
-  if (input.path === 'metadata.artistMaterialInspectorLanguage') {
+  if (input.path === 'metadata.artistMaterialInspectorLanguage' || input.path === PLAYABLE_EDITOR_SCENE_SHADOW_INSPECTOR_LANGUAGE_PATH) {
     return input.value === 'zh' || input.value === 'en'
       ? { ok: true, value: input.value }
-      : { ok: false, message: 'Invalid value for scene node field: metadata.artistMaterialInspectorLanguage.' };
+      : { ok: false, message: `Invalid value for scene node field: ${input.path}.` };
   }
   if (
     input.path === 'instance.assetId'
@@ -4215,6 +4216,60 @@ export function patchEditorSceneGameObjectField(
     value,
     EDITOR_SCENE_FIELD_MUTATION_OPTIONS,
   ) as EditorSceneDocument;
+}
+
+export function patchEditorSceneGameObjectsField(
+  document: EditorSceneDocument,
+  targetIds: readonly string[],
+  path: string,
+  value: unknown,
+): EditorSceneDocument {
+  const uniqueTargetIds = Array.from(new Set(targetIds.filter(Boolean)));
+  if (uniqueTargetIds.length === 0) return document;
+  if (path.startsWith('metadata.')) {
+    return patchEditorSceneGameObjectsMetadataField(document, uniqueTargetIds, path, value);
+  }
+  if (isDirectionalLightAnglePath(path)) {
+    return uniqueTargetIds.reduce((nextDocument, targetId) => (
+      patchEditorSceneGameObjectField(nextDocument, targetId, path, value)
+    ), document);
+  }
+  return patchPlayableEditorSceneGameObjectsField(
+    document,
+    uniqueTargetIds,
+    path,
+    value,
+    EDITOR_SCENE_FIELD_MUTATION_OPTIONS,
+  ) as EditorSceneDocument;
+}
+
+function patchEditorSceneGameObjectsMetadataField(
+  document: EditorSceneDocument,
+  targetIds: readonly string[],
+  path: string,
+  value: unknown,
+): EditorSceneDocument {
+  const targetIdSet = new Set(targetIds);
+  const normalizedValue = normalizeEditorSceneInspectorValue(path, value);
+  let changed = false;
+  const gameObjects = document.scene.gameObjects.map((entry) => {
+    if (!targetIdSet.has(entry.id)) return entry;
+    if (!validateEditorSceneInspectorValue(document, entry, path, normalizedValue).ok) return entry;
+    if (isBlockedEditorSceneSystemFieldPatch(document, entry.id, path, normalizedValue)) return entry;
+    const next = structuredClone(entry);
+    applyJsonFieldPatch(next as unknown as Record<string, unknown>, path, normalizedValue);
+    if (next.metadata && Object.keys(next.metadata).length === 0) delete next.metadata;
+    changed = true;
+    return next;
+  });
+  if (!changed) return document;
+  return {
+    ...document,
+    scene: {
+      ...document.scene,
+      gameObjects,
+    },
+  };
 }
 
 function patchEditorSceneMaterialAssetField(
@@ -4741,6 +4796,7 @@ function isBlockedEditorSceneSystemFieldPatch(
 function isEditorSceneProjectionShapePath(path: string): boolean {
   return path === 'shadowMode'
     || path === 'transformType'
+    || path.startsWith('rendering.')
     || path.startsWith('primitive.')
     || path.startsWith('camera.')
     || path.startsWith('light.');

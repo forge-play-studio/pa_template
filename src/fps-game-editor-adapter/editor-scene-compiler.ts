@@ -4,6 +4,7 @@ import type {
 import {
   resolveEditorSceneMaterialAssetIntegrity,
   resolveEditorSceneMaterialSlotReimportDiff,
+  resolveEditorSceneGameObjectRendering,
 } from '@fps-games/editor/playable-sdk';
 import type {
   EditorSceneAsset,
@@ -148,6 +149,7 @@ function compileGameObject(
   const primitiveRenderer = findEditorScenePrimitiveRenderer(gameObject);
   const nodeKind = readEditorSceneNodeKind(gameObject);
   const visualOverrides = compileEditorSceneVisualOverrides(gameObject, editorDocument);
+  const rendering = compileEditorSceneRendering(gameObject);
   const source: SceneRuntimeSourceBinding = {
     sourceId: sourceRef.sourceId,
     sourceType: sourceRef.sourceType,
@@ -161,6 +163,8 @@ function compileGameObject(
     ...(gameObject.name ? { name: gameObject.name } : {}),
     ...(gameObject.parentId ? { parentId: gameObject.parentId } : {}),
     ...(gameObject.active === false ? { enabled: false } : {}),
+    ...(gameObject.shadowMode ? { shadowMode: gameObject.shadowMode } : {}),
+    ...(rendering ? { rendering } : {}),
     source,
     ...(transform
       ? {
@@ -210,6 +214,10 @@ function compileGameObject(
     },
     ...(visualOverrides ? { overrides: visualOverrides } : {}),
   } satisfies SceneInstanceNode;
+}
+
+function compileEditorSceneRendering(gameObject: EditorSceneGameObject): SceneNodeConfig['rendering'] | undefined {
+  return resolveEditorSceneGameObjectRendering(gameObject);
 }
 
 function compileEditorSceneVisualOverrides(

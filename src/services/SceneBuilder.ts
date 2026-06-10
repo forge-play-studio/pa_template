@@ -685,17 +685,32 @@ export class SceneBuilder {
       CreateCapsule?: (name: string, options: Record<string, unknown>, scene: Scene) => unknown;
       CreateCylinder?: typeof MeshBuilder.CreateCylinder;
     };
-    const name = nodeConfig.name ?? nodeConfig.id;
+    const rootName = nodeConfig.name ?? nodeConfig.id;
     const shape = nodeConfig.primitive.shape;
+    const meshName = `${nodeConfig.id}.${shape ?? 'primitive'}Projection`;
+    const root = new TransformNode(`${nodeConfig.id}.projection`, this.scene);
+    root.id = nodeConfig.id;
+    root.name = rootName;
     const mesh = shape === 'sphere'
-      ? builder.CreateSphere?.(name, { diameter: 1, segments: 32 }, this.scene)
+      ? builder.CreateSphere?.(meshName, { diameter: 1, segments: 32 }, this.scene)
       : shape === 'plane'
-        ? builder.CreateGround?.(name, { width: 1, height: 1, subdivisions: 1 }, this.scene)
+        ? builder.CreateGround?.(meshName, { width: 1, height: 1, subdivisions: 1 }, this.scene)
         : shape === 'capsule'
-          ? builder.CreateCapsule?.(name, { height: 2, radius: 0.5, tessellation: 24, subdivisions: 8 }, this.scene)
-            ?? builder.CreateCylinder?.(name, { height: 2, diameter: 1, tessellation: 24 }, this.scene)
-          : builder.CreateBox?.(name, { size: 1 }, this.scene);
-    const runtimeNode = (mesh ?? new TransformNode(name, this.scene)) as TransformNode;
+          ? builder.CreateCapsule?.(meshName, { height: 2, radius: 0.5, tessellation: 24, subdivisions: 8 }, this.scene)
+            ?? builder.CreateCylinder?.(meshName, { height: 2, diameter: 1, tessellation: 24 }, this.scene)
+          : builder.CreateBox?.(meshName, { size: 1 }, this.scene);
+    const runtimeMesh = mesh as (TransformNode & { material?: unknown; metadata?: unknown }) | undefined;
+    if (!runtimeMesh) return root;
+    runtimeMesh.parent = root;
+    runtimeMesh.metadata = {
+      ...(runtimeMesh.metadata && typeof runtimeMesh.metadata === 'object' ? runtimeMesh.metadata : {}),
+      editorProjection: {
+        nodeId: nodeConfig.id,
+        runtimeKind: 'primitive',
+        primitiveShape: shape,
+        ...(nodeConfig.shadowMode ? { shadowMode: nodeConfig.shadowMode } : {}),
+      },
+    };
     const materialKind = this.resolvePrimitiveMaterialKind(nodeConfig);
     const material = materialKind === 'standard'
       ? new StandardMaterial(`${nodeConfig.id}_primitive_mat`, this.scene)
@@ -706,8 +721,8 @@ export class SceneBuilder {
     if ('metallic' in material) material.metallic = 0;
     if ('roughness' in material) material.roughness = 1;
     if (shape === 'plane') material.backFaceCulling = false;
-    (runtimeNode as any).material = material;
-    return runtimeNode;
+    runtimeMesh.material = material;
+    return root;
   }
 
   private resolvePrimitiveMaterialKind(nodeConfig: ScenePrimitiveNode): SceneMaterialAssetKind {
