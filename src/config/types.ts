@@ -17,6 +17,11 @@ export interface Position3D {
   z: number;
 }
 
+export interface PositionXZ {
+  x: number;
+  z: number;
+}
+
 export interface Scale3D {
   x: number;
   y: number;
@@ -239,8 +244,53 @@ export interface GroundOverlayPlaneConfig {
   textureId?: string;
 }
 
+// ============================================================
+// Gameplay Contract
+// ============================================================
+
+export type GameplayObjectType = string;
+
+export interface GameplayCostConfig {
+  resourceType: string;
+  amount: number;
+}
+
+export interface GameplayBindingConfig {
+  id: string;
+  scenePath?: string;
+  entityId?: string;
+  entityName?: string;
+  logicType?: GameplayObjectType;
+  initialEnabled?: boolean;
+  assetRef?: string;
+  resourceType?: string;
+  acceptsResourceTypes?: string[];
+  producesResourceTypes?: string[];
+  capacity?: number;
+  processTimeSec?: number;
+  cost?: GameplayCostConfig[];
+  dependsOn?: string[];
+  unlocks?: string[];
+  runtimeParent?: string;
+  spawnRootId?: string;
+  pathPointIds?: string[];
+  workerRole?: string;
+  tags?: string[];
+  notes?: string;
+}
+
+export interface SceneZoneConfig {
+  id: string;
+  location: PositionXZ;
+  size: { width: number; depth: number };
+  rotationDeg?: number;
+  meta?: string;
+}
+
 export interface SceneGameplayConfig {
   worldBounds?: WorldBoundsConfig;
+  gameplayBindings?: GameplayBindingConfig[];
+  zones?: SceneZoneConfig[];
   tuning?: {
     sceneVfx?: SceneVfxConfig;
   };

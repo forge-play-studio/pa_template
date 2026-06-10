@@ -15,6 +15,7 @@ import {
 
 const liteBuild = process.env.LITE_BUILD === 'true';
 const isProduction = process.env.NODE_ENV === 'production';
+const bundleStatsEnabled = process.env.BUNDLE_STATS !== 'false';
 const locale = (process.env.LOCALE || 'EN').toUpperCase();
 const channel = process.env.CHANNEL || 'applovin';
 const isRTL = ['AR', 'FA', 'HE', 'UR'].includes(locale);
@@ -128,12 +129,20 @@ export default defineConfig({
     // 构建后图片压缩：PNG → WebP (cwebp) 或 optipng 无损重压，取最小值
     // 需要: brew install webp optipng
     optimizePngPlugin({ enabled: isProduction, optipngLevel: 2, webpQuality: 80 }),
-    visualizer({
-      filename: 'dist/stats.html',
-      open: false,
-      gzipSize: true,
-      brotliSize: true,
-    }),
+    ...(bundleStatsEnabled ? [
+      visualizer({
+        filename: 'dist/stats.html',
+        open: false,
+        gzipSize: true,
+        brotliSize: true,
+      }),
+      visualizer({
+        filename: 'dist/stats.json',
+        template: 'raw-data',
+        gzipSize: true,
+        brotliSize: true,
+      }),
+    ] : []),
   ],
   resolve: {
     alias: {

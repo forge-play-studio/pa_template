@@ -56,6 +56,20 @@ export interface ModelConfig {
   rotationZ?: number;
 }
 
+export interface ModelWarmupAssetConfig {
+  sourceId: string;
+  warmupCount?: number;
+  singleton?: boolean;
+}
+
+export interface ModelWarmupResult {
+  modelId: string;
+  requested: number;
+  created: number;
+  available: number;
+  total: number;
+}
+
 
 /**
  * ModelPool 服务
@@ -197,12 +211,78 @@ export class ModelPool {
 
     if (entry) {
       entry.inUse = false;
-      instance.node.setEnabled(false);
-      instance.node.position.set(0, -1000, 0); // 移出视野
-
-      // 停止所有动画
-      instance.animations.forEach(anim => anim.stop());
+      this.deactivateInstance(instance);
     }
+  }
+
+  /**
+   * 预热指定模型池，确保至少有 count 个空闲池化实例。
+   *
+   * count 表示运行时可直接 acquire() 的空闲实例数量；
+   * 已被 authored scene 或 gameplay 占用的实例不计入 available。
+   */
+  warmup(modelId: string, count: number): ModelWarmupResult {
+    const requested = this.normalizeWarmupCount(count);
+    const pool = this.getPool(modelId);
+
+    if (requested <= 0) {
+      return {
+        modelId,
+        requested,
+        created: 0,
+        available: this.getAvailableCount(pool),
+        total: pool.length,
+      };
+    }
+
+    const availableBefore = this.getAvailableCount(pool);
+    const createCount = Math.max(0, requested - availableBefore);
+
+    if (createCount > 0) {
+      const container = this.assetLoader.getContainerSync(modelId);
+      if (!container) {
+        throw new Error(`[ModelPool] Model ${modelId} not preloaded. Call AssetLoader.loadAssetContainer() first.`);
+      }
+
+      for (let i = 0; i < createCount; i += 1) {
+        const instance = this.instantiateFromContainer(container, modelId);
+        this.deactivateInstance(instance);
+        pool.push({ instance, inUse: false });
+      }
+    }
+
+    return {
+      modelId,
+      requested,
+      created: createCount,
+      available: this.getAvailableCount(pool),
+      total: pool.length,
+    };
+  }
+
+  /**
+   * 从 scene.assets 预热池化模型。
+   *
+   * - 使用 sourceId 作为 ModelPool key，与 SceneBuilder acquire() 保持一致。
+   * - singleton 资产不预热，因为它们通过 acquireOnce() 管理生命周期。
+   * - 同一 sourceId 多次出现时，warmupCount 会累加为同一池的空闲目标数。
+   */
+  warmupFromSceneAssets(assets: ModelWarmupAssetConfig[]): ModelWarmupResult[] {
+    const warmupCounts = new Map<string, number>();
+
+    for (const asset of assets) {
+      if (asset.singleton) continue;
+
+      const modelId = asset.sourceId?.trim();
+      if (!modelId) continue;
+
+      const count = this.normalizeWarmupCount(asset.warmupCount);
+      if (count <= 0) continue;
+
+      warmupCounts.set(modelId, (warmupCounts.get(modelId) ?? 0) + count);
+    }
+
+    return [...warmupCounts.entries()].map(([modelId, count]) => this.warmup(modelId, count));
   }
 
   /**
@@ -226,7 +306,7 @@ export class ModelPool {
     const stats: { modelId: string; total: number; available: number }[] = [];
 
     for (const [modelId, pool] of this.pools.entries()) {
-      const available = pool.filter(e => !e.inUse).length;
+      const available = this.getAvailableCount(pool);
       stats.push({ modelId, total: pool.length, available });
     }
 
@@ -361,6 +441,21 @@ export class ModelPool {
 
     // 重新应用配置（直接使用 instance.modelId，不需要从名称解析）
     this.applyModelConfig(instance.node, this.getModelConfig(instance.modelId));
+  }
+
+  private deactivateInstance(instance: PooledInstance): void {
+    instance.node.setEnabled(false);
+    instance.node.position.set(0, -1000, 0); // 移出视野
+    instance.animations.forEach(anim => anim.stop());
+  }
+
+  private getAvailableCount(pool: PoolEntry[]): number {
+    return pool.filter(e => !e.inUse).length;
+  }
+
+  private normalizeWarmupCount(count: unknown): number {
+    if (typeof count !== 'number' || !Number.isFinite(count)) return 0;
+    return Math.max(0, Math.floor(count));
   }
 
   /**

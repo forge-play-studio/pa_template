@@ -1,8 +1,8 @@
 # pa_template
 
-这是从 `pa_maker/scaffold` 独立出来的新项目模板仓库。
+这是 PA 项目的独立模板仓库。
 
-当前模板内容直接位于仓库根目录，不再需要进入 `scaffold/` 子目录。
+当前模板内容直接位于仓库根目录。
 如果后续要从这里起新 playable ad 项目，可以直接复制整个 `pa_template` 仓库作为项目起点。
 
 ## 目标
@@ -22,15 +22,18 @@
 1. Babylon/Vite 项目骨架
 2. Vite 应用壳层（`index.html`）
 3. 最小 `scene.json` 与 `ConfigService`
-4. 项目侧 `editor-package`
-5. project editor runtime / edit session / selection / inspector host 骨架
-6. document/history/export/commit 主链
-7. `sceneNode` adapter 与 duplicate 主链
-8. 新项目尽早验证编辑器闭环所需的基础结构
-9. dev-only 本地 inspector 注入链
-10. `showInspector()` / `loadV2()` 前的 inspector preload patch
-11. 默认 Vite plugin 初始化链：`bridge / inspector / glb / modelCache / stripBabylon / viteSingleFile`
-12. 可直接启用的构建增强插件：`thirdPartyWhitelist / locale / optimizePng / visualizer`
+4. Gameplay Binding contract 类型、默认入口、查询服务和基础校验
+5. Project gameplay composition hook：`src/gameplay/createProjectGameplay.ts`
+6. 项目侧 `editor-package`
+7. project editor runtime / edit session / selection / inspector host 骨架
+8. document/history/export/commit 主链
+9. `sceneNode` adapter 与 duplicate 主链
+10. 新项目尽早验证编辑器闭环所需的基础结构
+11. dev-only 本地 inspector 注入链
+12. `showInspector()` / `loadV2()` 前的 inspector preload patch
+13. 默认 Vite plugin 初始化链：`bridge / inspector / glb / modelCache / stripBabylon / viteSingleFile`
+14. 可直接启用的构建增强插件：`thirdPartyWhitelist / locale / optimizePng / visualizer`
+15. `ZoneSystem`：消费当前 `SceneConfig` 中的 `gameplay.zones`，并维护 enter/tick/leave 区域状态
 
 当前不应默认假设已经完整包含：
 
@@ -51,6 +54,18 @@
 5. `src/`
 
 其中 `src/` 放项目 runtime 与项目侧编辑器接入代码，`vite-plugins/` 放平台桥接、inspector 注入、模型缓存、单文件构建等构建插件。
+
+## 团队级文档
+
+`pa_template` 不再保留 `docs/` 目录。团队级 First Playable Workflow、Gameplay Object / Binding / Naming 标准、Readiness 和 Acceptance 模板统一维护在 `wiki/sources/docs`：
+
+1. [First Playable Workflow](https://github.com/forge-play-studio/wiki/blob/main/sources/docs/guides/gameplay/FIRST_PLAYABLE_WORKFLOW.md)
+2. [Gameplay docs index](https://github.com/forge-play-studio/wiki/blob/main/sources/docs/guides/gameplay/README.md)
+3. [Gameplay Object Standard](https://github.com/forge-play-studio/wiki/blob/main/sources/docs/standards/GAMEPLAY_OBJECT_STANDARD.md)
+4. [Gameplay Binding Standard](https://github.com/forge-play-studio/wiki/blob/main/sources/docs/standards/GAMEPLAY_BINDING_STANDARD.md)
+5. [pa_template docs archive](https://github.com/forge-play-studio/wiki/tree/main/sources/docs/templates/pa_template)
+
+流程 0 完成后，新项目才能进入流程 1。模板只承载 gameplay contract layer，不默认实现 Backpack、Upgrade、Queue、Worker 等具体 gameplay 系统。
 
 ## `src/` 目录说明
 
@@ -84,8 +99,38 @@
 
 1. 场景配置
 2. 基础游戏配置
+3. `gameplay.gameplayBindings` contract 入口
+4. 基于 `gameplay.zones` 的 zone runtime 配置
 
-zone、ground UI 等可选能力配置不默认内置，后续按 ability 接入。
+zone 检测能力默认内置，但只负责矩形区域几何检测和 `enter/tick/leave` 事件分发，不内置付款、升级、背包、经济、解锁等具体业务逻辑。ground UI 等表现能力仍按 ability 接入。
+
+#### Zone 存储结构
+
+每个 zone 默认存储在 `gameplay.zones`。模板初始化时由 `Game` 把当前 `SceneConfig` 显式传给 `ZoneSystem`；ZoneSystem 不从 `gameplayBindings` 派生区域。
+
+```json
+{
+  "gameplay": {
+    "zones": [
+      {
+        "id": "pay_area_unlock_forest",
+        "location": { "x": 2, "z": 1 },
+        "size": { "width": 2, "depth": 1.5 },
+        "rotationDeg": 0,
+        "meta": "玩家站在这里时，由项目业务系统处理解锁森林的资源提交。"
+      }
+    ]
+  }
+}
+```
+
+字段分工：
+
+1. `id` 是 zone runtime id。
+2. `location.x/z` 是矩形中心点。
+3. `size.width/depth` 是矩形区域尺寸。
+4. `rotationDeg` 是区域绕 Y 轴的旋转角度，单位为度。
+5. `meta` 只放说明性文字，方便 AI 和开发者理解区域用途；ZoneSystem 不解释它。
 
 ### `core/`
 
@@ -135,6 +180,28 @@ zone、ground UI 等可选能力配置不默认内置，后续按 ability 接入
 
 这里偏 `Entity`，不负责全局规则推进。
 
+### `gameplay/`
+
+放项目 gameplay 的 composition 入口和模板级 gameplay module 类型。
+
+当前默认包含：
+
+1. `types.ts`：`GameplayModule` 和 `GameplayRuntimeContext`
+2. `createProjectGameplay.ts`：项目 gameplay module 创建入口，默认返回空数组
+3. `index.ts`：导出入口
+
+这层只负责“把项目侧 gameplay 模块接起来”，不负责承载具体玩法规则。
+
+具体项目开发 first playable 时，推荐做法是：
+
+1. 在 `src/systems/` 新增资源、背包、采集、加工、售卖、升级、解锁、队列、阶段等规则模块。
+2. 在 `src/entities/` 新增玩家、NPC、工人、顾客、车辆、机器 actor 等单体行为。
+3. 在 `src/services/` 新增 runtime node 查询封装、binding helper、飞物品、表现 helper 等可复用能力。
+4. 在 `src/ui/` 新增 HUD、摇杆、引导、进度、CTA、Endcard 等界面。
+5. 在 `src/gameplay/createProjectGameplay.ts` 中创建这些模块并返回 `GameplayModule[]`。
+
+不要把完整 first playable 写成一个宽泛的 `src/gameplay/<Project>Gameplay.ts` 大文件。
+
 ### `services/`
 
 放运行时能力模块。
@@ -147,10 +214,24 @@ zone、ground UI 等可选能力配置不默认内置，后续按 ability 接入
 4. 渲染/阴影/材质
 5. 音频/VFX/动画等通用能力
 6. 输入服务与输入抽象
+7. Gameplay Binding 查询和 runtime node 映射
 
 这层更接近 Babylon/runtime 侧。
 
-如果某个服务只服务于特定玩法或表现能力，例如轨迹动画、资源计数等，优先参考 `pa_maker` 内的 ability 形态沉淀，而不是默认留在模板基础层。
+如果某个服务只服务于特定玩法或表现能力，例如轨迹动画、资源计数等，优先参考 [`pa_abilities`](https://github.com/forge-play-studio/pa_abilities) 的形态沉淀，而不是默认留在模板基础层。
+
+#### `services/` 与 `systems/` 的判断标准
+
+`Service` 是能力提供者：通常提供接口、资源、查询、适配或基础设施能力，被 `Game`、`System`、`Entity` 调用，但不主动推进玩法规则。
+
+`System` 是规则推进者：负责持有并推进一段游戏世界状态，通常参与 `Game.update(deltaTime)`，也可以响应事件推进状态。
+
+常见判断：
+
+1. 如果模块主要被别人调用，例如 `load`、`acquire`、`getInput`、`getSceneNodes`，优先放在 `services/`。
+2. 如果模块主要推进规则状态，例如 zone enter/tick/leave、worker 队列、资源生产、解锁流程，优先放在 `systems/`。
+3. `services/` 可以监听 Babylon/runtime 事件来维护自身能力，但不应承载玩法规则。
+4. `systems/` 可以依赖 `services/`，但 `services/` 不应依赖具体 `systems/`。
 
 ### `systems/`
 
@@ -164,7 +245,7 @@ zone、ground UI 等可选能力配置不默认内置，后续按 ability 接入
 
 这层偏 `System`，不负责单体对象生命周期。
 
-模板当前只保留 `BaseSystem` 类型壳层，不默认初始化任何玩法 system。具体玩法系统优先通过 ability 或项目自身扩展接入。
+模板当前默认内置最小 `ZoneSystem`，只负责矩形区域生命周期检测和 `enter/tick/leave` 状态推进。其他玩法 system 仍优先通过 ability 或项目自身扩展接入。
 
 ### `ui/`
 
@@ -175,7 +256,7 @@ zone、ground UI 等可选能力配置不默认内置，后续按 ability 接入
 1. 加载页
 2. 其他默认内置 UI
 
-可选 UI 能力优先放仓库根的 `abilities/`。
+可选 UI 能力优先沉淀到 [`pa_abilities`](https://github.com/forge-play-studio/pa_abilities)。
 
 ### `utils/`
 
@@ -235,15 +316,17 @@ brew install webp optipng
 
 如果项目需要额外能力：
 
-1. 先看 [`../pa_maker/abilities`](../pa_maker/abilities)
+1. 先看 [`pa_abilities`](https://github.com/forge-play-studio/pa_abilities)
 2. 读取目标 ability 的 `README.md`
 3. 结合项目结构决定如何接入
 
 ## 相关规范
 
-这些规范仍维护在 `pa_maker` 仓库内：
+模板规范维护在本仓 [`docs`](./docs)：
 
-1. [`../pa_maker/docs/standards/GAME_ARCHITECTURE_STANDARD.md`](../pa_maker/docs/standards/GAME_ARCHITECTURE_STANDARD.md)
-2. [`../pa_maker/docs/standards/EDITOR_PACKAGE_INTEGRATION.md`](../pa_maker/docs/standards/EDITOR_PACKAGE_INTEGRATION.md)
-3. [`../pa_maker/docs/standards/ABILITY_CREATION_STANDARD.md`](../pa_maker/docs/standards/ABILITY_CREATION_STANDARD.md)
-4. [`../pa_maker/docs/guides/ABILITY_USAGE_GUIDE.md`](../pa_maker/docs/guides/ABILITY_USAGE_GUIDE.md)
+1. [GAME_ARCHITECTURE_STANDARD.md](./docs/standards/GAME_ARCHITECTURE_STANDARD.md)
+2. [EDITOR_PACKAGE_INTEGRATION.md](./docs/standards/EDITOR_PACKAGE_INTEGRATION.md)
+3. [SCENE_EDITING_INTEGRATION.md](./docs/standards/SCENE_EDITING_INTEGRATION.md)
+4. [SCENE_JSON_STANDARD.md](./docs/standards/SCENE_JSON_STANDARD.md)
+
+可选 ability 的通用规则维护在 [`pa_abilities`](https://github.com/forge-play-studio/pa_abilities) 根 README。

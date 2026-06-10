@@ -49,6 +49,8 @@
         }
       }
     ],
+    "gameplayBindings": [],
+    "zones": [],
     "tuning": {
       "sceneVfx": {
         "effects": {}
