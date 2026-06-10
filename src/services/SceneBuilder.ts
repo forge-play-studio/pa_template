@@ -55,9 +55,11 @@ import {
   type TransformConfig,
 } from '../config';
 import {
+  applyBabylonRenderingToNodeTree,
   applyArtistMaterialProfileToRuntimeMaterial as applyPlayableArtistMaterialProfileToRuntimeMaterial,
   applyPlayableBabylonOutlineOverrideToRuntimeNode,
   applyMaterialValueToRuntimeMaterial,
+  resolveEditorSceneGameObjectRendering,
   resolveEditorSceneArtistMaterialBinding,
   resolveMaterialRuntimeKind,
   resolveMaterialOwnerNode,
@@ -637,6 +639,7 @@ export class SceneBuilder {
 
     if (nodeConfig.kind === 'transform') {
       this.attachTransformRuntime(nodeConfig, runtimeNode);
+      this.applySceneNodeRendering(nodeConfig, runtimeNode);
       this.applyNodeMaterialEntries(nodeConfig, runtimeNode);
       this.applySceneNodeOverrides(nodeConfig, runtimeNode);
       this.sceneNodeCleanup.set(nodeConfig.id, null);
@@ -644,6 +647,7 @@ export class SceneBuilder {
     }
 
     if (nodeConfig.kind === 'primitive') {
+      this.applySceneNodeRendering(nodeConfig, runtimeNode);
       this.applyNodeMaterialEntries(nodeConfig, runtimeNode);
       this.applySceneNodeOverrides(nodeConfig, runtimeNode);
       this.sceneNodeCleanup.set(nodeConfig.id, null);
@@ -754,10 +758,14 @@ export class SceneBuilder {
     this.applyTransform(attached.modelNode, attached.asset.defaults?.transform);
     this.applyChildTransforms(attached.modelNode, nodeConfig.overrides?.childTransforms);
     this.applySharedMaterialOverrides(attached.asset, attached.modelNode);
+    const restoreRendering = this.applySceneNodeRendering(nodeConfig, runtimeNode, attached.modelNode);
     this.applyNodeMaterialEntries(nodeConfig, runtimeNode);
     this.applySharedOutlineOverrides(attached.asset, attached.modelNode);
     this.applySceneNodeOverrides(nodeConfig, runtimeNode, attached.asset);
-    this.sceneNodeCleanup.set(nodeConfig.id, attached.cleanup);
+    this.sceneNodeCleanup.set(nodeConfig.id, () => {
+      restoreRendering?.();
+      attached.cleanup();
+    });
     return runtimeNode;
   }
 
@@ -781,10 +789,14 @@ export class SceneBuilder {
     this.applyTransform(attached.modelNode, attached.asset.defaults?.transform);
     this.applyChildTransforms(attached.modelNode, nodeConfig.overrides?.childTransforms);
     this.applySharedMaterialOverrides(attached.asset, attached.modelNode);
+    const restoreRendering = this.applySceneNodeRendering(nodeConfig, runtimeNode, attached.modelNode);
     this.applyNodeMaterialEntries(nodeConfig, runtimeNode);
     this.applySharedOutlineOverrides(attached.asset, attached.modelNode);
     this.applySceneNodeOverrides(nodeConfig, runtimeNode, attached.asset);
-    this.sceneNodeCleanup.set(nodeConfig.id, attached.cleanup);
+    this.sceneNodeCleanup.set(nodeConfig.id, () => {
+      restoreRendering?.();
+      attached.cleanup();
+    });
     return runtimeNode;
   }
 
@@ -1207,6 +1219,19 @@ export class SceneBuilder {
     }
 
     (runtimeNode as any).material = mat;
+  }
+
+  private applySceneNodeRendering(
+    nodeConfig: SceneInstanceNode | SceneTransformNode | ScenePrimitiveNode,
+    rootNode: TransformNode,
+    contentRoot?: TransformNode | null,
+  ): (() => void) | null {
+    const rendering = resolveEditorSceneGameObjectRendering({
+      rendering: nodeConfig.rendering,
+      groundDecal: nodeConfig.kind === 'transform' ? nodeConfig.groundDecal : undefined,
+    });
+    if (!rendering) return null;
+    return applyBabylonRenderingToNodeTree(rootNode, rendering, contentRoot);
   }
 
   private resolveNodeMaterialOwner(rootNode: TransformNode, ownerNodePath: string): any | null {
