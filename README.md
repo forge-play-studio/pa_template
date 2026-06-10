@@ -37,6 +37,7 @@
 16. 默认调试入口：`DebugActionRegistry`，用于项目侧 debug 面板或 console quick action 触发
 17. 默认运行时节点查询封装：`RuntimeNodeService`，用于从 gameplay binding / scene node 稳定拿 runtime node
 18. 默认 debug 面板基础设施：`src/debug/debug-panel-layout.ts` 和 `src/debug/runtime-gameplay-debug-panels.ts`
+19. 默认 loading 链路：`Game.init` 在 gameplay modules 初始化前 preload `scene.assets`，并按 `warmupCount` 通过 `ModelPool` 做 runtime asset warmup
 
 当前不应默认假设已经完整包含：
 
@@ -69,6 +70,40 @@
 5. [pa_template docs archive](https://github.com/forge-play-studio/wiki/tree/main/sources/docs/templates/pa_template)
 
 流程 0 完成后，新项目才能进入流程 1。模板现在默认提供标准 first playable gameplay 骨架，但这些系统只承载通用状态、接口、配置入口和最小可运行链路；具体资源类型、区域、队列、升级、引导目标、结束条件、表现动画和项目规则仍需要由项目按 `gameplay.md` 补齐。
+
+## PA gameplay 合同规则
+
+新项目的 first playable 开发以项目根目录 `gameplay.md` 为权威合同。`pa_template` 提供默认系统、服务和 loading 链路；具体玩法状态、binding、动态资产和验收仍必须由项目文档确认。
+
+### Gameplay State / Core Loop State
+
+`GameplayStateSystem` 是模板默认的游戏流程状态真源。`UpgradeSystem` 可以处理升级支付和完成事件，但升级完成后导致的阶段变化、里程碑、解锁、blocker、引导目标变化和结束条件，应写入或读取 `GameplayStateSystem` 或项目等价系统。
+
+不要把游戏流程状态散落在 UI、debug 面板、`QueueSystem`、`GuideSystem` 或多个项目脚本里。资源数量、现金、背包容量和区域 enter/tick/leave 仍分别由 `InventorySystem`、`EconomySystem`、`BackpackSystem`、`AreaSystem` / `ZoneSystem` 承担。
+
+### Binding Contract
+
+场景节点和美术资产绑定由用户通过 gameplay 文档 AI 确认，并写入 `gameplay.md` 的 Binding Contract。`gameplay-builder` 负责消费该合同，把确认过的 binding 落到项目配置，使用 `GameplayBindingService` / `RuntimeNodeService` 查询，并输出 readiness gap。
+
+builder 不应自行决定某个相似 scene node、decoration 或 asset 就是目标绑定；缺失或模糊时应报告 Binding Gap，让用户或文档 AI 补齐。
+
+### Runtime Asset Contract / Loading
+
+所有运行时动态生成、clone、pool、飞行、堆叠、区域摆放、奖励掉落或重复出现的可见对象，都应在 `gameplay.md` 的 Runtime Asset Contract 中声明。常见对象包括队列 NPC / vehicle、背包和角色身后携带资源模型、资源飞行动效对象、区域摆放物、现金掉落、worker / automation actor 和 VFX 模型。
+
+项目实现时应把这些 runtime asset 加入 `scene.assets` 或项目等价 asset config。模板当前 loading 顺序是：
+
+```text
+LoadingScreen 显示
+-> Game.init
+-> AssetLoader preload scene.assets
+-> SceneBuilder 构建场景
+-> ModelPool 按 warmupCount warmup
+-> gameplay modules init
+-> LoadingScreen 隐藏
+```
+
+因此，QueueSystem、BackpackSystem、AreaSystem、ResourcesSystem 等业务系统不应临时拼路径加载模型来绕过 loading。缺少 asset id/file、loading path、runtime parent/spawn root 或 warmup/max-active 假设时，先按 Asset Gap 或 Gameplay Doc Gap 处理。
 
 ## `src/` 目录说明
 
@@ -105,6 +140,7 @@
 3. `gameplay.gameplayBindings` contract 入口
 4. 基于 `gameplay.zones` 的 zone runtime 配置
 5. `projectGameplayConfig.ts`：标准 first playable 系统的资源、背包、区域、队列、升级、引导、结束条件和 tuning 入口
+6. `scene.assets`：runtime asset 的 asset id / url / type / warmupCount 入口，供 loading preload 和 `ModelPool` warmup 使用
 
 zone 检测能力默认内置，但只负责矩形区域几何检测和 `enter/tick/leave` 事件分发。区域上的付款、升级、售卖、背包、经济、解锁等规则由对应 project gameplay system 承接。ground UI、资源飞行、堆放动画等表现能力仍按项目或 ability 接入。
 
@@ -220,11 +256,11 @@ debug 面板职责边界：
 
 默认阶段顺序：
 
-1. 3C + Resources + 左上角 HUD：`ThreeCSystem`、`ResourcesSystem`
+1. 3C + Resources + 项目资源 HUD：`ThreeCSystem`、`ResourcesSystem`
 2. Backpack：`BackpackSystem`，资源动效和区域摆放表现由 `ResourcesSystem` / 表现服务承接
 3. Area：`AreaSystem`
 4. Queue + Economy：`QueueSystem`、`EconomySystem`
-5. Upgrade + Guide + EndCondition：`UpgradeSystem`、`GuideSystem`、`EndConditionSystem`
+5. GameplayState + Upgrade + Guide + EndCondition：`GameplayStateSystem`、`UpgradeSystem`、`GuideSystem`、`EndConditionSystem`
 
 推荐协作方式是滚动推进：`gameplay.md` 先建立五阶段全局 Draft，再把当前要开发的阶段补到 `Ready for Builder`；builder 只开发 Ready 阶段，后续 Draft 阶段由用户和 gameplay 文档 AI 继续细化。
 
@@ -316,7 +352,7 @@ debug 面板职责边界：
 | `ResourcesSystem` | 资源 catalog 和资源表现入口 | 管理资源 id、displayName、tags，按 binding/node 查询资源节点 | 在这里扩展资源飞行动画、身后背负、场景摆放、资源模型映射；数量结算仍交给 Inventory / Economy |
 | `BackpackSystem` | 玩家背包规则 | 连接 backpack container，提供 add/remove/clear/snapshot，注册 `backpack.fill` / `backpack.clear` debug action | 项目采集、拾取、提交时通过它操作玩家携带资源；身后视觉堆叠由 ResourcesSystem 或表现服务订阅处理 |
 | `AreaSystem` | 区域交互入口 | 从 `ZoneSystem` 接 enter/leave，维护 active area，按 category 查询区域，注册 `area.toggleBounds` | 把 `gameplay.zones` 映射成 resource / backpack / queue / upgrade / guide / end 区域；业务规则交给 Queue / Upgrade / 项目 system |
-| `ThreeCSystem` | 3C 接线和 readiness | 接入输入源、设置 player zone actor、同步 camera target、检查右手坐标系 | 第一阶段先验收移动、镜头、区域 actor 和左上角 HUD；不要在这里写采集、售卖、升级规则 |
+| `ThreeCSystem` | 3C 接线和 readiness | 接入输入源、设置 player zone actor、同步 camera target、检查右手坐标系 | 第一阶段先验收移动、镜头、区域 actor 和项目资源 HUD；不要在这里写采集、售卖、升级规则 |
 | `QueueSystem` | 队列/售卖规则入口 | 提供 completeSale、记录 sale count、给 Economy 加 cash，注册 `queue.sellOnce` debug action | 先用 debug action 验收现金链路；项目需要顾客、车辆、定位点移动时在此扩展或新增 actor/system |
 | `UpgradeSystem` | 升级支付和完成规则 | 根据 active area 按秒扣 cash、推进 paidCash、完成 upgrade、写入 milestone，注册 `upgrade.complete` | 把升级费用、前置升级、解锁 milestone 写进 config；实际开门、显示机器等表现订阅完成状态 |
 | `GuideSystem` | 引导目标选择 | 根据 milestone / upgrade 状态选择目标 binding，输出 source/target position | 只决定“指向哪里”；箭头、地面光圈、手指提示等表现放 UI 或 VFX |
@@ -329,18 +365,20 @@ debug 面板职责边界：
 | --- | --- | --- |
 | `RuntimeNodeService` | binding id / logicType / scene node 到 runtime node 的查询封装 | system 需要 scene node 时通过它查；缺 binding 时输出 readiness issue，不静默猜节点 |
 | `DebugActionRegistry` | dev-only debug action 注册入口 | debug 面板或 console 统一调用 `window.__paDebugActions`；生产逻辑不要依赖它 |
-| `GameHud` | 左上角最小 HUD | 展示 cash 和 backpack snapshot；项目可扩展资源图标、容量、阶段信息 |
+| `GameHud` | 默认最小 HUD | 展示 cash 和 backpack snapshot；项目可扩展显示位置、资源图标、容量、阶段信息 |
 | `VirtualJoystick` | 移动输入源 | 默认接入 `InputService`；项目如替换输入 UI，保持 `MovementInputSource` 接口即可 |
 | `GuideArrowView` | 最小引导箭头表现 | 订阅 `GuideSystem` snapshot；复杂引导表现可替换该 UI，不改 GuideSystem 规则 |
 
 推荐接入顺序：
 
 1. 在 `projectGameplayConfig.ts` 填 resource、backpack capacity、area、queue、upgrade、guide target、end condition。
-2. 用左上角 HUD 和 `ThreeCSystem.getSnapshot()` 验收移动、镜头、右手坐标系和资源 catalog。
+2. 用项目资源 HUD 和 `ThreeCSystem.getSnapshot()` 验收移动、镜头、右手坐标系和资源 catalog。
 3. 用 `window.__paDebugActions['backpack.fill']()` 验收背包数量、容量和 HUD 更新。
 4. 用 `window.__paDebugActions['area.toggleBounds']()` 验收区域分类和 bounds 数据。
 5. 用 `window.__paDebugActions['queue.sellOnce']()` 验收 Queue -> Economy -> HUD 的现金链路。
 6. 用 `window.__paDebugActions['upgrade.complete']({ id: '<upgradeId>' })` 或站在 upgrade area 验收升级状态、milestone、Guide 和 EndCondition。
+
+任何阶段如果要使用 runtime/dynamic 可见对象，先把对象写入 `gameplay.md` 的 Runtime Asset Contract，再加入 `scene.assets` 或项目等价 asset config，并确认 `warmupCount` 或项目约定的 warmup/max-active 假设。业务 system 只消费已声明资产，不临时绕过 loading 链路。
 
 阶段需要 runtime debug 面板时：
 
@@ -365,7 +403,7 @@ debug 面板职责边界：
 
 当前默认包含：
 
-1. `GameHud`：左上角 cash / backpack 最小 HUD。
+1. `GameHud`：cash / backpack 最小 HUD。
 2. `VirtualJoystick`：移动输入源。
 3. `GuideArrowView`：基于 `GuideSystem` 的最小引导箭头。
 
