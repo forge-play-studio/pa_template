@@ -1,6 +1,7 @@
 import {
   EDITOR_SCENE_FIELD_SCHEMA,
   resolveEditorSceneFieldSchema,
+  isEditorSceneShadowMode,
   type EditorSceneFieldPatch,
   type EditorSceneFieldSchemaEntry,
 } from '@fps-games/editor/playable-sdk';
@@ -16,5 +17,12 @@ export function resolveSceneNodeFieldSchema(
   path: string,
   nodeKind: SceneNodeConfig['kind'],
 ): SceneNodeFieldSchemaEntry | null {
+  if (path === 'shadowMode' && nodeKind !== 'group') {
+    return {
+      path: 'shadowMode',
+      appliesTo: ['instance', 'transform', 'primitive'],
+      validate: (value) => value == null || isEditorSceneShadowMode(value),
+    };
+  }
   return resolveEditorSceneFieldSchema(path, nodeKind) as SceneNodeFieldSchemaEntry | null;
 }
