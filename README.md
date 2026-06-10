@@ -33,6 +33,9 @@
 12. 默认 Vite plugin 初始化链：`bridge / inspector / glb / modelCache / stripBabylon / viteSingleFile`
 13. 可直接启用的构建增强插件：`thirdPartyWhitelist / locale / optimizePng / visualizer`
 14. `ZoneSystem`：消费当前 `SceneConfig` 中的 `gameplay.zones`，并维护 enter/tick/leave 区域状态
+15. 标准 first playable gameplay 骨架：3C、Resources、Backpack、Area、Queue、Economy、Upgrade、Guide、EndCondition
+16. 默认调试入口：`DebugActionRegistry`，用于项目侧 debug 面板或 console quick action 触发
+17. 默认运行时节点查询封装：`RuntimeNodeService`，用于从 gameplay binding / scene node 稳定拿 runtime node
 
 当前不应默认假设已经完整包含：
 
@@ -64,7 +67,7 @@
 4. [Gameplay Binding Standard](https://github.com/forge-play-studio/wiki/blob/main/sources/docs/standards/GAMEPLAY_BINDING_STANDARD.md)
 5. [pa_template docs archive](https://github.com/forge-play-studio/wiki/tree/main/sources/docs/templates/pa_template)
 
-流程 0 完成后，新项目才能进入流程 1。模板只承载 gameplay contract layer，不默认实现 Backpack、Upgrade、Queue、Worker 等具体 gameplay 系统。
+流程 0 完成后，新项目才能进入流程 1。模板现在默认提供标准 first playable gameplay 骨架，但这些系统只承载通用状态、接口、配置入口和最小可运行链路；具体资源类型、区域、队列、升级、引导目标、结束条件、表现动画和项目规则仍需要由项目按 `gameplay.md` 补齐。
 
 ## `src/` 目录说明
 
@@ -100,8 +103,9 @@
 2. 基础游戏配置
 3. `gameplay.gameplayBindings` contract 入口
 4. 基于 `gameplay.zones` 的 zone runtime 配置
+5. `projectGameplayConfig.ts`：标准 first playable 系统的资源、背包、区域、队列、升级、引导、结束条件和 tuning 入口
 
-zone 检测能力默认内置，但只负责矩形区域几何检测和 `enter/tick/leave` 事件分发，不内置付款、升级、背包、经济、解锁等具体业务逻辑。ground UI 等表现能力仍按 ability 接入。
+zone 检测能力默认内置，但只负责矩形区域几何检测和 `enter/tick/leave` 事件分发。区域上的付款、升级、售卖、背包、经济、解锁等规则由对应 project gameplay system 承接。ground UI、资源飞行、堆放动画等表现能力仍按项目或 ability 接入。
 
 #### Zone 存储结构
 
@@ -186,18 +190,29 @@ zone 检测能力默认内置，但只负责矩形区域几何检测和 `enter/t
 当前默认包含：
 
 1. `types.ts`：`GameplayModule` 和 `GameplayRuntimeContext`
-2. `createProjectGameplay.ts`：项目 gameplay module 创建入口，默认返回空数组
+2. `createProjectGameplay.ts`：项目 gameplay module composition root，默认创建并连接标准 first playable gameplay 骨架
 3. `index.ts`：导出入口
 
-这层只负责“把项目侧 gameplay 模块接起来”，不负责承载具体玩法规则。
+这层只负责“把项目侧 gameplay 模块接起来”，不负责承载具体玩法规则。项目规则应落在 `systems/`，运行时查询和表现能力落在 `services/`，HUD/摇杆/引导表现落在 `ui/`。
+
+默认阶段顺序：
+
+1. 3C + Resources + 左上角 HUD：`ThreeCSystem`、`ResourcesSystem`
+2. Backpack：`BackpackSystem`，资源动效和区域摆放表现由 `ResourcesSystem` / 表现服务承接
+3. Area：`AreaSystem`
+4. Queue + Economy：`QueueSystem`、`EconomySystem`
+5. Upgrade + Guide + EndCondition：`UpgradeSystem`、`GuideSystem`、`EndConditionSystem`
+
+推荐协作方式是滚动推进：`gameplay.md` 先建立五阶段全局 Draft，再把当前要开发的阶段补到 `Ready for Builder`；builder 只开发 Ready 阶段，后续 Draft 阶段由用户和 gameplay 文档 AI 继续细化。
 
 具体项目开发 first playable 时，推荐做法是：
 
-1. 在 `src/systems/` 新增资源、背包、采集、加工、售卖、升级、解锁、队列、阶段等规则模块。
-2. 在 `src/entities/` 新增玩家、NPC、工人、顾客、车辆、机器 actor 等单体行为。
-3. 在 `src/services/` 新增 runtime node 查询封装、binding helper、飞物品、表现 helper 等可复用能力。
-4. 在 `src/ui/` 新增 HUD、摇杆、引导、进度、CTA、Endcard 等界面。
-5. 在 `src/gameplay/createProjectGameplay.ts` 中创建这些模块并返回 `GameplayModule[]`。
+1. 优先在 `src/config/projectGameplayConfig.ts` 填资源、背包容量、区域、队列、升级、引导目标和结束条件。
+2. 如果标准 system 职责足够，扩展现有 system 的项目规则；如果 gameplay.md 明确需要新责任，再新增采集、加工、售卖、解锁、工人、机器 actor 等模块。
+3. 在 `src/entities/` 新增 NPC、工人、顾客、车辆、机器 actor 等单体行为。
+4. 在 `src/services/` 新增飞物品、资源堆放、动画/audio/vfx helper、binding helper 等可复用能力。
+5. 在 `src/ui/` 扩展 HUD、debug 面板入口、引导、进度、CTA、Endcard 等界面。
+6. 在 `src/gameplay/createProjectGameplay.ts` 中只做模块创建、依赖注入和返回 `GameplayModule[]`。
 
 不要把完整 first playable 写成一个宽泛的 `src/gameplay/<Project>Gameplay.ts` 大文件。
 
@@ -216,6 +231,12 @@ zone 检测能力默认内置，但只负责矩形区域几何检测和 `enter/t
 7. Gameplay Binding 查询和 runtime node 映射
 
 这层更接近 Babylon/runtime 侧。
+
+当前默认包含：
+
+1. `GameplayBindingService`：只负责 authored gameplay binding 查询，不拥有具体 gameplay 规则。
+2. `RuntimeNodeService`：把 binding id、logicType、scene node id 映射到 runtime node，并输出 binding readiness issue。
+3. `DebugActionRegistry`：dev-only debug action 注册入口，供 debug 面板、console 或测试触发系统动作。
 
 如果某个服务只服务于特定玩法或表现能力，例如轨迹动画、资源计数等，优先参考 [`pa_abilities`](https://github.com/forge-play-studio/pa_abilities) 的形态沉淀，而不是默认留在模板基础层。
 
@@ -244,7 +265,59 @@ zone 检测能力默认内置，但只负责矩形区域几何检测和 `enter/t
 
 这层偏 `System`，不负责单体对象生命周期。
 
-模板当前默认内置最小 `ZoneSystem`，只负责矩形区域生命周期检测和 `enter/tick/leave` 状态推进。其他玩法 system 仍优先通过 ability 或项目自身扩展接入。
+模板当前默认内置标准 first playable 系统骨架：
+
+1. `GameplayStateSystem`：阶段、里程碑、升级完成和 blocker 状态。
+2. `InventorySystem`：通用 container/resource 数量和容量。
+3. `EconomySystem`：现金状态和扣费能力。
+4. `ResourcesSystem`：资源 catalog、资源绑定查询和资源链表现扩展入口。
+5. `BackpackSystem`：玩家背包 container、debug fill/clear 和 HUD 数据。
+6. `AreaSystem`：基于 `ZoneSystem` 的区域分类、active 状态和 debug bounds 数据。
+7. `ThreeCSystem`：输入源接入、相机目标、玩家 zone actor 和右手坐标系 readiness。
+8. `QueueSystem`：队列/售卖最小规则入口和 debug sell action。
+9. `UpgradeSystem`：升级状态、站立支付和完成事件。
+10. `GuideSystem`：引导目标选择。
+11. `EndConditionSystem`：结束条件检测。
+
+这些系统是默认骨架，不代表项目玩法已经完成。项目应按 `gameplay.md` 补足资源来源、加工、队列行为、升级效果、引导表现和最终验收。
+
+#### 标准 Gameplay 系统使用说明
+
+这些模块的设计目标是让新项目默认有一条可接线、可调试、可分阶段验收的 first playable 主链。推荐先改 `src/config/projectGameplayConfig.ts`，再按 `gameplay.md` 扩展对应 system；不要为同一职责再建一套平行 system。
+
+| 模块 | 主要作用 | 当前功能 | 推荐用法 |
+| --- | --- | --- | --- |
+| `GameplayStateSystem` | 全局 gameplay 状态真源 | 记录 stage、milestone、completed upgrades、blocker、complete | 让 Queue / Upgrade / Guide / EndCondition 写入或读取阶段状态；不要把资源数量或 UI 状态放进这里 |
+| `InventorySystem` | 通用资源容器 | 管理 container 内 resource 数量、容量、add/remove/clear、change event | 作为 Backpack、机器输入/输出、场景容器的底层数量服务；项目不应直接用 UI 改它 |
+| `EconomySystem` | 现金状态真源 | 管理 cash、add、spend、canAfford、cash change event | Queue 售卖加钱、Upgrade 支付扣钱、HUD 订阅展示；不要把木头、石头等普通资源放这里 |
+| `ResourcesSystem` | 资源 catalog 和资源表现入口 | 管理资源 id、displayName、tags，按 binding/node 查询资源节点 | 在这里扩展资源飞行动画、身后背负、场景摆放、资源模型映射；数量结算仍交给 Inventory / Economy |
+| `BackpackSystem` | 玩家背包规则 | 连接 backpack container，提供 add/remove/clear/snapshot，注册 `backpack.fill` / `backpack.clear` debug action | 项目采集、拾取、提交时通过它操作玩家携带资源；身后视觉堆叠由 ResourcesSystem 或表现服务订阅处理 |
+| `AreaSystem` | 区域交互入口 | 从 `ZoneSystem` 接 enter/leave，维护 active area，按 category 查询区域，注册 `area.toggleBounds` | 把 `gameplay.zones` 映射成 resource / backpack / queue / upgrade / guide / end 区域；业务规则交给 Queue / Upgrade / 项目 system |
+| `ThreeCSystem` | 3C 接线和 readiness | 接入输入源、设置 player zone actor、同步 camera target、检查右手坐标系 | 第一阶段先验收移动、镜头、区域 actor 和左上角 HUD；不要在这里写采集、售卖、升级规则 |
+| `QueueSystem` | 队列/售卖规则入口 | 提供 completeSale、记录 sale count、给 Economy 加 cash，注册 `queue.sellOnce` debug action | 先用 debug action 验收现金链路；项目需要顾客、车辆、定位点移动时在此扩展或新增 actor/system |
+| `UpgradeSystem` | 升级支付和完成规则 | 根据 active area 按秒扣 cash、推进 paidCash、完成 upgrade、写入 milestone，注册 `upgrade.complete` | 把升级费用、前置升级、解锁 milestone 写进 config；实际开门、显示机器等表现订阅完成状态 |
+| `GuideSystem` | 引导目标选择 | 根据 milestone / upgrade 状态选择目标 binding，输出 source/target position | 只决定“指向哪里”；箭头、地面光圈、手指提示等表现放 UI 或 VFX |
+| `EndConditionSystem` | 结束条件检测 | 根据 completed upgrade 或 milestone 触发 complete | 用于 first playable 闭环结束、CTA/Endcard 前置触发；不要把结算 UI 写在这里 |
+| `ZoneSystem` | 几何区域检测 | 从 `gameplay.zones` 检测 enter/tick/leave | 保持为底层几何能力；不要把付款、售卖、升级、加工等规则写进 ZoneSystem |
+
+服务和 UI 的推荐职责：
+
+| 模块 | 主要作用 | 推荐用法 |
+| --- | --- | --- |
+| `RuntimeNodeService` | binding id / logicType / scene node 到 runtime node 的查询封装 | system 需要 scene node 时通过它查；缺 binding 时输出 readiness issue，不静默猜节点 |
+| `DebugActionRegistry` | dev-only debug action 注册入口 | debug 面板或 console 统一调用 `window.__paDebugActions`；生产逻辑不要依赖它 |
+| `GameHud` | 左上角最小 HUD | 展示 cash 和 backpack snapshot；项目可扩展资源图标、容量、阶段信息 |
+| `VirtualJoystick` | 移动输入源 | 默认接入 `InputService`；项目如替换输入 UI，保持 `MovementInputSource` 接口即可 |
+| `GuideArrowView` | 最小引导箭头表现 | 订阅 `GuideSystem` snapshot；复杂引导表现可替换该 UI，不改 GuideSystem 规则 |
+
+推荐接入顺序：
+
+1. 在 `projectGameplayConfig.ts` 填 resource、backpack capacity、area、queue、upgrade、guide target、end condition。
+2. 用左上角 HUD 和 `ThreeCSystem.getSnapshot()` 验收移动、镜头、右手坐标系和资源 catalog。
+3. 用 `window.__paDebugActions['backpack.fill']()` 验收背包数量、容量和 HUD 更新。
+4. 用 `window.__paDebugActions['area.toggleBounds']()` 验收区域分类和 bounds 数据。
+5. 用 `window.__paDebugActions['queue.sellOnce']()` 验收 Queue -> Economy -> HUD 的现金链路。
+6. 用 `window.__paDebugActions['upgrade.complete']({ id: '<upgradeId>' })` 或站在 upgrade area 验收升级状态、milestone、Guide 和 EndCondition。
 
 ### `ui/`
 
@@ -253,7 +326,16 @@ zone 检测能力默认内置，但只负责矩形区域几何检测和 `enter/t
 适合放：
 
 1. 加载页
-2. 其他默认内置 UI
+2. HUD
+3. 摇杆
+4. 引导箭头
+5. 其他默认内置 UI
+
+当前默认包含：
+
+1. `GameHud`：左上角 cash / backpack 最小 HUD。
+2. `VirtualJoystick`：移动输入源。
+3. `GuideArrowView`：基于 `GuideSystem` 的最小引导箭头。
 
 可选 UI 能力优先沉淀到 [`pa_abilities`](https://github.com/forge-play-studio/pa_abilities)。
 

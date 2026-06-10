@@ -2,7 +2,7 @@
  * GameplayBindingService - gameplay contract 查询层 (Scaffold)
  *
  * 只负责把 authored `gameplay.gameplayBindings` 变成稳定查询入口。
- * 不实现 Backpack / Upgrade / Queue / Worker 等具体玩法系统。
+ * 具体玩法系统通过该服务或 RuntimeNodeService 读取 binding，不把 gameplay 规则写在这里。
  */
 
 import type { TransformNode } from '@babylonjs/core/Meshes/transformNode';

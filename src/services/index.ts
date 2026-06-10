@@ -26,6 +26,14 @@ export { MaterialConfigService } from './MaterialConfigService';
 export { SceneVfxService } from './SceneVfxService';
 export { gameplayBindingService } from './GameplayBindingService';
 export type { GameplayBindingRuntimeRef } from './GameplayBindingService';
+export { RuntimeNodeService } from './RuntimeNodeService';
+export type {
+  RuntimeBindingIssue,
+  RuntimeBindingIssueType,
+  RuntimeBindingReadinessReport,
+} from './RuntimeNodeService';
+export { DebugActionRegistry } from './DebugActionRegistry';
+export type { DebugAction, DebugActionContext } from './DebugActionRegistry';
 export {
   ASSET_MANAGER_ERROR_CODES,
   planAssetRegistration,

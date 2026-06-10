@@ -5,6 +5,7 @@
  */
 
 export * from './types';
+export * from './projectGameplayConfig';
 export { ConfigService, configService } from './ConfigService';
 export {
   assertSceneJsonV2,
