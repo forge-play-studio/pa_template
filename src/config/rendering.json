@@ -1,4 +1,80 @@
 {
+  "renderingGroups": {
+    "slots": [
+      {
+        "renderingGroupId": 0,
+        "name": "普通场景",
+        "alphaIndexPresets": [
+          {
+            "name": "默认透明顺序",
+            "alphaIndex": 0
+          },
+          {
+            "name": "地表贴花",
+            "alphaIndex": 100
+          },
+          {
+            "name": "近景覆盖",
+            "alphaIndex": 200
+          }
+        ]
+      },
+      {
+        "renderingGroupId": 1,
+        "name": "水面 / 透明地表",
+        "alphaIndexPresets": [
+          {
+            "name": "水面",
+            "alphaIndex": 0
+          },
+          {
+            "name": "透明地表",
+            "alphaIndex": 100
+          },
+          {
+            "name": "水面高光",
+            "alphaIndex": 200
+          }
+        ]
+      },
+      {
+        "renderingGroupId": 2,
+        "name": "特效",
+        "alphaIndexPresets": [
+          {
+            "name": "普通特效",
+            "alphaIndex": 0
+          },
+          {
+            "name": "前景特效",
+            "alphaIndex": 100
+          },
+          {
+            "name": "最前特效",
+            "alphaIndex": 200
+          }
+        ]
+      },
+      {
+        "renderingGroupId": 3,
+        "name": "世界空间 UI / 引导箭头",
+        "alphaIndexPresets": [
+          {
+            "name": "世界空间 UI",
+            "alphaIndex": 0
+          },
+          {
+            "name": "引导箭头",
+            "alphaIndex": 100
+          },
+          {
+            "name": "顶层提示",
+            "alphaIndex": 200
+          }
+        ]
+      }
+    ]
+  },
   "globalVolume": {
     "enabled": true,
     "imageProcessing": {
@@ -65,9 +141,10 @@
     }
   },
   "shadows": {
+    "defaultMode": "static",
     "enabled": false,
     "useCsm": false,
-    "useBlobShadow": false,
+    "useBlobShadow": true,
     "settings": {
       "mapSize": 1024,
       "darkness": 0.3,
@@ -84,10 +161,52 @@
       }
     },
     "blobSettings": {
-      "opacity": 0.2,
-      "yOffset": 0.02,
-      "sizeMultiplier": 1,
+      "opacity": 0.35,
+      "yOffset": 0.08,
+      "sizeMultiplier": 1.25,
       "minSize": 0.25
+    },
+    "blob": {
+      "enabled": true,
+      "plane": {
+        "height": 0,
+        "yOffset": 0.08
+      },
+      "appearance": {
+        "color": {
+          "r": 0,
+          "g": 0,
+          "b": 0,
+          "a": 0.35
+        },
+        "edgeSoftness": 0.55
+      },
+      "size": {
+        "sizeMultiplier": 1.25,
+        "minSize": 0.25,
+        "maxSize": 20
+      }
+    },
+    "staticProjected": {
+      "enabled": true,
+      "plane": {
+        "height": 0,
+        "yOffset": 0.08
+      },
+      "appearance": {
+        "color": {
+          "r": 0,
+          "g": 0,
+          "b": 0,
+          "a": 0.35
+        }
+      },
+      "bake": {
+        "resolution": 256,
+        "padding": 0.15,
+        "blur": 2,
+        "maxSize": 20
+      }
     },
     "shadowRange": {
       "minZ": 1,
@@ -141,12 +260,6 @@
       "receivers": {
         "patterns": []
       }
-    },
-    "blob": {
-      "enabled": true
-    },
-    "staticProjected": {
-      "enabled": true
     }
   },
   "shadowMeshes": {
