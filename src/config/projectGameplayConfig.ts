@@ -4,6 +4,39 @@ export interface ProjectResourceConfig {
   tags?: string[];
 }
 
+export interface ProjectVector3Config {
+  x: number;
+  y: number;
+  z: number;
+}
+
+export interface ProjectResourceVisualStackLayoutConfig {
+  mode?: 'grid' | 'line' | 'vertical' | 'custom';
+  columns?: number;
+  rows?: number;
+  spacing?: ProjectVector3Config;
+  origin?: ProjectVector3Config;
+  rotation?: ProjectVector3Config;
+  scale?: ProjectVector3Config;
+  layerHeight?: number;
+  align?: 'center' | 'start';
+}
+
+export interface ProjectResourceVisualStackConfig {
+  id: string;
+  containerId: string;
+  resourceId: string;
+  assetId: string;
+  areaId?: string;
+  bindingId?: string;
+  rootNodeId?: string;
+  runtimeParentId?: string;
+  maxVisible?: number;
+  layout?: ProjectResourceVisualStackLayoutConfig;
+  updateTiming?: 'onInventoryChange' | 'onFlightArrive' | 'manual';
+  debugLabel?: string;
+}
+
 export interface ProjectBackpackConfig {
   containerId: string;
   capacityByResource?: Record<string, number | null>;
@@ -49,6 +82,7 @@ export interface ProjectEndConditionConfig {
 
 export interface ProjectGameplaySkeletonConfig {
   resources: ProjectResourceConfig[];
+  resourceVisualStacks: ProjectResourceVisualStackConfig[];
   backpack: ProjectBackpackConfig;
   areas: ProjectAreaConfig[];
   queues: ProjectQueueConfig[];
@@ -67,6 +101,7 @@ export const PROJECT_GAMEPLAY_CONFIG: ProjectGameplaySkeletonConfig = {
   resources: [
     { id: 'cash', displayName: 'Cash', tags: ['currency'] },
   ],
+  resourceVisualStacks: [],
   backpack: {
     containerId: 'player_backpack',
     capacityByResource: {},
@@ -100,7 +135,7 @@ export const STANDARD_GAMEPLAY_PHASES = [
   {
     id: 'phase_3_area',
     label: 'Area',
-    systems: ['AreaSystem'],
+    systems: ['AreaSystem', 'ResourcesSystem'],
   },
   {
     id: 'phase_4_queue_economy',

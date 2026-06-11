@@ -26,7 +26,11 @@ export function createProjectGameplayModules(context: GameplayRuntimeContext): G
       capacityByResource: PROJECT_GAMEPLAY_CONFIG.backpack.capacityByResource,
     },
   ]);
-  const resources = new ResourcesSystem(PROJECT_GAMEPLAY_CONFIG.resources, runtimeNodes);
+  const resources = new ResourcesSystem(
+    PROJECT_GAMEPLAY_CONFIG.resources,
+    runtimeNodes,
+    PROJECT_GAMEPLAY_CONFIG.resourceVisualStacks,
+  );
   const economy = new EconomySystem();
   const backpack = new BackpackSystem(
     PROJECT_GAMEPLAY_CONFIG.backpack,
