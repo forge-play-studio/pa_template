@@ -77,9 +77,25 @@
 
 ### Gameplay State / Core Loop State
 
-`GameplayStateSystem` 是模板默认的游戏流程状态真源。`UpgradeSystem` 可以处理升级支付和完成事件，但升级完成后导致的阶段变化、里程碑、解锁、blocker、引导目标变化和结束条件，应写入或读取 `GameplayStateSystem` 或项目等价系统。
+`GameplayStateSystem` 是模板默认的游戏流程状态真源。`UpgradeSystem` 可以处理升级支付、进度和完成事件，但升级完成后具体发生什么必须来自 `gameplay.md` 的 Upgrade Completion Effects 合同。升级完成后导致的阶段变化、里程碑、解锁、blocker、引导目标变化和结束条件，应写入或读取 `GameplayStateSystem` 或项目等价系统。
 
 不要把游戏流程状态散落在 UI、debug 面板、`QueueSystem`、`GuideSystem` 或多个项目脚本里。资源数量、现金、背包容量和区域 enter/tick/leave 仍分别由 `InventorySystem`、`EconomySystem`、`BackpackSystem`、`AreaSystem` / `ZoneSystem` 承担。
+
+### Upgrade Completion Effects
+
+`pa_template` 不默认提供固定的 `LumberSceneVisibilitySystem`、`UnlockVisibilitySystem` 或项目专属解锁系统。每个项目必须在 `gameplay.md` 中说明每个升级完成后的具体效果；没有某类效果时应写 `None`，builder 不应从参考项目、scene node 名称或模板默认行为中猜测。
+
+常见升级完成效果包括：
+
+1. 标记 gameplay state / milestone。
+2. 显示、隐藏、启用或禁用 scene node / scene group。
+3. 开放或关闭 area、pay area、queue、machine、resource chain。
+4. 改变容量、速度、产量、范围、价格或冷却。
+5. 改变 Guide 目标。
+6. 改变 EndCondition。
+7. 播放 required presentation，例如 VFX、镜头、动画或音效。
+
+`UpgradeSystem` 默认只负责支付、进度、完成事件和 completed upgrade / milestone 写入。场景显隐、区域开放、资源链变化、容量 / 速度 / 产量变化、Guide 变化、EndCondition 变化和 required presentation 应由 `gameplay.md` 指定 owner system，再由项目侧 system、service 或 view 承接。
 
 ### Binding Contract
 
@@ -260,7 +276,7 @@ debug 面板职责边界：
 2. Backpack：`BackpackSystem`，资源动效和区域摆放表现由 `ResourcesSystem` / 表现服务承接
 3. Area：`AreaSystem`
 4. Queue + Economy：`QueueSystem`、`EconomySystem`
-5. GameplayState + Upgrade + Guide + EndCondition：`GameplayStateSystem`、`UpgradeSystem`、`GuideSystem`、`EndConditionSystem`
+5. GameplayState + Upgrade + Upgrade Completion Effects + Guide + EndCondition：`GameplayStateSystem`、`UpgradeSystem`、`GuideSystem`、`EndConditionSystem`，以及 `gameplay.md` 指定的项目侧 owner
 
 推荐协作方式是滚动推进：`gameplay.md` 先建立五阶段全局 Draft，再把当前要开发的阶段补到 `Ready for Builder`；builder 只开发 Ready 阶段，后续 Draft 阶段由用户和 gameplay 文档 AI 继续细化。
 
@@ -336,7 +352,7 @@ Phase 1 需要在 `gameplay.md` 中明确主控对象模型。模板默认只提
 6. `AreaSystem`：基于 `ZoneSystem` 的区域分类、active 状态和 debug bounds 数据。
 7. `ThreeCSystem`：输入源接入、相机目标、玩家 zone actor 和右手坐标系 readiness。
 8. `QueueSystem`：队列/售卖最小规则入口和 debug sell action。
-9. `UpgradeSystem`：升级状态、站立支付和完成事件。
+9. `UpgradeSystem`：升级状态、站立支付、进度和完成事件；升级完成后的具体效果来自 `gameplay.md`。
 10. `GuideSystem`：引导目标选择。
 11. `EndConditionSystem`：结束条件检测。
 
@@ -356,7 +372,7 @@ Phase 1 需要在 `gameplay.md` 中明确主控对象模型。模板默认只提
 | `AreaSystem` | 区域交互入口 | 从 `ZoneSystem` 接 enter/leave，维护 active area，按 category 查询区域，注册 `area.toggleBounds` | 把 `gameplay.zones` 映射成 resource / backpack / queue / upgrade / guide / end 区域；业务规则交给 Queue / Upgrade / 项目 system |
 | `ThreeCSystem` | 3C 接线和 readiness | 接入输入源、设置 player zone actor、同步 camera target、检查右手坐标系 | 第一阶段先验收移动、镜头、区域 actor、主控对象模型和项目资源 HUD；如果项目有可控载具/机器，只在 `gameplay.md` 写清后扩展主控切换，不要在这里写采集、售卖、升级规则 |
 | `QueueSystem` | 队列/售卖规则入口 | 提供 completeSale、记录 sale count、给 Economy 加 cash，注册 `queue.sellOnce` debug action | 先用 debug action 验收现金链路；项目需要顾客、车辆、定位点移动时在此扩展或新增 actor/system |
-| `UpgradeSystem` | 升级支付和完成规则 | 根据 active area 按秒扣 cash、推进 paidCash、完成 upgrade、写入 milestone，注册 `upgrade.complete` | 把升级费用、前置升级、解锁 milestone 写进 config；实际开门、显示机器等表现订阅完成状态 |
+| `UpgradeSystem` | 升级支付和完成规则 | 根据 active area 按秒扣 cash、推进 paidCash、完成 upgrade、写入 milestone，注册 `upgrade.complete` | 把升级费用、前置升级、解锁 milestone 写进 config；升级完成后的 scene visibility、区域开放、数值变化、Guide、EndCondition 和 required presentation 必须来自 `gameplay.md` 的 Upgrade Completion Effects，并由对应 owner 承接 |
 | `GuideSystem` | 引导目标选择 | 根据 milestone / upgrade 状态选择目标 binding，输出 source/target position | 只决定“指向哪里”；箭头、地面光圈、手指提示等表现放 UI 或 VFX |
 | `EndConditionSystem` | 结束条件检测 | 根据 completed upgrade 或 milestone 触发 complete | 用于 first playable 闭环结束、CTA/Endcard 前置触发；不要把结算 UI 写在这里 |
 | `ZoneSystem` | 几何区域检测 | 从 `gameplay.zones` 检测 enter/tick/leave | 保持为底层几何能力；不要把付款、售卖、升级、加工等规则写进 ZoneSystem |
@@ -378,7 +394,7 @@ Phase 1 需要在 `gameplay.md` 中明确主控对象模型。模板默认只提
 3. 用 `window.__paDebugActions['backpack.fill']()` 验收背包数量、容量和 HUD 更新。
 4. 用 `window.__paDebugActions['area.toggleBounds']()` 验收区域分类和 bounds 数据。
 5. 用 `window.__paDebugActions['queue.sellOnce']()` 验收 Queue -> Economy -> HUD 的现金链路。
-6. 用 `window.__paDebugActions['upgrade.complete']({ id: '<upgradeId>' })` 或站在 upgrade area 验收升级状态、milestone、Guide 和 EndCondition。
+6. 用 `window.__paDebugActions['upgrade.complete']({ id: '<upgradeId>' })` 或站在 upgrade area 验收升级状态、milestone、Upgrade Completion Effects、Guide 和 EndCondition。
 
 任何阶段如果要使用 runtime/dynamic 可见对象，先把对象写入 `gameplay.md` 的 Runtime Asset Contract，再加入 `scene.assets` 或项目等价 asset config，并确认 `warmupCount` 或项目约定的 warmup/max-active 假设。业务 system 只消费已声明资产，不临时绕过 loading 链路。
 
