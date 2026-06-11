@@ -264,6 +264,8 @@ debug 面板职责边界：
 
 推荐协作方式是滚动推进：`gameplay.md` 先建立五阶段全局 Draft，再把当前要开发的阶段补到 `Ready for Builder`；builder 只开发 Ready 阶段，后续 Draft 阶段由用户和 gameplay 文档 AI 继续细化。
 
+Phase 1 需要在 `gameplay.md` 中明确主控对象模型。模板默认只提供单一 player actor 的 3C 骨架；如果项目需要切换到载具、机器或其他 controlled actor，应作为项目侧 3C extension 实现，并在文档中先写清 control subjects、切换触发、mount / anchor、相机目标、输入 / 碰撞差异和资源 holder 规则。模板不默认提供 `VehicleSystem`。
+
 具体项目开发 first playable 时，推荐做法是：
 
 1. 优先在 `src/config/projectGameplayConfig.ts` 填资源、背包容量、区域、队列、升级、引导目标和结束条件。
@@ -352,7 +354,7 @@ debug 面板职责边界：
 | `ResourcesSystem` | 资源 catalog 和资源表现入口 | 管理资源 id、displayName、tags，按 binding/node 查询资源节点 | 在这里扩展资源飞行动画、身后背负、场景摆放、资源模型映射；数量结算仍交给 Inventory / Economy |
 | `BackpackSystem` | 玩家背包规则 | 连接 backpack container，提供 add/remove/clear/snapshot，注册 `backpack.fill` / `backpack.clear` debug action | 项目采集、拾取、提交时通过它操作玩家携带资源；身后视觉堆叠由 ResourcesSystem 或表现服务订阅处理 |
 | `AreaSystem` | 区域交互入口 | 从 `ZoneSystem` 接 enter/leave，维护 active area，按 category 查询区域，注册 `area.toggleBounds` | 把 `gameplay.zones` 映射成 resource / backpack / queue / upgrade / guide / end 区域；业务规则交给 Queue / Upgrade / 项目 system |
-| `ThreeCSystem` | 3C 接线和 readiness | 接入输入源、设置 player zone actor、同步 camera target、检查右手坐标系 | 第一阶段先验收移动、镜头、区域 actor 和项目资源 HUD；不要在这里写采集、售卖、升级规则 |
+| `ThreeCSystem` | 3C 接线和 readiness | 接入输入源、设置 player zone actor、同步 camera target、检查右手坐标系 | 第一阶段先验收移动、镜头、区域 actor、主控对象模型和项目资源 HUD；如果项目有可控载具/机器，只在 `gameplay.md` 写清后扩展主控切换，不要在这里写采集、售卖、升级规则 |
 | `QueueSystem` | 队列/售卖规则入口 | 提供 completeSale、记录 sale count、给 Economy 加 cash，注册 `queue.sellOnce` debug action | 先用 debug action 验收现金链路；项目需要顾客、车辆、定位点移动时在此扩展或新增 actor/system |
 | `UpgradeSystem` | 升级支付和完成规则 | 根据 active area 按秒扣 cash、推进 paidCash、完成 upgrade、写入 milestone，注册 `upgrade.complete` | 把升级费用、前置升级、解锁 milestone 写进 config；实际开门、显示机器等表现订阅完成状态 |
 | `GuideSystem` | 引导目标选择 | 根据 milestone / upgrade 状态选择目标 binding，输出 source/target position | 只决定“指向哪里”；箭头、地面光圈、手指提示等表现放 UI 或 VFX |
