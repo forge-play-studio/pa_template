@@ -239,6 +239,8 @@ zone 检测能力默认内置，但只负责矩形区域几何检测和 `enter/t
 
 具体玩法阶段的 debug 面板不在模板里默认写死。开发 Ready phase 时，builder 应按项目 `gameplay.md` 的 `Debug & Tuning` 合同，先使用 `debug-panel` skill，再在 `src/debug/runtime-<feature>-debug-panel.ts` 生成面板，并把 mount 注册到 `runtime-gameplay-debug-panels.ts`。
 
+阶段 debug coverage 应优先来自 wiki ability，而不是要求用户设计调试按钮。Phase 4 Queue + Economy 项目应按 `customer-queue`、`sell-system`、`basic-economy` 和相关 visual ability 的默认 debug coverage 生成队列拓扑、成员状态、订单进度、付款结算、经济/HUD 读数和 quick actions；用户只需要确认玩法事实、binding、asset 和项目专属表现。
+
 当项目实现 item flight、resource flight、payment flight、money stack collect flight 或 upgrade pay flight 时，`runtime-flight-debug-panel.ts` 或项目等价面板是该飞行功能的默认随附交付。用户不需要命名 `effectId` 或理解飞行算法；builder 根据 `gameplay.md` 的 Flight Tuning Contract 自动生成不重复的 effect id，参数写入 `PROJECT_GAMEPLAY_CONFIG.flightTuning` 或项目等价配置，运行系统通过 `projectFlightTuning.ts` 读取，debug 面板提供 live preview、Reset 和 Save。
 
 debug 面板职责边界：
@@ -417,6 +419,7 @@ Phase 4 的 Payment Settlement 默认按以下边界处理：
 3. `PROJECT_GAMEPLAY_CONFIG.paymentSettlement.mode` 默认是 `moneyStackCollect`；只有 `gameplay.md` 明确写出 simplified instant settlement 时，才改为 `instant`。
 4. 钱堆可见堆叠继续走 `resourceVisualStacks` / presentation service；模板默认只提供状态和 debug 骨架，不内置固定 `MoneyDropSystem`。
 5. 付款飞行、钱堆模型、收取飞行模型和 money stack binding / collect area 都必须来自 `gameplay.md` 的 Payment Settlement Contract、Binding Contract 和 Runtime Asset Contract。
+6. 如果项目有动态顾客、车辆或 NPC 队列，`QueueSystem` 或项目 queue actor system 必须按 wiki ability 扩展 debug snapshot、点位 overlay 和 queue quick actions；模板自带的 `queue.sellOnce` / `queue.collectMoneyStack` 只是默认结算链路的最小验收入口。
 
 阶段需要 runtime debug 面板时：
 
