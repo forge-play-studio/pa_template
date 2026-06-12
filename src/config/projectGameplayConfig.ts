@@ -37,6 +37,24 @@ export interface ProjectResourceVisualStackConfig {
   debugLabel?: string;
 }
 
+export interface ProjectFlightTuningValues {
+  durationSec?: number;
+  arcHeight?: number;
+  staggerSec?: number;
+  startDelaySec?: number;
+  triggerRadius?: number;
+  pickupIntervalSec?: number;
+  submitIntervalSec?: number;
+  payIntervalSec?: number;
+  processIntervalSec?: number;
+  scaleShrinkAmount?: number;
+  spinSpeed?: number;
+  visualScale?: number;
+  [key: string]: number | undefined;
+}
+
+export type ProjectFlightTuningConfig = Record<string, ProjectFlightTuningValues>;
+
 export interface ProjectBackpackConfig {
   containerId: string;
   capacityByResource?: Record<string, number | null>;
@@ -94,6 +112,7 @@ export interface ProjectEndConditionConfig {
 export interface ProjectGameplaySkeletonConfig {
   resources: ProjectResourceConfig[];
   resourceVisualStacks: ProjectResourceVisualStackConfig[];
+  flightTuning: ProjectFlightTuningConfig;
   paymentSettlement: ProjectPaymentSettlementConfig;
   backpack: ProjectBackpackConfig;
   areas: ProjectAreaConfig[];
@@ -114,6 +133,7 @@ export const PROJECT_GAMEPLAY_CONFIG: ProjectGameplaySkeletonConfig = {
     { id: 'cash', displayName: 'Cash', tags: ['currency'] },
   ],
   resourceVisualStacks: [],
+  flightTuning: {},
   paymentSettlement: {
     mode: 'moneyStackCollect',
     moneyResourceId: 'cash',

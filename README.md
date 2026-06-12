@@ -155,8 +155,9 @@ LoadingScreen 显示
 2. 基础游戏配置
 3. `gameplay.gameplayBindings` contract 入口
 4. 基于 `gameplay.zones` 的 zone runtime 配置
-5. `projectGameplayConfig.ts`：标准 first playable 系统的资源、背包、区域、队列、升级、引导、结束条件和 tuning 入口
-6. `scene.assets`：runtime asset 的 asset id / url / type / warmupCount 入口，供 loading preload 和 `ModelPool` warmup 使用
+5. `projectGameplayConfig.ts`：标准 first playable 系统的资源、背包、区域、队列、升级、引导、结束条件和 tuning 入口；其中 `flightTuning` 是项目道具飞行调参的默认配置落点
+6. `projectFlightTuning.ts`：道具飞行调参读取、缺失报错和 dev-only runtime preview helper，供项目 system 和 debug 面板共用
+7. `scene.assets`：runtime asset 的 asset id / url / type / warmupCount 入口，供 loading preload 和 `ModelPool` warmup 使用
 
 zone 检测能力默认内置，但只负责矩形区域几何检测和 `enter/tick/leave` 事件分发。区域上的付款、升级、售卖、背包、经济、解锁等规则由对应 project gameplay system 承接。ground UI、资源飞行、堆放动画等表现能力仍按项目或 ability 接入。
 
@@ -237,6 +238,8 @@ zone 检测能力默认内置，但只负责矩形区域几何检测和 `enter/t
 5. `runtime-gameplay-debug-panels.ts`：项目 gameplay debug 面板统一 dev-only mount 入口。
 
 具体玩法阶段的 debug 面板不在模板里默认写死。开发 Ready phase 时，builder 应按项目 `gameplay.md` 的 `Debug & Tuning` 合同，先使用 `debug-panel` skill，再在 `src/debug/runtime-<feature>-debug-panel.ts` 生成面板，并把 mount 注册到 `runtime-gameplay-debug-panels.ts`。
+
+当项目实现 item flight、resource flight、payment flight、money stack collect flight 或 upgrade pay flight 时，`runtime-flight-debug-panel.ts` 或项目等价面板是该飞行功能的默认随附交付。用户不需要命名 `effectId` 或理解飞行算法；builder 根据 `gameplay.md` 的 Flight Tuning Contract 自动生成不重复的 effect id，参数写入 `PROJECT_GAMEPLAY_CONFIG.flightTuning` 或项目等价配置，运行系统通过 `projectFlightTuning.ts` 读取，debug 面板提供 live preview、Reset 和 Save。
 
 debug 面板职责边界：
 
@@ -402,9 +405,10 @@ Phase 3 的区域资源摆放 / 场景库存堆叠按以下边界处理：
 
 1. `AreaSystem` 只负责区域分类、active 状态和 bounds debug。
 2. `InventorySystem` / `EconomySystem` / 项目等价系统保存真实数量。
-3. `ResourcesSystem` 或项目 presentation service 读取 `resourceVisualStacks`，负责资源飞行动效、摆放 root、可见堆叠刷新和调参入口。
+3. `ResourcesSystem` 或项目 presentation service 读取 `resourceVisualStacks` 和 `flightTuning`，负责资源飞行动效、自动分配后的 effect id 消费、摆放 root、可见堆叠刷新和调参入口。
 4. `resourceVisualStacks` 应来自 `gameplay.md` 的 Resource Visual Stack / Area Placement Contract，至少写清 `containerId`、`resourceId`、`assetId`、`areaId` / `bindingId` / `rootNodeId`、`maxVisible`、layout、update timing 和 debug 需求。
 5. depot、货架、机器输入/输出、现金堆、车辆货斗、售卖台等用模型表达库存的场景，都使用这类配置或项目等价配置；不要为每个场景默认新增固定命名的 system。
+6. 道具飞行调参不是 optional polish；只要项目使用飞行表现，就必须由 builder 生成对应 debug coverage，并通过 `runtime-gameplay-debug-panels.ts` 挂载。
 
 Phase 4 的 Payment Settlement 默认按以下边界处理：
 
@@ -422,6 +426,7 @@ Phase 4 的 Payment Settlement 默认按以下边界处理：
 4. 多个面板共用 `debug-panel-layout.ts`，不要各自写固定坐标。
 5. 面板统一从 `runtime-gameplay-debug-panels.ts` 注册，并通过 `src/main.ts` 的 dev-only dynamic import 加载。
 6. 面板调业务动作时优先调用 `DebugActionRegistry` 注册的 action；需要调 runtime 数值时，系统或配置模块应提供 preview setter。
+7. 道具飞行面板应复用 `projectFlightTuning.ts` 的 runtime preview helper；完整面板由 builder 根据项目 Flight Tuning Contract 生成，不在模板里预置项目 effect id。
 
 ### `ui/`
 

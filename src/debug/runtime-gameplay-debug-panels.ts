@@ -17,6 +17,7 @@ type RuntimeGameplayDebugPanelMount = (options: Required<RuntimeGameplayDebugPan
 
 const panelMounts: RuntimeGameplayDebugPanelMount[] = [
   // Phase-specific debug panels generated through the debug-panel skill should be registered here.
+  // Projects that implement item/resource/payment flight should register their runtime-flight-debug-panel here.
 ];
 
 export function mountRuntimeGameplayDebugPanels(options: RuntimeGameplayDebugPanelsOptions): RuntimeGameplayDebugPanels {

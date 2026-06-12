@@ -6,6 +6,7 @@
 
 export * from './types';
 export * from './projectGameplayConfig';
+export * from './projectFlightTuning';
 export { ConfigService, configService } from './ConfigService';
 export {
   assertSceneJsonV2,
