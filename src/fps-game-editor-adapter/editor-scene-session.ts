@@ -1,7 +1,8 @@
 import {
   type DocumentCommand,
   type EditorPlacementHit,
-  type EditorTransformSnapshot,
+  type EditorTransformSnapshot as PlayableEditorTransformSnapshot,
+  type EditorTransformTrsSnapshot,
   type InspectorObject,
   type InspectorProperty,
   type InspectorSection,
@@ -22,6 +23,7 @@ import {
   combineEditorTransforms,
   createIdentityEditorTransform,
   getTopLevelSceneGraphNodeIds,
+  isEditorTransformTrsSnapshot,
   toEditorLocalTransformFromWorld,
 } from '@fps-games/editor/playable-sdk';
 import {
@@ -169,6 +171,8 @@ import {
   readDirectionalLightAngles,
 } from './editor-lighting-utils';
 import { getActiveRenderingProfile } from '../rendering/editor-rendering-profile-store';
+
+type EditorTransformSnapshot = EditorTransformTrsSnapshot;
 
 export type EditorSceneDocumentPatch =
   | ({ kind: 'serialized-property' } & SerializedPropertyPatch)
@@ -1038,7 +1042,7 @@ function normalizeEditorSceneRootTransformDocument(document: EditorSceneDocument
     const childTransform = findEditorSceneTransform(gameObject);
     if (!childTransform) return gameObject;
     const bakedTransform = combineEditorTransforms(rootLocalTransform, readRawGameObjectLocalTransform(gameObject));
-    if (!bakedTransform) return gameObject;
+    if (!bakedTransform || !isEditorTransformTrsSnapshot(bakedTransform)) return gameObject;
     const next = patchEditorSceneGameObjectLocalTransform(gameObject, bakedTransform);
     changed = changed || next !== gameObject;
     return next;
@@ -1928,15 +1932,17 @@ export function getEditorSceneGameObjectWorldTransform(
   document: EditorSceneDocument,
   gameObjectId: string,
 ): EditorTransformSnapshot | null {
-  return getPlayableEditorSceneGameObjectWorldTransform(document, gameObjectId);
+  const transform = getPlayableEditorSceneGameObjectWorldTransform(document, gameObjectId);
+  return transform && isEditorTransformTrsSnapshot(transform) ? transform : null;
 }
 
 export function toEditorSceneLocalTransformFromWorld(
   document: EditorSceneDocument,
   gameObjectId: string,
-  worldTransform: EditorTransformSnapshot,
+  worldTransform: PlayableEditorTransformSnapshot,
 ): EditorTransformSnapshot | null {
-  return toPlayableEditorSceneLocalTransformFromWorld(document, gameObjectId, worldTransform);
+  const transform = toPlayableEditorSceneLocalTransformFromWorld(document, gameObjectId, worldTransform);
+  return transform && isEditorTransformTrsSnapshot(transform) ? transform : null;
 }
 
 export function createEditorScenePatchFromRuntimePatch(
@@ -2494,7 +2500,7 @@ function resolveEditorSceneRootContainerId(document: EditorSceneDocument): strin
 function toLocalTransformForParent(
   document: EditorSceneDocument,
   parentId: string | undefined,
-  world: EditorTransformSnapshot,
+  world: PlayableEditorTransformSnapshot,
 ): EditorTransformSnapshot | null {
   const parentWorld = parentId ? getEditorSceneGameObjectWorldTransform(document, parentId) : createIdentityEditorTransform();
   return parentWorld ? toLocalTransformFromParentWorld(parentWorld, world) : null;
@@ -2502,9 +2508,10 @@ function toLocalTransformForParent(
 
 function toLocalTransformFromParentWorld(
   parentWorld: EditorTransformSnapshot,
-  world: EditorTransformSnapshot,
+  world: PlayableEditorTransformSnapshot,
 ): EditorTransformSnapshot | null {
-  return toEditorLocalTransformFromWorld(parentWorld, world);
+  const transform = toEditorLocalTransformFromWorld(parentWorld, world);
+  return transform && isEditorTransformTrsSnapshot(transform) ? transform : null;
 }
 
 function readRawGameObjectLocalTransform(gameObject: EditorSceneGameObject): EditorTransformSnapshot {

@@ -27,21 +27,21 @@ import {
   type EditorSceneGameObject as PlayableEditorSceneGameObject,
   type EditorSceneModelRendererComponent as PlayableEditorSceneModelRendererComponent,
   type EditorScenePrimitiveRenderer as PlayableEditorScenePrimitiveRenderer,
-  type EditorSceneTransformComponent as PlayableEditorSceneTransformComponent,
+  type EditorSceneTransformTrsComponent as PlayableEditorSceneTransformTrsComponent,
   type EditorSceneVec3 as PlayableEditorSceneVec3,
   type AuthoringSourceRef,
 } from '@fps-games/editor/playable-sdk';
 
 export type { EditorSceneCameraInspectorLanguage };
 
-export interface EditorSceneVec3 extends PlayableEditorSceneVec3 {}
+export type EditorSceneVec3 = PlayableEditorSceneVec3;
 
 export interface EditorSceneAsset extends PlayableEditorSceneAsset<
   SceneAssetDefaults,
   AssetExternalRef,
   SceneAssetMaterialMode
 > {
-  type: 'glb';
+  type: 'glb' | 'texture';
   materialMode?: SceneAssetMaterialMode;
   defaults?: SceneAssetDefaults;
   external?: AssetExternalRef;
@@ -60,9 +60,9 @@ export interface EditorSceneAssetLibraryItem extends PlayableEditorSceneAssetLib
   origin: 'project';
 }
 
-export interface EditorSceneTransformComponent extends PlayableEditorSceneTransformComponent {}
+export type EditorSceneTransformComponent = PlayableEditorSceneTransformTrsComponent;
 
-export interface EditorSceneModelRendererComponent extends PlayableEditorSceneModelRendererComponent {}
+export type EditorSceneModelRendererComponent = PlayableEditorSceneModelRendererComponent;
 
 export interface EditorScenePrimitiveRenderer extends PlayableEditorScenePrimitiveRenderer<ScenePrimitiveShape> {
   shape: ScenePrimitiveShape;
@@ -135,7 +135,8 @@ export function cloneEditorSceneDocument(document: EditorSceneDocument): EditorS
 export function findEditorSceneTransform(
   gameObject: EditorSceneGameObject,
 ): EditorSceneTransformComponent | null {
-  return findPlayableEditorSceneTransform(gameObject) as EditorSceneTransformComponent | null;
+  const transform = findPlayableEditorSceneTransform(gameObject);
+  return transform && isEditorSceneTransformComponent(transform) ? transform : null;
 }
 
 export function findEditorSceneModelRenderer(
@@ -168,7 +169,7 @@ export function patchEditorSceneGameObjectTransform(
         return {
           ...gameObject,
           components: gameObject.components.map((component) => {
-            if (component.type !== 'Transform') return component;
+            if (!isEditorSceneTransformComponent(component)) return component;
             return {
               ...component,
               position: patch.position ?? component.position,
@@ -180,4 +181,10 @@ export function patchEditorSceneGameObjectTransform(
       }),
     },
   };
+}
+
+function isEditorSceneTransformComponent(
+  component: PlayableEditorSceneComponent,
+): component is EditorSceneTransformComponent {
+  return component.type === 'Transform' && 'position' in component && 'rotation' in component;
 }

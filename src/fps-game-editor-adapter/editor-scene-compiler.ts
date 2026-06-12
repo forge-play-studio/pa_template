@@ -80,7 +80,9 @@ export function compileEditorSceneDocumentToSceneConfig(
   };
   nextSceneConfig.scene = {
     rootId,
-    assets: documentWithResolvedMaterialAssets.assets.map(compileAsset),
+    assets: documentWithResolvedMaterialAssets.assets
+      .filter(isEditorSceneModelAsset)
+      .map(compileAsset),
     nodes: compiledGameObjects.map((gameObject) => compileGameObject(gameObject, sourceRef, documentWithResolvedMaterialAssets)),
     materialAssets,
     materials: previousScene?.materials ?? [],
@@ -125,7 +127,13 @@ function resolveCompiledEditorSceneMaterialAssets(
   return materialAssets;
 }
 
-function compileAsset(asset: EditorSceneAsset): SceneAssetConfig {
+type EditorSceneModelAsset = EditorSceneAsset & { type: 'glb' };
+
+function isEditorSceneModelAsset(asset: EditorSceneAsset): asset is EditorSceneModelAsset {
+  return asset.type === 'glb';
+}
+
+function compileAsset(asset: EditorSceneModelAsset): SceneAssetConfig {
   return {
     id: asset.id,
     type: asset.type,
