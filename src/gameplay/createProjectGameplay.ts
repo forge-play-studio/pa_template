@@ -25,6 +25,12 @@ export function createProjectGameplayModules(context: GameplayRuntimeContext): G
       id: PROJECT_GAMEPLAY_CONFIG.backpack.containerId,
       capacityByResource: PROJECT_GAMEPLAY_CONFIG.backpack.capacityByResource,
     },
+    {
+      id: PROJECT_GAMEPLAY_CONFIG.paymentSettlement.moneyStackContainerId,
+      capacityByResource: {
+        [PROJECT_GAMEPLAY_CONFIG.paymentSettlement.moneyResourceId]: null,
+      },
+    },
   ]);
   const resources = new ResourcesSystem(
     PROJECT_GAMEPLAY_CONFIG.resources,
@@ -42,6 +48,8 @@ export function createProjectGameplayModules(context: GameplayRuntimeContext): G
   const area = new AreaSystem(PROJECT_GAMEPLAY_CONFIG.areas, context.zoneSystem, debugActions);
   const queue = new QueueSystem(
     PROJECT_GAMEPLAY_CONFIG.queues,
+    PROJECT_GAMEPLAY_CONFIG.paymentSettlement,
+    inventory,
     economy,
     gameplayState,
     debugActions,

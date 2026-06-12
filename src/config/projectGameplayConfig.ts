@@ -56,6 +56,17 @@ export interface ProjectQueueConfig {
   rewardCash?: number;
 }
 
+export type ProjectPaymentSettlementMode = 'moneyStackCollect' | 'instant';
+
+export interface ProjectPaymentSettlementConfig {
+  mode: ProjectPaymentSettlementMode;
+  moneyResourceId: string;
+  moneyStackContainerId: string;
+  moneyStackAreaId?: string;
+  moneyStackBindingId?: string;
+  collectTrigger?: 'playerNear' | 'debugAction' | 'manual';
+}
+
 export interface ProjectUpgradeConfig {
   id: string;
   areaId?: string;
@@ -83,6 +94,7 @@ export interface ProjectEndConditionConfig {
 export interface ProjectGameplaySkeletonConfig {
   resources: ProjectResourceConfig[];
   resourceVisualStacks: ProjectResourceVisualStackConfig[];
+  paymentSettlement: ProjectPaymentSettlementConfig;
   backpack: ProjectBackpackConfig;
   areas: ProjectAreaConfig[];
   queues: ProjectQueueConfig[];
@@ -102,6 +114,12 @@ export const PROJECT_GAMEPLAY_CONFIG: ProjectGameplaySkeletonConfig = {
     { id: 'cash', displayName: 'Cash', tags: ['currency'] },
   ],
   resourceVisualStacks: [],
+  paymentSettlement: {
+    mode: 'moneyStackCollect',
+    moneyResourceId: 'cash',
+    moneyStackContainerId: 'money_stack',
+    collectTrigger: 'playerNear',
+  },
   backpack: {
     containerId: 'player_backpack',
     capacityByResource: {},

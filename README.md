@@ -79,7 +79,7 @@
 
 `GameplayStateSystem` 是模板默认的游戏流程状态真源。`UpgradeSystem` 可以处理升级支付、进度和完成事件，但升级完成后具体发生什么必须来自 `gameplay.md` 的 Upgrade Completion Effects 合同。升级完成后导致的阶段变化、里程碑、解锁、blocker、引导目标变化和结束条件，应写入或读取 `GameplayStateSystem` 或项目等价系统。
 
-不要把游戏流程状态散落在 UI、debug 面板、`QueueSystem`、`GuideSystem` 或多个项目脚本里。资源数量、现金、背包容量和区域 enter/tick/leave 仍分别由 `InventorySystem`、`EconomySystem`、`BackpackSystem`、`AreaSystem` / `ZoneSystem` 承担。
+不要把游戏流程状态散落在 UI、debug 面板、`QueueSystem`、`GuideSystem` 或多个项目脚本里。资源数量、pending 钱堆、现金、背包容量和区域 enter/tick/leave 仍分别由 `InventorySystem`、`EconomySystem`、`BackpackSystem`、`AreaSystem` / `ZoneSystem` 承担。
 
 ### Upgrade Completion Effects
 
@@ -275,7 +275,7 @@ debug 面板职责边界：
 1. 3C + Resources + 项目资源 HUD：`ThreeCSystem`、`ResourcesSystem`
 2. Backpack：`BackpackSystem`，资源动效和区域摆放表现由 `ResourcesSystem` / 表现服务承接
 3. Area：`AreaSystem`、`ResourcesSystem`
-4. Queue + Economy：`QueueSystem`、`EconomySystem`
+4. Queue + Economy：`QueueSystem`、`EconomySystem`，默认使用钱堆收取结算
 5. GameplayState + Upgrade + Upgrade Completion Effects + Guide + EndCondition：`GameplayStateSystem`、`UpgradeSystem`、`GuideSystem`、`EndConditionSystem`，以及 `gameplay.md` 指定的项目侧 owner
 
 推荐协作方式是滚动推进：`gameplay.md` 先建立五阶段全局 Draft，再把当前要开发的阶段补到 `Ready for Builder`；builder 只开发 Ready 阶段，后续 Draft 阶段由用户和 gameplay 文档 AI 继续细化。
@@ -366,12 +366,12 @@ Phase 1 需要在 `gameplay.md` 中明确主控对象模型。模板默认只提
 | --- | --- | --- | --- |
 | `GameplayStateSystem` | 全局 gameplay 状态真源 | 记录 stage、milestone、completed upgrades、blocker、complete | 让 Queue / Upgrade / Guide / EndCondition 写入或读取阶段状态；不要把资源数量或 UI 状态放进这里 |
 | `InventorySystem` | 通用资源容器 | 管理 container 内 resource 数量、容量、add/remove/clear、change event | 作为 Backpack、机器输入/输出、场景容器的底层数量服务；项目不应直接用 UI 改它 |
-| `EconomySystem` | 现金状态真源 | 管理 cash、add、spend、canAfford、cash change event | Queue 售卖加钱、Upgrade 支付扣钱、HUD 订阅展示；不要把木头、石头等普通资源放这里 |
+| `EconomySystem` | 现金状态真源 | 管理 cash、add、spend、canAfford、cash change event | 玩家收取钱堆后加钱、Upgrade 支付扣钱、HUD 订阅展示；不要把木头、石头等普通资源或未收取的钱堆 pending 放这里 |
 | `ResourcesSystem` | 资源 catalog 和资源表现入口 | 管理资源 id、displayName、tags，按 binding/node 查询资源节点，读取 `resourceVisualStacks` 配置 | 在这里扩展资源飞行动画、身后背负、场景摆放、资源视觉堆叠、资源模型映射；数量结算仍交给 Inventory / Economy |
 | `BackpackSystem` | 玩家背包规则 | 连接 backpack container，提供 add/remove/clear/snapshot，注册 `backpack.fill` / `backpack.clear` debug action | 项目采集、拾取、提交时通过它操作玩家携带资源；身后视觉堆叠由 ResourcesSystem 或表现服务订阅处理 |
 | `AreaSystem` | 区域交互入口 | 从 `ZoneSystem` 接 enter/leave，维护 active area，按 category 查询区域，注册 `area.toggleBounds` | 把 `gameplay.zones` 映射成 resource / backpack / queue / upgrade / guide / end 区域；业务规则交给 Queue / Upgrade / 项目 system |
 | `ThreeCSystem` | 3C 接线和 readiness | 接入输入源、设置 player zone actor、同步 camera target、检查右手坐标系 | 第一阶段先验收移动、镜头、区域 actor、主控对象模型和项目资源 HUD；如果项目有可控载具/机器，只在 `gameplay.md` 写清后扩展主控切换，不要在这里写采集、售卖、升级规则 |
-| `QueueSystem` | 队列/售卖规则入口 | 提供 completeSale、记录 sale count、给 Economy 加 cash，注册 `queue.sellOnce` debug action | 先用 debug action 验收现金链路；项目需要顾客、车辆、定位点移动时在此扩展或新增 actor/system |
+| `QueueSystem` | 队列/售卖规则入口 | 提供 completeSale、记录 sale count、默认把 reward 放入 money stack container，注册 `queue.sellOnce` / `queue.collectMoneyStack` debug action | 先用 debug action 验收“售卖进钱堆 -> 玩家收取后到账”；项目需要顾客、车辆、定位点移动时在此扩展或新增 actor/system |
 | `UpgradeSystem` | 升级支付和完成规则 | 根据 active area 按秒扣 cash、推进 paidCash、完成 upgrade、写入 milestone，注册 `upgrade.complete` | 把升级费用、前置升级、解锁 milestone 写进 config；升级完成后的 scene visibility、区域开放、数值变化、Guide、EndCondition 和 required presentation 必须来自 `gameplay.md` 的 Upgrade Completion Effects，并由对应 owner 承接 |
 | `GuideSystem` | 引导目标选择 | 根据 milestone / upgrade 状态选择目标 binding，输出 source/target position | 只决定“指向哪里”；箭头、地面光圈、手指提示等表现放 UI 或 VFX |
 | `EndConditionSystem` | 结束条件检测 | 根据 completed upgrade 或 milestone 触发 complete | 用于 first playable 闭环结束、CTA/Endcard 前置触发；不要把结算 UI 写在这里 |
@@ -393,7 +393,7 @@ Phase 1 需要在 `gameplay.md` 中明确主控对象模型。模板默认只提
 2. 用项目资源 HUD 和 `ThreeCSystem.getSnapshot()` 验收移动、镜头、右手坐标系和资源 catalog。
 3. 用 `window.__paDebugActions['backpack.fill']()` 验收背包数量、容量和 HUD 更新。
 4. 用 `window.__paDebugActions['area.toggleBounds']()` 验收区域分类和 bounds 数据。
-5. 用 `window.__paDebugActions['queue.sellOnce']()` 验收 Queue -> Economy -> HUD 的现金链路。
+5. 用 `window.__paDebugActions['queue.sellOnce']()` 验收订单完成后 pending 钱堆增加且 HUD 不提前加钱，再用 `window.__paDebugActions['queue.collectMoneyStack']()` 验收玩家收取后 Economy -> HUD 的现金链路。
 6. 用 `window.__paDebugActions['upgrade.complete']({ id: '<upgradeId>' })` 或站在 upgrade area 验收升级状态、milestone、Upgrade Completion Effects、Guide 和 EndCondition。
 
 任何阶段如果要使用 runtime/dynamic 可见对象，先把对象写入 `gameplay.md` 的 Runtime Asset Contract，再加入 `scene.assets` 或项目等价 asset config，并确认 `warmupCount` 或项目约定的 warmup/max-active 假设。业务 system 只消费已声明资产，不临时绕过 loading 链路。
@@ -405,6 +405,14 @@ Phase 3 的区域资源摆放 / 场景库存堆叠按以下边界处理：
 3. `ResourcesSystem` 或项目 presentation service 读取 `resourceVisualStacks`，负责资源飞行动效、摆放 root、可见堆叠刷新和调参入口。
 4. `resourceVisualStacks` 应来自 `gameplay.md` 的 Resource Visual Stack / Area Placement Contract，至少写清 `containerId`、`resourceId`、`assetId`、`areaId` / `bindingId` / `rootNodeId`、`maxVisible`、layout、update timing 和 debug 需求。
 5. depot、货架、机器输入/输出、现金堆、车辆货斗、售卖台等用模型表达库存的场景，都使用这类配置或项目等价配置；不要为每个场景默认新增固定命名的 system。
+
+Phase 4 的 Payment Settlement 默认按以下边界处理：
+
+1. `QueueSystem.completeSale()` 表示订单 / 售卖完成，只把 reward 写入 `paymentSettlement.moneyStackContainerId` 对应的 pending 钱堆；默认不直接 `EconomySystem.addCash()`。
+2. 玩家靠近钱堆、点击 debug action 或项目收取逻辑完成后，才从 money stack container 移除金额并调用 `EconomySystem.addCash()`，HUD 通过 Economy listener 更新。
+3. `PROJECT_GAMEPLAY_CONFIG.paymentSettlement.mode` 默认是 `moneyStackCollect`；只有 `gameplay.md` 明确写出 simplified instant settlement 时，才改为 `instant`。
+4. 钱堆可见堆叠继续走 `resourceVisualStacks` / presentation service；模板默认只提供状态和 debug 骨架，不内置固定 `MoneyDropSystem`。
+5. 付款飞行、钱堆模型、收取飞行模型和 money stack binding / collect area 都必须来自 `gameplay.md` 的 Payment Settlement Contract、Binding Contract 和 Runtime Asset Contract。
 
 阶段需要 runtime debug 面板时：
 
