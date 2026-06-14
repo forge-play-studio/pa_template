@@ -1,5 +1,4 @@
 import type { GameplayModule } from '../gameplay';
-import type { DebugActionRegistry } from '../services';
 import type { ProjectUpgradeConfig } from '../config/projectGameplayConfig';
 import type { AreaSystem } from './AreaSystem';
 import type { EconomySystem } from './EconomySystem';
@@ -16,14 +15,12 @@ export interface UpgradeState {
 export class UpgradeSystem implements GameplayModule {
   private readonly states = new Map<string, UpgradeState>();
   private readonly paymentCarryByUpgradeId = new Map<string, number>();
-  private unregisterComplete: (() => void) | null = null;
 
   constructor(
     private readonly upgrades: ProjectUpgradeConfig[],
     private readonly areaSystem: AreaSystem,
     private readonly economy: EconomySystem,
     private readonly gameplayState: GameplayStateSystem,
-    private readonly debugActions: DebugActionRegistry,
     private readonly payRateCashPerSecond: number,
   ) {}
 
@@ -37,16 +34,6 @@ export class UpgradeSystem implements GameplayModule {
         completed: false,
       });
     }
-    this.unregisterComplete = this.debugActions.register({
-      id: 'upgrade.complete',
-      label: 'Complete upgrade',
-      run: ({ payload }) => {
-        const id = readString(payload, 'id') ?? this.upgrades[0]?.id;
-        if (!id) return { ok: false, message: 'No upgrade id available.' };
-        this.complete(id);
-        return { ok: true, upgrades: this.getUpgradeStates() };
-      },
-    });
   }
 
   update(deltaTime: number): void {
@@ -79,6 +66,10 @@ export class UpgradeSystem implements GameplayModule {
     return [...this.states.values()].map((state) => ({ ...state }));
   }
 
+  getDefaultUpgradeId(): string | null {
+    return this.upgrades[0]?.id ?? null;
+  }
+
   complete(id: string): void {
     const state = this.states.get(id);
     if (!state || state.completed) return;
@@ -91,16 +82,9 @@ export class UpgradeSystem implements GameplayModule {
   }
 
   dispose(): void {
-    this.unregisterComplete?.();
   }
 
   private isVisible(upgrade: ProjectUpgradeConfig): boolean {
     return (upgrade.revealAfter ?? []).every((id) => this.gameplayState.isUpgradeComplete(id));
   }
-}
-
-function readString(payload: unknown, key: string): string | null {
-  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return null;
-  const value = (payload as Record<string, unknown>)[key];
-  return typeof value === 'string' ? value : null;
 }

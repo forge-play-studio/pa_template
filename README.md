@@ -34,9 +34,9 @@
 13. 可直接启用的构建增强插件：`thirdPartyWhitelist / locale / optimizePng / visualizer`
 14. `ZoneSystem`：消费当前 `SceneConfig` 中的 `gameplay.zones`，并维护 enter/tick/leave 区域状态
 15. 标准 first playable gameplay 骨架：3C、Resources、Backpack、Area、Queue、Economy、Upgrade、Guide、EndCondition
-16. 默认调试入口：`DebugActionRegistry`，用于项目侧 debug 面板或 console quick action 触发
+16. dev-only runtime debug bootstrap：`src/debug/runtime-debug-bootstrap.ts`，统一挂载模板基础调试工具和玩法阶段面板
 17. 默认运行时节点查询封装：`RuntimeNodeService`，用于从 gameplay binding / scene node 稳定拿 runtime node
-18. 默认 debug 面板基础设施：`src/debug/debug-panel-layout.ts` 和 `src/debug/runtime-gameplay-debug-panels.ts`
+18. 默认 debug 面板基础设施：`src/debug/framework/*`、`src/debug/panel-manifest.ts` 和 `src/debug/runtime-gameplay-debug-panels.ts`
 19. 默认 loading 链路：`Game.init` 在 gameplay modules 初始化前 preload `scene.assets`，并按 `warmupCount` 通过 `ModelPool` 做 runtime asset warmup
 
 当前不应默认假设已经完整包含：
@@ -243,10 +243,12 @@ zone 检测能力默认内置，但只负责矩形区域几何检测和 `enter/t
 1. `camera-debug-panel.ts`：编辑器相机 runtime 调试面板。
 2. `runtime-lighting-debug-panel.ts`：编辑器灯光 runtime 调试面板。
 3. `local-editor-mode-switcher.ts`：本地编辑器/游戏模式切换入口。
-4. `debug-panel-layout.ts`：项目 gameplay debug 面板的共享底部 dock、global hide/show 和 panel container helper。
-5. `runtime-gameplay-debug-panels.ts`：项目 gameplay debug 面板统一 dev-only mount 入口。
+4. `runtime-debug-bootstrap.ts`：dev-only debug 总入口；只由 `src/main.ts` 的 dev dynamic import 加载。
+5. `framework/`：debug 面板基础能力，包括 dock layout、controls、config client、overlay、action registry 和 disposable helpers。
+6. `panel-manifest.ts`：玩法阶段面板注册 manifest。模板默认不注册具体玩法面板，builder 按阶段生成。
+7. `runtime-gameplay-debug-panels.ts`：读取 panel manifest 并统一 mount 玩法阶段 debug 面板。
 
-具体玩法阶段的 debug 面板不在模板里默认写死。开发 Ready phase 时，builder 应按项目 `gameplay.md` 的 `Debug & Tuning` 合同，先使用 `debug-panel` skill，再在 `src/debug/runtime-<feature>-debug-panel.ts` 生成面板，并把 mount 注册到 `runtime-gameplay-debug-panels.ts`。
+具体玩法阶段的 debug 面板不在模板里默认写死。开发 Ready phase 时，builder 应按项目 `gameplay.md` 的 `Debug & Tuning` 合同，先使用 `debug-panel` skill，再在 `src/debug/runtime-<feature>-debug-panel.ts` 生成面板，并把 descriptor 注册到 `src/debug/panel-manifest.ts`。
 
 阶段 debug coverage 应默认来自 wiki ability / 阶段标准，而不是要求用户设计调试按钮。builder 应根据项目 `gameplay.md` 中的玩法事实、binding、asset 和 owner system 自动生成标准面板项；用户只需要确认玩法事实和默认面板之外的项目专属表现或调试修改需求。Phase 2 Backpack 项目应按 `backpack-system` 默认 debug coverage 生成玩家背包数据、容量、可视化堆叠、endpoint preview 和 fill / clear actions；只有 `gameplay.md` 明确声明非玩家 actor carry 时，才按 `actor-carry-stack` 生成对应 debug coverage。Phase 4 Queue + Economy 项目应按 `customer-queue`、`sell-system`、`basic-economy` 和相关 visual ability 的默认 debug coverage 生成队列拓扑、成员状态、订单进度、付款结算、经济/HUD 读数和 quick actions。
 
@@ -258,7 +260,7 @@ debug 面板职责边界：
 
 1. 面板只负责调参、诊断、preview、Reset、Save 和 quick action UI。
 2. 业务规则留在对应 `systems/`、`services/` 或 `entities/`。
-3. quick action 通过 `DebugActionRegistry` 或 system/service debug API 调用，不在面板里复制玩法逻辑。
+3. quick action 通过 dev-only `RuntimeDebugActionRegistry` 或正式 system/service runtime API 调用，不在面板里复制玩法逻辑。
 4. numeric tuning 的持久化应写回源码配置。当前 dev server 已提供 `/__debug_panel_config`，允许读写 `src/config/*.json`；标准 gameplay tuning 默认写回 `src/config/gameplay.json`。
 5. 面板必须由 `src/main.ts` 的 dev-only dynamic import 链路加载，不要在 production-owned 文件里静态 import debug module 的值。
 6. production / package build 不得 mount runtime debug panel、注册 `window.__paDebugActions`、暴露 debug HUD / tuning UI，正式 gameplay 逻辑也不得依赖 debug-only API。
@@ -332,7 +334,6 @@ Phase 1 需要在 `gameplay.md` 中明确主控对象模型。模板默认只提
 
 1. `GameplayBindingService`：只负责 authored gameplay binding 查询，不拥有具体 gameplay 规则。
 2. `RuntimeNodeService`：把 binding id、logicType、scene node id 映射到 runtime node，并输出 binding readiness issue。
-3. `DebugActionRegistry`：dev-only debug action 注册入口，供 debug 面板、console 或测试触发系统动作。
 
 如果某个服务只服务于特定玩法或表现能力，例如轨迹动画、资源计数等，优先参考 [`pa_abilities`](https://github.com/forge-play-studio/pa_abilities) 的形态沉淀，而不是默认留在模板基础层。
 
@@ -364,12 +365,12 @@ Phase 1 需要在 `gameplay.md` 中明确主控对象模型。模板默认只提
 模板当前默认内置标准 first playable 系统骨架：
 
 1. `GameplayStateSystem`：阶段、里程碑、升级完成和 blocker 状态。
-2. `BackpackSystem`：玩家背包数量、容量、装填 / 取出、身后可视化和 dev-only debug fill/clear。
+2. `BackpackSystem`：玩家背包数量、容量、装填 / 取出和身后可视化数据入口。
 3. `EconomySystem`：现金状态和扣费能力。
 4. `ResourcesSystem`：资源 catalog、资源绑定查询和资源链表现扩展入口。
-5. `AreaSystem`：基于 `ZoneSystem` 的区域分类、active 状态和 debug bounds 数据。
+5. `AreaSystem`：基于 `ZoneSystem` 的区域分类、active 状态和 bounds / diagnostics 数据。
 6. `ThreeCSystem`：输入源接入、相机目标、玩家 zone actor 和右手坐标系 readiness。
-7. `QueueSystem`：队列/售卖最小规则入口和 debug sell action。
+7. `QueueSystem`：队列/售卖最小规则入口和 pending 钱堆结算入口。
 8. `UpgradeSystem`：升级状态、站立支付、进度和完成事件；升级完成后的具体效果来自 `gameplay.md`。
 9. `GuideSystem`：引导目标选择。
 10. `EndConditionSystem`：结束条件检测。
@@ -387,11 +388,11 @@ Phase 1 需要在 `gameplay.md` 中明确主控对象模型。模板默认只提
 | `GameplayStateSystem` | 全局 gameplay 状态真源 | 记录 stage、milestone、completed upgrades、blocker、complete | 让 Queue / Upgrade / Guide / EndCondition 写入或读取阶段状态；不要把资源数量或 UI 状态放进这里 |
 | `EconomySystem` | 现金状态真源 | 管理 cash、add、spend、canAfford、cash change event | 玩家收取钱堆后加钱、Upgrade 支付扣钱、HUD 订阅展示；不要把木头、石头等普通资源或未收取的钱堆 pending 放这里 |
 | `ResourcesSystem` | 资源 catalog 和资源表现入口 | 管理资源 id、displayName、tags，按 binding/node 查询资源节点，读取 `resourceVisualStacks` 配置 | 在这里扩展资源飞行动画、场景摆放、资源视觉堆叠、资源模型映射；数量结算仍交给 Backpack / Economy / 项目 resource owner；非玩家 actor carry 只在 gameplay.md 明确声明时接项目 adapter |
-| `BackpackSystem` | 玩家背包数据和可视化真源 | 管理玩家携带资源、容量、add/remove/clear/snapshot，注册 dev-only `backpack.fill` / `backpack.clear` debug action | 项目采集、拾取、提交时通过它操作玩家携带资源；玩家身后视觉堆叠也由它或其表现 adapter 负责，不为默认玩家背包新增 `actor-carry-stack` |
-| `AreaSystem` | 区域交互入口 | 从 `ZoneSystem` 接 enter/leave，维护 active area，按 category 查询区域，注册 `area.toggleBounds` | 把 `gameplay.zones` 映射成 resource / backpack / queue / upgrade / guide / end 区域；业务规则交给 Queue / Upgrade / 项目 system |
+| `BackpackSystem` | 玩家背包数据和可视化真源 | 管理玩家携带资源、容量、add/remove/clear/snapshot，并提供 preview-friendly runtime API | 项目采集、拾取、提交时通过它操作玩家携带资源；玩家身后视觉堆叠也由它或其表现 adapter 负责，不为默认玩家背包新增 `actor-carry-stack` |
+| `AreaSystem` | 区域交互入口 | 从 `ZoneSystem` 接 enter/leave，维护 active area，按 category 查询区域，输出 bounds diagnostics | 把 `gameplay.zones` 映射成 resource / backpack / queue / upgrade / guide / end 区域；业务规则交给 Queue / Upgrade / 项目 system |
 | `ThreeCSystem` | 3C 接线和 readiness | 接入输入源、设置 player zone actor、同步 camera target、检查右手坐标系 | 第一阶段先验收移动、镜头、区域 actor、主控对象模型和项目资源 HUD；如果项目有可控载具/机器，只在 `gameplay.md` 写清后扩展主控切换，不要在这里写采集、售卖、升级规则 |
-| `QueueSystem` | 队列/售卖规则入口 | 提供 completeSale、记录 sale count、默认把 reward 放入 money stack container，注册 `queue.sellOnce` / `queue.collectMoneyStack` debug action | 先用 debug action 验收“售卖进钱堆 -> 玩家收取后到账”；项目需要顾客、车辆、定位点移动时在此扩展或新增 actor/system |
-| `UpgradeSystem` | 升级支付和完成规则 | 根据 active area 按秒扣 cash、推进 paidCash、完成 upgrade、写入 milestone，注册 `upgrade.complete` | 把升级费用、前置升级、解锁 milestone 写进 config；升级完成后的 scene visibility、区域开放、数值变化、Guide、EndCondition 和 required presentation 必须来自 `gameplay.md` 的 Upgrade Completion Effects，并由对应 owner 承接 |
+| `QueueSystem` | 队列/售卖规则入口 | 提供 completeSale、记录 sale count、默认把 reward 放入 money stack container，并提供收取 pending 钱堆的 runtime API | 先用生成的阶段 debug 面板验收“售卖进钱堆 -> 玩家收取后到账”；项目需要顾客、车辆、定位点移动时在此扩展或新增 actor/system |
+| `UpgradeSystem` | 升级支付和完成规则 | 根据 active area 按秒扣 cash、推进 paidCash、完成 upgrade、写入 milestone，并暴露 complete runtime API | 把升级费用、前置升级、解锁 milestone 写进 config；升级完成后的 scene visibility、区域开放、数值变化、Guide、EndCondition 和 required presentation 必须来自 `gameplay.md` 的 Upgrade Completion Effects，并由对应 owner 承接 |
 | `GuideSystem` | 引导目标选择 | 根据 milestone / upgrade 状态选择目标 binding，输出 source/target position | 只决定“指向哪里”；箭头、地面光圈、手指提示等表现放 UI 或 VFX |
 | `EndConditionSystem` | 结束条件检测 | 根据 completed upgrade 或 milestone 触发 complete | 用于 first playable 闭环结束、CTA/Endcard 前置触发；不要把结算 UI 写在这里 |
 | `ZoneSystem` | 几何区域检测 | 从 `gameplay.zones` 检测 enter/tick/leave | 保持为底层几何能力；不要把付款、售卖、升级、加工等规则写进 ZoneSystem |
@@ -401,7 +402,7 @@ Phase 1 需要在 `gameplay.md` 中明确主控对象模型。模板默认只提
 | 模块 | 主要作用 | 推荐用法 |
 | --- | --- | --- |
 | `RuntimeNodeService` | binding id / logicType / scene node 到 runtime node 的查询封装 | system 需要 scene node 时通过它查；缺 binding 时输出 readiness issue，不静默猜节点 |
-| `DebugActionRegistry` | dev-only debug action 注册入口 | debug 面板或 console 统一调用 `window.__paDebugActions`；生产逻辑不要依赖它 |
+| `src/debug/framework/*` | dev-only debug 基础能力 | builder 生成阶段 debug 面板时复用 layout、controls、config client、overlay 和 action registry；生产逻辑不要静态 import |
 | `GameHud` | 默认最小 HUD | 展示 cash 和 backpack snapshot；项目可扩展显示位置、资源图标、容量、阶段信息 |
 | `VirtualJoystick` | 移动输入源 | 默认接入 `InputService`；项目如替换输入 UI，保持 `MovementInputSource` 接口即可 |
 | `GuideArrowView` | 最小引导箭头表现 | 订阅 `GuideSystem` snapshot；复杂引导表现可替换该 UI，不改 GuideSystem 规则 |
@@ -410,10 +411,10 @@ Phase 1 需要在 `gameplay.md` 中明确主控对象模型。模板默认只提
 
 1. 在 `src/config/gameplay.json` 填 resource、resource visual stacks、backpack capacity、area、queue、upgrade、guide target、end condition。
 2. 用项目资源 HUD 和 `ThreeCSystem.getSnapshot()` 验收移动、镜头、右手坐标系和资源 catalog。
-3. 用 `window.__paDebugActions['backpack.fill']()` 验收背包数量、容量和 HUD 更新。
-4. 用 `window.__paDebugActions['area.toggleBounds']()` 验收区域分类和 bounds 数据。
-5. 用 `window.__paDebugActions['queue.sellOnce']()` 验收订单完成后 pending 钱堆增加且 HUD 不提前加钱，再用 `window.__paDebugActions['queue.collectMoneyStack']()` 验收玩家收取后 Economy -> HUD 的现金链路。
-6. 用 `window.__paDebugActions['upgrade.complete']({ id: '<upgradeId>' })` 或站在 upgrade area 验收升级状态、milestone、Upgrade Completion Effects、Guide 和 EndCondition。
+3. 用 Phase 2 生成的 Backpack debug 面板验收背包数量、容量、preview fill/clear 和 HUD 更新。
+4. 用 Phase 3 生成的 Area / Flight / Placement debug 面板验收区域分类、bounds、飞行动效和摆放参数。
+5. 用 Phase 4 生成的 Queue + Economy debug 面板验收订单完成后 pending 钱堆增加且 HUD 不提前加钱，再验收玩家收取后 Economy -> HUD 的现金链路。
+6. 用 Phase 5 生成的 Upgrade + Guide debug 面板或站在 upgrade area 验收升级状态、milestone、Upgrade Completion Effects、Guide 和 EndCondition。
 
 任何阶段如果要使用 runtime/dynamic 可见对象，先把对象写入 `gameplay.md` 的 Runtime Asset Contract，再加入 `scene.assets` 或项目等价 asset config，并确认 `warmupCount` 或项目约定的 warmup/max-active 假设。业务 system 只消费已声明资产，不临时绕过 loading 链路。
 
@@ -435,16 +436,16 @@ Phase 4 的 Payment Settlement 默认按以下边界处理：
 4. 钱堆可见堆叠继续走 `resourceVisualStacks` / presentation service；模板默认只提供状态和 debug 骨架，不内置固定 `MoneyDropSystem`。
 5. 付款飞行、钱堆模型、收取飞行模型和 money stack binding / collect area 都必须来自 `gameplay.md` 的 Payment Settlement Contract、Binding Contract 和 Runtime Asset Contract。
 6. 模板自带 `QueueSystem` 是静态售卖 / 结算骨架，不内置动态 `QueueMember`、`CustomerQueueController` 或模型池生命周期。
-7. 如果项目有动态顾客、车辆、NPC 或其他 queue member，`gameplay.md` 必须先写 Queue Member / Runtime Spawn Contract，覆盖 member asset、spawn / wait / service / exit 点位、runtime parent、pool / warmup / max-active、movement owner 和 service trigger；项目 `QueueSystem` 或 queue actor system 再按 `customer-queue` wiki ability 扩展 debug snapshot、点位 overlay 和 queue quick actions。模板自带的 `queue.sellOnce` / `queue.collectMoneyStack` 只是默认结算链路的最小验收入口。
+7. 如果项目有动态顾客、车辆、NPC 或其他 queue member，`gameplay.md` 必须先写 Queue Member / Runtime Spawn Contract，覆盖 member asset、spawn / wait / service / exit 点位、runtime parent、pool / warmup / max-active、movement owner 和 service trigger；项目 `QueueSystem` 或 queue actor system 再按 `customer-queue` wiki ability 扩展 debug snapshot、点位 overlay 和 queue quick actions。模板只提供默认结算链路的 runtime API，具体 debug 面板和 quick action 由 builder 按阶段生成。
 
 阶段需要 runtime debug 面板时：
 
 1. `gameplay.md` 必须先写清 `Debug & Tuning`：面板名、owner system/service、controls、quick actions、diagnostics、source config save path 和验收用途。标准 controls、quick actions 和 diagnostics 由文档 AI 按 wiki ability / 阶段标准填入，不要求用户逐项设计。
 2. builder 必须先使用 `debug-panel` skill。
 3. 具体面板放在 `src/debug/runtime-<feature>-debug-panel.ts`。
-4. 多个面板共用 `debug-panel-layout.ts`，不要各自写固定坐标。
-5. 面板统一从 `runtime-gameplay-debug-panels.ts` 注册，并通过 `src/main.ts` 的 dev-only dynamic import 加载。
-6. 面板调业务动作时优先调用 `DebugActionRegistry` 注册的 action；需要调 runtime 数值时，系统或配置模块应提供 preview setter。
+4. 多个面板共用 `src/debug/framework/panel-layout.ts`，不要各自写固定坐标。
+5. 面板统一注册到 `src/debug/panel-manifest.ts`，由 `runtime-gameplay-debug-panels.ts` mount，并通过 `src/main.ts` 的 dev-only dynamic import 加载。
+6. 面板调业务动作时优先调用正式 system/service runtime API；需要 console quick action 时，只在 dev-only 面板侧注册 `RuntimeDebugActionRegistry` action；需要调 runtime 数值时，系统或配置模块应提供 preview setter。
 7. 道具飞行面板应复用 `projectFlightTuning.ts` 的 runtime preview helper；完整面板由 builder 根据项目 Flight Tuning Contract 生成，不在模板里预置项目 effect id。
 
 ### `ui/`

@@ -57,6 +57,13 @@ export interface ProjectFlightTuningValues {
 
 export type ProjectFlightTuningConfig = Record<string, ProjectFlightTuningValues>;
 
+export interface ProjectThreeCConfig {
+  player: {
+    speed: number;
+    radius: number;
+  };
+}
+
 export interface ProjectBackpackConfig {
   containerId: string;
   capacityByResource?: Record<string, number | null>;
@@ -115,6 +122,7 @@ export interface ProjectGameplaySkeletonConfig {
   resources: ProjectResourceConfig[];
   resourceVisualStacks: ProjectResourceVisualStackConfig[];
   flightTuning: ProjectFlightTuningConfig;
+  threeC: ProjectThreeCConfig;
   paymentSettlement: ProjectPaymentSettlementConfig;
   backpack: ProjectBackpackConfig;
   areas: ProjectAreaConfig[];
@@ -123,10 +131,7 @@ export interface ProjectGameplaySkeletonConfig {
   guideTargets: ProjectGuideTargetConfig[];
   endConditions: ProjectEndConditionConfig[];
   tuning: {
-    playerSpeed: number;
     upgradePayRateCashPerSecond: number;
-    debugBackpackFillAmount: number;
-    debugQueueSaleRewardCash: number;
   };
 }
 

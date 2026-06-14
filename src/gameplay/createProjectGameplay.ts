@@ -1,6 +1,6 @@
 import type { GameplayModule, GameplayRuntimeContext } from './types';
 import { PROJECT_GAMEPLAY_CONFIG } from '../config/projectGameplayConfig';
-import { DebugActionRegistry, RuntimeNodeService } from '../services';
+import { RuntimeNodeService } from '../services';
 import {
   AreaSystem,
   BackpackSystem,
@@ -16,9 +16,33 @@ import {
 } from '../systems';
 import { GameHud, GuideArrowView, VirtualJoystick } from '../ui';
 
-export function createProjectGameplayModules(context: GameplayRuntimeContext): GameplayModule[] {
+export interface ProjectGameplayRuntime {
+  modules: GameplayModule[];
+  services: {
+    runtimeNodes: RuntimeNodeService;
+  };
+  systems: {
+    gameplayState: GameplayStateSystem;
+    inventory: InventorySystem;
+    economy: EconomySystem;
+    resources: ResourcesSystem;
+    backpack: BackpackSystem;
+    area: AreaSystem;
+    threeC: ThreeCSystem;
+    queue: QueueSystem;
+    upgrades: UpgradeSystem;
+    guide: GuideSystem;
+    endConditions: EndConditionSystem;
+  };
+  ui: {
+    joystick: VirtualJoystick;
+    hud: GameHud;
+    guideArrow: GuideArrowView;
+  };
+}
+
+export function createProjectGameplayRuntime(context: GameplayRuntimeContext): ProjectGameplayRuntime {
   const runtimeNodes = new RuntimeNodeService(context.sceneBuilder);
-  const debugActions = new DebugActionRegistry();
   const gameplayState = new GameplayStateSystem();
   const inventory = new InventorySystem([
     {
@@ -42,25 +66,20 @@ export function createProjectGameplayModules(context: GameplayRuntimeContext): G
     PROJECT_GAMEPLAY_CONFIG.backpack,
     inventory,
     resources,
-    debugActions,
-    PROJECT_GAMEPLAY_CONFIG.tuning.debugBackpackFillAmount,
   );
-  const area = new AreaSystem(PROJECT_GAMEPLAY_CONFIG.areas, context.zoneSystem, debugActions);
+  const area = new AreaSystem(PROJECT_GAMEPLAY_CONFIG.areas, context.zoneSystem);
   const queue = new QueueSystem(
     PROJECT_GAMEPLAY_CONFIG.queues,
     PROJECT_GAMEPLAY_CONFIG.paymentSettlement,
     inventory,
     economy,
     gameplayState,
-    debugActions,
-    PROJECT_GAMEPLAY_CONFIG.tuning.debugQueueSaleRewardCash,
   );
   const upgrades = new UpgradeSystem(
     PROJECT_GAMEPLAY_CONFIG.upgrades,
     area,
     economy,
     gameplayState,
-    debugActions,
     PROJECT_GAMEPLAY_CONFIG.tuning.upgradePayRateCashPerSecond,
   );
   const joystick = new VirtualJoystick();
@@ -85,8 +104,7 @@ export function createProjectGameplayModules(context: GameplayRuntimeContext): G
   const endConditions = new EndConditionSystem(PROJECT_GAMEPLAY_CONFIG.endConditions, gameplayState);
   const hudBindings = createHudBindingModule(hud, economy, backpack);
 
-  return [
-    debugActions,
+  const modules: GameplayModule[] = [
     joystick,
     hud,
     gameplayState,
@@ -103,6 +121,35 @@ export function createProjectGameplayModules(context: GameplayRuntimeContext): G
     endConditions,
     hudBindings,
   ];
+
+  return {
+    modules,
+    services: {
+      runtimeNodes,
+    },
+    systems: {
+      gameplayState,
+      inventory,
+      economy,
+      resources,
+      backpack,
+      area,
+      threeC,
+      queue,
+      upgrades,
+      guide,
+      endConditions,
+    },
+    ui: {
+      joystick,
+      hud,
+      guideArrow,
+    },
+  };
+}
+
+export function createProjectGameplayModules(context: GameplayRuntimeContext): GameplayModule[] {
+  return createProjectGameplayRuntime(context).modules;
 }
 
 function createHudBindingModule(

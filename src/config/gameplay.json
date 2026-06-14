@@ -8,6 +8,12 @@
   ],
   "resourceVisualStacks": [],
   "flightTuning": {},
+  "threeC": {
+    "player": {
+      "speed": 4.2,
+      "radius": 0.35
+    }
+  },
   "paymentSettlement": {
     "mode": "moneyStackCollect",
     "moneyResourceId": "cash",
@@ -29,9 +35,6 @@
   "guideTargets": [],
   "endConditions": [],
   "tuning": {
-    "playerSpeed": 4.2,
-    "upgradePayRateCashPerSecond": 10,
-    "debugBackpackFillAmount": 10,
-    "debugQueueSaleRewardCash": 1
+    "upgradePayRateCashPerSecond": 10
   }
 }

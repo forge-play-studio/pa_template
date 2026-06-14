@@ -15,7 +15,8 @@
     "test:asset-manager-guid-external": "node scripts/check-asset-manager-guid-external.mjs",
     "test:editor-canonical-assets": "node scripts/check-editor-canonical-assets.mjs",
     "test:asset-registry-unregister": "node scripts/check-asset-registry-unregister-guard.mjs",
-    "build": "tsc && vite build",
+    "build": "tsc && vite build && npm run check:prod-debug",
+    "check:prod-debug": "node scripts/check-production-debug-surface.mjs",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit"
   },

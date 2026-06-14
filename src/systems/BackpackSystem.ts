@@ -1,5 +1,4 @@
 import type { GameplayModule } from '../gameplay';
-import type { DebugActionRegistry } from '../services';
 import type { ProjectBackpackConfig } from '../config/projectGameplayConfig';
 import type { InventoryChangeEvent, InventorySystem } from './InventorySystem';
 import type { ResourcesSystem } from './ResourcesSystem';
@@ -13,16 +12,12 @@ type Listener = (snapshot: BackpackSnapshot) => void;
 
 export class BackpackSystem implements GameplayModule {
   private readonly listeners = new Set<Listener>();
-  private unregisterFill: (() => void) | null = null;
-  private unregisterClear: (() => void) | null = null;
   private unsubscribeInventory: (() => void) | null = null;
 
   constructor(
     private readonly config: ProjectBackpackConfig,
     private readonly inventory: InventorySystem,
     private readonly resources: ResourcesSystem,
-    private readonly debugActions: DebugActionRegistry,
-    private readonly debugFillAmount: number,
   ) {}
 
   init(): void {
@@ -31,19 +26,6 @@ export class BackpackSystem implements GameplayModule {
       capacityByResource: this.config.capacityByResource,
     });
     this.unsubscribeInventory = this.inventory.onChange((event) => this.handleInventoryChange(event));
-    this.unregisterFill = this.debugActions.register({
-      id: 'backpack.fill',
-      label: 'Fill backpack',
-      run: ({ payload }) => this.debugFill(payload),
-    });
-    this.unregisterClear = this.debugActions.register({
-      id: 'backpack.clear',
-      label: 'Clear backpack',
-      run: () => {
-        this.clear('debug');
-        return { ok: true, snapshot: this.getSnapshot() };
-      },
-    });
   }
 
   getSnapshot(): BackpackSnapshot {
@@ -65,6 +47,15 @@ export class BackpackSystem implements GameplayModule {
     this.inventory.clear(this.config.containerId, reason);
   }
 
+  fillForPreview(resourceId: string | null, amount: number, reason = 'debug_preview'): BackpackSnapshot {
+    const resolvedResourceId = resourceId
+      ?? this.resources.getBackpackResourceIds()[0]
+      ?? this.resources.getResourceIds()[0]
+      ?? 'debug_resource';
+    this.add(resolvedResourceId, amount, reason);
+    return this.getSnapshot();
+  }
+
   onChange(listener: Listener): () => void {
     this.listeners.add(listener);
     listener(this.getSnapshot());
@@ -72,20 +63,8 @@ export class BackpackSystem implements GameplayModule {
   }
 
   dispose(): void {
-    this.unregisterFill?.();
-    this.unregisterClear?.();
     this.unsubscribeInventory?.();
     this.listeners.clear();
-  }
-
-  private debugFill(payload: unknown): { ok: boolean; snapshot: BackpackSnapshot; message?: string } {
-    const data = isRecord(payload) ? payload : {};
-    const resourceId = typeof data.resourceId === 'string'
-      ? data.resourceId
-      : this.resources.getBackpackResourceIds()[0] ?? this.resources.getResourceIds()[0] ?? 'debug_resource';
-    const amount = typeof data.amount === 'number' ? data.amount : this.debugFillAmount;
-    this.add(resourceId, amount, 'debug');
-    return { ok: true, snapshot: this.getSnapshot() };
   }
 
   private handleInventoryChange(event: InventoryChangeEvent): void {
@@ -93,8 +72,4 @@ export class BackpackSystem implements GameplayModule {
     const snapshot = this.getSnapshot();
     for (const listener of this.listeners) listener(snapshot);
   }
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return !!value && typeof value === 'object' && !Array.isArray(value);
 }

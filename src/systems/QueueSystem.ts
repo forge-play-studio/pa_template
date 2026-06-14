@@ -1,5 +1,4 @@
 import type { GameplayModule } from '../gameplay';
-import type { DebugActionRegistry } from '../services';
 import type { ProjectPaymentSettlementConfig, ProjectQueueConfig } from '../config/projectGameplayConfig';
 import type { EconomySystem } from './EconomySystem';
 import type { GameplayStateSystem } from './GameplayStateSystem';
@@ -15,8 +14,6 @@ export interface QueueSnapshot {
 export class QueueSystem implements GameplayModule {
   private saleCount = 0;
   private lastRewardCash = 0;
-  private unregisterSellOnce: (() => void) | null = null;
-  private unregisterCollectMoneyStack: (() => void) | null = null;
 
   constructor(
     private readonly queues: ProjectQueueConfig[],
@@ -24,30 +21,7 @@ export class QueueSystem implements GameplayModule {
     private readonly inventory: InventorySystem,
     private readonly economy: EconomySystem,
     private readonly gameplayState: GameplayStateSystem,
-    private readonly debugActions: DebugActionRegistry,
-    private readonly fallbackRewardCash: number,
   ) {}
-
-  init(): void {
-    this.unregisterSellOnce = this.debugActions.register({
-      id: 'queue.sellOnce',
-      label: 'Complete one queue sale',
-      run: ({ payload }) => {
-        const reward = readNumber(payload, 'rewardCash') ?? this.queues[0]?.rewardCash ?? this.fallbackRewardCash;
-        this.completeSale(reward, 'debug');
-        return { ok: true, snapshot: this.getSnapshot() };
-      },
-    });
-    this.unregisterCollectMoneyStack = this.debugActions.register({
-      id: 'queue.collectMoneyStack',
-      label: 'Collect pending money stack',
-      run: ({ payload }) => {
-        const amount = readNumber(payload, 'amount') ?? Number.POSITIVE_INFINITY;
-        const collected = this.collectMoneyStack(amount, 'debug_collect_money_stack');
-        return { ok: true, collected, snapshot: this.getSnapshot() };
-      },
-    });
-  }
 
   completeSale(rewardCash: number, reason?: string): void {
     const reward = Math.max(0, Math.floor(rewardCash));
@@ -94,14 +68,10 @@ export class QueueSystem implements GameplayModule {
     };
   }
 
-  dispose(): void {
-    this.unregisterSellOnce?.();
-    this.unregisterCollectMoneyStack?.();
+  getDefaultRewardCash(fallbackRewardCash = 1): number {
+    return this.queues[0]?.rewardCash ?? fallbackRewardCash;
   }
-}
 
-function readNumber(payload: unknown, key: string): number | null {
-  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return null;
-  const value = (payload as Record<string, unknown>)[key];
-  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+  dispose(): void {
+  }
 }

@@ -37,7 +37,7 @@ import {
 const liteBuild = process.env.LITE_BUILD === 'true';
 const isProduction = process.env.NODE_ENV === 'production';
 const bridgeEnabled = process.env.BRIDGE_ENABLED !== 'false';
-const bundleStatsEnabled = process.env.BUNDLE_STATS !== 'false';
+const bundleStatsEnabled = process.env.BUNDLE_STATS === 'true';
 const locale = (process.env.LOCALE || 'EN').toUpperCase();
 const channel = process.env.CHANNEL || 'applovin';
 const isRTL = ['AR', 'FA', 'HE', 'UR'].includes(locale);

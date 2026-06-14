@@ -1,5 +1,4 @@
 import type { GameplayModule } from '../gameplay';
-import type { DebugActionRegistry } from '../services';
 import type { ProjectAreaConfig } from '../config/projectGameplayConfig';
 import type { ZoneEvent, ZoneSystem } from './ZoneSystem';
 
@@ -15,12 +14,10 @@ export class AreaSystem implements GameplayModule {
   private debugBoundsVisible = false;
   private unsubscribeEnter: (() => void) | null = null;
   private unsubscribeLeave: (() => void) | null = null;
-  private unregisterDebugToggle: (() => void) | null = null;
 
   constructor(
     areas: ProjectAreaConfig[],
     private readonly zoneSystem: ZoneSystem,
-    private readonly debugActions: DebugActionRegistry,
   ) {
     for (const area of areas) this.areaByZoneId.set(area.zoneId, { ...area });
   }
@@ -28,14 +25,6 @@ export class AreaSystem implements GameplayModule {
   init(): void {
     this.unsubscribeEnter = this.zoneSystem.onEnter((event) => this.handleEnter(event));
     this.unsubscribeLeave = this.zoneSystem.onLeave((event) => this.handleLeave(event));
-    this.unregisterDebugToggle = this.debugActions.register({
-      id: 'area.toggleBounds',
-      label: 'Toggle area bounds',
-      run: () => {
-        this.debugBoundsVisible = !this.debugBoundsVisible;
-        return { ok: true, snapshot: this.getSnapshot(), bounds: this.getDebugBounds() };
-      },
-    });
   }
 
   isAreaActive(areaId: string): boolean {
@@ -67,10 +56,18 @@ export class AreaSystem implements GameplayModule {
     }));
   }
 
+  setDebugBoundsVisible(visible: boolean): AreaSnapshot {
+    this.debugBoundsVisible = visible;
+    return this.getSnapshot();
+  }
+
+  toggleDebugBounds(): AreaSnapshot {
+    return this.setDebugBoundsVisible(!this.debugBoundsVisible);
+  }
+
   dispose(): void {
     this.unsubscribeEnter?.();
     this.unsubscribeLeave?.();
-    this.unregisterDebugToggle?.();
     this.activeZoneIds.clear();
   }
 

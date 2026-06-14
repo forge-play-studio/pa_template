@@ -58,10 +58,10 @@ import { ZoneSystem } from '../systems';
 // 实体 / UI（脚手架）
 import { SimplePlayer } from '../entities';
 
-import { configService } from '../config';
+import { configService, PROJECT_GAMEPLAY_CONFIG } from '../config';
 import type { SceneConfig } from '../config';
-import { createProjectGameplayModules } from '../gameplay';
-import type { GameplayModule } from '../gameplay';
+import { createProjectGameplayRuntime } from '../gameplay';
+import type { GameplayModule, ProjectGameplayRuntime } from '../gameplay';
 
 export interface GameOptions {
   canvasId: string;
@@ -98,6 +98,7 @@ export class Game {
 
   // Project gameplay modules
   private gameplayModules: GameplayModule[] = [];
+  private projectGameplayRuntime: ProjectGameplayRuntime | null = null;
 
   // Loop state
   private isRunning = false;
@@ -228,8 +229,8 @@ export class Game {
     const startPos = new Vector3(0, 0.35, 0);
     this.player = new SimplePlayer(this.scene, this.inputService, {
       position: startPos,
-      speed: 4.2,
-      radius: 0.35,
+      speed: PROJECT_GAMEPLAY_CONFIG.threeC.player.speed,
+      radius: PROJECT_GAMEPLAY_CONFIG.threeC.player.radius,
       visible: this.showPlayerPlaceholder,
     });
 
@@ -263,7 +264,7 @@ export class Game {
       return;
     }
 
-    this.gameplayModules = createProjectGameplayModules({
+    this.projectGameplayRuntime = createProjectGameplayRuntime({
       scene: this.scene,
       camera: this.camera,
       assetLoader: this.assetLoader,
@@ -279,6 +280,7 @@ export class Game {
       player: this.player,
       zoneSystem: this.zoneSystem,
     });
+    this.gameplayModules = this.projectGameplayRuntime.modules;
 
     for (const module of this.gameplayModules) {
       await module.init?.();
@@ -393,6 +395,10 @@ export class Game {
     return this.zoneSystem;
   }
 
+  getProjectGameplayRuntime(): ProjectGameplayRuntime | null {
+    return this.projectGameplayRuntime;
+  }
+
   getSceneNodeRuntime(id: string): any | null {
     return this.sceneBuilder?.getSceneNodeRuntime(id) ?? null;
   }
@@ -420,6 +426,7 @@ export class Game {
       this.gameplayModules[i].dispose?.();
     }
     this.gameplayModules = [];
+    this.projectGameplayRuntime = null;
 
     this.player?.dispose();
     this.player = null;

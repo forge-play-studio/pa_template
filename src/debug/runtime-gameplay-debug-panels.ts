@@ -1,40 +1,46 @@
 import type { Game } from '../core/Game';
+import type { ProjectGameplayRuntime } from '../gameplay';
+import type { Disposable } from './framework/disposables';
+import type { RuntimeDebugActionRegistry } from './framework/debug-action-registry';
 import {
   installDebugPanelLayout,
   type RuntimeDebugPanelLayoutController,
-} from './debug-panel-layout';
+} from './framework/panel-layout';
+import { runtimeGameplayDebugPanelDescriptors } from './panel-manifest';
 
 export interface RuntimeGameplayDebugPanelsOptions {
   root?: HTMLElement;
   getGame: () => Game | null;
+  getGameplayRuntime: () => ProjectGameplayRuntime | null;
+  actions: RuntimeDebugActionRegistry;
 }
 
-export interface RuntimeGameplayDebugPanels {
-  dispose(): void;
+export interface RuntimeGameplayDebugPanelDescriptor {
+  id: string;
+  title: string;
+  phase: number | 'presentation' | 'framework';
+  mount(options: Required<RuntimeGameplayDebugPanelsOptions>): Disposable;
 }
 
-type RuntimeGameplayDebugPanelMount = (options: Required<RuntimeGameplayDebugPanelsOptions>) => RuntimeGameplayDebugPanels;
-
-const panelMounts: RuntimeGameplayDebugPanelMount[] = [
-  // Phase-specific debug panels generated through the debug-panel skill should be registered here.
-  // Projects that implement item/resource/payment flight should register their runtime-flight-debug-panel here.
-];
+export type RuntimeGameplayDebugPanels = Disposable;
 
 export function mountRuntimeGameplayDebugPanels(options: RuntimeGameplayDebugPanelsOptions): RuntimeGameplayDebugPanels {
   const root = options.root ?? document.body;
   const mountOptions: Required<RuntimeGameplayDebugPanelsOptions> = {
     root,
     getGame: options.getGame,
+    getGameplayRuntime: options.getGameplayRuntime,
+    actions: options.actions,
   };
   let layout: RuntimeDebugPanelLayoutController | null = null;
-  const panels: RuntimeGameplayDebugPanels[] = [];
+  const panels: Disposable[] = [];
 
-  if (panelMounts.length > 0) {
+  if (runtimeGameplayDebugPanelDescriptors.length > 0) {
     layout = installDebugPanelLayout(root);
   }
 
-  for (const mount of panelMounts) {
-    panels.push(mount(mountOptions));
+  for (const descriptor of runtimeGameplayDebugPanelDescriptors) {
+    panels.push(descriptor.mount(mountOptions));
   }
 
   return {

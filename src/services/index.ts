@@ -32,8 +32,6 @@ export type {
   RuntimeBindingIssueType,
   RuntimeBindingReadinessReport,
 } from './RuntimeNodeService';
-export { DebugActionRegistry } from './DebugActionRegistry';
-export type { DebugAction, DebugActionContext } from './DebugActionRegistry';
 export {
   ASSET_MANAGER_ERROR_CODES,
   planAssetRegistration,
