@@ -81,6 +81,14 @@
 
 不要把游戏流程状态散落在 UI、debug 面板、`QueueSystem`、`GuideSystem` 或多个项目脚本里。玩家背包数量、容量和身后可视化由 `BackpackSystem` 承担；现金由 `EconomySystem` 承担；pending 钱堆由 `QueueSystem` 或项目 settlement owner 承担；区域 enter/tick/leave 由 `AreaSystem` / `ZoneSystem` 承担。
 
+### Config Discipline / No Hardcoded Gameplay Numbers
+
+所有 gameplay、balance 和 presentation tuning 数值必须进入 checked-in authored config，再由 runtime typed adapter 消费。`pa_template` 默认使用 `src/config/gameplay.json` 作为 first playable 的配置真源，`src/config/projectGameplayConfig.ts` 只负责类型定义和 runtime adapter。
+
+必须放进 config 的常见值包括：容量、价格、奖励、速度、距离、半径、阈值、间隔、持续时间、spacing、offset、scale、概率、倍率、阶段条件、相机参数、背包堆叠参数、区域摆放参数、队列参数、升级参数、引导参数、飞行动效参数、音效和 VFX 调参。代码中只允许保留 `0` / `1` / `-1`、数组下标、循环步进、数学换算、API 技术参数或短生命周期计算中间值这类不承载玩法调参意义的实现常量。
+
+`gameplay-builder` 开发任何阶段前都应建立 Config Surface Audit：列出本阶段新增或修改的数值、稳定 id、source config path、runtime reader、debug live preview / Save 路径和 hardcode 状态。缺少关键数值、单位、范围或平衡意图时，先报告 Gameplay Doc Gap；不要把默认值藏在系统、实体、UI、debug 面板或服务代码里。
+
 ### Upgrade Completion Effects
 
 `pa_template` 不默认提供固定的 `LumberSceneVisibilitySystem`、`UnlockVisibilitySystem` 或项目专属解锁系统。每个项目必须在 `gameplay.md` 中说明每个升级完成后的具体效果；没有某类效果时应写 `None`，builder 不应从参考项目、scene node 名称或模板默认行为中猜测。
