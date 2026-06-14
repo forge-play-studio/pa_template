@@ -425,7 +425,8 @@ Phase 4 的 Payment Settlement 默认按以下边界处理：
 3. `PROJECT_GAMEPLAY_CONFIG.paymentSettlement.mode` 默认是 `moneyStackCollect`；只有 `gameplay.md` 明确写出 simplified instant settlement 时，才改为 `instant`。
 4. 钱堆可见堆叠继续走 `resourceVisualStacks` / presentation service；模板默认只提供状态和 debug 骨架，不内置固定 `MoneyDropSystem`。
 5. 付款飞行、钱堆模型、收取飞行模型和 money stack binding / collect area 都必须来自 `gameplay.md` 的 Payment Settlement Contract、Binding Contract 和 Runtime Asset Contract。
-6. 如果项目有动态顾客、车辆或 NPC 队列，`QueueSystem` 或项目 queue actor system 必须按 wiki ability 扩展 debug snapshot、点位 overlay 和 queue quick actions；模板自带的 `queue.sellOnce` / `queue.collectMoneyStack` 只是默认结算链路的最小验收入口。
+6. 模板自带 `QueueSystem` 是静态售卖 / 结算骨架，不内置动态 `QueueMember`、`CustomerQueueController` 或模型池生命周期。
+7. 如果项目有动态顾客、车辆、NPC 或其他 queue member，`gameplay.md` 必须先写 Queue Member / Runtime Spawn Contract，覆盖 member asset、spawn / wait / service / exit 点位、runtime parent、pool / warmup / max-active、movement owner 和 service trigger；项目 `QueueSystem` 或 queue actor system 再按 `customer-queue` wiki ability 扩展 debug snapshot、点位 overlay 和 queue quick actions。模板自带的 `queue.sellOnce` / `queue.collectMoneyStack` 只是默认结算链路的最小验收入口。
 
 阶段需要 runtime debug 面板时：
 
