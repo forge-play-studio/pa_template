@@ -3,6 +3,3 @@
  */
 
 export * from './LoadingScreen';
-export { GameHud } from './GameHud';
-export { VirtualJoystick } from './VirtualJoystick';
-export { GuideArrowView } from './GuideArrowView';

@@ -14,7 +14,6 @@ import {
   ThreeCSystem,
   UpgradeSystem,
 } from '../systems';
-import { GameHud, GuideArrowView, VirtualJoystick } from '../ui';
 
 export interface ProjectGameplayRuntime {
   modules: GameplayModule[];
@@ -34,11 +33,6 @@ export interface ProjectGameplayRuntime {
     guide: GuideSystem;
     endConditions: EndConditionSystem;
   };
-  ui: {
-    joystick: VirtualJoystick;
-    hud: GameHud;
-    guideArrow: GuideArrowView;
-  };
 }
 
 export function createProjectGameplayRuntime(context: GameplayRuntimeContext): ProjectGameplayRuntime {
@@ -48,12 +42,6 @@ export function createProjectGameplayRuntime(context: GameplayRuntimeContext): P
     {
       id: PROJECT_GAMEPLAY_CONFIG.backpack.containerId,
       capacityByResource: PROJECT_GAMEPLAY_CONFIG.backpack.capacityByResource,
-    },
-    {
-      id: PROJECT_GAMEPLAY_CONFIG.paymentSettlement.moneyStackContainerId,
-      capacityByResource: {
-        [PROJECT_GAMEPLAY_CONFIG.paymentSettlement.moneyResourceId]: null,
-      },
     },
   ]);
   const resources = new ResourcesSystem(
@@ -65,48 +53,22 @@ export function createProjectGameplayRuntime(context: GameplayRuntimeContext): P
   const backpack = new BackpackSystem(
     PROJECT_GAMEPLAY_CONFIG.backpack,
     inventory,
-    resources,
   );
   const area = new AreaSystem(PROJECT_GAMEPLAY_CONFIG.areas, context.zoneSystem);
-  const queue = new QueueSystem(
-    PROJECT_GAMEPLAY_CONFIG.queues,
-    PROJECT_GAMEPLAY_CONFIG.paymentSettlement,
-    inventory,
-    economy,
-    gameplayState,
-  );
-  const upgrades = new UpgradeSystem(
-    PROJECT_GAMEPLAY_CONFIG.upgrades,
-    area,
-    economy,
-    gameplayState,
-    PROJECT_GAMEPLAY_CONFIG.tuning.upgradePayRateCashPerSecond,
-  );
-  const joystick = new VirtualJoystick();
+  const queue = new QueueSystem(PROJECT_GAMEPLAY_CONFIG.queues);
+  const upgrades = new UpgradeSystem(PROJECT_GAMEPLAY_CONFIG.upgrades, gameplayState);
   const threeC = new ThreeCSystem({
     scene: context.scene,
     camera: context.camera,
     player: context.player,
     inputService: context.inputService,
-    movementSource: joystick,
     zoneSystem: context.zoneSystem,
     gameplayState,
   });
-  const guide = new GuideSystem({
-    targets: PROJECT_GAMEPLAY_CONFIG.guideTargets,
-    runtimeNodes,
-    threeC,
-    upgrades,
-    gameplayState,
-  });
-  const hud = new GameHud();
-  const guideArrow = new GuideArrowView(guide);
+  const guide = new GuideSystem(PROJECT_GAMEPLAY_CONFIG.guideTargets, runtimeNodes);
   const endConditions = new EndConditionSystem(PROJECT_GAMEPLAY_CONFIG.endConditions, gameplayState);
-  const hudBindings = createHudBindingModule(hud, economy, backpack);
 
   const modules: GameplayModule[] = [
-    joystick,
-    hud,
     gameplayState,
     inventory,
     economy,
@@ -117,9 +79,7 @@ export function createProjectGameplayRuntime(context: GameplayRuntimeContext): P
     queue,
     upgrades,
     guide,
-    guideArrow,
     endConditions,
-    hudBindings,
   ];
 
   return {
@@ -140,33 +100,9 @@ export function createProjectGameplayRuntime(context: GameplayRuntimeContext): P
       guide,
       endConditions,
     },
-    ui: {
-      joystick,
-      hud,
-      guideArrow,
-    },
   };
 }
 
 export function createProjectGameplayModules(context: GameplayRuntimeContext): GameplayModule[] {
   return createProjectGameplayRuntime(context).modules;
-}
-
-function createHudBindingModule(
-  hud: GameHud,
-  economy: EconomySystem,
-  backpack: BackpackSystem,
-): GameplayModule {
-  let disposeCash: (() => void) | null = null;
-  let disposeBackpack: (() => void) | null = null;
-  return {
-    init: () => {
-      disposeCash = economy.onCashChanged((event) => hud.updateCash(event.cash));
-      disposeBackpack = backpack.onChange((snapshot) => hud.updateBackpack(snapshot));
-    },
-    dispose: () => {
-      disposeCash?.();
-      disposeBackpack?.();
-    },
-  };
 }

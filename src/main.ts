@@ -116,7 +116,6 @@ async function init(): Promise<void> {
       canvasId: 'renderCanvas',
       debug: true,
       enableAudio: true,
-      showPlayerPlaceholder: false,
     });
 
     // 初始化游戏（包括资源加载和场景构建）

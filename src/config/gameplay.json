@@ -1,11 +1,5 @@
 {
-  "resources": [
-    {
-      "id": "cash",
-      "displayName": "Cash",
-      "tags": ["currency"]
-    }
-  ],
+  "resources": [],
   "resourceVisualStacks": [],
   "flightTuning": {},
   "threeC": {
@@ -14,27 +8,13 @@
       "radius": 0.35
     }
   },
-  "paymentSettlement": {
-    "mode": "moneyStackCollect",
-    "moneyResourceId": "cash",
-    "moneyStackContainerId": "money_stack",
-    "collectTrigger": "playerNear"
-  },
   "backpack": {
     "containerId": "player_backpack",
     "capacityByResource": {}
   },
   "areas": [],
-  "queues": [
-    {
-      "id": "default_queue",
-      "rewardCash": 1
-    }
-  ],
+  "queues": [],
   "upgrades": [],
   "guideTargets": [],
-  "endConditions": [],
-  "tuning": {
-    "upgradePayRateCashPerSecond": 10
-  }
+  "endConditions": []
 }

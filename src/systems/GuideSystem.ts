@@ -2,9 +2,6 @@ import { Vector3 } from '@babylonjs/core/Maths/math.vector';
 import type { GameplayModule } from '../gameplay';
 import type { ProjectGuideTargetConfig } from '../config/projectGameplayConfig';
 import type { RuntimeNodeService } from '../services';
-import type { GameplayStateSystem } from './GameplayStateSystem';
-import type { ThreeCSystem } from './ThreeCSystem';
-import type { UpgradeSystem } from './UpgradeSystem';
 
 export interface GuideSnapshot {
   targetId: string | null;
@@ -20,34 +17,26 @@ export class GuideSystem implements GameplayModule {
     targetPosition: null,
     visible: false,
   };
+  private activeTargetId: string | null = null;
 
-  constructor(private readonly options: {
-    targets: ProjectGuideTargetConfig[];
-    runtimeNodes: RuntimeNodeService;
-    threeC: ThreeCSystem;
-    upgrades: UpgradeSystem;
-    gameplayState: GameplayStateSystem;
-  }) {}
+  constructor(
+    private readonly targets: ProjectGuideTargetConfig[],
+    private readonly runtimeNodes: RuntimeNodeService,
+  ) {}
 
   init(): void {}
 
-  update(): void {
-    if (this.options.gameplayState.isComplete()) {
-      this.snapshot = { targetId: null, sourcePosition: null, targetPosition: null, visible: false };
-      return;
-    }
-
-    const source = this.options.threeC.getSnapshot().position;
-    const sourcePosition = new Vector3(source.x, source.y, source.z);
-    const target = this.resolveTarget();
+  setActiveTarget(targetId: string | null, sourcePosition: Vector3 | null = null): GuideSnapshot {
+    this.activeTargetId = targetId;
+    const target = targetId ? this.targets.find((candidate) => candidate.id === targetId) ?? null : null;
     if (!target?.bindingId) {
-      this.snapshot = { targetId: null, sourcePosition, targetPosition: null, visible: false };
-      return;
+      this.snapshot = { targetId, sourcePosition, targetPosition: null, visible: false };
+      return this.getSnapshot();
     }
-    const node = this.options.runtimeNodes.getRuntimeNode(target.bindingId);
+    const node = this.runtimeNodes.getRuntimeNode(target.bindingId);
     if (!node) {
-      this.snapshot = { targetId: null, sourcePosition, targetPosition: null, visible: false };
-      return;
+      this.snapshot = { targetId, sourcePosition, targetPosition: null, visible: false };
+      return this.getSnapshot();
     }
     this.snapshot = {
       targetId: target.id,
@@ -55,6 +44,19 @@ export class GuideSystem implements GameplayModule {
       targetPosition: node.getAbsolutePosition().clone(),
       visible: true,
     };
+    return this.getSnapshot();
+  }
+
+  clearTarget(): GuideSnapshot {
+    return this.setActiveTarget(null);
+  }
+
+  getGuideTargets(): ProjectGuideTargetConfig[] {
+    return this.targets.map((target) => ({ ...target }));
+  }
+
+  update(): void {
+    if (this.activeTargetId) this.setActiveTarget(this.activeTargetId, this.snapshot.sourcePosition);
   }
 
   getSnapshot(): GuideSnapshot {
@@ -66,14 +68,4 @@ export class GuideSystem implements GameplayModule {
     };
   }
 
-  private resolveTarget(): ProjectGuideTargetConfig | null {
-    const upgrades = this.options.upgrades.getUpgradeStates();
-    const configured = [...this.options.targets].sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0));
-    for (const target of configured) {
-      if (target.requiresMilestone && !this.options.gameplayState.hasMilestone(target.requiresMilestone)) continue;
-      if (target.requiresUpgradeIncomplete && upgrades.find((upgrade) => upgrade.id === target.requiresUpgradeIncomplete)?.completed) continue;
-      return target;
-    }
-    return null;
-  }
 }

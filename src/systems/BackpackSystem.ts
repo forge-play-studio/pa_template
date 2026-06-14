@@ -1,7 +1,6 @@
 import type { GameplayModule } from '../gameplay';
 import type { ProjectBackpackConfig } from '../config/projectGameplayConfig';
 import type { InventoryChangeEvent, InventorySystem } from './InventorySystem';
-import type { ResourcesSystem } from './ResourcesSystem';
 
 export interface BackpackSnapshot {
   containerId: string;
@@ -17,7 +16,6 @@ export class BackpackSystem implements GameplayModule {
   constructor(
     private readonly config: ProjectBackpackConfig,
     private readonly inventory: InventorySystem,
-    private readonly resources: ResourcesSystem,
   ) {}
 
   init(): void {
@@ -33,27 +31,6 @@ export class BackpackSystem implements GameplayModule {
       containerId: this.config.containerId,
       resources: this.inventory.getSnapshot(this.config.containerId),
     };
-  }
-
-  add(resourceId: string, amount: number, reason?: string): number {
-    return this.inventory.add(this.config.containerId, resourceId, amount, reason);
-  }
-
-  removeUpTo(resourceId: string, amount: number, reason?: string): number {
-    return this.inventory.removeUpTo(this.config.containerId, resourceId, amount, reason);
-  }
-
-  clear(reason?: string): void {
-    this.inventory.clear(this.config.containerId, reason);
-  }
-
-  fillForPreview(resourceId: string | null, amount: number, reason = 'debug_preview'): BackpackSnapshot {
-    const resolvedResourceId = resourceId
-      ?? this.resources.getBackpackResourceIds()[0]
-      ?? this.resources.getResourceIds()[0]
-      ?? 'debug_resource';
-    this.add(resolvedResourceId, amount, reason);
-    return this.getSnapshot();
   }
 
   onChange(listener: Listener): () => void {

@@ -18,13 +18,15 @@ export class ThreeCSystem implements GameplayModule {
     camera: ArcRotateCamera | null;
     player: SimplePlayer;
     inputService: InputService;
-    movementSource: MovementInputSource;
+    movementSource?: MovementInputSource | null;
     zoneSystem: ZoneSystem;
     gameplayState: GameplayStateSystem;
   }) {}
 
   init(): void {
-    this.options.inputService.setMovementSource(this.options.movementSource);
+    if (this.options.movementSource) {
+      this.options.inputService.setMovementSource(this.options.movementSource);
+    }
     this.options.zoneSystem.setActorProvider(() => [{
       id: 'player',
       position: {
@@ -58,7 +60,9 @@ export class ThreeCSystem implements GameplayModule {
   }
 
   dispose(): void {
-    this.options.inputService.clearMovementSource();
+    if (this.options.movementSource) {
+      this.options.inputService.clearMovementSource();
+    }
     this.options.zoneSystem.setActorProvider(null);
   }
 }

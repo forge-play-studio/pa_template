@@ -10,19 +10,14 @@ export class EndConditionSystem implements GameplayModule {
 
   init(): void {}
 
-  update(): void {
-    if (this.gameplayState.isComplete()) return;
-    for (const condition of this.conditions) {
-      if (condition.completedUpgradeId && this.gameplayState.isUpgradeComplete(condition.completedUpgradeId)) {
-        this.gameplayState.markMilestone(condition.id);
-        this.gameplayState.setComplete(true);
-        return;
-      }
-      if (condition.completedMilestoneId && this.gameplayState.hasMilestone(condition.completedMilestoneId)) {
-        this.gameplayState.markMilestone(condition.id);
-        this.gameplayState.setComplete(true);
-        return;
-      }
-    }
+  getConditionConfigs(): ProjectEndConditionConfig[] {
+    return this.conditions.map((condition) => ({ ...condition }));
+  }
+
+  getSnapshot(): { conditionIds: string[]; complete: boolean } {
+    return {
+      conditionIds: this.conditions.map((condition) => condition.id),
+      complete: this.gameplayState.isComplete(),
+    };
   }
 }

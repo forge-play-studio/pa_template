@@ -80,24 +80,12 @@ export interface ProjectAreaConfig {
 export interface ProjectQueueConfig {
   id: string;
   serviceAreaId?: string;
-  rewardCash?: number;
-}
-
-export type ProjectPaymentSettlementMode = 'moneyStackCollect' | 'instant';
-
-export interface ProjectPaymentSettlementConfig {
-  mode: ProjectPaymentSettlementMode;
-  moneyResourceId: string;
-  moneyStackContainerId: string;
-  moneyStackAreaId?: string;
-  moneyStackBindingId?: string;
-  collectTrigger?: 'playerNear' | 'debugAction' | 'manual';
+  debugLabel?: string;
 }
 
 export interface ProjectUpgradeConfig {
   id: string;
   areaId?: string;
-  costCash: number;
   revealAfter?: string[];
   unlocks?: string[];
   debugLabel?: string;
@@ -123,16 +111,12 @@ export interface ProjectGameplaySkeletonConfig {
   resourceVisualStacks: ProjectResourceVisualStackConfig[];
   flightTuning: ProjectFlightTuningConfig;
   threeC: ProjectThreeCConfig;
-  paymentSettlement: ProjectPaymentSettlementConfig;
   backpack: ProjectBackpackConfig;
   areas: ProjectAreaConfig[];
   queues: ProjectQueueConfig[];
   upgrades: ProjectUpgradeConfig[];
   guideTargets: ProjectGuideTargetConfig[];
   endConditions: ProjectEndConditionConfig[];
-  tuning: {
-    upgradePayRateCashPerSecond: number;
-  };
 }
 
 export const PROJECT_GAMEPLAY_CONFIG_SOURCE_FILE = 'gameplay.json';

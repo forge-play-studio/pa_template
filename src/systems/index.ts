@@ -5,7 +5,7 @@ export type { GameplayBlocker, GameplayStateSnapshot } from './GameplayStateSyst
 export { InventorySystem } from './InventorySystem';
 export type { InventoryChangeEvent, InventoryContainerConfig } from './InventorySystem';
 export { EconomySystem } from './EconomySystem';
-export type { EconomyChangeEvent } from './EconomySystem';
+export type { EconomySnapshot } from './EconomySystem';
 export { ResourcesSystem } from './ResourcesSystem';
 export type { ResourceSnapshot } from './ResourcesSystem';
 export { BackpackSystem } from './BackpackSystem';

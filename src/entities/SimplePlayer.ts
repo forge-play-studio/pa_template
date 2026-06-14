@@ -3,7 +3,6 @@
  *
  * 这是一个“脚手架示例实体”：
  * - 不依赖任何具体 GLB 模型资源
- * - 用 Babylon 基元 Mesh (sphere) 作为可视化
  * - 演示实体的 init / update / dispose 生命周期
  * - 演示如何消费通用移动输入接口
  *
@@ -14,11 +13,7 @@
 
 import { ArcRotateCamera } from '@babylonjs/core/Cameras/arcRotateCamera';
 import { Scene } from '@babylonjs/core/scene';
-import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
-import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { Vector3 } from '@babylonjs/core/Maths/math.vector';
-import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
-import { Color3 } from '@babylonjs/core/Maths/math.color';
 
 import type { MovementInputSource } from '../services';
 import { configService } from '../config';
@@ -30,14 +25,11 @@ export interface SimplePlayerConfig {
   speed: number;
   /** 半径（视觉尺寸） */
   radius?: number;
-  /** 是否显示脚手架玩家占位体 */
-  visible?: boolean;
 }
 
 export class SimplePlayer {
   private scene: Scene;
   private movementInput: MovementInputSource | null;
-  private mesh: Mesh | null = null;
 
   private _position: Vector3;
   private baseSpeed: number;
@@ -52,27 +44,6 @@ export class SimplePlayer {
 
     const radius = config.radius ?? 0.35;
     this._radius = radius;
-
-    // 使用基元 Mesh 作为占位角色
-    const mesh = MeshBuilder.CreateSphere('player_sphere', { diameter: radius * 2 }, this.scene);
-    mesh.position.copyFrom(this._position);
-
-    const mat = new StandardMaterial('player_material', this.scene);
-    mat.diffuseColor = new Color3(0.3, 0.8, 0.55);
-    mat.specularColor = new Color3(0.05, 0.05, 0.05);
-    mesh.material = mat;
-    if (config.visible === false) {
-      mesh.isVisible = false;
-      mesh.isPickable = false;
-      mesh.metadata = {
-        ...(mesh.metadata && typeof mesh.metadata === 'object' ? mesh.metadata : {}),
-        disableBlobShadow: true,
-        disableStaticProjectedShadow: true,
-        disablePlanarShadow: true,
-      };
-    }
-
-    this.mesh = mesh;
   }
 
   get position(): Vector3 {
@@ -88,8 +59,6 @@ export class SimplePlayer {
   }
 
   update(deltaTime: number): void {
-    if (!this.mesh) return;
-
     const input = this.movementInput?.getInput();
 
     // 输入向量：x 对应世界 X，y 对应世界 Z
@@ -110,7 +79,7 @@ export class SimplePlayer {
       }
     }
 
-    // 归一化移动（magnitude 已在摇杆中做了 deadzone & remap）
+    // 归一化移动（magnitude 由项目输入源提供）
     const magnitude = Math.sqrt(move.x * move.x + move.z * move.z);
     if (magnitude > 0.0001) {
       move.x /= magnitude;
@@ -125,18 +94,9 @@ export class SimplePlayer {
       this._position.x = Math.max(bounds.minX, Math.min(bounds.maxX, this._position.x));
       this._position.z = Math.max(bounds.minZ, Math.min(bounds.maxZ, this._position.z));
 
-      // 同步到 Mesh
-      this.mesh.position.copyFrom(this._position);
-
-      // 朝向（让球体朝向移动方向，方便替换为角色模型后继续使用）
-      this.mesh.rotation.y = Math.atan2(move.x, move.z);
     }
   }
 
   dispose(): void {
-    if (this.mesh) {
-      this.mesh.dispose();
-      this.mesh = null;
-    }
   }
 }
