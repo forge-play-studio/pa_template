@@ -155,9 +155,10 @@ LoadingScreen 显示
 2. 基础游戏配置
 3. `gameplay.gameplayBindings` contract 入口
 4. 基于 `gameplay.zones` 的 zone runtime 配置
-5. `projectGameplayConfig.ts`：标准 first playable 系统的资源、背包、区域、队列、升级、引导、结束条件和 tuning 入口；其中 `flightTuning` 是项目道具飞行调参的默认配置落点
-6. `projectFlightTuning.ts`：道具飞行调参读取、缺失报错和 dev-only runtime preview helper，供项目 system 和 debug 面板共用
-7. `scene.assets`：runtime asset 的 asset id / url / type / warmupCount 入口，供 loading preload 和 `ModelPool` warmup 使用
+5. `gameplay.json`：标准 first playable 系统的资源、背包、区域、队列、升级、引导、结束条件和 tuning source of truth；其中 `flightTuning` 是项目道具飞行调参的默认 Save 落点
+6. `projectGameplayConfig.ts`：`gameplay.json` 的类型定义和 runtime typed adapter
+7. `projectFlightTuning.ts`：道具飞行调参读取、缺失报错和 dev-only runtime preview helper，供项目 system 和 debug 面板共用
+8. `scene.assets`：runtime asset 的 asset id / url / type / warmupCount 入口，供 loading preload 和 `ModelPool` warmup 使用
 
 zone 检测能力默认内置，但只负责矩形区域几何检测和 `enter/tick/leave` 事件分发。区域上的付款、升级、售卖、背包、经济、解锁等规则由对应 project gameplay system 承接。ground UI、资源飞行、堆放动画等表现能力仍按项目或 ability 接入。
 
@@ -241,7 +242,7 @@ zone 检测能力默认内置，但只负责矩形区域几何检测和 `enter/t
 
 阶段 debug coverage 应默认来自 wiki ability / 阶段标准，而不是要求用户设计调试按钮。builder 应根据项目 `gameplay.md` 中的玩法事实、binding、asset 和 owner system 自动生成标准面板项；用户只需要确认玩法事实和默认面板之外的项目专属表现或调试修改需求。Phase 2 Backpack 项目应按 `backpack-system` 默认 debug coverage 生成玩家背包数据、容量、可视化堆叠、endpoint preview 和 fill / clear actions；只有 `gameplay.md` 明确声明非玩家 actor carry 时，才按 `actor-carry-stack` 生成对应 debug coverage。Phase 4 Queue + Economy 项目应按 `customer-queue`、`sell-system`、`basic-economy` 和相关 visual ability 的默认 debug coverage 生成队列拓扑、成员状态、订单进度、付款结算、经济/HUD 读数和 quick actions。
 
-当项目实现 item flight、resource flight、payment flight、money stack collect flight 或 upgrade pay flight 时，`runtime-flight-debug-panel.ts` 或项目等价面板是该飞行功能的默认随附交付。用户不需要命名 `effectId` 或理解飞行算法；builder 根据 `gameplay.md` 的 Flight Tuning Contract 自动生成不重复的 effect id，参数写入 `PROJECT_GAMEPLAY_CONFIG.flightTuning` 或项目等价配置，运行系统通过 `projectFlightTuning.ts` 读取，debug 面板提供 live preview、Reset 和 Save。
+当项目实现 item flight、resource flight、payment flight、money stack collect flight 或 upgrade pay flight 时，`runtime-flight-debug-panel.ts` 或项目等价面板是该飞行功能的默认随附交付。用户不需要命名 `effectId` 或理解飞行算法；builder 根据 `gameplay.md` 的 Flight Tuning Contract 自动生成不重复的 effect id，参数写入 `src/config/gameplay.json` 的 `flightTuning` 或项目等价源码配置，运行系统通过 `projectFlightTuning.ts` 读取，debug 面板提供 live preview、Reset 和 Save。
 
 Pure presentation debug 默认不阻塞 core gameplay。模板不默认内置 audio、lighting、water、shadow、halo、VFX、material、animation、camera sequence 或地贴排序等表现面板；现有 `camera-debug-panel.ts` 和 `runtime-lighting-debug-panel.ts` 是编辑器/模板工具，不代表所有 PA gameplay 都 required。只有 `gameplay.md` 把某个表现写成 required presentation，或用户明确要求还原参考项目表现时，builder 才按 `debug-panel` skill 和项目 presentation pattern 生成对应面板。即使表现面板 required，用户也只确认表现目标、asset / binding、验收观感和特殊修改需求，不逐项设计标准 controls。
 
@@ -250,7 +251,7 @@ debug 面板职责边界：
 1. 面板只负责调参、诊断、preview、Reset、Save 和 quick action UI。
 2. 业务规则留在对应 `systems/`、`services/` 或 `entities/`。
 3. quick action 通过 `DebugActionRegistry` 或 system/service debug API 调用，不在面板里复制玩法逻辑。
-4. numeric tuning 的持久化应写回源码配置。当前 dev server 已提供 `/__debug_panel_config`，允许读写 `src/config/*.json`。
+4. numeric tuning 的持久化应写回源码配置。当前 dev server 已提供 `/__debug_panel_config`，允许读写 `src/config/*.json`；标准 gameplay tuning 默认写回 `src/config/gameplay.json`。
 5. 面板必须由 `src/main.ts` 的 dev-only dynamic import 链路加载，不要在 production-owned 文件里静态 import debug module 的值。
 6. production / package build 不得 mount runtime debug panel、注册 `window.__paDebugActions`、暴露 debug HUD / tuning UI，正式 gameplay 逻辑也不得依赖 debug-only API。
 
@@ -278,7 +279,7 @@ debug 面板职责边界：
 
 这层只负责“把项目侧 gameplay 模块接起来”，不负责承载具体玩法规则。项目规则应落在 `systems/`，运行时查询和表现能力落在 `services/`，HUD/摇杆/引导表现落在 `ui/`。
 
-默认阶段顺序：
+强制阶段顺序：
 
 1. 3C + Resources + 项目资源 HUD：`ThreeCSystem`、`ResourcesSystem`
 2. Backpack：`BackpackSystem`，玩家背包数据、容量、装填 / 取出和玩家背包可视化由它或其表现 adapter 承接；资源动效和区域摆放表现由 `ResourcesSystem` / 表现服务承接
@@ -286,7 +287,7 @@ debug 面板职责边界：
 4. Queue + Economy：`QueueSystem`、`EconomySystem`，默认使用钱堆收取结算
 5. GameplayState + Upgrade + Upgrade Completion Effects + Guide + EndCondition：`GameplayStateSystem`、`UpgradeSystem`、`GuideSystem`、`EndConditionSystem`，以及 `gameplay.md` 指定的项目侧 owner
 
-推荐协作方式是滚动推进：`gameplay.md` 先建立五阶段全局 Draft，再把当前要开发的阶段补到 `Ready for Builder`；builder 只开发 Ready 阶段，后续 Draft 阶段由用户和 gameplay 文档 AI 继续细化。
+协作方式是强制滚动推进：`gameplay.md` 先建立五阶段全局 Draft，再只把最早未 `Verified` 的阶段补到 `Ready for Builder`；builder 只开发这个阶段。后续阶段可以继续细化 Draft，但必须等前一阶段完成并验收为 `Verified` 后，才能进入 `Ready for Builder`。
 
 Phase 1 需要在 `gameplay.md` 中明确主控对象模型。模板默认只提供单一 player actor 的 3C 骨架；如果项目需要切换到载具、机器或其他 controlled actor，应作为项目侧 3C extension 实现，并在文档中先写清 control subjects、切换触发、mount / anchor、相机目标、输入 / 碰撞差异和资源 holder 规则。模板不默认提供 `VehicleSystem`。
 
@@ -294,7 +295,7 @@ Phase 1 需要在 `gameplay.md` 中明确主控对象模型。模板默认只提
 
 具体项目开发 first playable 时，推荐做法是：
 
-1. 优先在 `src/config/projectGameplayConfig.ts` 填资源、背包容量、区域、队列、升级、引导目标和结束条件。
+1. 优先在 `src/config/gameplay.json` 填资源、背包容量、区域、队列、升级、引导目标、结束条件和 tuning；`src/config/projectGameplayConfig.ts` 只作为 typed adapter。
 2. 如果标准 system 职责足够，扩展现有 system 的项目规则；如果 gameplay.md 明确需要新责任，再新增采集、加工、售卖、解锁、工人、机器 actor 等模块。
 3. 在 `src/entities/` 新增 NPC、工人、顾客、车辆、机器 actor 等单体行为。
 4. 在 `src/services/` 新增飞物品、资源堆放、动画/audio/vfx helper、binding helper 等可复用能力。
@@ -371,7 +372,7 @@ Phase 1 需要在 `gameplay.md` 中明确主控对象模型。模板默认只提
 
 #### 标准 Gameplay 系统使用说明
 
-这些模块的设计目标是让新项目默认有一条可接线、可调试、可分阶段验收的 first playable 主链。推荐先改 `src/config/projectGameplayConfig.ts`，再按 `gameplay.md` 扩展对应 system；不要为同一职责再建一套平行 system。
+这些模块的设计目标是让新项目默认有一条可接线、可调试、可分阶段验收的 first playable 主链。推荐先改 `src/config/gameplay.json`，再按 `gameplay.md` 扩展对应 system；`src/config/projectGameplayConfig.ts` 只保留类型和 runtime export，不要为同一职责再建一套平行 system。
 
 | 模块 | 主要作用 | 当前功能 | 推荐用法 |
 | --- | --- | --- | --- |
@@ -399,7 +400,7 @@ Phase 1 需要在 `gameplay.md` 中明确主控对象模型。模板默认只提
 
 推荐接入顺序：
 
-1. 在 `projectGameplayConfig.ts` 填 resource、resource visual stacks、backpack capacity、area、queue、upgrade、guide target、end condition。
+1. 在 `src/config/gameplay.json` 填 resource、resource visual stacks、backpack capacity、area、queue、upgrade、guide target、end condition。
 2. 用项目资源 HUD 和 `ThreeCSystem.getSnapshot()` 验收移动、镜头、右手坐标系和资源 catalog。
 3. 用 `window.__paDebugActions['backpack.fill']()` 验收背包数量、容量和 HUD 更新。
 4. 用 `window.__paDebugActions['area.toggleBounds']()` 验收区域分类和 bounds 数据。

@@ -1,3 +1,5 @@
+import gameplayConfigJson from './gameplay.json';
+
 export interface ProjectResourceConfig {
   id: string;
   displayName?: string;
@@ -128,36 +130,10 @@ export interface ProjectGameplaySkeletonConfig {
   };
 }
 
-export const PROJECT_GAMEPLAY_CONFIG: ProjectGameplaySkeletonConfig = {
-  resources: [
-    { id: 'cash', displayName: 'Cash', tags: ['currency'] },
-  ],
-  resourceVisualStacks: [],
-  flightTuning: {},
-  paymentSettlement: {
-    mode: 'moneyStackCollect',
-    moneyResourceId: 'cash',
-    moneyStackContainerId: 'money_stack',
-    collectTrigger: 'playerNear',
-  },
-  backpack: {
-    containerId: 'player_backpack',
-    capacityByResource: {},
-  },
-  areas: [],
-  queues: [
-    { id: 'default_queue', rewardCash: 1 },
-  ],
-  upgrades: [],
-  guideTargets: [],
-  endConditions: [],
-  tuning: {
-    playerSpeed: 4.2,
-    upgradePayRateCashPerSecond: 10,
-    debugBackpackFillAmount: 10,
-    debugQueueSaleRewardCash: 1,
-  },
-};
+export const PROJECT_GAMEPLAY_CONFIG_SOURCE_FILE = 'gameplay.json';
+export const PROJECT_GAMEPLAY_CONFIG_SOURCE_PATH = `src/config/${PROJECT_GAMEPLAY_CONFIG_SOURCE_FILE}`;
+export const PROJECT_GAMEPLAY_CONFIG: ProjectGameplaySkeletonConfig =
+  gameplayConfigJson as ProjectGameplaySkeletonConfig;
 
 export const STANDARD_GAMEPLAY_PHASES = [
   {
