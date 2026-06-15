@@ -78,6 +78,7 @@ import {
   normalizeEditorSceneFieldInspectorValue as normalizePlayableEditorSceneFieldInspectorValue,
   normalizeEditorSceneHierarchyDocument as normalizePlayableEditorSceneHierarchyDocument,
   normalizeEditorSceneMaterialAssetValue as normalizePlayableEditorSceneMaterialAssetValue,
+  normalizeEditorSceneMaterialSlotOwnerPath as normalizePlayableEditorSceneMaterialSlotOwnerPath,
   radiansToEditorSceneDegrees as radiansToPlayableEditorSceneDegrees,
   parseEditorSceneDuplicateMaterialAssetValue as parsePlayableEditorSceneDuplicateMaterialAssetValue,
   parseEditorSceneMaterialAssetFieldPath as parsePlayableEditorSceneMaterialAssetFieldPath,
@@ -1345,7 +1346,7 @@ function collectEditorSceneMaterialSlotMigrationDescriptors(
     if (!rawSlot || typeof rawSlot !== 'object' || Array.isArray(rawSlot)) continue;
     const record = rawSlot as Record<string, unknown>;
     const slotId = typeof record.slotId === 'string' ? record.slotId.trim() : '';
-    const ownerNodePath = normalizeEditorSceneMaterialSlotMigrationOwnerPath(
+    const ownerNodePath = normalizePlayableEditorSceneMaterialSlotOwnerPath(
       typeof record.ownerNodePath === 'string'
         ? record.ownerNodePath
         : typeof record.path === 'string'
@@ -1364,18 +1365,14 @@ function findEditorSceneLegacyMaterialSlotBinding(
   if (!childMaterialBindings) return null;
   const exact = childMaterialBindings[ownerNodePath];
   if (exact) return { ownerNodePath, binding: exact };
-  const normalizedOwnerNodePath = normalizeEditorSceneMaterialSlotMigrationOwnerPath(ownerNodePath);
+  const normalizedOwnerNodePath = normalizePlayableEditorSceneMaterialSlotOwnerPath(ownerNodePath);
   for (const [legacyOwnerNodePath, binding] of Object.entries(childMaterialBindings)) {
     if (!binding) continue;
-    if (normalizeEditorSceneMaterialSlotMigrationOwnerPath(legacyOwnerNodePath) === normalizedOwnerNodePath) {
+    if (normalizePlayableEditorSceneMaterialSlotOwnerPath(legacyOwnerNodePath) === normalizedOwnerNodePath) {
       return { ownerNodePath: legacyOwnerNodePath, binding };
     }
   }
   return null;
-}
-
-function normalizeEditorSceneMaterialSlotMigrationOwnerPath(ownerNodePath: string): string {
-  return String(ownerNodePath ?? '').split('/').filter(Boolean).join('/');
 }
 
 function ensureImportedEditorSceneMaterialDefaults(

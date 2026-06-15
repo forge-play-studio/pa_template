@@ -2,6 +2,7 @@ import type {
   EditorSceneMaterialAsset,
 } from '@fps-games/editor/playable-sdk';
 import {
+  normalizeEditorSceneMaterialSlotOwnerPath,
   resolveEditorSceneMaterialAssetIntegrity,
   resolveEditorSceneMaterialSlotReimportDiff,
   resolveEditorSceneGameObjectRendering,
@@ -280,7 +281,7 @@ function collectCompiledEditorSceneMaterialSlots(
     if (!rawSlot || typeof rawSlot !== 'object' || Array.isArray(rawSlot)) continue;
     const record = rawSlot as Record<string, unknown>;
     const slotId = typeof record.slotId === 'string' ? record.slotId.trim() : '';
-    const ownerNodePath = normalizeSceneMaterialSlotMigrationOwnerPath(
+    const ownerNodePath = normalizeEditorSceneMaterialSlotOwnerPath(
       typeof record.ownerNodePath === 'string'
         ? record.ownerNodePath
         : typeof record.path === 'string'
@@ -298,17 +299,13 @@ function findLegacySceneMaterialSlotBinding(
 ): { ownerNodePath: string; binding: SceneNodeMaterialBindingConfig } | null {
   const exact = childMaterialBindings[ownerNodePath];
   if (exact) return { ownerNodePath, binding: exact };
-  const normalizedOwnerNodePath = normalizeSceneMaterialSlotMigrationOwnerPath(ownerNodePath);
+  const normalizedOwnerNodePath = normalizeEditorSceneMaterialSlotOwnerPath(ownerNodePath);
   for (const [legacyOwnerNodePath, binding] of Object.entries(childMaterialBindings)) {
-    if (normalizeSceneMaterialSlotMigrationOwnerPath(legacyOwnerNodePath) === normalizedOwnerNodePath) {
+    if (normalizeEditorSceneMaterialSlotOwnerPath(legacyOwnerNodePath) === normalizedOwnerNodePath) {
       return { ownerNodePath: legacyOwnerNodePath, binding };
     }
   }
   return null;
-}
-
-function normalizeSceneMaterialSlotMigrationOwnerPath(ownerNodePath: string): string {
-  return String(ownerNodePath ?? '').split('/').filter(Boolean).join('/');
 }
 
 function compileEditorSceneCamera(camera: EditorSceneCameraRig): SceneTransformNode['camera'] {

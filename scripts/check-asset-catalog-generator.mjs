@@ -327,7 +327,9 @@ assert.deepEqual(slotMetadata.materialSlots, [{
   ownerNodePath: 'Body',
   label: 'Body',
   nodeIndex: 1,
+  nodeIndexPath: [0, 1],
   meshIndex: 0,
+  primitiveIndex: 0,
   sourceMaterialIndex: 0,
   sourceMaterialIndices: [0, 1],
   materialName: 'Paint',
@@ -408,6 +410,14 @@ assert.notEqual(duplicateSlotMetadata.materialSlots[0].slotId, duplicateSlotMeta
 assert.deepEqual(
   duplicateSlotMetadata.materialSlots.map(slot => [slot.nodeIndex, slot.meshIndex, slot.sourceMaterialIndex]),
   [[0, 0, 0], [1, 1, 1]],
+);
+assert.deepEqual(
+  duplicateSlotMetadata.materialSlots.map(slot => slot.nodeIndexPath),
+  [[0], [1]],
+);
+assert.deepEqual(
+  duplicateSlotMetadata.materialSlots.map(slot => slot.primitiveIndex),
+  [0, 0],
 );
 assert.deepEqual(
   duplicateSlotMetadata.materialSlots.map(slot => slot.sourceMaterialIndices),

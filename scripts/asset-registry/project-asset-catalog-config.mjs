@@ -232,8 +232,10 @@ function collectGltfMaterialSlots(gltf, context = {}) {
     if (!ownerNodePath) continue;
 
     const mesh = meshes[meshIndex];
+    const nodeIndexPath = buildGltfNodeIndexPath(nodes, parentByNode, nodeIndex);
     const materialRefs = readGltfNodeMeshMaterialRefs(mesh, materials);
     const sourceMaterialIndex = materialRefs.indices[0] ?? -1;
+    const primitiveIndex = materialRefs.primitiveIndices[0] ?? -1;
     const materialName = materialRefs.names[0] ?? null;
     const reusablePreviousSlotId = currentOwnerPathCounts.get(ownerNodePath) === 1
       ? previousSlotIdByOwnerPath.get(ownerNodePath)
@@ -250,7 +252,9 @@ function collectGltfMaterialSlots(gltf, context = {}) {
       ownerNodePath,
       label: readGltfNodeMeshLabel(node, mesh, ownerNodePath),
       nodeIndex,
+      ...(nodeIndexPath.length > 0 ? { nodeIndexPath } : {}),
       meshIndex,
+      ...(primitiveIndex >= 0 ? { primitiveIndex } : {}),
       ...(sourceMaterialIndex >= 0 ? { sourceMaterialIndex } : {}),
       ...(materialRefs.indices.length > 0 ? { sourceMaterialIndices: materialRefs.indices } : {}),
       ...(materialName ? { materialName } : {}),
@@ -534,6 +538,21 @@ function buildGltfOwnerNodePath(nodes, parentByNode, rootSet, nodeIndex) {
   return segments.filter(Boolean).join('/');
 }
 
+function buildGltfNodeIndexPath(nodes, parentByNode, nodeIndex) {
+  const indexes = [];
+  let currentIndex = nodeIndex;
+  const visited = new Set();
+  while (Number.isInteger(currentIndex) && currentIndex >= 0 && currentIndex < nodes.length) {
+    if (visited.has(currentIndex)) return [];
+    visited.add(currentIndex);
+    indexes.push(currentIndex);
+    const parentIndex = parentByNode.get(currentIndex);
+    if (!Number.isInteger(parentIndex)) break;
+    currentIndex = parentIndex;
+  }
+  return indexes.reverse();
+}
+
 function stableGltfNodeSegment(node, index) {
   const name = typeof node?.name === 'string' ? node.name.trim() : '';
   return name || `node_${index}`;
@@ -548,16 +567,20 @@ function readGltfNodeMeshLabel(node, mesh, ownerNodePath) {
 function readGltfNodeMeshMaterialRefs(mesh, materials) {
   const primitives = Array.isArray(mesh?.primitives) ? mesh.primitives : [];
   const indices = [];
+  const primitiveIndices = [];
   const seen = new Set();
-  for (const primitive of primitives) {
+  for (let primitiveIndex = 0; primitiveIndex < primitives.length; primitiveIndex += 1) {
+    const primitive = primitives[primitiveIndex];
     const materialIndex = Number.isInteger(primitive?.material) ? primitive.material : -1;
     if (materialIndex >= 0 && !seen.has(materialIndex)) {
       seen.add(materialIndex);
       indices.push(materialIndex);
+      primitiveIndices.push(primitiveIndex);
     }
   }
   return {
     indices,
+    primitiveIndices,
     names: indices
       .map((materialIndex) => {
         const material = materials[materialIndex];
