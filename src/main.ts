@@ -17,7 +17,7 @@ let game: Game | null = null;
 let loadingScreen: LoadingScreen | null = null;
 
 /** DEV-only runtime debug bootstrap */
-let runtimeDebug: { dispose(): void } | null = null;
+let runtimeDebug: { dispose(): void; detachForEditor?: () => void } | null = null;
 
 /** 确保沙盒/动态注入场景下入口只启动一次 */
 let initStarted = false;
@@ -36,6 +36,11 @@ async function registerRuntimeEditorBridge(): Promise<void> {
 
 function disposeRuntimeDebug(): void {
   runtimeDebug?.dispose();
+  runtimeDebug = null;
+}
+
+function detachRuntimeDebugForEditor(): void {
+  runtimeDebug?.detachForEditor?.();
   runtimeDebug = null;
 }
 
@@ -59,7 +64,7 @@ async function mountRuntimeDebugForDev(): Promise<void> {
       root: document.body,
       getGame: () => game,
       getGameplayRuntime: () => game?.getProjectGameplayRuntime() ?? null,
-      disposeGameWorld: disposeProjectGameWorld,
+      disposeGameWorld: disposeProjectGameWorldForEditor,
     });
   } catch (error) {
     console.warn('[runtime-debug-bootstrap] mount failed', error);
@@ -80,16 +85,50 @@ async function waitForSceneReadyBeforeDispose(targetGame: Game): Promise<void> {
   ]);
 }
 
-async function disposeProjectGameWorld(): Promise<void> {
+type RenderCanvasPlacement = {
+  canvas: HTMLCanvasElement;
+  parent: Node;
+  nextSibling: ChildNode | null;
+};
+
+function captureRenderCanvasPlacement(): RenderCanvasPlacement | null {
+  const canvas = document.getElementById('renderCanvas');
+  if (!(canvas instanceof HTMLCanvasElement) || !canvas.parentNode) return null;
+  return {
+    canvas,
+    parent: canvas.parentNode,
+    nextSibling: canvas.nextSibling,
+  };
+}
+
+function restoreRenderCanvasPlacement(placement: RenderCanvasPlacement | null): void {
+  if (!placement || placement.canvas.isConnected) return;
+  const parent = placement.parent.isConnected ? placement.parent : document.body;
+  const nextSibling = placement.nextSibling?.parentNode === parent ? placement.nextSibling : null;
+  parent.insertBefore(placement.canvas, nextSibling);
+}
+
+async function disposeProjectGameWorldCore(): Promise<void> {
   const gameToDispose = game;
+  const renderCanvasPlacement = captureRenderCanvasPlacement();
   game = null;
   clearProjectRuntimeGlobals();
-  disposeRuntimeDebug();
   if (gameToDispose) {
     await waitForSceneReadyBeforeDispose(gameToDispose);
     gameToDispose.dispose();
+    restoreRenderCanvasPlacement(renderCanvasPlacement);
   }
   clearLoadingScreen();
+}
+
+async function disposeProjectGameWorld(): Promise<void> {
+  disposeRuntimeDebug();
+  await disposeProjectGameWorldCore();
+}
+
+async function disposeProjectGameWorldForEditor(): Promise<void> {
+  detachRuntimeDebugForEditor();
+  await disposeProjectGameWorldCore();
 }
 
 // ============================================================

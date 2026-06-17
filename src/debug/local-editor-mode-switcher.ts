@@ -142,12 +142,14 @@ interface EditorProjectionImportStats {
 export interface LocalEditorModeSwitcherOptions {
   root?: HTMLElement;
   disposeGameWorld: () => void | Promise<void>;
+  onBeforeEnterEditor?: () => void | Promise<void>;
   onBeforeReload?: () => void;
 }
 
 export interface LocalEditorModeSwitcher {
   enterEditor(): Promise<void>;
   discardAndRunGame(): Promise<void>;
+  detachForEditor(): void;
   dispose(): void;
 }
 
@@ -244,6 +246,12 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
   };
   const normalizeLoadedPlatformAssetPayload = (payload: Record<string, unknown>): Record<string, unknown> => {
     return platformAssetDropCache.normalize(payload);
+  };
+  let detachedForEditor = false;
+  const runBeforeEnterEditor = async (): Promise<void> => {
+    if (detachedForEditor) return;
+    detachedForEditor = true;
+    await options.onBeforeEnterEditor?.();
   };
 
   editorHost = createPlayableLocalEditorHost<EditorSceneDocument, EditorSceneDocumentPatch, EditorSceneAssetLibraryItem>({
@@ -357,6 +365,7 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
         const restartProjectGame = (window as ProjectGameRestartWindow).__restartProjectGame;
         if (typeof restartProjectGame === 'function') {
           await restartProjectGame(context);
+          scheduleEditorHostCleanupAfterRunGame();
           return;
         }
         options.onBeforeReload?.();
@@ -364,7 +373,10 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
       },
     },
     worldAdapter: {
-      disposeWorld: options.disposeGameWorld,
+      disposeWorld: async () => {
+        await runBeforeEnterEditor();
+        await options.disposeGameWorld();
+      },
       getCanvas() {
         const canvas = document.getElementById('renderCanvas');
         if (!(canvas instanceof HTMLCanvasElement)) return null;
@@ -434,13 +446,37 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
   });
   setLocalEditorAssetBridgeActive(true);
 
+  let disposed = false;
+  let cleanupAfterRunGameScheduled = false;
+
+  const disposeEditorHost = (disposeOptions: { preserveAssetBridgeActive?: boolean } = {}): void => {
+    if (disposed) return;
+    disposed = true;
+    disposeLegacyAssetBypass();
+    if (!disposeOptions.preserveAssetBridgeActive) setLocalEditorAssetBridgeActive(false);
+    host.dispose();
+    if (editorHost === host) editorHost = null;
+  };
+
+  const scheduleEditorHostCleanupAfterRunGame = (): void => {
+    if (cleanupAfterRunGameScheduled) return;
+    cleanupAfterRunGameScheduled = true;
+    window.setTimeout(() => {
+      disposeEditorHost({ preserveAssetBridgeActive: true });
+    }, 0);
+  };
+
   return {
-    enterEditor: () => host.enterEditor(),
+    async enterEditor() {
+      await runBeforeEnterEditor();
+      await host.enterEditor();
+    },
     discardAndRunGame: () => host.discardAndRunGame(),
+    detachForEditor() {
+      detachedForEditor = true;
+    },
     dispose() {
-      disposeLegacyAssetBypass();
-      setLocalEditorAssetBridgeActive(false);
-      host.dispose();
+      disposeEditorHost();
     },
   };
 }

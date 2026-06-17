@@ -14,20 +14,24 @@ export interface RuntimeDebugBootstrapOptions {
   disposeGameWorld: () => void | Promise<void>;
 }
 
-export function mountRuntimeDebug(options: RuntimeDebugBootstrapOptions): Disposable {
-  const root = options.root ?? document.body;
-  const disposables = new DisposableStack();
-  const actions = disposables.use(new RuntimeDebugActionRegistry(root.ownerDocument.defaultView ?? window));
+export interface RuntimeDebugBootstrap extends Disposable {
+  detachForEditor(): void;
+}
 
-  disposables.use(mountCameraDebugPanel({
+export function mountRuntimeDebug(options: RuntimeDebugBootstrapOptions): RuntimeDebugBootstrap {
+  const root = options.root ?? document.body;
+  const runtimePanels = new DisposableStack();
+  const actions = runtimePanels.use(new RuntimeDebugActionRegistry(root.ownerDocument.defaultView ?? window));
+
+  runtimePanels.use(mountCameraDebugPanel({
     root,
     getGame: options.getGame,
   }));
-  disposables.use(mountRuntimeLightingDebugPanel({
+  runtimePanels.use(mountRuntimeLightingDebugPanel({
     root,
     getGame: options.getGame,
   }));
-  disposables.use(mountRuntimeGameplayDebugPanels({
+  runtimePanels.use(mountRuntimeGameplayDebugPanels({
     root,
     getGame: options.getGame,
     getGameplayRuntime: options.getGameplayRuntime,
@@ -35,20 +39,33 @@ export function mountRuntimeDebug(options: RuntimeDebugBootstrapOptions): Dispos
   }));
 
   let disposedForReload = false;
+  let runtimePanelsDetached = false;
+  const detachRuntimePanelsForEditor = () => {
+    if (runtimePanelsDetached) return;
+    runtimePanelsDetached = true;
+    runtimePanels.dispose();
+    editorSwitcher.detachForEditor();
+  };
   const editorSwitcher = mountLocalEditorModeSwitcher({
     root,
-    disposeGameWorld: options.disposeGameWorld,
+    disposeGameWorld: async () => {
+      detachRuntimePanelsForEditor();
+      await options.disposeGameWorld();
+    },
+    onBeforeEnterEditor: detachRuntimePanelsForEditor,
     onBeforeReload: () => {
       disposedForReload = true;
-      disposables.dispose();
+      runtimePanels.dispose();
+      editorSwitcher.dispose();
     },
   });
-  disposables.use(editorSwitcher);
 
   return {
+    detachForEditor: detachRuntimePanelsForEditor,
     dispose() {
       if (disposedForReload) return;
-      disposables.dispose();
+      runtimePanels.dispose();
+      editorSwitcher.dispose();
     },
   };
 }
