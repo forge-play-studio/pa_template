@@ -39,7 +39,9 @@ import {
   createEditorSceneDeleteSubtreePatch as createPlayableEditorSceneDeleteSubtreePatch,
   createEditorSceneDuplicateSelectionPatch as createPlayableEditorSceneDuplicateSelectionPatch,
   createEditorSceneGroupSelectionPatch as createPlayableEditorSceneGroupSelectionPatch,
+  createEditorSceneGameObjectsFieldPatch as createPlayableEditorSceneGameObjectsFieldPatch,
   createEditorSceneHierarchyMovePatch as createPlayableEditorSceneHierarchyMovePatch,
+  createEditorSceneSerializedMultiTransformPatch as createPlayableEditorSceneSerializedMultiTransformPatch,
   createEditorSceneCreatedMaterialAsset as createPlayableEditorSceneCreatedMaterialAsset,
   createEditorSceneDuplicatedMaterialAssetCopy as createPlayableEditorSceneDuplicatedMaterialAssetCopy,
   createEditorSceneDuplicateMaterialAssetForBindingPatch as createPlayableEditorSceneDuplicateMaterialAssetForBindingPatch,
@@ -137,6 +139,8 @@ import {
   type EditorSceneReadonlyInspectorSectionInput as PlayableEditorSceneReadonlyInspectorSectionInput,
   type EditorSceneRuntimeInspectorSnapshot as PlayableEditorSceneRuntimeInspectorSnapshot,
   type EditorSceneSerializedPropertyValidator as PlayableEditorSceneSerializedPropertyValidator,
+  type PlayableLocalEditorMultiPropertyCapabilityInput,
+  type PlayableLocalEditorMultiPropertyPatchInput,
 } from '@fps-games/editor/playable-sdk';
 import type {
   EditorSceneAsset,
@@ -273,6 +277,11 @@ const DEFAULT_STANDARD_MATERIAL_ASSET_ID = 'mat_default_standard';
 const DEFAULT_PBR_MATERIAL_ASSET_GUID = '00000000-0000-4000-8000-000000000001';
 const DEFAULT_STANDARD_MATERIAL_ASSET_GUID = '00000000-0000-4000-8000-000000000002';
 const DEFAULT_ARTIST_MATERIAL_ASSET_ID = DEFAULT_PBR_MATERIAL_ASSET_ID;
+const EDITOR_SCENE_SERIALIZED_MULTI_FIELD_PATCH_PATHS = new Set<string>([
+  'enabled',
+  'shadowMode',
+  PLAYABLE_EDITOR_SCENE_SHADOW_INSPECTOR_LANGUAGE_PATH,
+]);
 const DEFAULT_PBR_MATERIAL_ASSET: SceneMaterialAssetConfig = {
   id: DEFAULT_PBR_MATERIAL_ASSET_ID,
   guid: DEFAULT_PBR_MATERIAL_ASSET_GUID,
@@ -2252,6 +2261,86 @@ export function createEditorSceneInspectorPropertyPatch(
     changedIds,
     ...(reprojectIds ? { reprojectIds } : {}),
   };
+}
+
+export function canCreateEditorSceneSerializedMultiPropertyPatch(
+  input: PlayableLocalEditorMultiPropertyCapabilityInput<EditorSceneDocument>,
+): boolean {
+  if (isEditorSceneSerializedMultiTransformPatchPath(input.path)) return input.targetIds.length > 0;
+  if (!EDITOR_SCENE_SERIALIZED_MULTI_FIELD_PATCH_PATHS.has(input.path)) return false;
+  return collectEditorSceneSerializedMultiFieldPatchTargetIds(
+    input.document,
+    input.targetIds,
+    input.path,
+  ).length > 0;
+}
+
+export function createEditorSceneSerializedMultiPropertyPatch(
+  input: PlayableLocalEditorMultiPropertyPatchInput<EditorSceneDocument>,
+): { patch: EditorSceneDocumentPatch; label: string; changedIds: string[]; reprojectIds?: string[] } | null {
+  if (!canCreateEditorSceneSerializedMultiPropertyPatch(input)) return null;
+  const targetIds = collectEditorSceneSerializedMultiFieldPatchTargetIds(
+    input.document,
+    input.targetIds,
+    input.path,
+  );
+  if (targetIds.length === 0) return null;
+  if (targetIds.some((targetId) => !createEditorSceneInspectorPropertyPatch({
+    document: input.document,
+    targetId,
+    path: input.path,
+    value: input.value,
+  }))) return null;
+  if (isEditorSceneSerializedMultiTransformPatchPath(input.path)) {
+    const result = createPlayableEditorSceneSerializedMultiTransformPatch({
+      document: input.document,
+      targetIds,
+      path: input.path,
+      value: input.value,
+    });
+    if (!result) return null;
+    return {
+      ...result,
+      patch: result.patch as EditorSceneDocumentPatch,
+    };
+  }
+
+  const value = normalizeEditorSceneInspectorValue(input.path, input.value);
+  return {
+    label: `Patch ${input.path} on ${targetIds.length} objects`,
+    patch: createPlayableEditorSceneGameObjectsFieldPatch({
+      targetIds,
+      path: input.path,
+      value,
+    }) as EditorSceneDocumentPatch,
+    changedIds: targetIds,
+  };
+}
+
+function isEditorSceneSerializedMultiTransformPatchPath(path: string): boolean {
+  return /^transform\.(position|rotation|scale)\.(x|y|z)$/.test(path);
+}
+
+function collectEditorSceneSerializedMultiFieldPatchTargetIds(
+  document: EditorSceneDocument,
+  targetIds: readonly string[],
+  path: string,
+): string[] {
+  const uniqueTargetIds = Array.from(new Set(targetIds.filter(Boolean)));
+  if (path === 'shadowMode' || path === PLAYABLE_EDITOR_SCENE_SHADOW_INSPECTOR_LANGUAGE_PATH) {
+    return uniqueTargetIds.filter((targetId) => {
+      const gameObject = findEditorSceneGameObject(document, targetId);
+      return !!gameObject && canEditEditorSceneSerializedMultiShadowTarget(gameObject);
+    });
+  }
+  return uniqueTargetIds;
+}
+
+function canEditEditorSceneSerializedMultiShadowTarget(gameObject: EditorSceneGameObject): boolean {
+  if (isEditorSceneRootGameObject(gameObject)) return false;
+  if (isEditorSceneCameraGameObject(gameObject) || isEditorSceneLightGameObject(gameObject)) return false;
+  const nodeKind = readEditorSceneNodeKind(gameObject);
+  return nodeKind === 'instance' || nodeKind === 'primitive' || nodeKind === 'transform';
 }
 
 export function createEditorSceneAssetActionPatch(
