@@ -11,7 +11,6 @@ import {
   createEditorSceneRuntimePreviewNode,
   createEditorSceneRuntimePreviewNodes,
   createEditorScenePrefabAgentSummary,
-  createEditorSceneSerializedMultiTransformPatch as createPlayableEditorSceneSerializedMultiTransformPatch,
   createEditorSceneTransformBatchPatch as createPlayableEditorSceneTransformBatchPatch,
   createEditorSceneTransformPatch as createPlayableEditorSceneTransformPatch,
   normalizePlayableForgePlayCommandName,
@@ -36,8 +35,6 @@ import {
   type PlayableLocalEditorHostCompatibilityReport,
   type PlayableLocalEditorHostBridgeContext,
   type PlayableLocalEditorHarnessApi,
-  type PlayableLocalEditorMultiPropertyCapabilityInput,
-  type PlayableLocalEditorMultiPropertyPatchInput,
   type PlayableLocalEditorPropertyPatchInput,
   type PlayableLocalEditorTransformBatchPatchInput,
   type PlayableLocalEditorTransformInspectorPreviewInput,
@@ -73,6 +70,8 @@ import {
   createEditorSceneDuplicateSelectionPatch,
   createEditorSceneGroupSelectionPatch,
   createEditorSceneHierarchyMovePatch,
+  canCreateEditorSceneSerializedMultiPropertyPatch,
+  createEditorSceneSerializedMultiPropertyPatch,
   createEditorSceneInspectorPropertyPatch,
   createEditorScenePlacedAssetPatch,
   createEditorSceneAssetActionPatch,
@@ -673,29 +672,6 @@ function createEditorSceneSerializedPropertyPatch(
   input: PlayableLocalEditorPropertyPatchInput<EditorSceneDocument>,
 ): { patch: EditorSceneDocumentPatch; label: string; changedId: string; changedIds: string[]; reprojectIds?: string[] } | null {
   return createEditorSceneInspectorPropertyPatch(input);
-}
-
-function canCreateEditorSceneSerializedMultiPropertyPatch(
-  input: PlayableLocalEditorMultiPropertyCapabilityInput<EditorSceneDocument>,
-): boolean {
-  return input.path.startsWith('transform.');
-}
-
-function createEditorSceneSerializedMultiPropertyPatch(
-  input: PlayableLocalEditorMultiPropertyPatchInput<EditorSceneDocument>,
-): { patch: EditorSceneDocumentPatch; label: string; changedIds: string[] } | null {
-  if (input.targetIds.some((targetId) => !createEditorSceneInspectorPropertyPatch({
-    document: input.document,
-    targetId,
-    path: input.path,
-    value: input.value,
-  }))) return null;
-  const result = createPlayableEditorSceneSerializedMultiTransformPatch(input);
-  if (!result) return null;
-  return {
-    ...result,
-    patch: result.patch as EditorSceneDocumentPatch,
-  };
 }
 
 function createEditorSceneTransformPatch(
