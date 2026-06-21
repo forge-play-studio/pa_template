@@ -3,6 +3,7 @@ import type {
 } from '@fps-games/editor/playable-sdk';
 import {
   normalizeEditorSceneMaterialSlotOwnerPath,
+  resolveEditorScenePrefabInstanceEffectiveOverrides,
   resolveEditorSceneMaterialAssetIntegrity,
   resolveEditorSceneMaterialSlotReimportDiff,
   resolveEditorSceneGameObjectRendering,
@@ -81,7 +82,9 @@ export function compileEditorSceneDocumentToSceneConfig(
   };
   nextSceneConfig.scene = {
     rootId,
-    assets: documentWithResolvedMaterialAssets.assets.map(compileAsset),
+    assets: documentWithResolvedMaterialAssets.assets
+      .filter(isRuntimeSceneAsset)
+      .map(compileAsset),
     nodes: compiledGameObjects.map((gameObject) => compileGameObject(gameObject, sourceRef, documentWithResolvedMaterialAssets)),
     materialAssets,
     materials: previousScene?.materials ?? [],
@@ -126,7 +129,7 @@ function resolveCompiledEditorSceneMaterialAssets(
   return materialAssets;
 }
 
-function compileAsset(asset: EditorSceneAsset): SceneAssetConfig {
+function compileAsset(asset: EditorSceneAsset & { type: 'glb' }): SceneAssetConfig {
   return {
     id: asset.id,
     type: asset.type,
@@ -138,6 +141,10 @@ function compileAsset(asset: EditorSceneAsset): SceneAssetConfig {
     ...(asset.external ? { external: structuredClone(asset.external) } : {}),
     ...(asset.metadata ? { metadata: structuredClone(asset.metadata) } : {}),
   };
+}
+
+function isRuntimeSceneAsset(asset: EditorSceneAsset): asset is EditorSceneAsset & { type: 'glb' } {
+  return asset.type === 'glb';
 }
 
 function compileGameObject(
@@ -227,10 +234,41 @@ function compileEditorSceneVisualOverrides(
 ): SceneNodeVisualOverrides | undefined {
   const nodeKind = readEditorSceneNodeKind(gameObject);
   if (nodeKind !== 'instance' && nodeKind !== 'transform' && nodeKind !== 'primitive') return undefined;
-  if (!gameObject.overrides) return undefined;
+  const effectiveMaterialOverrides = resolveEditorScenePrefabInstanceEffectiveOverrides(editorDocument, gameObject.id);
+  if (!gameObject.overrides && !effectiveMaterialOverrides) return undefined;
   const modelRenderer = findEditorSceneModelRenderer(gameObject);
   const asset = modelRenderer ? editorDocument.assets.find((entry) => entry.id === modelRenderer.assetId) : undefined;
-  return migrateSceneMaterialSlotBindings(structuredClone(gameObject.overrides), asset, editorDocument, gameObject);
+  const overrides = gameObject.overrides
+    ? structuredClone(gameObject.overrides) as SceneNodeVisualOverrides
+    : {};
+  if (effectiveMaterialOverrides) {
+    patchSceneNodeVisualMaterialOverrides(overrides, effectiveMaterialOverrides);
+  }
+  return migrateSceneMaterialSlotBindings(overrides, asset, editorDocument, gameObject);
+}
+
+function patchSceneNodeVisualMaterialOverrides(
+  overrides: SceneNodeVisualOverrides,
+  materialOverrides: {
+    materialBinding?: SceneNodeMaterialBindingConfig;
+    materialSlotBindings?: Record<string, SceneNodeMaterialBindingConfig | undefined>;
+    childMaterialBindings?: Record<string, SceneNodeMaterialBindingConfig | undefined>;
+  },
+): void {
+  if (materialOverrides.materialBinding) overrides.materialBinding = structuredClone(materialOverrides.materialBinding);
+  else delete overrides.materialBinding;
+
+  if (materialOverrides.materialSlotBindings && Object.keys(materialOverrides.materialSlotBindings).length > 0) {
+    overrides.materialSlotBindings = structuredClone(materialOverrides.materialSlotBindings) as Record<string, SceneNodeMaterialBindingConfig>;
+  } else {
+    delete overrides.materialSlotBindings;
+  }
+
+  if (materialOverrides.childMaterialBindings && Object.keys(materialOverrides.childMaterialBindings).length > 0) {
+    overrides.childMaterialBindings = structuredClone(materialOverrides.childMaterialBindings) as Record<string, SceneNodeMaterialBindingConfig>;
+  } else {
+    delete overrides.childMaterialBindings;
+  }
 }
 
 function migrateSceneMaterialSlotBindings(

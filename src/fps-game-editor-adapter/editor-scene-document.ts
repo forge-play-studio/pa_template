@@ -26,6 +26,7 @@ import {
   type EditorSceneDocument as PlayableEditorSceneDocument,
   type EditorSceneGameObject as PlayableEditorSceneGameObject,
   type EditorSceneModelRendererComponent as PlayableEditorSceneModelRendererComponent,
+  type EditorScenePrefabDefinition,
   type EditorScenePrimitiveRenderer as PlayableEditorScenePrimitiveRenderer,
   type EditorSceneTransformComponent as PlayableEditorSceneTransformComponent,
   type EditorSceneVec3 as PlayableEditorSceneVec3,
@@ -41,9 +42,10 @@ export interface EditorSceneAsset extends PlayableEditorSceneAsset<
   AssetExternalRef,
   SceneAssetMaterialMode
 > {
-  type: 'glb';
+  type: 'glb' | 'prefab';
   materialMode?: SceneAssetMaterialMode;
   defaults?: SceneAssetDefaults;
+  prefab?: EditorScenePrefabDefinition;
   external?: AssetExternalRef;
 }
 
@@ -52,10 +54,11 @@ export interface EditorSceneAssetLibraryItem extends PlayableEditorSceneAssetLib
   AssetExternalRef,
   SceneAssetMaterialMode
 > {
-  type: 'glb' | 'texture';
-  kind: 'model' | 'texture';
+  type: 'glb' | 'prefab' | 'texture';
+  kind: 'model' | 'prefab' | 'texture';
   materialMode?: SceneAssetMaterialMode;
   defaults?: SceneAssetDefaults;
+  prefab?: EditorScenePrefabDefinition;
   external?: AssetExternalRef;
   origin: 'project';
 }
