@@ -30,8 +30,8 @@
 9. document/history/export/commit 主链
 10. `sceneNode` adapter 与 duplicate 主链
 11. 新项目尽早验证编辑器闭环所需的基础结构
-12. 默认 Vite plugin 初始化链：`bridge / inspector / glb / modelCache / stripBabylon / viteSingleFile`
-13. 可直接启用的构建增强插件：`thirdPartyWhitelist / locale / optimizePng / visualizer`
+12. 默认 Vite plugin 初始化链：`bridge / inspector / glb / modelCache / stripBabylon / viteSingleFile / optimizePng / gzipBundle`
+13. 可直接启用的构建增强插件：`thirdPartyWhitelist / locale / visualizer`
 14. `ZoneSystem`：消费当前 `SceneConfig` 中的 `gameplay.zones`，并维护 enter/tick/leave 区域状态
 15. 标准 first playable gameplay 骨架：3C、Resources、Backpack、Area、Queue、Economy、Upgrade、Guide、EndCondition
 16. dev-only runtime debug bootstrap：`src/debug/runtime-debug-bootstrap.ts`，统一挂载模板基础调试工具和玩法阶段面板

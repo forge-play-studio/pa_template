@@ -9,6 +9,7 @@
  * | glbGzipPlugin       | build | GLB 文件 Brotli 压缩内联                       |
  * | stripBabylonPlugin  | build | 剥离 Babylon.js 未使用的 WGSL / 子模块          |
  * | optimizePngPlugin   | build | 内联 PNG 无损优化 (optipng / cwebp)            |
+ * | gzipBundlePlugin    | build | single-file HTML 内联 JS gzip 自解压           |
  *
  * 注意: inspector-init.ts 是 inspectorPlugin 注入的运行时脚本，
  *       不是插件本身，不在此处导出。
@@ -26,6 +27,9 @@ export { glbGzipPlugin, COMPRESSED_GLB_MIME } from './glbGzip';
 export { stripBabylonPlugin } from './stripBabylon';
 
 export { optimizePngPlugin } from './optimizePng';
+
+export { gzipBundlePlugin } from './gzipBundle';
+export type { GzipBundlePluginOptions } from './gzipBundle';
 
 export { thirdPartyWhitelistPlugin } from './thirdPartyWhitelist';
 export type { ThirdPartyWhitelistPluginOptions } from './thirdPartyWhitelist';

@@ -26,6 +26,7 @@ import {
 import {
   bridgePlugin,
   glbGzipPlugin,
+  gzipBundlePlugin,
   inspectorPlugin,
   localePlugin,
   modelCachePlugin,
@@ -697,6 +698,9 @@ export default defineConfig({
     // 构建后图片压缩：PNG → WebP (cwebp) 或 optipng 无损重压，取最小值
     // 需要: brew install webp optipng
     optimizePngPlugin({ enabled: isProduction, optipngLevel: 2, webpQuality: 80 }),
+    // 构建后压缩 single-file HTML 中的内联 JS bundle。
+    // 放在 optimizePngPlugin 后面，避免先压 JS 导致图片优化看不到内联 PNG。
+    gzipBundlePlugin({ enabled: isProduction, minSize: 100 * 1024, verbose: true }),
     ...(bundleStatsEnabled ? [
       visualizer({
         filename: 'dist/stats.html',
