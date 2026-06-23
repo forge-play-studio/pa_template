@@ -6,7 +6,7 @@
  * | bridgePlugin        | dev   | 自动注入 MCP Server 的 bridge.js               |
  * | inspectorPlugin     | dev   | 暴露 @babylonjs/inspector 到 globalThis        |
  * | modelCachePlugin    | dev   | 模型/贴图资源版本化强缓存                       |
- * | glbGzipPlugin       | build | GLB 文件 Brotli 压缩内联                       |
+ * | glbGzipPlugin       | build | GLB 文件 gzip 压缩内联                         |
  * | stripBabylonPlugin  | build | 剥离 Babylon.js 未使用的 WGSL / 子模块          |
  * | optimizePngPlugin   | build | 内联 PNG 无损优化 (optipng / cwebp)            |
  * | gzipBundlePlugin    | build | single-file HTML 内联 JS gzip 自解压           |

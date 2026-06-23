@@ -108,7 +108,6 @@ const allowedThirdPartyPackages = [
   '@babylonjs/core',
   '@babylonjs/loaders',
   ...PLAYABLE_EDITOR_PACKAGE_IDS,
-  'brotli-dec-wasm',
 ];
 
 const editorPackageIds = PLAYABLE_EDITOR_PACKAGE_IDS;
