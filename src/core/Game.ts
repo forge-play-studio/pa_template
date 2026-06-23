@@ -51,8 +51,11 @@ import {
   RenderingService,
   ShadowService,
   SceneVfxService,
+  playableAnalyticsService,
+  playableCtaService,
   configValidator,
 } from '../services';
+import type { PlayableAnalyticsService, PlayableCtaService } from '../services';
 import { ZoneSystem } from '../systems';
 
 // 实体 / UI（脚手架）
@@ -88,6 +91,8 @@ export class Game {
   private shadowService: ShadowService | null = null;
   private sceneVfxService: SceneVfxService | null = null;
   private zoneSystem: ZoneSystem | null = null;
+  private analyticsService: PlayableAnalyticsService = playableAnalyticsService;
+  private ctaService: PlayableCtaService = playableCtaService;
 
   // Input
   private inputService: InputService | null = null;
@@ -273,6 +278,8 @@ export class Game {
       sceneBuilder: this.sceneBuilder,
       sceneVfxService: this.sceneVfxService,
       shadowService: this.shadowService,
+      analytics: this.analyticsService,
+      cta: this.ctaService,
       player: this.player,
       zoneSystem: this.zoneSystem,
     });

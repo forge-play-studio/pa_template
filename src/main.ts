@@ -5,6 +5,7 @@
 
 import { LoadingScreen } from './ui';
 import { Game } from './core/Game';
+import { playableAnalyticsService } from './services';
 
 // ============================================================
 // 全局实例
@@ -146,6 +147,9 @@ async function init(): Promise<void> {
       (window as any).BABYLON = BABYLON;
     }
 
+    playableAnalyticsService.resetForNewSession();
+    playableAnalyticsService.reportInitPlayable();
+
     // 创建并显示加载页面
     clearLoadingScreen();
     loadingScreen = new LoadingScreen();
@@ -159,6 +163,7 @@ async function init(): Promise<void> {
 
     // 初始化游戏（包括资源加载和场景构建）
     await game.init();
+    playableAnalyticsService.reportLoaded();
 
     if (import.meta.env.VITE_ENABLE_LEGACY_RUNTIME_EDITOR === 'true') {
       await registerRuntimeEditorBridge();
@@ -169,6 +174,10 @@ async function init(): Promise<void> {
 
     // 启动游戏循环
     game.start();
+    window.requestAnimationFrame(() => {
+      playableAnalyticsService.reportDisplay();
+      playableAnalyticsService.reportProgressMilestone(0);
+    });
 
     // 暴露给调试
     window.gameInstance = game;
@@ -232,6 +241,9 @@ if (document.readyState === 'loading') {
 } else {
   void startInitOnce();
 }
+
+window.addEventListener('beforeunload', () => playableAnalyticsService.reportCompleted());
+window.addEventListener('pagehide', () => playableAnalyticsService.reportCompleted());
 
 if (import.meta.env.DEV) {
   const disposeDevTools = () => {

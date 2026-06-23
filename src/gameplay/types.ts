@@ -8,6 +8,8 @@ import type {
   InputService,
   MaterialConfigService,
   ModelPool,
+  PlayableAnalyticsService,
+  PlayableCtaService,
   RenderingService,
   SceneBuilder,
   SceneVfxService,
@@ -34,6 +36,8 @@ export interface GameplayRuntimeContext {
   sceneBuilder: SceneBuilder;
   sceneVfxService: SceneVfxService;
   shadowService: ShadowService;
+  analytics: PlayableAnalyticsService;
+  cta: PlayableCtaService;
   player: SimplePlayer;
   zoneSystem: ZoneSystem;
 }

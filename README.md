@@ -130,6 +130,26 @@ LoadingScreen 显示
 
 因此，QueueSystem、BackpackSystem、AreaSystem、ResourcesSystem 等业务系统不应临时拼路径加载模型来绕过 loading。缺少 asset id/file、loading path、runtime parent/spawn root、placement root、layout 或 warmup/max-active 假设时，先按 Asset Gap 或 Gameplay Doc Gap 处理。
 
+### Analytics / CTA Contract
+
+模板默认提供与已落地 PA 项目一致的埋点和 CTA 行为。具体项目只需要在真实玩法节点里调用对应接口；不同项目的商店链接通过 `scene.json.meta.playableAdInfo.ctaUrl` 配置。
+
+模板已接入的通用生命周期：
+
+1. `reportInitPlayable()`：入口初始化开始。
+2. `reportLoaded()`：`Game.init()` 完成。
+3. `reportDisplay()`：loading 隐藏并启动渲染后的下一帧；同一帧上报 `challenge_progress` 的 `progress: 0`。
+4. `reportCompleted()`：`beforeunload` / `pagehide` 兜底。
+
+模板提供的项目侧接口：
+
+1. `context.analytics.reportProgressMilestone(progress)`：发送 `challenge_progress`，内部去重。具体 `25/50/75/100` 对应哪个玩法节点由项目实现决定。
+2. `context.analytics.reportEndCardShown()`：发送 `onShowEndCard`，内部去重。
+3. `context.cta.handleCtaClick(source)`：`source === 'fail'` 时先 `onRetry()`，随后 `onInstall('Global')` 并打开 CTA。
+4. `context.cta.openCtaUrlInNewPage()`：结束页展示后的自动跳转；`CHANNEL=unity` 时不自动跳转。
+
+CTA 链接默认读取 `scene.json.meta.playableAdInfo.ctaUrl`。打开顺序统一为 `super_html.download` -> `mraid.open` -> `window.open('_blank')` -> `location.href`。按钮点击不拦 `unity`，只有结束页自动跳转路径拦 `unity`。
+
 ## `src/` 目录说明
 
 当前 `src/` 下固定包含这些目录：
