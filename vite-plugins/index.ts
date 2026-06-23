@@ -10,6 +10,8 @@
  * | stripBabylonPlugin  | build | 剥离 Babylon.js 未使用的 WGSL / 子模块          |
  * | optimizePngPlugin   | build | 内联 PNG 无损优化 (optipng / cwebp)            |
  * | gzipBundlePlugin    | build | single-file HTML 内联 JS gzip 自解压           |
+ * | analyticsPlugin     | build | 有埋点版本注入渠道 analytics SDK               |
+ * | molocoCtaPlugin     | build | Moloco 渠道 CTA 兼容 shim                      |
  *
  * 注意: inspector-init.ts 是 inspectorPlugin 注入的运行时脚本，
  *       不是插件本身，不在此处导出。
@@ -36,3 +38,8 @@ export type { ThirdPartyWhitelistPluginOptions } from './thirdPartyWhitelist';
 
 export { localePlugin } from './locale';
 export type { LocalePluginOptions } from './locale';
+
+export { analyticsPlugin } from './analytics';
+export type { AdNetwork, AnalyticsPluginOptions } from './analytics';
+
+export { molocoCtaPlugin } from './molocoCta';

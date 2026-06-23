@@ -30,8 +30,8 @@
 9. document/history/export/commit 主链
 10. `sceneNode` adapter 与 duplicate 主链
 11. 新项目尽早验证编辑器闭环所需的基础结构
-12. 默认 Vite plugin 初始化链：`bridge / inspector / glb / modelCache / stripBabylon / viteSingleFile / optimizePng / gzipBundle`
-13. 可直接启用的构建增强插件：`thirdPartyWhitelist / locale / visualizer`
+12. 默认 Vite plugin 初始化链：`bridge / inspector / glb / modelCache / stripBabylon / locale / analytics / molocoCta / viteSingleFile / optimizePng / gzipBundle`
+13. 可直接启用的构建增强插件：`thirdPartyWhitelist / visualizer`
 14. `ZoneSystem`：消费当前 `SceneConfig` 中的 `gameplay.zones`，并维护 enter/tick/leave 区域状态
 15. 标准 first playable gameplay 骨架：3C、Resources、Backpack、Area、Queue、Economy、Upgrade、Guide、EndCondition
 16. dev-only runtime debug bootstrap：`src/debug/runtime-debug-bootstrap.ts`，统一挂载模板基础调试工具和玩法阶段面板
@@ -149,6 +149,18 @@ LoadingScreen 显示
 4. `context.cta.openCtaUrlInNewPage()`：结束页展示后的自动跳转；`CHANNEL=unity` 时不自动跳转。
 
 CTA 链接默认读取 `scene.json.meta.playableAdInfo.ctaUrl`。打开顺序统一为 `super_html.download` -> `mraid.open` -> `window.open('_blank')` -> `location.href`。按钮点击不拦 `unity`，只有结束页自动跳转路径拦 `unity`。
+
+### Build Matrix Contract
+
+模板默认提供与已落地 PA 项目一致的多渠道打包入口。`package.json` 的 `appConfig` 控制语言版本、tracked / untracked 渠道列表、analytics 初始化字段和产物命名字段。
+
+默认命令：
+
+1. `npm run build`：构建 `EN + applovin` 的有埋点和无埋点版本。
+2. `npm run build:all`：按 `appConfig.i18n.buildVersions` 构建全部语言和全部渠道矩阵。
+3. `npm run build:single`：只做普通单产物构建，输出到 `dist/index.html`。
+
+矩阵构建输出到 `dist/<LOCALE>/tracked` 和 `dist/<LOCALE>/untracked`。`TRACKING=false` 时不会注入 analytics SDK；Moloco 渠道会额外注入与落地项目一致的 CTA shim。
 
 ## `src/` 目录说明
 

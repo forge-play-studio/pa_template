@@ -15,7 +15,9 @@
     "test:asset-manager-guid-external": "node scripts/check-asset-manager-guid-external.mjs",
     "test:editor-canonical-assets": "node scripts/check-editor-canonical-assets.mjs",
     "test:asset-registry-unregister": "node scripts/check-asset-registry-unregister-guard.mjs",
-    "build": "tsc && vite build && npm run check:prod-debug",
+    "build": "./scripts/build-all.sh en applovin",
+    "build:all": "./scripts/build-all.sh",
+    "build:single": "cross-env BUILD_MATRIX=false tsc && cross-env BUILD_MATRIX=false vite build && npm run check:prod-debug",
     "check:prod-debug": "node scripts/check-production-debug-surface.mjs",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit"
@@ -43,5 +45,94 @@
     "@babylonjs/loaders": "8.52.1",
     "@fps-games/editor": "0.1.5-beta.4",
     "brotli-dec-wasm": "^2.3.2"
+  },
+  "appConfig": {
+    "analytics": {
+      "adNetwork": "applovin",
+      "playableId": "pa-template",
+      "playableVersion": "1.0.0",
+      "distributorName": "PA_TEMPLATE"
+    },
+    "i18n": {
+      "buildVersions": [
+        "EN",
+        "KR",
+        "VN"
+      ],
+      "locales": {
+        "EN": {
+          "htmlLang": "en",
+          "isRTL": false,
+          "region": "global"
+        },
+        "KR": {
+          "htmlLang": "ko",
+          "isRTL": false,
+          "region": "global"
+        },
+        "VN": {
+          "htmlLang": "vi",
+          "isRTL": false,
+          "region": "vn"
+        },
+        "RU": {
+          "htmlLang": "ru",
+          "isRTL": false,
+          "region": "global"
+        },
+        "JP": {
+          "htmlLang": "ja",
+          "isRTL": false,
+          "region": "global"
+        },
+        "AR": {
+          "htmlLang": "ar",
+          "isRTL": true,
+          "region": "global"
+        },
+        "FR": {
+          "htmlLang": "fr",
+          "isRTL": false,
+          "region": "global"
+        },
+        "DE": {
+          "htmlLang": "de",
+          "isRTL": false,
+          "region": "global"
+        },
+        "ES": {
+          "htmlLang": "es",
+          "isRTL": false,
+          "region": "global"
+        },
+        "TW": {
+          "htmlLang": "zh-TW",
+          "isRTL": false,
+          "region": "global"
+        }
+      },
+      "channels": {
+        "tracked": [
+          "applovin",
+          "unity"
+        ],
+        "untracked": [
+          "applovin",
+          "facebook",
+          "google",
+          "moloco",
+          "tiktok",
+          "unity",
+          "snapchat"
+        ]
+      }
+    },
+    "naming": {
+      "projectCode": "SSD",
+      "materialId": "00000P00",
+      "creator": "PY",
+      "vendor": "DLCX",
+      "materialName": "PA_Template"
+    }
   }
 }

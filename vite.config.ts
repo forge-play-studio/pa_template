@@ -5,6 +5,7 @@ import { mkdir, writeFile } from 'fs/promises';
 import path from 'path';
 import { viteSingleFile } from 'vite-plugin-singlefile';
 import { visualizer } from 'rollup-plugin-visualizer';
+import pkg from './package.json';
 import {
   createPlayableEditorBundledPackageRoots,
   createPlayableEditorBundledPackageAliasPlan,
@@ -24,30 +25,75 @@ import {
 } from '@fps-games/editor/playable-sdk';
 
 import {
+  analyticsPlugin,
+  type AdNetwork,
   bridgePlugin,
   glbGzipPlugin,
   gzipBundlePlugin,
   inspectorPlugin,
   localePlugin,
   modelCachePlugin,
+  molocoCtaPlugin,
   optimizePngPlugin,
   stripBabylonPlugin,
   thirdPartyWhitelistPlugin,
 } from './vite-plugins';
 
+type TemplateLocaleConfig = {
+  htmlLang: string;
+  isRTL: boolean;
+  region?: string;
+};
+
+type TemplateAppConfig = {
+  analytics: {
+    adNetwork?: AdNetwork;
+    playableId?: string;
+    playableVersion?: string;
+    distributorName?: string;
+    sdkVersion?: string;
+    isLandscape?: boolean;
+    maxWidth?: number;
+    maxHeight?: number;
+  };
+  i18n: {
+    buildVersions: string[];
+    locales: Record<string, TemplateLocaleConfig>;
+    channels: {
+      tracked: AdNetwork[];
+      untracked: AdNetwork[];
+    };
+  };
+  naming: {
+    projectCode: string;
+    materialId: string;
+    creator: string;
+    vendor: string;
+    materialName: string;
+  };
+};
+
+const appConfig = (pkg as typeof pkg & { appConfig: TemplateAppConfig }).appConfig;
+const analyticsConfig = appConfig.analytics;
+const i18nConfig = appConfig.i18n;
 const liteBuild = process.env.LITE_BUILD === 'true';
 const isProduction = process.env.NODE_ENV === 'production';
 const bridgeEnabled = process.env.BRIDGE_ENABLED !== 'false';
 const bundleStatsEnabled = process.env.BUNDLE_STATS === 'true';
-const locale = (process.env.LOCALE || 'EN').toUpperCase();
-const channel = process.env.CHANNEL || 'applovin';
-const isRTL = ['AR', 'FA', 'HE', 'UR'].includes(locale);
-const localeMeta = {
+const buildMatrix = process.env.BUILD_MATRIX === 'true';
+const defaultBuildLocale = (i18nConfig.buildVersions[0] || 'EN').toUpperCase();
+const locale = (process.env.LOCALE || defaultBuildLocale).toUpperCase();
+const channel = (process.env.CHANNEL || analyticsConfig.adNetwork || 'applovin') as AdNetwork;
+const tracking = process.env.TRACKING !== 'false';
+const dedicatedBuildLocales = new Set(i18nConfig.buildVersions.slice(1).map(value => value.toUpperCase()));
+const isMultiLocale = locale === defaultBuildLocale;
+const bundledLocales = isMultiLocale
+  ? Object.keys(i18nConfig.locales).filter(value => !dedicatedBuildLocales.has(value.toUpperCase()))
+  : [locale];
+const localeMeta = i18nConfig.locales[locale] || i18nConfig.locales[defaultBuildLocale] || {
   htmlLang: locale.toLowerCase(),
-  isRTL,
+  isRTL: false,
 };
-const isMultiLocale = false;
-const bundledLocales = [locale];
 const debugPanelConfigRoot = resolve(__dirname, 'src/config');
 const localFpsGameEditorRepo = process.env.FPS_GAME_EDITOR_REPO
   ? resolve(process.env.FPS_GAME_EDITOR_REPO)
@@ -694,6 +740,20 @@ export default defineConfig({
       isRTL: localeMeta.isRTL,
       imgRoot: resolve(__dirname, 'src/assets/ui'),
     }),
+    ...(channel === 'moloco' ? [molocoCtaPlugin()] : []),
+    ...(tracking ? [
+      analyticsPlugin({
+        adNetwork: channel,
+        playableId: analyticsConfig.playableId,
+        playableVersion: analyticsConfig.playableVersion,
+        distributorName: analyticsConfig.distributorName,
+        sdkVersion: analyticsConfig.sdkVersion,
+        isLandscape: analyticsConfig.isLandscape,
+        maxWidth: analyticsConfig.maxWidth,
+        maxHeight: analyticsConfig.maxHeight,
+        development: process.env.NODE_ENV !== 'production',
+      }),
+    ] : []),
     viteSingleFile(),
     // 构建后图片压缩：PNG → WebP (cwebp) 或 optipng 无损重压，取最小值
     // 需要: brew install webp optipng
@@ -703,13 +763,13 @@ export default defineConfig({
     gzipBundlePlugin({ enabled: isProduction, minSize: 100 * 1024, verbose: true }),
     ...(bundleStatsEnabled ? [
       visualizer({
-        filename: 'dist/stats.html',
+        filename: buildMatrix ? 'dist/_build/stats.html' : 'dist/stats.html',
         open: false,
         gzipSize: true,
         brotliSize: true,
       }),
       visualizer({
-        filename: 'dist/stats.json',
+        filename: buildMatrix ? 'dist/_build/stats.json' : 'dist/stats.json',
         template: 'raw-data',
         gzipSize: true,
         brotliSize: true,
@@ -740,7 +800,7 @@ export default defineConfig({
   assetsInclude: ['**/*.env'],
   build: {
     target: 'esnext',
-    outDir: 'dist',
+    outDir: buildMatrix ? 'dist/_build' : 'dist',
     // 临时降低内联阈值：查看文件大小分布
     assetsInlineLimit: 100000000, // 内联所有资源
     chunkSizeWarningLimit: 1000000,
