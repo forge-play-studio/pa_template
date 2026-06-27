@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host",
-    "dev:editor-local": "vite --host 0.0.0.0 --port 3006 --strictPort",
+    "dev:editor-local": "vite --host 0.0.0.0 --port 3011 --strictPort",
     "asset:register": "node scripts/register-asset.mjs",
     "asset:unregister": "node scripts/register-asset.mjs --unregister",
     "asset:migrate-guid": "node scripts/asset-registry/migrate-asset-guid-catalog.mjs",

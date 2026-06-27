@@ -874,7 +874,7 @@ export default defineConfig({
     },
   },
   server: {
-    port: 3006,
+    port: 3011,
     strictPort: true,
     cors: true,
     allowedHosts: ['.e2b.app'],
