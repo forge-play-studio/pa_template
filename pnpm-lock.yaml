@@ -18,8 +18,8 @@ importers:
         specifier: 0.1.5-beta.4
         version: 0.1.5-beta.4
       '@fps/vfx':
-        specifier: git+ssh://git@github.com/forge-play-studio/fps-vfx-library.git#v0.1.0
-        version: git+https://git@github.com:forge-play-studio/fps-vfx-library.git#5069d6c4cf14ee2b118f485613d831dde3d40593(@babylonjs/core@8.52.1)(@babylonjs/loaders@8.52.1(@babylonjs/core@8.52.1)(babylonjs-gltf2interface@8.46.2))
+        specifier: git+ssh://git@github.com/forge-play-studio/fps-vfx-library.git#v0.1.1
+        version: git+https://git@github.com:forge-play-studio/fps-vfx-library.git#2da3062b7ed8beb3bb7672cc1e4481ba89daed9f(@babylonjs/core@8.52.1)(@babylonjs/loaders@8.52.1(@babylonjs/core@8.52.1)(babylonjs-gltf2interface@8.46.2))
     devDependencies:
       '@babylonjs/inspector':
         specifier: 8.52.1
@@ -799,9 +799,9 @@ packages:
       - '@fps-games/editor-playable-sdk'
       - '@fps-games/editor-protocol'
 
-  '@fps/vfx@git+https://git@github.com:forge-play-studio/fps-vfx-library.git#5069d6c4cf14ee2b118f485613d831dde3d40593':
-    resolution: {commit: 5069d6c4cf14ee2b118f485613d831dde3d40593, repo: git@github.com:forge-play-studio/fps-vfx-library.git, type: git}
-    version: 0.1.0
+  '@fps/vfx@git+https://git@github.com:forge-play-studio/fps-vfx-library.git#2da3062b7ed8beb3bb7672cc1e4481ba89daed9f':
+    resolution: {commit: 2da3062b7ed8beb3bb7672cc1e4481ba89daed9f, repo: git@github.com:forge-play-studio/fps-vfx-library.git, type: git}
+    version: 0.1.1
     peerDependencies:
       '@babylonjs/core': ^8.0.0
       '@babylonjs/loaders': ^8.0.0
@@ -2614,7 +2614,7 @@ snapshots:
 
   '@fps-games/editor@0.1.5-beta.4': {}
 
-  '@fps/vfx@git+https://git@github.com:forge-play-studio/fps-vfx-library.git#5069d6c4cf14ee2b118f485613d831dde3d40593(@babylonjs/core@8.52.1)(@babylonjs/loaders@8.52.1(@babylonjs/core@8.52.1)(babylonjs-gltf2interface@8.46.2))':
+  '@fps/vfx@git+https://git@github.com:forge-play-studio/fps-vfx-library.git#2da3062b7ed8beb3bb7672cc1e4481ba89daed9f(@babylonjs/core@8.52.1)(@babylonjs/loaders@8.52.1(@babylonjs/core@8.52.1)(babylonjs-gltf2interface@8.46.2))':
     dependencies:
       '@babylonjs/core': 8.52.1
       '@babylonjs/loaders': 8.52.1(@babylonjs/core@8.52.1)(babylonjs-gltf2interface@8.46.2)
