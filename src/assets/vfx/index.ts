@@ -5,9 +5,9 @@ import { buildRegistry, type VfxRegistry } from '@fps/vfx';
 // 把库的类型/导出透传给项目(消费方按 '../assets/vfx' 取 VFX 类型)
 export * from '@fps/vfx';
 
-// prod 构建只保留这些 production 目录(等价旧 index.production.ts)
-const PRODUCTION_EFFECT_DIRS = new Set<string>([
-  // vfx add 后把要进 prod 的目录名加这里
+// 默认:vfx add 进来的特效都进 prod 包。只想 dev 预览、不进 prod 的,把目录名加到这里。
+const DEBUG_ONLY_EFFECT_DIRS = new Set<string>([
+  // 例:'some-experimental-effect'
 ]);
 
 const modules = import.meta.glob('./effects/*/index.ts', { eager: true }) as Record<string, Record<string, unknown>>;
@@ -17,5 +17,5 @@ export const VFX_REGISTRY: VfxRegistry = buildRegistry({
   modules,
   params,
   prod: __PROD_BUILD__,
-  isDebugOnly: (dir) => !PRODUCTION_EFFECT_DIRS.has(dir),
+  isDebugOnly: (dir) => DEBUG_ONLY_EFFECT_DIRS.has(dir),
 });
