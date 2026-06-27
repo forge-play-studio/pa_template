@@ -4,6 +4,7 @@ import { mountCameraDebugPanel } from './camera-debug-panel';
 import { mountLocalEditorModeSwitcher } from './local-editor-mode-switcher';
 import { mountRuntimeGameplayDebugPanels } from './runtime-gameplay-debug-panels';
 import { mountRuntimeLightingDebugPanel } from './runtime-lighting-debug-panel';
+import { mountRuntimeVfxDebugPanel } from './runtime-vfx-debug-panel';
 import { DisposableStack, type Disposable } from './framework/disposables';
 import { RuntimeDebugActionRegistry } from './framework/debug-action-registry';
 
@@ -28,6 +29,10 @@ export function mountRuntimeDebug(options: RuntimeDebugBootstrapOptions): Runtim
     getGame: options.getGame,
   }));
   runtimePanels.use(mountRuntimeLightingDebugPanel({
+    root,
+    getGame: options.getGame,
+  }));
+  runtimePanels.use(mountRuntimeVfxDebugPanel({
     root,
     getGame: options.getGame,
   }));
