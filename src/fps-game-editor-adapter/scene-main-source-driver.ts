@@ -19,7 +19,11 @@ import {
 import baseSceneConfig from '../config/scene.json';
 import type { SceneConfig } from '../config/types';
 import type { EditorSceneAssetLibraryItem, EditorSceneDocument } from './editor-scene-document';
-import { compileEditorSceneDocumentToSceneConfig } from './editor-scene-compiler';
+import {
+  EDITOR_SCENE_COMPILER_ID,
+  EDITOR_SCENE_COMPILER_VERSION,
+  compileEditorSceneDocumentToSceneConfig,
+} from './editor-scene-compiler';
 import {
   getActiveRenderingConfig,
   isRenderingProfileDirty,
@@ -201,8 +205,8 @@ function readCompiledArtifactProvenance(
   if (generatedFrom) return generatedFrom;
   return {
     ...source.ref,
-    compilerId: 'pa_template.editor-scene.compiler',
-    compilerVersion: '1',
+    compilerId: EDITOR_SCENE_COMPILER_ID,
+    compilerVersion: EDITOR_SCENE_COMPILER_VERSION,
     compiledAt: new Date().toISOString(),
   };
 }

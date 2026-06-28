@@ -212,10 +212,11 @@ const editorProjectionModelImporter = createBabylonAssetContainerProjectionImpor
   resolveCacheKey: (context) => {
     const importPlan = resolveCachedEditorProjectionImportPlan(context);
     const assetId = readEditorSceneRuntimePreviewAssetId(context.asset) ?? '';
-    const sourceId = typeof context.asset.sourceId === 'string' ? context.asset.sourceId : '';
+    const assetRecord = context.asset as Record<string, unknown>;
+    const assetGuid = typeof assetRecord.guid === 'string' ? assetRecord.guid : '';
     return importPlan && importPlan.kind !== 'groundDecal'
-      ? `pa-template:model:${assetId}:${sourceId}:${importPlan.url}`
-      : `pa-template:model:${assetId}:${sourceId}`;
+      ? `pa-template:model:${assetId}:${assetGuid}:${importPlan.url}`
+      : `pa-template:model:${assetId}:${assetGuid}`;
   },
   onEvent: handleEditorProjectionImportEvent,
 });
@@ -275,14 +276,20 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
         const gameObject = document.scene.gameObjects.find((entry) => entry.id === id);
         return gameObject ? createProjectionNode(document, gameObject) : null;
       },
-      createPatchFromAsset: (assetItem, input) => ({
-        label: `Add ${assetItem.displayName}`,
-        patch: {
-          kind: 'game-object.create-from-asset',
-          assetItem,
-          ...(input?.placement ? { placement: input.placement as any } : {}),
-        },
-      }),
+      createPatchFromAsset: (assetItem, input) => {
+        const assetName = typeof input?.name === 'string' && input.name.trim()
+          ? input.name.trim()
+          : undefined;
+        return {
+          label: `Add ${assetName ?? assetItem.displayName}`,
+          patch: {
+            kind: 'game-object.create-from-asset',
+            assetItem,
+            ...(assetName ? { name: assetName } : {}),
+            ...(input?.placement ? { placement: input.placement as any } : {}),
+          },
+        };
+      },
       createSerializedPropertyPatch: createEditorSceneSerializedPropertyPatch,
     },
     capabilities: {

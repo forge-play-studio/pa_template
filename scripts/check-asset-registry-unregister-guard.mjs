@@ -71,9 +71,7 @@ async function createConfig(baseDir) {
     },
     loadRules: async () => ({ errorCodes }),
     relativeImportedPath: (_kind, fileName) => `../imported/${fileName}`,
-    toImportName: (value) => value,
     publicUrlForImportedAsset: (_kind, fileName) => `/src/assets/imported/${fileName}`,
-    generateRegistry: () => 'export const GENERATED_ASSET_CATALOG = {};\n',
   };
 }
 

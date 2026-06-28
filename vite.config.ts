@@ -1,8 +1,10 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
+import { spawnSync } from 'child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { mkdir, writeFile } from 'fs/promises';
 import path from 'path';
+import { pathToFileURL } from 'url';
 import { viteSingleFile } from 'vite-plugin-singlefile';
 import { visualizer } from 'rollup-plugin-visualizer';
 import pkg from './package.json';
@@ -10,6 +12,7 @@ import {
   createPlayableEditorBundledPackageRoots,
   createPlayableEditorBundledPackageAliasPlan,
   createPlayableEditorSourcePackageAliasPlan,
+  createEditorSceneAssetLibrary,
   formatPlayableEditorDoctorReport,
   handleEditorSceneRenderingProfileAuthoringRequest,
   handlePlayableAuthoringServerRequest,
@@ -170,6 +173,7 @@ function createBundledEditorAliases(): Array<{ find: string | RegExp; replacemen
 const editorPackageAliases = localFpsGameEditorRepo
   ? createLocalEditorSourceAliases(localFpsGameEditorRepo)
   : createBundledEditorAliases();
+const playableEditorAssetAuthoringHandlersFactoryPromise = loadPlayableEditorAssetAuthoringHandlersFactory();
 
 if (localFpsGameEditorRepo) {
   console.info(`[fps-editor] Using local editor sources from ${localFpsGameEditorRepo}`);
@@ -245,6 +249,7 @@ function projectAuthoringApiPlugin() {
     name: 'fps-editor-project-authoring-api',
     apply: 'serve' as const,
     configureServer(server: any) {
+      const assetAuthoringHandlersPromise = createProjectAssetAuthoringHandlers(server);
       void import('./scripts/asset-registry/project-asset-catalog-config.mjs')
         .then(({ projectAssetRegistryConfig, projectTextureRegistryConfig }) => {
           const paths = [
@@ -304,25 +309,15 @@ function projectAuthoringApiPlugin() {
         }, {
           readBody: () => readJsonBody(req),
           normalizeTransportPath,
-          async loadManifest() {
-            const { projectAssetRegistryConfig, projectTextureRegistryConfig } = await import('./scripts/asset-registry/project-asset-catalog-config.mjs');
-            const manifest = existsSync(projectAssetRegistryConfig.manifestPath)
-              ? JSON.parse(readFileSync(projectAssetRegistryConfig.manifestPath, 'utf8'))
-              : [];
-            const textureManifest = existsSync(projectTextureRegistryConfig.manifestPath)
-              ? JSON.parse(readFileSync(projectTextureRegistryConfig.manifestPath, 'utf8'))
-              : [];
-            return { ok: true, manifest, textureManifest };
+          async loadManifest(route) {
+            const handlers = await assetAuthoringHandlersPromise;
+            if (!handlers.loadManifest) throw new Error('asset_manifest_handler_unavailable');
+            return handlers.loadManifest(route);
           },
-          async loadEditorAssetLibrary() {
-            const assets = await listEditorAssetLibrary(server);
-            return {
-              ok: true,
-              assets,
-              summary: {
-                assets: assets.length,
-              },
-            };
+          async loadEditorAssetLibrary(route) {
+            const handlers = await assetAuthoringHandlersPromise;
+            if (!handlers.loadEditorAssetLibrary) throw new Error('asset_library_handler_unavailable');
+            return handlers.loadEditorAssetLibrary(route);
           },
           async loadEditorScene() {
             const editorScenePath = resolve(__dirname, 'src/config/editor-scene.json');
@@ -354,29 +349,10 @@ function projectAuthoringApiPlugin() {
             await writeFile(targetPath, text, 'utf8');
             return { ok: true, path: targetPath };
           },
-          async runCommand({ cmd, payloadPath }) {
-            const { projectAssetRegistryConfig, projectTextureRegistryConfig } = await import('./scripts/asset-registry/project-asset-catalog-config.mjs');
-            const registryCore = await import('./scripts/asset-registry/core.mjs');
-            const rules = await projectAssetRegistryConfig.loadRules();
-            const errorCodes = rules.errorCodes ?? {};
-            const payload = readAssetRegistryPayload(payloadPath);
-            const registryConfig = selectAssetRegistryConfigForPayload(
-              payload,
-              projectAssetRegistryConfig,
-              projectTextureRegistryConfig,
-            );
-            const result = cmd.includes('asset:unregister')
-              ? await registryCore.unregisterAsset(registryConfig, { payload: payloadPath }, errorCodes)
-              : await registryCore.registerAsset(registryConfig, { payload: payloadPath }, errorCodes);
-            invalidateViteFileModules(
-              server,
-              [
-                resolve(__dirname, 'src/assets/index.ts'),
-                typeof result?.manifestPath === 'string' ? result.manifestPath : registryConfig.manifestPath,
-                typeof result?.registryPath === 'string' ? result.registryPath : registryConfig.registryPath,
-              ],
-            );
-            return { ok: true, cmd, result };
+          async runCommand(input) {
+            const handlers = await assetAuthoringHandlersPromise;
+            if (!handlers.runCommand) throw new Error('asset_command_handler_unavailable');
+            return handlers.runCommand(input);
           },
           async saveEditorScene({ mode: saveMode, rawEditorScene, body }) {
             const companionConfigPayload = readSceneMainSourceSaveCompanionConfigs(body);
@@ -586,27 +562,63 @@ function normalizeTransportPath(value: string): string {
   return normalizePayloadPath(value);
 }
 
-function readAssetRegistryPayload(payloadPath: string): Record<string, any> {
-  return JSON.parse(readFileSync(payloadPath, 'utf8') || '{}') as Record<string, any>;
+async function createProjectAssetAuthoringHandlers(server: any) {
+  const { projectAssetRegistryConfig, projectTextureRegistryConfig } = await import('./scripts/asset-registry/project-asset-catalog-config.mjs');
+  const createPlayableEditorAssetAuthoringHandlers = await playableEditorAssetAuthoringHandlersFactoryPromise;
+  return createPlayableEditorAssetAuthoringHandlers({
+    assetRegistryConfig: projectAssetRegistryConfig,
+    textureRegistryConfig: projectTextureRegistryConfig,
+    loadAssetCatalogEntries: () => loadProjectEditorAssetCatalogEntries(server),
+    additionalInvalidationFiles: [resolve(__dirname, 'src/assets/index.ts')],
+    invalidateFiles(files) {
+      invalidateViteFileModules(server, [...files]);
+    },
+  });
 }
 
-function selectAssetRegistryConfigForPayload(
-  payload: Record<string, any>,
-  modelConfig: any,
-  textureConfig: any,
-): any {
-  return isTextureAssetRegistryPayload(payload) ? textureConfig : modelConfig;
+async function loadPlayableEditorAssetAuthoringHandlersFactory() {
+  if (localFpsGameEditorRepo) {
+    const viteDistPath = resolve(localFpsGameEditorRepo, 'packages/editor-playable-sdk/dist/vite/index.js');
+    if (!existsSync(viteDistPath)) {
+      compileLocalPlayableSdk(localFpsGameEditorRepo);
+    }
+    const module = await import(`${pathToFileURL(viteDistPath).href}?vite-config=${Date.now()}`);
+    return readPlayableEditorAssetAuthoringHandlersFactory(module, viteDistPath);
+  }
+
+  const module = await import('@fps-games/editor/playable-sdk/vite');
+  return readPlayableEditorAssetAuthoringHandlersFactory(module, '@fps-games/editor/playable-sdk/vite');
 }
 
-function isTextureAssetRegistryPayload(payload: Record<string, any>): boolean {
-  const explicitType = typeof payload.assetType === 'string' ? payload.assetType.toLowerCase() : '';
-  if (/^(texture|image|png|jpg|jpeg|webp)$/.test(explicitType)) return true;
-  const mimeType = typeof payload.mimeType === 'string' ? payload.mimeType.toLowerCase() : '';
-  if (mimeType.startsWith('image/')) return true;
-  const candidate = [payload.sourcePath, payload.assetPath, payload.assetName]
-    .filter((value): value is string => typeof value === 'string')
-    .join('\n');
-  return /\.(png|jpe?g|webp)(?:$|[?#])/i.test(candidate);
+function readPlayableEditorAssetAuthoringHandlersFactory(module: unknown, source: string) {
+  const factory = (module as {
+    createPlayableEditorAssetAuthoringHandlers?: unknown;
+  })?.createPlayableEditorAssetAuthoringHandlers;
+  if (typeof factory !== 'function') {
+    throw new Error(
+      `${source} does not provide createPlayableEditorAssetAuthoringHandlers. `
+      + 'Install a newer @fps-games/editor package or set FPS_GAME_EDITOR_REPO to a local fps-game-editor checkout.',
+    );
+  }
+  return factory;
+}
+
+function compileLocalPlayableSdk(repoRoot: string): void {
+  const result = spawnSync('npx', ['tsc', '-p', 'packages/editor-playable-sdk/tsconfig.json'], {
+    cwd: repoRoot,
+    stdio: 'inherit',
+  });
+  if (result.status !== 0) {
+    throw new Error(`Failed to compile local fps-game-editor playable SDK (exit ${result.status ?? 'unknown'}).`);
+  }
+
+  const fixResult = spawnSync('node', ['scripts/fix-esm-imports.mjs'], {
+    cwd: repoRoot,
+    stdio: 'inherit',
+  });
+  if (fixResult.status !== 0) {
+    throw new Error(`Failed to prepare local fps-game-editor playable SDK ESM output (exit ${fixResult.status ?? 'unknown'}).`);
+  }
 }
 
 function sendAuthoringServerResponse(res: any, response: PlayableAuthoringServerResponse): void {
@@ -672,14 +684,16 @@ function summarizeRenderingProfile(value: any): Record<string, unknown> {
   };
 }
 
-async function listEditorAssetLibrary(server: any): Promise<Array<Record<string, unknown>>> {
+async function loadProjectEditorAssetCatalogEntries(server: any): Promise<Array<Record<string, unknown>>> {
   const assetsModule = await server.ssrLoadModule('/src/assets/index.ts');
-  const editorAssetLibraryModule = await server.ssrLoadModule('/src/fps-game-editor-adapter/editor-asset-library.ts');
-  const catalogEntries = [
+  return [
     ...assetsModule.getAssetCatalogEntries({ kind: 'model', placeable: true }),
     ...assetsModule.getAssetCatalogEntries({ kind: 'texture', placeable: true }),
   ];
-  return editorAssetLibraryModule.createProjectEditorAssetLibrary(catalogEntries);
+}
+
+async function listEditorAssetLibrary(server: any): Promise<Array<Record<string, unknown>>> {
+  return createEditorSceneAssetLibrary(await loadProjectEditorAssetCatalogEntries(server)) as Array<Record<string, unknown>>;
 }
 
 function invalidateViteFileModules(server: any, files: string[]): void {

@@ -8,10 +8,10 @@
     "generatedFrom": {
       "sourceId": "scene.main",
       "sourceType": "scene",
-      "revision": 51,
-      "compilerId": "pa_template.editor-scene.compiler",
+      "revision": 53,
+      "compilerId": "@fps-games/editor.playable-sdk.scene-compiler",
       "compilerVersion": "1",
-      "compiledAt": "2026-06-09T10:00:25.754Z"
+      "compiledAt": "2026-06-28T06:08:03.887Z"
     }
   },
   "gameplay": {
@@ -31,7 +31,1000 @@
   },
   "scene": {
     "rootId": "root",
-    "assets": [],
+    "assets": [
+      {
+        "id": "asset_699aee4da2b84a3eb07f4496872ad249",
+        "type": "glb",
+        "guid": "699aee4d-a2b8-4a3e-b07f-4496872ad249",
+        "displayName": "阴影测试-主角",
+        "category": "Model",
+        "materialMode": "shared",
+        "metadata": {
+          "originalFileName": "木材订单主角.glb",
+          "relativePath": "../imported/asset_699aee4da2b84a3eb07f4496872ad249.glb",
+          "codeKey": "shadow_fixture_player",
+          "contentHash": "sha256:4c472def3f8215eb2e2ba25a486750568d15effefe4210f53b085e8804e483e6",
+          "byteSize": 390248,
+          "category": "shadow-fixture/character",
+          "shadowFixture": true,
+          "sourceProject": "lumber-order-260525",
+          "sourceFileName": "木材订单主角.glb",
+          "materialSlots": [
+            {
+              "slotId": "slot_7bdc2eef",
+              "ownerNodePath": "男主",
+              "label": "男主",
+              "nodeIndex": 0,
+              "meshIndex": 0,
+              "sourceMaterialIndex": 0,
+              "sourceMaterialIndices": [
+                0,
+                1
+              ],
+              "materialName": "ren_C_Mat",
+              "materialNames": [
+                "ren_C_Mat",
+                "maozi_C_Mat"
+              ],
+              "sourceMaterialProfiles": [
+                {
+                  "sourceMaterialIndex": 0,
+                  "materialName": "ren_C_Mat",
+                  "profile": {
+                    "metallic": 0,
+                    "roughness": 0.5
+                  },
+                  "textureHints": [
+                    {
+                      "profilePath": "baseColor.texture",
+                      "textureIndex": 0,
+                      "imageIndex": 0,
+                      "bufferView": 12,
+                      "mimeType": "image/png",
+                      "reason": "embedded-texture"
+                    }
+                  ]
+                },
+                {
+                  "sourceMaterialIndex": 1,
+                  "materialName": "maozi_C_Mat",
+                  "profile": {
+                    "metallic": 0,
+                    "roughness": 0.5
+                  },
+                  "textureHints": [
+                    {
+                      "profilePath": "baseColor.texture",
+                      "textureIndex": 1,
+                      "imageIndex": 1,
+                      "bufferView": 13,
+                      "mimeType": "image/png",
+                      "reason": "embedded-texture"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "asset_ade25007e0964563b197b21c2759c027",
+        "type": "glb",
+        "guid": "ade25007-e096-4563-b197-b21c2759c027",
+        "displayName": "阴影测试-工人",
+        "category": "Model",
+        "materialMode": "shared",
+        "metadata": {
+          "originalFileName": "工人_2.glb",
+          "relativePath": "../imported/asset_ade25007e0964563b197b21c2759c027.glb",
+          "codeKey": "shadow_fixture_worker",
+          "contentHash": "sha256:4a6718371965120bc98f444142858bfe819dacaec4cd3a4b9f8a3d9d552ae7c9",
+          "byteSize": 424920,
+          "category": "shadow-fixture/character",
+          "shadowFixture": true,
+          "sourceProject": "lumber-order-260525",
+          "sourceFileName": "工人_2.glb",
+          "materialSlots": [
+            {
+              "slotId": "slot_74e9cbf9",
+              "ownerNodePath": "gongren_Rig:Geometry/gongren_Rig:fbx_city_npc_worker_male03",
+              "label": "gongren_Rig:fbx_city_npc_worker_male03",
+              "nodeIndex": 2,
+              "meshIndex": 0,
+              "sourceMaterialIndex": 0,
+              "sourceMaterialIndices": [
+                0
+              ],
+              "materialName": "lambert2",
+              "materialNames": [
+                "lambert2"
+              ],
+              "sourceMaterialProfiles": [
+                {
+                  "sourceMaterialIndex": 0,
+                  "materialName": "lambert2",
+                  "profile": {
+                    "baseColor": {
+                      "color": {
+                        "r": 1,
+                        "g": 1,
+                        "b": 1
+                      },
+                      "brightness": 1,
+                      "saturation": 1,
+                      "contrast": 1,
+                      "hue": 0
+                    },
+                    "metallic": 0,
+                    "roughness": 0.4500536322593689,
+                    "alpha": {
+                      "mode": "opaque"
+                    }
+                  },
+                  "textureHints": [
+                    {
+                      "profilePath": "baseColor.texture",
+                      "textureIndex": 0,
+                      "imageIndex": 0,
+                      "bufferView": 6,
+                      "mimeType": "image/jpeg",
+                      "reason": "embedded-texture"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "asset_4b2358ee5d9441cd8cae8b389bb98c46",
+        "type": "glb",
+        "guid": "4b2358ee-5d94-41cd-8cae-8b389bb98c46",
+        "displayName": "阴影测试-小蓝卡车",
+        "category": "Model",
+        "materialMode": "shared",
+        "metadata": {
+          "originalFileName": "小蓝卡车.glb",
+          "relativePath": "../imported/asset_4b2358ee5d9441cd8cae8b389bb98c46.glb",
+          "codeKey": "shadow_fixture_truck",
+          "contentHash": "sha256:18c222d04afb57061d0ab55ce62ee3b5245c90b1bf70a27c0b70d2123b137c9b",
+          "byteSize": 407284,
+          "category": "shadow-fixture/vehicle",
+          "shadowFixture": true,
+          "sourceProject": "lumber-order-260525",
+          "sourceFileName": "小蓝卡车.glb",
+          "materialSlots": [
+            {
+              "slotId": "slot_91c449a4",
+              "ownerNodePath": "ST_kache_Rig:Geometry/ST_kache_Rig:polySurface102",
+              "label": "ST_kache_Rig:polySurface102",
+              "nodeIndex": 6,
+              "meshIndex": 4,
+              "sourceMaterialIndex": 0,
+              "sourceMaterialIndices": [
+                0
+              ],
+              "materialName": "ST_kache_Rig:lambert21",
+              "materialNames": [
+                "ST_kache_Rig:lambert21"
+              ],
+              "sourceMaterialProfiles": [
+                {
+                  "sourceMaterialIndex": 0,
+                  "materialName": "ST_kache_Rig:lambert21",
+                  "profile": {
+                    "metallic": 0,
+                    "roughness": 0.165830582,
+                    "emission": {
+                      "color": {
+                        "r": 0.8,
+                        "g": 0.8,
+                        "b": 0.8
+                      },
+                      "intensity": 1
+                    }
+                  },
+                  "textureHints": [
+                    {
+                      "profilePath": "baseColor.texture",
+                      "textureIndex": 0,
+                      "imageIndex": 0,
+                      "bufferView": 6,
+                      "mimeType": "image/jpeg",
+                      "reason": "embedded-texture"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "slotId": "slot_47f2cfb8",
+              "ownerNodePath": "ST_kache_Rig:Geometry/ST_kache_Rig:polySurface108",
+              "label": "ST_kache_Rig:polySurface108",
+              "nodeIndex": 3,
+              "meshIndex": 1,
+              "sourceMaterialIndex": 0,
+              "sourceMaterialIndices": [
+                0
+              ],
+              "materialName": "ST_kache_Rig:lambert21",
+              "materialNames": [
+                "ST_kache_Rig:lambert21"
+              ],
+              "sourceMaterialProfiles": [
+                {
+                  "sourceMaterialIndex": 0,
+                  "materialName": "ST_kache_Rig:lambert21",
+                  "profile": {
+                    "metallic": 0,
+                    "roughness": 0.165830582,
+                    "emission": {
+                      "color": {
+                        "r": 0.8,
+                        "g": 0.8,
+                        "b": 0.8
+                      },
+                      "intensity": 1
+                    }
+                  },
+                  "textureHints": [
+                    {
+                      "profilePath": "baseColor.texture",
+                      "textureIndex": 0,
+                      "imageIndex": 0,
+                      "bufferView": 6,
+                      "mimeType": "image/jpeg",
+                      "reason": "embedded-texture"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "slotId": "slot_5278c34c",
+              "ownerNodePath": "ST_kache_Rig:Geometry/ST_kache_Rig:polySurface119",
+              "label": "ST_kache_Rig:polySurface119",
+              "nodeIndex": 2,
+              "meshIndex": 0,
+              "sourceMaterialIndex": 0,
+              "sourceMaterialIndices": [
+                0
+              ],
+              "materialName": "ST_kache_Rig:lambert21",
+              "materialNames": [
+                "ST_kache_Rig:lambert21"
+              ],
+              "sourceMaterialProfiles": [
+                {
+                  "sourceMaterialIndex": 0,
+                  "materialName": "ST_kache_Rig:lambert21",
+                  "profile": {
+                    "metallic": 0,
+                    "roughness": 0.165830582,
+                    "emission": {
+                      "color": {
+                        "r": 0.8,
+                        "g": 0.8,
+                        "b": 0.8
+                      },
+                      "intensity": 1
+                    }
+                  },
+                  "textureHints": [
+                    {
+                      "profilePath": "baseColor.texture",
+                      "textureIndex": 0,
+                      "imageIndex": 0,
+                      "bufferView": 6,
+                      "mimeType": "image/jpeg",
+                      "reason": "embedded-texture"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "slotId": "slot_a58a01f0",
+              "ownerNodePath": "ST_kache_Rig:Geometry/ST_kache_Rig:polySurface96",
+              "label": "ST_kache_Rig:polySurface96",
+              "nodeIndex": 4,
+              "meshIndex": 2,
+              "sourceMaterialIndex": 0,
+              "sourceMaterialIndices": [
+                0
+              ],
+              "materialName": "ST_kache_Rig:lambert21",
+              "materialNames": [
+                "ST_kache_Rig:lambert21"
+              ],
+              "sourceMaterialProfiles": [
+                {
+                  "sourceMaterialIndex": 0,
+                  "materialName": "ST_kache_Rig:lambert21",
+                  "profile": {
+                    "metallic": 0,
+                    "roughness": 0.165830582,
+                    "emission": {
+                      "color": {
+                        "r": 0.8,
+                        "g": 0.8,
+                        "b": 0.8
+                      },
+                      "intensity": 1
+                    }
+                  },
+                  "textureHints": [
+                    {
+                      "profilePath": "baseColor.texture",
+                      "textureIndex": 0,
+                      "imageIndex": 0,
+                      "bufferView": 6,
+                      "mimeType": "image/jpeg",
+                      "reason": "embedded-texture"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "slotId": "slot_ab17af44",
+              "ownerNodePath": "ST_kache_Rig:Geometry/ST_kache_Rig:polySurface99",
+              "label": "ST_kache_Rig:polySurface99",
+              "nodeIndex": 5,
+              "meshIndex": 3,
+              "sourceMaterialIndex": 0,
+              "sourceMaterialIndices": [
+                0
+              ],
+              "materialName": "ST_kache_Rig:lambert21",
+              "materialNames": [
+                "ST_kache_Rig:lambert21"
+              ],
+              "sourceMaterialProfiles": [
+                {
+                  "sourceMaterialIndex": 0,
+                  "materialName": "ST_kache_Rig:lambert21",
+                  "profile": {
+                    "metallic": 0,
+                    "roughness": 0.165830582,
+                    "emission": {
+                      "color": {
+                        "r": 0.8,
+                        "g": 0.8,
+                        "b": 0.8
+                      },
+                      "intensity": 1
+                    }
+                  },
+                  "textureHints": [
+                    {
+                      "profilePath": "baseColor.texture",
+                      "textureIndex": 0,
+                      "imageIndex": 0,
+                      "bufferView": 6,
+                      "mimeType": "image/jpeg",
+                      "reason": "embedded-texture"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "asset_edc2f992438c4450afc1c6354ec21500",
+        "type": "glb",
+        "guid": "edc2f992-438c-4450-afc1-c6354ec21500",
+        "displayName": "阴影测试-松树",
+        "category": "Model",
+        "materialMode": "shared",
+        "metadata": {
+          "originalFileName": "松树.glb",
+          "relativePath": "../imported/asset_edc2f992438c4450afc1c6354ec21500.glb",
+          "codeKey": "shadow_fixture_pine_tree",
+          "contentHash": "sha256:30f4359bf67f78a1279b154228326c6c8dfe0b6da5478734f24ac466a4e44706",
+          "byteSize": 26812,
+          "category": "shadow-fixture/vegetation",
+          "shadowFixture": true,
+          "sourceProject": "lumber-order-260525",
+          "sourceFileName": "松树.glb",
+          "materialSlots": [
+            {
+              "slotId": "slot_1463c7d6",
+              "ownerNodePath": "树",
+              "label": "树",
+              "nodeIndex": 0,
+              "meshIndex": 0,
+              "sourceMaterialIndex": 0,
+              "sourceMaterialIndices": [
+                0
+              ],
+              "materialName": "Material #104",
+              "materialNames": [
+                "Material #104"
+              ],
+              "sourceMaterialProfiles": [
+                {
+                  "sourceMaterialIndex": 0,
+                  "materialName": "Material #104",
+                  "profile": {
+                    "metallic": 0,
+                    "roughness": 0.5527864098548889
+                  },
+                  "textureHints": [
+                    {
+                      "profilePath": "baseColor.texture",
+                      "textureIndex": 0,
+                      "imageIndex": 0,
+                      "bufferView": 0,
+                      "mimeType": "image/jpeg",
+                      "reason": "embedded-texture"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "asset_af82a4f117d84ff58bedb41aa11bad5c",
+        "type": "glb",
+        "guid": "af82a4f1-17d8-4ff5-8bed-b41aa11bad5c",
+        "displayName": "阴影测试-阔叶灌木",
+        "category": "Model",
+        "materialMode": "shared",
+        "metadata": {
+          "originalFileName": "阔叶灌木.glb",
+          "relativePath": "../imported/asset_af82a4f117d84ff58bedb41aa11bad5c.glb",
+          "codeKey": "shadow_fixture_bush",
+          "contentHash": "sha256:e7b11c136363d947fe3d20a343e637a9d8071913cfaa546794445ef59278e5a4",
+          "byteSize": 63492,
+          "category": "shadow-fixture/vegetation",
+          "shadowFixture": true,
+          "sourceProject": "lumber-order-260525",
+          "sourceFileName": "阔叶灌木.glb",
+          "materialSlots": [
+            {
+              "slotId": "slot_a3b38496",
+              "ownerNodePath": "SM_SSD_S_M_huacaoo49",
+              "label": "SM_SSD_S_M_huacaoo49",
+              "nodeIndex": 0,
+              "meshIndex": 0,
+              "sourceMaterialIndex": 0,
+              "sourceMaterialIndices": [
+                0
+              ],
+              "materialName": "SSD_S_M_Cao_C3_Mat",
+              "materialNames": [
+                "SSD_S_M_Cao_C3_Mat"
+              ],
+              "sourceMaterialProfiles": [
+                {
+                  "sourceMaterialIndex": 0,
+                  "materialName": "SSD_S_M_Cao_C3_Mat",
+                  "profile": {
+                    "metallic": 1,
+                    "roughness": 0.5527864098548889
+                  },
+                  "textureHints": [
+                    {
+                      "profilePath": "baseColor.texture",
+                      "textureIndex": 0,
+                      "imageIndex": 0,
+                      "bufferView": 5,
+                      "mimeType": "image/png",
+                      "reason": "embedded-texture"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "asset_2286fa2ec19e45df8b1b188717c7c4e9",
+        "type": "glb",
+        "guid": "2286fa2e-c19e-45df-8b1b-188717c7c4e9",
+        "displayName": "阴影测试-岩石组",
+        "category": "Model",
+        "materialMode": "shared",
+        "metadata": {
+          "originalFileName": "岩石组.glb",
+          "relativePath": "../imported/asset_2286fa2ec19e45df8b1b188717c7c4e9.glb",
+          "codeKey": "shadow_fixture_rocks",
+          "contentHash": "sha256:4a1c7748c1b2a495f4466098b9f0b04dcc566c41d92340e1adb5cf949227fd28",
+          "byteSize": 83836,
+          "category": "shadow-fixture/rock",
+          "shadowFixture": true,
+          "sourceProject": "lumber-order-260525",
+          "sourceFileName": "岩石组.glb",
+          "materialSlots": [
+            {
+              "slotId": "slot_0a33f1e4",
+              "ownerNodePath": "yanshi_02",
+              "label": "yanshi_02",
+              "nodeIndex": 0,
+              "meshIndex": 0,
+              "sourceMaterialIndex": 0,
+              "sourceMaterialIndices": [
+                0
+              ],
+              "materialName": "standardSurface2",
+              "materialNames": [
+                "standardSurface2"
+              ],
+              "sourceMaterialProfiles": [
+                {
+                  "sourceMaterialIndex": 0,
+                  "materialName": "standardSurface2",
+                  "profile": {
+                    "metallic": 0,
+                    "roughness": 0.5527864098548889
+                  },
+                  "textureHints": [
+                    {
+                      "profilePath": "baseColor.texture",
+                      "textureIndex": 0,
+                      "imageIndex": 0,
+                      "bufferView": 4,
+                      "mimeType": "image/jpeg",
+                      "reason": "embedded-texture"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "asset_e726be04042849088cf73e4f2f92c00f",
+        "type": "glb",
+        "guid": "e726be04-0428-4908-8cf7-3e4f2f92c00f",
+        "displayName": "阴影测试-栅栏",
+        "category": "Model",
+        "materialMode": "shared",
+        "metadata": {
+          "originalFileName": "栅栏.glb",
+          "relativePath": "../imported/asset_e726be04042849088cf73e4f2f92c00f.glb",
+          "codeKey": "shadow_fixture_fence",
+          "contentHash": "sha256:012de8a27bf4da988ede9bc7b82937fd261cd2fc139d54394035c3e20e351a6e",
+          "byteSize": 45728,
+          "category": "shadow-fixture/prop",
+          "shadowFixture": true,
+          "sourceProject": "lumber-order-260525",
+          "sourceFileName": "栅栏.glb",
+          "materialSlots": [
+            {
+              "slotId": "slot_134be123",
+              "ownerNodePath": "ZHALAN__5_",
+              "label": "ZHALAN__5_",
+              "nodeIndex": 0,
+              "meshIndex": 0,
+              "sourceMaterialIndex": 0,
+              "sourceMaterialIndices": [
+                0
+              ],
+              "materialName": "ZHALAN_Mat",
+              "materialNames": [
+                "ZHALAN_Mat"
+              ],
+              "sourceMaterialProfiles": [
+                {
+                  "sourceMaterialIndex": 0,
+                  "materialName": "ZHALAN_Mat",
+                  "profile": {
+                    "metallic": 1,
+                    "roughness": 0.5527864098548889
+                  },
+                  "textureHints": [
+                    {
+                      "profilePath": "baseColor.texture",
+                      "textureIndex": 0,
+                      "imageIndex": 0,
+                      "bufferView": 5,
+                      "mimeType": "image/jpeg",
+                      "reason": "embedded-texture"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "asset_52549a6dc9a34a5da036b7e771a907b3",
+        "type": "glb",
+        "guid": "52549a6d-c9a3-4a5d-a036-b7e771a907b3",
+        "displayName": "阴影测试-成捆木材",
+        "category": "Model",
+        "materialMode": "shared",
+        "metadata": {
+          "originalFileName": "成捆木材.glb",
+          "relativePath": "../imported/asset_52549a6dc9a34a5da036b7e771a907b3.glb",
+          "codeKey": "shadow_fixture_log_bundle",
+          "contentHash": "sha256:f63fb3420fcb65edf2d79962a3f2953aef80f57da5b1b0126b4beb3a3bc2eeb6",
+          "byteSize": 1164808,
+          "category": "shadow-fixture/prop",
+          "shadowFixture": true,
+          "sourceProject": "lumber-order-260525",
+          "sourceFileName": "成捆木材.glb",
+          "materialSlots": [
+            {
+              "slotId": "slot_fa0049a6",
+              "ownerNodePath": "node_0",
+              "label": "asset_20fda03a2e3c410da8df4741b_eae9a5__1781600584273_upload__1_",
+              "nodeIndex": 0,
+              "meshIndex": 0,
+              "sourceMaterialIndex": 0,
+              "sourceMaterialIndices": [
+                0,
+                1
+              ],
+              "materialName": "MI_Pipe_Stacks_01a_asset_20fda0_4_741b2eae9a5__1780739654514_upload_asset_20fda03a2e3c410da8df4741b_eae9a5__1781600584273_upload__1_",
+              "materialNames": [
+                "MI_Pipe_Stacks_01a_asset_20fda0_4_741b2eae9a5__1780739654514_upload_asset_20fda03a2e3c410da8df4741b_eae9a5__1781600584273_upload__1_",
+                "lambert2_SM_木材-单根_单根木材_asset_20_4_741b2eae9a5__1780739654514_upload_asset_20fda03a2e3c410da8df4741b_eae9a5__1781600584273_upload__1_"
+              ],
+              "sourceMaterialProfiles": [
+                {
+                  "sourceMaterialIndex": 0,
+                  "materialName": "MI_Pipe_Stacks_01a_asset_20fda0_4_741b2eae9a5__1780739654514_upload_asset_20fda03a2e3c410da8df4741b_eae9a5__1781600584273_upload__1_",
+                  "profile": {
+                    "metallic": 0,
+                    "roughness": 0.498039246
+                  },
+                  "textureHints": [
+                    {
+                      "profilePath": "baseColor.texture",
+                      "textureIndex": 0,
+                      "imageIndex": 0,
+                      "bufferView": 14,
+                      "mimeType": "image/png",
+                      "reason": "embedded-texture"
+                    }
+                  ]
+                },
+                {
+                  "sourceMaterialIndex": 1,
+                  "materialName": "lambert2_SM_木材-单根_单根木材_asset_20_4_741b2eae9a5__1780739654514_upload_asset_20fda03a2e3c410da8df4741b_eae9a5__1781600584273_upload__1_",
+                  "profile": {
+                    "baseColor": {
+                      "color": {
+                        "r": 0.796875,
+                        "g": 0.796875,
+                        "b": 0.796875
+                      },
+                      "brightness": 1,
+                      "saturation": 1,
+                      "contrast": 1,
+                      "hue": 0
+                    },
+                    "metallic": 0,
+                    "roughness": 1
+                  },
+                  "textureHints": [
+                    {
+                      "profilePath": "baseColor.texture",
+                      "textureIndex": 1,
+                      "imageIndex": 1,
+                      "bufferView": 15,
+                      "mimeType": "image/png",
+                      "reason": "embedded-texture"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "asset_759b595e81934517ba0251b16bd31061",
+        "type": "glb",
+        "guid": "759b595e-8193-4517-ba02-51b16bd31061",
+        "displayName": "阴影测试-箱子",
+        "category": "Model",
+        "materialMode": "shared",
+        "metadata": {
+          "originalFileName": "木材订单单个箱子.glb",
+          "relativePath": "../imported/asset_759b595e81934517ba0251b16bd31061.glb",
+          "codeKey": "shadow_fixture_crate",
+          "contentHash": "sha256:77faad71692365dc47c8753a322d0bf5560a009c77d3eaa7eec1cdcb9cad6d6d",
+          "byteSize": 26932,
+          "category": "shadow-fixture/prop",
+          "shadowFixture": true,
+          "sourceProject": "lumber-order-260525",
+          "sourceFileName": "木材订单单个箱子.glb",
+          "materialSlots": [
+            {
+              "slotId": "slot_8656a283",
+              "ownerNodePath": "xiangzi",
+              "label": "xiangzi",
+              "nodeIndex": 0,
+              "meshIndex": 0,
+              "sourceMaterialIndex": 0,
+              "sourceMaterialIndices": [
+                0
+              ],
+              "materialName": "xiangzi01_Mat_卡通风格手绘木质板箱组_xiangzi01-_xiangzi",
+              "materialNames": [
+                "xiangzi01_Mat_卡通风格手绘木质板箱组_xiangzi01-_xiangzi"
+              ],
+              "sourceMaterialProfiles": [
+                {
+                  "sourceMaterialIndex": 0,
+                  "materialName": "xiangzi01_Mat_卡通风格手绘木质板箱组_xiangzi01-_xiangzi",
+                  "profile": {
+                    "baseColor": {
+                      "color": {
+                        "r": 1,
+                        "g": 1,
+                        "b": 0.845049024
+                      },
+                      "brightness": 1,
+                      "saturation": 1,
+                      "contrast": 1,
+                      "hue": 0
+                    },
+                    "metallic": 1,
+                    "roughness": 1
+                  },
+                  "textureHints": [
+                    {
+                      "profilePath": "baseColor.texture",
+                      "textureIndex": 0,
+                      "imageIndex": 0,
+                      "bufferView": 5,
+                      "mimeType": "image/png",
+                      "reason": "embedded-texture"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "asset_7612f54e381044e4b035ea6a988bfb89",
+        "type": "glb",
+        "guid": "7612f54e-3810-44e4-b035-ea6a988bfb89",
+        "displayName": "阴影测试-木桶",
+        "category": "Model",
+        "materialMode": "shared",
+        "metadata": {
+          "originalFileName": "木质酒桶.glb",
+          "relativePath": "../imported/asset_7612f54e381044e4b035ea6a988bfb89.glb",
+          "codeKey": "shadow_fixture_barrel",
+          "contentHash": "sha256:04b676dcf8950abc56770b52b0431e891440734cbd40ae236b00f26ed4647814",
+          "byteSize": 734348,
+          "category": "shadow-fixture/prop",
+          "shadowFixture": true,
+          "sourceProject": "lumber-order-260525",
+          "sourceFileName": "木质酒桶.glb",
+          "materialSlots": [
+            {
+              "slotId": "slot_f3f14d2b",
+              "ownerNodePath": "SM_mutong",
+              "label": "SM_mutong",
+              "nodeIndex": 0,
+              "meshIndex": 0,
+              "sourceMaterialIndex": 0,
+              "sourceMaterialIndices": [
+                0
+              ],
+              "materialName": "T_Mat",
+              "materialNames": [
+                "T_Mat"
+              ],
+              "sourceMaterialProfiles": [
+                {
+                  "sourceMaterialIndex": 0,
+                  "materialName": "T_Mat",
+                  "profile": {
+                    "metallic": 1,
+                    "roughness": 0.5527864098548889
+                  },
+                  "textureHints": [
+                    {
+                      "profilePath": "baseColor.texture",
+                      "textureIndex": 0,
+                      "imageIndex": 0,
+                      "bufferView": 5,
+                      "mimeType": "image/png",
+                      "reason": "embedded-texture"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "asset_97121f40170c40d1aaf63b8c2cf0bf24",
+        "type": "glb",
+        "guid": "97121f40-170c-40d1-aaf6-3b8c2cf0bf24",
+        "displayName": "阴影测试-鸡",
+        "category": "Model",
+        "materialMode": "shared",
+        "metadata": {
+          "originalFileName": "鸡.glb",
+          "relativePath": "../imported/asset_97121f40170c40d1aaf63b8c2cf0bf24.glb",
+          "codeKey": "shadow_fixture_chicken",
+          "contentHash": "sha256:db72ad930562c7efaafaf3b2d9183003eaf0280be3c8b2cfa12cc589a024398d",
+          "byteSize": 54424,
+          "category": "shadow-fixture/animal",
+          "shadowFixture": true,
+          "sourceProject": "lumber-order-260525",
+          "sourceFileName": "鸡.glb",
+          "materialSlots": [
+            {
+              "slotId": "slot_db1ccc4e",
+              "ownerNodePath": "Geometry/ji2",
+              "label": "ji2",
+              "nodeIndex": 2,
+              "meshIndex": 0,
+              "sourceMaterialIndex": 0,
+              "sourceMaterialIndices": [
+                0
+              ],
+              "materialName": "Mat_ji",
+              "materialNames": [
+                "Mat_ji"
+              ],
+              "sourceMaterialProfiles": [
+                {
+                  "sourceMaterialIndex": 0,
+                  "materialName": "Mat_ji",
+                  "profile": {
+                    "baseColor": {
+                      "color": {
+                        "r": 0.6470588445663452,
+                        "g": 0.6470588445663452,
+                        "b": 0.6470588445663452
+                      },
+                      "brightness": 1,
+                      "saturation": 1,
+                      "contrast": 1,
+                      "hue": 0
+                    },
+                    "metallic": 0,
+                    "roughness": 1
+                  },
+                  "textureHints": [
+                    {
+                      "profilePath": "baseColor.texture",
+                      "textureIndex": 0,
+                      "reason": "missing-image-uri"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "asset_26e79030d245465885b6e4349c9d81d9",
+        "type": "glb",
+        "guid": "26e79030-d245-4658-85b6-e4349c9d81d9",
+        "displayName": "阴影测试-干草卷",
+        "category": "Model",
+        "materialMode": "shared",
+        "metadata": {
+          "originalFileName": "干草卷.glb",
+          "relativePath": "../imported/asset_26e79030d245465885b6e4349c9d81d9.glb",
+          "codeKey": "shadow_fixture_hay_bale",
+          "contentHash": "sha256:46e70ecdca481383f963f1d4f6f2029b55adde803338a5a3339d3f49de07be22",
+          "byteSize": 31820,
+          "category": "shadow-fixture/prop",
+          "shadowFixture": true,
+          "sourceProject": "lumber-order-260525",
+          "sourceFileName": "干草卷.glb",
+          "materialSlots": [
+            {
+              "slotId": "slot_c6401e21",
+              "ownerNodePath": "SM_maiduo",
+              "label": "SM_maiduo",
+              "nodeIndex": 0,
+              "meshIndex": 0,
+              "sourceMaterialIndex": 0,
+              "sourceMaterialIndices": [
+                0
+              ],
+              "materialName": "麦垛-_Mat",
+              "materialNames": [
+                "麦垛-_Mat"
+              ],
+              "sourceMaterialProfiles": [
+                {
+                  "sourceMaterialIndex": 0,
+                  "materialName": "麦垛-_Mat",
+                  "profile": {
+                    "metallic": 1,
+                    "roughness": 0.5527864098548889
+                  },
+                  "textureHints": [
+                    {
+                      "profilePath": "baseColor.texture",
+                      "textureIndex": 0,
+                      "imageIndex": 0,
+                      "bufferView": 5,
+                      "mimeType": "image/jpeg",
+                      "reason": "embedded-texture"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "asset_094bc5a89357455bb002b6b6a67e9295",
+        "type": "glb",
+        "guid": "094bc5a8-9357-455b-b002-b6b6a67e9295",
+        "displayName": "阴影测试-收银台",
+        "category": "Model",
+        "materialMode": "shared",
+        "metadata": {
+          "originalFileName": "木材订单收银台单个.glb",
+          "relativePath": "../imported/asset_094bc5a89357455bb002b6b6a67e9295.glb",
+          "codeKey": "shadow_fixture_counter",
+          "contentHash": "sha256:c839de72bc0766a27beeb829df673a48e11c4fd92ad37e36e2c62dbad7dcd67f",
+          "byteSize": 41140,
+          "category": "shadow-fixture/large-prop",
+          "shadowFixture": true,
+          "sourceProject": "lumber-order-260525",
+          "sourceFileName": "木材订单收银台单个.glb",
+          "materialSlots": [
+            {
+              "slotId": "slot_5cd8df33",
+              "ownerNodePath": "收银桌子",
+              "label": "收银桌子",
+              "nodeIndex": 0,
+              "meshIndex": 0,
+              "sourceMaterialIndex": 0,
+              "sourceMaterialIndices": [
+                0
+              ],
+              "materialName": "收银桌子aa_Mat",
+              "materialNames": [
+                "收银桌子aa_Mat"
+              ],
+              "sourceMaterialProfiles": [
+                {
+                  "sourceMaterialIndex": 0,
+                  "materialName": "收银桌子aa_Mat",
+                  "profile": {
+                    "metallic": 0,
+                    "roughness": 0.5
+                  },
+                  "textureHints": [
+                    {
+                      "profilePath": "baseColor.texture",
+                      "textureIndex": 0,
+                      "imageIndex": 0,
+                      "bufferView": 5,
+                      "mimeType": "image/png",
+                      "reason": "embedded-texture"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ],
     "nodes": [
       {
         "id": "main_camera",
@@ -40,7 +1033,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 51,
+          "revision": 53,
           "objectGuid": "go_2406b122-d63b-4971-bf66-7d78a8776543",
           "objectId": "main_camera",
           "component": "Transform"
@@ -68,8 +1061,8 @@
           "projection": "orthographic",
           "alpha": 0.7854,
           "beta": 0.7854,
-          "radius": 27,
-          "orthoSize": 5,
+          "radius": 32,
+          "orthoSize": 12,
           "fov": 0.85,
           "targetOffset": {
             "x": 0,
@@ -96,7 +1089,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 51,
+          "revision": 53,
           "objectGuid": "go_environment_light_default",
           "objectId": "environment_light",
           "component": "Transform"
@@ -142,7 +1135,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 51,
+          "revision": 53,
           "objectGuid": "go_7017d029-9d69-4381-91ac-75093053caa9",
           "objectId": "sun_light",
           "component": "Transform"
@@ -183,31 +1176,32 @@
       },
       {
         "id": "plane",
-        "name": "Plane",
+        "name": "Shadow Receiver Plane",
         "parentId": "root",
+        "shadowMode": "static",
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 51,
+          "revision": 53,
           "objectGuid": "go_20efbb4a-c323-4ea3-911c-23c72827d7b9",
           "objectId": "plane",
           "component": "PrimitiveRenderer"
         },
         "transform": {
           "position": {
-            "x": -3.078279733657837,
-            "y": 7.105427357601002e-15,
-            "z": 0.0016481704078614712
+            "x": 0,
+            "y": 0,
+            "z": 0
           },
           "rotation": {
-            "z": 0,
             "x": 0,
-            "y": 0
+            "y": 0,
+            "z": 0
           },
           "scale": {
-            "x": 20,
-            "y": 20,
-            "z": 20
+            "x": 24,
+            "y": 24,
+            "z": 24
           }
         },
         "kind": "primitive",
@@ -219,10 +1213,11 @@
         "id": "cube",
         "name": "Cube",
         "parentId": "root",
+        "shadowMode": "static",
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 51,
+          "revision": 53,
           "objectGuid": "go_ac4a2824-3625-468c-aeee-d7c75dedc814",
           "objectId": "cube",
           "component": "PrimitiveRenderer"
@@ -253,10 +1248,11 @@
         "id": "sphere",
         "name": "Sphere",
         "parentId": "root",
+        "shadowMode": "static",
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 51,
+          "revision": 53,
           "objectGuid": "go_cc80f1b1-57b9-4373-baba-eed140d90c8f",
           "objectId": "sphere",
           "component": "PrimitiveRenderer"
@@ -287,10 +1283,11 @@
         "id": "capsule",
         "name": "Capsule",
         "parentId": "root",
+        "shadowMode": "static",
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 51,
+          "revision": 53,
           "objectGuid": "go_68778bee-9b2d-44bb-9a37-cfa42efa2846",
           "objectId": "capsule",
           "component": "PrimitiveRenderer"
@@ -315,6 +1312,492 @@
         "kind": "primitive",
         "primitive": {
           "shape": "capsule"
+        }
+      },
+      {
+        "id": "shadow_fixture_group",
+        "name": "Shadow Fixture Models",
+        "parentId": "root",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 53,
+          "objectGuid": "go_shadow_fixture_group",
+          "objectId": "shadow_fixture_group",
+          "component": "GameObject"
+        },
+        "transform": {
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "group"
+      },
+      {
+        "id": "shadow_fixture_player",
+        "name": "阴影测试-主角",
+        "parentId": "shadow_fixture_group",
+        "shadowMode": "static",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 53,
+          "objectGuid": "go_shadow_fixture_player",
+          "objectId": "shadow_fixture_player",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": -8,
+            "y": 0.01,
+            "z": -6
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0.35,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.7,
+            "y": 0.7,
+            "z": 0.7
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_699aee4da2b84a3eb07f4496872ad249"
+        }
+      },
+      {
+        "id": "shadow_fixture_worker",
+        "name": "阴影测试-工人",
+        "parentId": "shadow_fixture_group",
+        "shadowMode": "static",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 53,
+          "objectGuid": "go_shadow_fixture_worker",
+          "objectId": "shadow_fixture_worker",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": -4,
+            "y": 0,
+            "z": -6
+          },
+          "rotation": {
+            "x": 0,
+            "y": -0.35,
+            "z": 0
+          },
+          "scale": {
+            "x": 1.1,
+            "y": 1.1,
+            "z": 1.1
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_ade25007e0964563b197b21c2759c027"
+        }
+      },
+      {
+        "id": "shadow_fixture_truck",
+        "name": "阴影测试-小蓝卡车",
+        "parentId": "shadow_fixture_group",
+        "shadowMode": "static",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 53,
+          "objectGuid": "go_shadow_fixture_truck",
+          "objectId": "shadow_fixture_truck",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 0.3,
+            "y": 0,
+            "z": -6
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0.55,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.75,
+            "y": 0.75,
+            "z": 0.75
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_4b2358ee5d9441cd8cae8b389bb98c46"
+        }
+      },
+      {
+        "id": "shadow_fixture_pine_tree",
+        "name": "阴影测试-松树",
+        "parentId": "shadow_fixture_group",
+        "shadowMode": "static",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 53,
+          "objectGuid": "go_shadow_fixture_pine_tree",
+          "objectId": "shadow_fixture_pine_tree",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 5.4,
+            "y": 0,
+            "z": -6
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 2,
+            "y": 2,
+            "z": 2
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_edc2f992438c4450afc1c6354ec21500"
+        }
+      },
+      {
+        "id": "shadow_fixture_bush",
+        "name": "阴影测试-阔叶灌木",
+        "parentId": "shadow_fixture_group",
+        "shadowMode": "static",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 53,
+          "objectGuid": "go_shadow_fixture_bush",
+          "objectId": "shadow_fixture_bush",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": -8,
+            "y": 0,
+            "z": -1.5
+          },
+          "rotation": {
+            "x": 0,
+            "y": -0.25,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.8,
+            "y": 0.8,
+            "z": 0.8
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_af82a4f117d84ff58bedb41aa11bad5c"
+        }
+      },
+      {
+        "id": "shadow_fixture_rocks",
+        "name": "阴影测试-岩石组",
+        "parentId": "shadow_fixture_group",
+        "shadowMode": "static",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 53,
+          "objectGuid": "go_shadow_fixture_rocks",
+          "objectId": "shadow_fixture_rocks",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": -4,
+            "y": 0.09,
+            "z": -1.5
+          },
+          "rotation": {
+            "x": 0,
+            "y": -0.6,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_2286fa2ec19e45df8b1b188717c7c4e9"
+        }
+      },
+      {
+        "id": "shadow_fixture_fence",
+        "name": "阴影测试-栅栏",
+        "parentId": "shadow_fixture_group",
+        "shadowMode": "static",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 53,
+          "objectGuid": "go_shadow_fixture_fence",
+          "objectId": "shadow_fixture_fence",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 0.5,
+            "y": 0.06,
+            "z": -1.6
+          },
+          "rotation": {
+            "x": 0,
+            "y": 1.5707963267948966,
+            "z": 0
+          },
+          "scale": {
+            "x": 1.2,
+            "y": 1.2,
+            "z": 1.2
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_e726be04042849088cf73e4f2f92c00f"
+        }
+      },
+      {
+        "id": "shadow_fixture_log_bundle",
+        "name": "阴影测试-成捆木材",
+        "parentId": "shadow_fixture_group",
+        "shadowMode": "static",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 53,
+          "objectGuid": "go_shadow_fixture_log_bundle",
+          "objectId": "shadow_fixture_log_bundle",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 4.8,
+            "y": 0.36,
+            "z": -1.5
+          },
+          "rotation": {
+            "x": 0,
+            "y": 1.5707963267948966,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.7,
+            "y": 0.7,
+            "z": 0.7
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_52549a6dc9a34a5da036b7e771a907b3"
+        }
+      },
+      {
+        "id": "shadow_fixture_crate",
+        "name": "阴影测试-箱子",
+        "parentId": "shadow_fixture_group",
+        "shadowMode": "static",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 53,
+          "objectGuid": "go_shadow_fixture_crate",
+          "objectId": "shadow_fixture_crate",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": -8,
+            "y": 0.75,
+            "z": 3
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0.2,
+            "z": 0
+          },
+          "scale": {
+            "x": 3,
+            "y": 3,
+            "z": 3
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_759b595e81934517ba0251b16bd31061"
+        }
+      },
+      {
+        "id": "shadow_fixture_barrel",
+        "name": "阴影测试-木桶",
+        "parentId": "shadow_fixture_group",
+        "shadowMode": "static",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 53,
+          "objectGuid": "go_shadow_fixture_barrel",
+          "objectId": "shadow_fixture_barrel",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": -4.4,
+            "y": 0,
+            "z": 3.2
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 2.2,
+            "y": 2.2,
+            "z": 2.2
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_7612f54e381044e4b035ea6a988bfb89"
+        }
+      },
+      {
+        "id": "shadow_fixture_chicken",
+        "name": "阴影测试-鸡",
+        "parentId": "shadow_fixture_group",
+        "shadowMode": "static",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 53,
+          "objectGuid": "go_shadow_fixture_chicken",
+          "objectId": "shadow_fixture_chicken",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": -0.8,
+            "y": 0.44,
+            "z": 3
+          },
+          "rotation": {
+            "x": 0,
+            "y": -0.8,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.45,
+            "y": 0.45,
+            "z": 0.45
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_97121f40170c40d1aaf63b8c2cf0bf24"
+        }
+      },
+      {
+        "id": "shadow_fixture_hay_bale",
+        "name": "阴影测试-干草卷",
+        "parentId": "shadow_fixture_group",
+        "shadowMode": "static",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 53,
+          "objectGuid": "go_shadow_fixture_hay_bale",
+          "objectId": "shadow_fixture_hay_bale",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 2.4,
+            "y": 0,
+            "z": 3
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0.4,
+            "z": 0
+          },
+          "scale": {
+            "x": 1.4,
+            "y": 1.4,
+            "z": 1.4
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_26e79030d245465885b6e4349c9d81d9"
+        }
+      },
+      {
+        "id": "shadow_fixture_counter",
+        "name": "阴影测试-收银台",
+        "parentId": "shadow_fixture_group",
+        "shadowMode": "static",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 53,
+          "objectGuid": "go_shadow_fixture_counter",
+          "objectId": "shadow_fixture_counter",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 6.2,
+            "y": 0,
+            "z": 3.2
+          },
+          "rotation": {
+            "x": 0,
+            "y": -0.45,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.48,
+            "y": 0.48,
+            "z": 0.48
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_094bc5a89357455bb002b6b6a67e9295"
         }
       }
     ],
@@ -396,6 +1879,6 @@
     "textures": []
   },
   "render": {},
-  "version": 48,
-  "updatedAt": "2026-06-09T10:00:25.754Z"
+  "version": 50,
+  "updatedAt": "2026-06-28T06:08:03.888Z"
 }

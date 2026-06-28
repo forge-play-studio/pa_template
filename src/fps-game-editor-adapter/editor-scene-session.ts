@@ -220,6 +220,7 @@ export type EditorSceneDocumentPatch =
   | {
     kind: 'game-object.create-from-asset';
     assetItem: EditorSceneAssetLibraryItem;
+    name?: string;
     placement?: EditorTransformSnapshot;
   }
   | {

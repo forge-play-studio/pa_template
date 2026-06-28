@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
+import {
+  createAssetId,
+} from './asset-registry/core.mjs';
 
 const manifest = await readJson('src/assets/generated/asset-catalog.manifest.json');
 assert.ok(Array.isArray(manifest), 'asset catalog manifest must be an array');
@@ -8,7 +11,7 @@ for (const [index, entry] of manifest.entries()) {
   assert.equal(typeof entry.guid, 'string', `manifest[${index}].guid`);
   assert.equal(typeof entry.assetId, 'string', `manifest[${index}].assetId`);
   assert.ok(['model', 'texture', 'image', 'sound'].includes(entry.kind), `manifest[${index}].kind`);
-  assert.equal(entry.assetId, createExpectedAssetId(entry.kind, entry.guid), `manifest[${index}].assetId must be derived from guid`);
+  assert.equal(entry.assetId, createAssetId(entry.kind, entry.guid), `manifest[${index}].assetId must match SDK identity`);
   assert.equal(Object.hasOwn(entry, 'sourceId'), false, `manifest[${index}] must not contain sourceId`);
 }
 
@@ -66,16 +69,4 @@ function walk(value, visit, path = '$') {
 
 async function readJson(filePath) {
   return JSON.parse(await fs.readFile(filePath, 'utf8'));
-}
-
-function createExpectedAssetId(kind, guid) {
-  const token = guid.replace(/-/g, '').toLowerCase();
-  const prefix = kind === 'model'
-    ? 'asset'
-    : kind === 'texture'
-      ? 'texture'
-      : kind === 'sound'
-        ? 'sound'
-        : 'image';
-  return `${prefix}_${token}`;
 }
