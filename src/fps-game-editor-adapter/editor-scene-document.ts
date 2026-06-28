@@ -41,7 +41,7 @@ export interface EditorSceneAsset extends PlayableEditorSceneAsset<
   AssetExternalRef,
   SceneAssetMaterialMode
 > {
-  type: 'glb' | 'texture';
+  type: 'glb' | 'texture' | 'prefab';
   materialMode?: SceneAssetMaterialMode;
   defaults?: SceneAssetDefaults;
   external?: AssetExternalRef;
@@ -52,8 +52,8 @@ export interface EditorSceneAssetLibraryItem extends PlayableEditorSceneAssetLib
   AssetExternalRef,
   SceneAssetMaterialMode
 > {
-  type: 'glb' | 'texture';
-  kind: 'model' | 'texture';
+  type: 'glb' | 'texture' | 'prefab';
+  kind: 'model' | 'texture' | 'prefab';
   materialMode?: SceneAssetMaterialMode;
   defaults?: SceneAssetDefaults;
   external?: AssetExternalRef;

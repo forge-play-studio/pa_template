@@ -10,8 +10,8 @@ import {
   createEditorSceneRuntimePreviewMissingAssetUrlDiagnostic,
   createEditorSceneRuntimePreviewNode,
   createEditorSceneRuntimePreviewNodes,
+  createEditorScenePrefabAgentSummary,
   EDITOR_SCENE_STATIC_SHADOW_BAKE_ACTION_PATH,
-  createEditorSceneMaterialBrowserAssetItems as createPlayableEditorSceneMaterialBrowserAssetItems,
   createEditorSceneSerializedMultiTransformPatch as createPlayableEditorSceneSerializedMultiTransformPatch,
   createEditorSceneTransformBatchPatch as createPlayableEditorSceneTransformBatchPatch,
   createEditorSceneTransformPatch as createPlayableEditorSceneTransformPatch,
@@ -54,6 +54,7 @@ import {
   type PlayablePlatformAssetExternal,
   type EditorSceneRuntimePreviewGroundDecalDescriptor,
 } from '@fps-games/editor/playable-sdk';
+import type { EditorAgentJsonObject } from '@fps-games/editor-protocol';
 import baseSceneConfig from '../config/scene.json';
 import type {
   SceneConfig,
@@ -76,6 +77,11 @@ import {
   createEditorSceneInspectorPropertyPatch,
   createEditorScenePlacedAssetPatch,
   createEditorSceneAssetActionPatch,
+  createEditorSceneBrowserAssetItems as createEditorSceneDocumentBrowserAssetItems,
+  getEditorScenePrefabStageDescriptor,
+  getEditorScenePrefabStageProjectionNodes,
+  getEditorScenePrefabStageStructure,
+  getEditorScenePrefabStageInspectorObject,
   createEditorSceneRenamePatch,
   createEditorSceneReparentPatch,
   DEFAULT_EDITOR_SCENE_CAMERA,
@@ -331,6 +337,12 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
           const beforeIds = new Set(beforeDocument.scene.gameObjects.map((gameObject) => gameObject.id));
           return afterDocument.scene.gameObjects.find((gameObject) => !beforeIds.has(gameObject.id))?.id ?? null;
         },
+      },
+      prefabStage: {
+        getPrefabStageDescriptor: getEditorScenePrefabStageDescriptor,
+        getPrefabStageProjectionNodes: getEditorScenePrefabStageProjectionNodes,
+        getPrefabStageStructure: getEditorScenePrefabStageStructure,
+        getPrefabStageInspectorObject: getEditorScenePrefabStageInspectorObject,
       },
       transformCommands: {
         canCreateSerializedMultiPropertyPatch: canCreateEditorSceneSerializedMultiPropertyPatch,
@@ -613,7 +625,7 @@ function readEditorPrimitiveProjectionMeshRequest(name: string): { nodeId: strin
 }
 
 function createEditorSceneBrowserAssetItems(editorScene: EditorSceneDocument) {
-  return createPlayableEditorSceneMaterialBrowserAssetItems(editorScene);
+  return createEditorSceneDocumentBrowserAssetItems(editorScene);
 }
 
 function logPlayableLocalEditorHostCompatibilityReport(
@@ -1283,7 +1295,7 @@ function summarizeEditorScene(editorScene: EditorSceneDocument): string {
   return `editorScene assets=${editorScene.assets.length}, gameObjects=${editorScene.scene.gameObjects.length}`;
 }
 
-function describeEditorSceneAgentObject(
+export function describeEditorSceneAgentObject(
   editorScene: EditorSceneDocument,
   objectId: string,
 ) {
@@ -1292,31 +1304,39 @@ function describeEditorSceneAgentObject(
   const nodeKind = readEditorSceneNodeKind(gameObject);
   const asset = findEditorSceneAgentAsset(editorScene, gameObject);
   const label = gameObject.name || gameObject.id;
+  const prefabSummary = createEditorScenePrefabAgentSummary(editorScene as any, gameObject.id);
+  const bindingCandidates = [
+    {
+      kind: 'scene-node',
+      id: gameObject.id,
+      label,
+      path: `scene.gameObjects.${gameObject.id}`,
+    },
+    ...(asset ? [{
+      kind: 'scene-asset',
+      id: asset.id,
+      label: asset.displayName || asset.id,
+      path: `assets.${asset.id}`,
+    }] : []),
+    ...(prefabSummary ? createEditorSceneAgentPrefabBindingCandidates(prefabSummary) : []),
+  ];
   return {
-    domainKind: `pa-template:${nodeKind}`,
-    domainRole: resolveEditorSceneAgentGameplayRole(gameObject),
+    domainKind: prefabSummary ? 'pa-template:prefab-instance' : `pa-template:${nodeKind}`,
+    domainRole: prefabSummary ? 'prefab-instance' : resolveEditorSceneAgentGameplayRole(gameObject),
     functionLabel: label,
-    functionDescription: asset
-      ? `${label} is a ${nodeKind} scene node using asset ${asset.displayName || asset.id}.`
-      : `${label} is a ${nodeKind} scene node in the editable scene document.`,
+    functionDescription: prefabSummary
+      ? `${label} is a prefab instance from ${prefabSummary.prefabDisplayName ?? prefabSummary.prefabId}.`
+      : asset
+        ? `${label} is a ${nodeKind} scene node using asset ${asset.displayName || asset.id}.`
+        : `${label} is a ${nodeKind} scene node in the editable scene document.`,
     domainHints: [
-      `Interpret this as a ${nodeKind} node from pa_template's scene graph.`,
+      prefabSummary
+        ? 'Interpret this as a prefab instance. Prefer editing prefab defaults for shared shadow/material behavior before overriding this instance.'
+        : `Interpret this as a ${nodeKind} node from pa_template's scene graph.`,
       ...(asset ? [`Asset reference: ${asset.displayName || asset.id}.`] : []),
+      ...(prefabSummary?.sourceAssetId ? [`Prefab source asset: ${prefabSummary.sourceAssetDisplayName ?? prefabSummary.sourceAssetId}.`] : []),
     ],
-    bindingCandidates: [
-      {
-        kind: 'scene-node',
-        id: gameObject.id,
-        label,
-        path: `scene.gameObjects.${gameObject.id}`,
-      },
-      ...(asset ? [{
-        kind: 'scene-asset',
-        id: asset.id,
-        label: asset.displayName || asset.id,
-        path: `assets.${asset.id}`,
-      }] : []),
-    ],
+    bindingCandidates,
     sourceRefs: [
       {
         kind: 'scene-document',
@@ -1327,17 +1347,21 @@ function describeEditorSceneAgentObject(
     metadata: {
       nodeKind,
       ...(asset ? { assetId: asset.id, assetDisplayName: asset.displayName || asset.id } : {}),
+      ...(prefabSummary ? { prefab: toEditorSceneAgentJsonObject(prefabSummary) } : {}),
     },
   };
 }
 
-function describeEditorSceneAgentObjectSet(
+export function describeEditorSceneAgentObjectSet(
   editorScene: EditorSceneDocument,
   objectIds: readonly string[],
 ) {
   const gameObjects = findEditorSceneAgentGameObjects(editorScene, objectIds);
   if (gameObjects.length === 0) return null;
   const nodeKinds = [...new Set(gameObjects.map(readEditorSceneNodeKind))];
+  const prefabSummaries = gameObjects
+    .map(gameObject => createEditorScenePrefabAgentSummary(editorScene as any, gameObject.id))
+    .filter((summary): summary is NonNullable<typeof summary> => !!summary);
   return {
     domainKind: 'pa-template:scene-object-set',
     domainRole: 'selection',
@@ -1361,8 +1385,36 @@ function describeEditorSceneAgentObjectSet(
     metadata: {
       objectCount: gameObjects.length,
       nodeKinds,
+      ...(prefabSummaries.length > 0 ? { prefabs: prefabSummaries.map(toEditorSceneAgentJsonObject) } : {}),
     },
   };
+}
+
+function toEditorSceneAgentJsonObject<T extends object>(value: T): EditorAgentJsonObject {
+  return structuredClone(value) as unknown as EditorAgentJsonObject;
+}
+
+function createEditorSceneAgentPrefabBindingCandidates(prefabSummary: NonNullable<ReturnType<typeof createEditorScenePrefabAgentSummary>>) {
+  return [
+    {
+      kind: 'prefab-definition',
+      id: prefabSummary.prefabId,
+      label: prefabSummary.prefabDisplayName ?? prefabSummary.prefabId,
+      path: `assets.${prefabSummary.prefabId}`,
+    },
+    ...(prefabSummary.sourceAssetId ? [{
+      kind: 'prefab-source-asset',
+      id: prefabSummary.sourceAssetId,
+      label: prefabSummary.sourceAssetDisplayName ?? prefabSummary.sourceAssetId,
+      path: `assets.${prefabSummary.sourceAssetId}`,
+    }] : []),
+    ...prefabSummary.materialTargets.map(target => ({
+      kind: 'prefab-material-override-target',
+      id: target.slotId ?? target.ownerNodePath ?? target.bindingPath,
+      label: target.label,
+      path: `assets.${prefabSummary.prefabId}.${target.bindingPath}`,
+    })),
+  ];
 }
 
 function describeEditorSceneAgentRegionBinding(
