@@ -23,6 +23,9 @@ import {
   combineEditorTransforms,
   createIdentityEditorTransform,
   getTopLevelSceneGraphNodeIds,
+  isEditorTransformTrsSnapshot,
+  readRawEditorSceneGameObjectLocalTransform as readPlayableRawEditorSceneGameObjectLocalTransform,
+  toEditorSceneTransformComponent as createPlayableEditorSceneTransformComponent,
   toEditorLocalTransformFromWorld,
 } from '@fps-games/editor/playable-sdk';
 import {
@@ -108,7 +111,6 @@ import {
   readEditorSceneRuntimeNumber as readPlayableEditorSceneRuntimeNumber,
   readEditorSceneRuntimeString as readPlayableEditorSceneRuntimeString,
   readEditorSceneRuntimeValue as readPlayableEditorSceneRuntimeValue,
-  readEditorSceneTransformVector as readPlayableEditorSceneTransformVector,
   reduceEditorSceneDocumentMutation as reducePlayableEditorSceneDocumentMutation,
   resolveEditorSceneMaterialAssetIntegrity as resolvePlayableEditorSceneMaterialAssetIntegrity,
   resolveEditorSceneMaterialAssetKind as resolvePlayableEditorSceneMaterialAssetKind,
@@ -1095,12 +1097,7 @@ function patchEditorSceneGameObjectLocalTransform(
     ...gameObject,
     components: gameObject.components.map((component) => {
       if (component.type !== 'Transform') return component;
-      return {
-        ...component,
-        position: { ...transform.position },
-        rotation: { ...transform.rotation },
-        scale: { ...transform.scale },
-      };
+      return createPlayableEditorSceneTransformComponent(transform);
     }),
   };
   return shallowEditorSceneGameObjectsEqual(next, gameObject) ? gameObject : next;
@@ -1801,7 +1798,7 @@ export function createEditorSceneBrowserAssetItems(document: EditorSceneDocument
   return [
     ...createPlayableEditorSceneMaterialBrowserAssetItems(document),
     ...document.assets
-      .filter(isPlayableEditorScenePrefabAsset)
+      .filter(isEditorScenePrefabAsset)
       .map(asset => ({
         id: `prefab:${asset.id}`,
         guid: asset.guid,
@@ -2716,7 +2713,7 @@ function collectEditorSceneMaterialAssetBindingIds(
 
 function isEditorTransformSnapshot(value: unknown): value is EditorTransformSnapshot {
   if (!value || typeof value !== 'object') return false;
-  const candidate = value as Partial<EditorTransformSnapshot>;
+  const candidate = value as { position?: unknown; rotation?: unknown; scale?: unknown };
   return isVec3(candidate.position) && isVec3(candidate.rotation) && isVec3(candidate.scale);
 }
 
@@ -2838,17 +2835,7 @@ function toLocalTransformFromParentWorld(
 }
 
 function readRawGameObjectLocalTransform(gameObject: EditorSceneGameObject): EditorTransformSnapshot {
-  const transform = findEditorSceneTransform(gameObject);
-  if (!transform) return identityTransform();
-  return {
-    position: { ...transform.position },
-    rotation: { ...transform.rotation },
-    scale: { ...readTransformVector(transform, 'scale') },
-  };
-}
-
-function identityTransform(): EditorTransformSnapshot {
-  return createIdentityEditorTransform();
+  return readPlayableRawEditorSceneGameObjectLocalTransform(gameObject);
 }
 
 function isIdentityEditorTransform(transform: EditorTransformSnapshot): boolean {
@@ -2856,6 +2843,7 @@ function isIdentityEditorTransform(transform: EditorTransformSnapshot): boolean 
 }
 
 function transformsEqual(left: EditorTransformSnapshot, right: EditorTransformSnapshot): boolean {
+  if (!isEditorTransformTrsSnapshot(left) || !isEditorTransformTrsSnapshot(right)) return false;
   return vectorsEqual(left.position, right.position)
     && vectorsEqual(left.rotation, right.rotation)
     && vectorsEqual(left.scale, right.scale);
@@ -4859,8 +4847,10 @@ function readEditorScenePrefabOverrideProfilePath(materialPath: string): string 
 function findEditorScenePrefabAsset(
   document: EditorSceneDocument,
   assetId: string,
-): EditorSceneAsset | null {
-  return document.assets.find((asset) => asset.id === assetId && isPlayableEditorScenePrefabAsset(asset)) ?? null;
+): EditorScenePrefabAsset | null {
+  return document.assets.find((asset): asset is EditorScenePrefabAsset => (
+    asset.id === assetId && isEditorScenePrefabAsset(asset)
+  )) ?? null;
 }
 
 export interface EditorScenePrefabStageInput {
@@ -4903,6 +4893,14 @@ export interface EditorScenePrefabStageContext {
   importStructureReady?: boolean;
   importStructure?: EditorScenePrefabStageImportStructure | null;
   textureAssets?: readonly EditorSceneInspectorTextureAsset[];
+}
+
+type EditorScenePrefabAsset = EditorSceneAsset & {
+  prefab: NonNullable<EditorSceneAsset['prefab']>;
+};
+
+function isEditorScenePrefabAsset(asset: EditorSceneAsset): asset is EditorScenePrefabAsset {
+  return isPlayableEditorScenePrefabAsset(asset) && !!asset.prefab;
 }
 
 interface EditorScenePrefabStageImportStructure {
@@ -6247,7 +6245,7 @@ function createEditorScenePrefabStagePreviewGameObject(
     kind: 'instance',
     active: true,
     ...(prefabAsset.prefab.defaults?.shadowMode ? { shadowMode: prefabAsset.prefab.defaults.shadowMode } : {}),
-    ...(prefabAsset.prefab.overrides ? { overrides: structuredClone(prefabAsset.prefab.overrides) } : {}),
+    ...(prefabAsset.prefab.overrides ? { overrides: structuredClone(prefabAsset.prefab.overrides) as EditorSceneGameObject['overrides'] } : {}),
     components: [{
       type: 'Transform',
       position: { x: 0, y: 0, z: 0 },
@@ -6275,7 +6273,7 @@ function createEditorScenePrefabStageRuntimePreviewNode(
   const node = createPlayableEditorSceneRuntimePreviewNode(document, gameObject);
   if (!node || typeof node !== 'object') return node;
   return {
-    ...(node as Record<string, unknown>),
+    ...(node as unknown as Record<string, unknown>),
     assetInstantiationMode,
   };
 }
@@ -7298,13 +7296,6 @@ const validateEditorSceneSerializedPropertyField: PlayableEditorSceneSerializedP
   input.path,
   input.value,
 );
-
-function readTransformVector(
-  transform: { position: EditorSceneVec3; rotation: EditorSceneVec3; scale?: EditorSceneVec3 },
-  vectorName: 'position' | 'rotation' | 'scale',
-): EditorSceneVec3 {
-  return readPlayableEditorSceneTransformVector(transform, vectorName);
-}
 
 function radiansToDegrees(value: number): number {
   return radiansToPlayableEditorSceneDegrees(value);
