@@ -2157,6 +2157,20 @@ export interface EditorSceneRuntimeInspectorContext {
   projectedRoot?: unknown;
 }
 
+export interface EditorScenePrefabStagePreviewTarget {
+  scopeId: string;
+  scopeKind: 'prefab-stage';
+  projectionNodeId: string;
+  targetId: string;
+  itemId: string;
+  label: string;
+  kind: string;
+  selectable: boolean;
+  transformable: boolean;
+  readonly?: boolean;
+  disabledReason?: string;
+}
+
 export type EditorSceneInspectorSourceTag = PlayableEditorSceneInspectorSourceTag;
 
 export interface EditorSceneReadonlyInspectorPropertyInput
@@ -2250,6 +2264,55 @@ export function getEditorScenePrefabStageProjectionNodes(
     ...compositionNodes,
     ...comparisonNodes,
   ];
+}
+
+export function resolveEditorScenePrefabStagePreviewTarget(
+  document: EditorSceneDocument,
+  descriptor: { assetId: string; label: string; sourceAssetId?: string; previewNodeId?: string; readonly?: boolean },
+  projectionNodeId: string,
+): EditorScenePrefabStagePreviewTarget | null {
+  const prefabAsset = findEditorScenePrefabAsset(document, descriptor.assetId);
+  const rootNodeId = prefabAsset ? readPlayableEditorScenePrefabRootNodeId(prefabAsset) : null;
+  const previewNodeId = descriptor.previewNodeId ?? `prefab-stage:${descriptor.assetId}`;
+  if (!prefabAsset || !rootNodeId || projectionNodeId.includes(':compare-')) return null;
+  const structure = getEditorScenePrefabStageStructure(document, descriptor);
+  for (const item of flattenEditorScenePrefabStageStructureItems(structure)) {
+    const nodeId = readEditorSceneString(item.nodeId);
+    if (item.itemType !== 'prefab-node' || !nodeId) continue;
+    const expectedProjectionNodeId = createEditorScenePrefabStageProjectionNodeId(previewNodeId, rootNodeId, nodeId);
+    if (expectedProjectionNodeId !== projectionNodeId) continue;
+    const readonly = descriptor.readonly === true || item.readonly === true;
+    const isRoot = nodeId === rootNodeId || item.kind === 'root';
+    return {
+      scopeId: `prefab-stage:${descriptor.assetId}`,
+      scopeKind: 'prefab-stage',
+      projectionNodeId,
+      targetId: nodeId,
+      itemId: item.id,
+      label: item.label,
+      kind: item.kind,
+      selectable: true,
+      transformable: !readonly && !isRoot,
+      readonly,
+      ...(!readonly && !isRoot ? {} : { disabledReason: readonly ? 'Prefab stage is readonly.' : 'Prefab root cannot be transformed from Preview.' }),
+    };
+  }
+  return null;
+}
+
+export function getEditorScenePrefabStageProjectionNodeIdForNode(
+  document: EditorSceneDocument,
+  descriptor: { assetId: string; previewNodeId?: string },
+  nodeId: string,
+): string | null {
+  const prefabAsset = findEditorScenePrefabAsset(document, descriptor.assetId);
+  const rootNodeId = prefabAsset ? readPlayableEditorScenePrefabRootNodeId(prefabAsset) : null;
+  if (!rootNodeId) return null;
+  return createEditorScenePrefabStageProjectionNodeId(
+    descriptor.previewNodeId ?? `prefab-stage:${descriptor.assetId}`,
+    rootNodeId,
+    nodeId,
+  );
 }
 
 export function getEditorScenePrefabStageStructure(
@@ -3878,6 +3941,17 @@ function findEditorScenePrefabStageStructureItem(
     if (child) return child;
   }
   return null;
+}
+
+function flattenEditorScenePrefabStageStructureItems(
+  items: readonly EditorScenePrefabStageStructureItem[],
+): EditorScenePrefabStageStructureItem[] {
+  const flattened: EditorScenePrefabStageStructureItem[] = [];
+  for (const item of items) {
+    flattened.push(item);
+    flattened.push(...flattenEditorScenePrefabStageStructureItems(item.children ?? []));
+  }
+  return flattened;
 }
 
 function readEditorSceneImportArray(importStructure: unknown, key: string): Record<string, unknown>[] {
