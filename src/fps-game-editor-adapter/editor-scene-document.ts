@@ -16,6 +16,7 @@ import {
   cloneEditorSceneDocument as clonePlayableEditorSceneDocument,
   findEditorSceneModelRenderer as findPlayableEditorSceneModelRenderer,
   findEditorSceneTransform as findPlayableEditorSceneTransform,
+  isEditorSceneTrsTransformComponent,
   readEditorSceneNodeKind as readPlayableEditorSceneNodeKind,
   type EditorSceneAsset as PlayableEditorSceneAsset,
   type EditorSceneAssetLibraryItem as PlayableEditorSceneAssetLibraryItem,
@@ -46,7 +47,7 @@ export interface EditorSceneAsset extends PlayableEditorSceneAsset<
   AssetExternalRef,
   SceneAssetMaterialMode
 > {
-  type: 'glb' | 'prefab';
+  type: 'glb' | 'prefab' | 'texture';
   materialMode?: SceneAssetMaterialMode;
   defaults?: SceneAssetDefaults;
   prefab?: EditorScenePrefabDefinition;
@@ -67,9 +68,9 @@ export interface EditorSceneAssetLibraryItem extends PlayableEditorSceneAssetLib
   origin: 'project';
 }
 
-export interface EditorSceneTransformComponent extends PlayableEditorSceneTransformComponent {}
+export type EditorSceneTransformComponent = PlayableEditorSceneTransformComponent;
 
-export interface EditorSceneModelRendererComponent extends PlayableEditorSceneModelRendererComponent {}
+export type EditorSceneModelRendererComponent = PlayableEditorSceneModelRendererComponent;
 
 export interface EditorScenePrimitiveRenderer extends PlayableEditorScenePrimitiveRenderer<ScenePrimitiveShape> {
   shape: ScenePrimitiveShape;
@@ -221,11 +222,13 @@ export function patchEditorSceneGameObjectTransform(
           ...gameObject,
           components: gameObject.components.map((component) => {
             if (component.type !== 'Transform') return component;
+            const transformComponent = component as EditorSceneTransformComponent;
+            if (!isEditorSceneTrsTransformComponent(transformComponent)) return component;
             return {
-              ...component,
-              position: patch.position ?? component.position,
-              rotation: patch.rotation ?? component.rotation,
-              scale: patch.scale ?? component.scale,
+              ...transformComponent,
+              position: patch.position ?? transformComponent.position,
+              rotation: patch.rotation ?? transformComponent.rotation,
+              scale: patch.scale ?? transformComponent.scale,
             };
           }),
         };

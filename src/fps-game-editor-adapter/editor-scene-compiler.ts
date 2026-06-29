@@ -2,7 +2,9 @@ import type {
   EditorSceneMaterialAsset,
 } from '@fps-games/editor/playable-sdk';
 import {
+  isEditorTransformTrsSnapshot,
   normalizeEditorSceneMaterialSlotOwnerPath,
+  readRawEditorSceneGameObjectLocalTransform,
   resolveEditorScenePrefabInstanceEffectiveOverrides,
   resolveEditorSceneMaterialAssetIntegrity,
   resolveEditorSceneMaterialSlotReimportDiff,
@@ -18,7 +20,6 @@ import type {
 import {
   findEditorSceneModelRenderer,
   findEditorScenePrimitiveRenderer,
-  findEditorSceneTransform,
   readEditorSceneNodeKind,
 } from './editor-scene-document';
 import type {
@@ -153,7 +154,8 @@ function compileGameObject(
   sourceRef: SceneRuntimeSourceBinding,
   editorDocument: EditorSceneDocument,
 ): SceneNodeConfig {
-  const transform = findEditorSceneTransform(gameObject);
+  const transformSnapshot = readRawEditorSceneGameObjectLocalTransform(gameObject);
+  const transform = isEditorTransformTrsSnapshot(transformSnapshot) ? transformSnapshot : null;
   const modelRenderer = findEditorSceneModelRenderer(gameObject);
   const primitiveRenderer = findEditorScenePrimitiveRenderer(gameObject);
   const nodeKind = readEditorSceneNodeKind(gameObject);
@@ -261,25 +263,47 @@ function compileEditorSceneVisualOverrides(
 function patchSceneNodeVisualMaterialOverrides(
   overrides: SceneNodeVisualOverrides,
   materialOverrides: {
-    materialBinding?: SceneNodeMaterialBindingConfig;
-    materialSlotBindings?: Record<string, SceneNodeMaterialBindingConfig | undefined>;
-    childMaterialBindings?: Record<string, SceneNodeMaterialBindingConfig | undefined>;
+    materialBinding?: unknown;
+    materialSlotBindings?: Record<string, unknown>;
+    childMaterialBindings?: Record<string, unknown>;
   },
 ): void {
-  if (materialOverrides.materialBinding) overrides.materialBinding = structuredClone(materialOverrides.materialBinding);
+  const materialBinding = normalizeSceneNodeMaterialBinding(materialOverrides.materialBinding);
+  if (materialBinding) overrides.materialBinding = materialBinding;
   else delete overrides.materialBinding;
 
-  if (materialOverrides.materialSlotBindings && Object.keys(materialOverrides.materialSlotBindings).length > 0) {
-    overrides.materialSlotBindings = structuredClone(materialOverrides.materialSlotBindings) as Record<string, SceneNodeMaterialBindingConfig>;
+  const materialSlotBindings = normalizeSceneNodeMaterialBindingMap(materialOverrides.materialSlotBindings);
+  if (materialSlotBindings && Object.keys(materialSlotBindings).length > 0) {
+    overrides.materialSlotBindings = materialSlotBindings;
   } else {
     delete overrides.materialSlotBindings;
   }
 
-  if (materialOverrides.childMaterialBindings && Object.keys(materialOverrides.childMaterialBindings).length > 0) {
-    overrides.childMaterialBindings = structuredClone(materialOverrides.childMaterialBindings) as Record<string, SceneNodeMaterialBindingConfig>;
+  const childMaterialBindings = normalizeSceneNodeMaterialBindingMap(materialOverrides.childMaterialBindings);
+  if (childMaterialBindings && Object.keys(childMaterialBindings).length > 0) {
+    overrides.childMaterialBindings = childMaterialBindings;
   } else {
     delete overrides.childMaterialBindings;
   }
+}
+
+function normalizeSceneNodeMaterialBinding(value: unknown): SceneNodeMaterialBindingConfig | undefined {
+  if (!value || typeof value !== 'object') return undefined;
+  const binding = structuredClone(value) as SceneNodeMaterialBindingConfig & { materialAssetId?: string | null };
+  if (binding.materialAssetId == null) delete binding.materialAssetId;
+  return binding;
+}
+
+function normalizeSceneNodeMaterialBindingMap(
+  value: Record<string, unknown> | undefined,
+): Record<string, SceneNodeMaterialBindingConfig> | undefined {
+  if (!value) return undefined;
+  const result: Record<string, SceneNodeMaterialBindingConfig> = {};
+  for (const [key, binding] of Object.entries(value)) {
+    const normalized = normalizeSceneNodeMaterialBinding(binding);
+    if (normalized) result[key] = normalized;
+  }
+  return result;
 }
 
 function migrateSceneMaterialSlotBindings(

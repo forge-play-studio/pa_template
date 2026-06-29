@@ -137,12 +137,14 @@ interface EditorProjectionImportStats {
 export interface LocalEditorModeSwitcherOptions {
   root?: HTMLElement;
   disposeGameWorld: () => void | Promise<void>;
+  onBeforeEnterEditor?: () => void | Promise<void>;
   onBeforeReload?: () => void;
 }
 
 export interface LocalEditorModeSwitcher {
   enterEditor(): Promise<void>;
   discardAndRunGame(): Promise<void>;
+  detachForEditor(): void;
   dispose(): void;
 }
 
@@ -237,6 +239,12 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
   };
   const normalizeLoadedPlatformAssetPayload = (payload: Record<string, unknown>): Record<string, unknown> => {
     return platformAssetDropCache.normalize(payload);
+  };
+  let detachedForEditor = false;
+  const runBeforeEnterEditor = async (): Promise<void> => {
+    if (detachedForEditor) return;
+    detachedForEditor = true;
+    await options.onBeforeEnterEditor?.();
   };
 
   editorHost = createPlayableLocalEditorHost<EditorSceneDocument, EditorSceneDocumentPatch, EditorSceneAssetLibraryItem>({
@@ -339,12 +347,18 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
         getPrefabStageProjectionNodes: (document, descriptor) => (
           getEditorScenePrefabStageProjectionNodes(document, descriptor) as unknown as PlayableBabylonProjectionNode[]
         ),
-        getPrefabStageStructure: (document, descriptor, context) => getEditorScenePrefabStageStructure(document, descriptor, context),
+        getPrefabStageStructure: (document, descriptor, context) => (
+          getEditorScenePrefabStageStructure(
+            document,
+            descriptor as Parameters<typeof getEditorScenePrefabStageStructure>[1],
+            context as Parameters<typeof getEditorScenePrefabStageStructure>[2],
+          )
+        ),
         getPrefabStageInspectorObject: (document, descriptor, selectedItemId, context) => (
-          getEditorScenePrefabStageInspectorObject(document, descriptor, selectedItemId, {
+          getEditorScenePrefabStageInspectorObject(document, descriptor as Parameters<typeof getEditorScenePrefabStageInspectorObject>[1], selectedItemId, {
             ...context,
             textureAssets: createEditorSceneInspectorTextureAssets(currentEditorAssetLibrary),
-          })
+          } as Parameters<typeof getEditorScenePrefabStageInspectorObject>[3])
         ),
       },
       rendering: editorRenderingCapability,
@@ -450,8 +464,14 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
   setLocalEditorAssetBridgeActive(true);
 
   return {
-    enterEditor: () => host.enterEditor(),
+    async enterEditor() {
+      await runBeforeEnterEditor();
+      await host.enterEditor();
+    },
     discardAndRunGame: () => host.discardAndRunGame(),
+    detachForEditor() {
+      detachedForEditor = true;
+    },
     dispose() {
       disposeLegacyAssetBypass();
       setLocalEditorAssetBridgeActive(false);
