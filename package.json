@@ -43,7 +43,8 @@
   "dependencies": {
     "@babylonjs/core": "8.52.1",
     "@babylonjs/loaders": "8.52.1",
-    "@fps-games/editor": "0.1.5-beta.4"
+    "@fps-games/editor": "0.1.5-beta.4",
+    "@fps/vfx": "git+ssh://git@github.com/forge-play-studio/fps-vfx-library.git#v0.1.1"
   },
   "appConfig": {
     "analytics": {
