@@ -1,1 +1,71 @@
-[]
+[
+  {
+    "guid": "ee97d50a-7eb4-42b5-905a-dd9aaae74f2c",
+    "assetId": "texture_ee97d50a7eb442b5905add9aaae74f2c",
+    "kind": "texture",
+    "displayName": "地贴_传送带",
+    "relativePath": "../imported/textures/texture_ee97d50a7eb442b5905add9aaae74f2c.png",
+    "originalFileName": "ground_decal_conveyor_reference.png",
+    "codeKey": "ground_decal_conveyor_reference",
+    "placeable": false,
+    "contentHash": "sha256:822c7759161df2fafe2fdbc59a561492f43bf70fb5f698c50c2b742bb75f2f7e",
+    "byteSize": 4356,
+    "metadata": {
+      "sourceProject": "lumber-truck",
+      "usage": "groundDecalUiDefault",
+      "textureUsage": "material",
+      "capabilities": {
+        "materialTexture": true,
+        "environmentTexture": false
+      }
+    },
+    "createdAt": "2026-06-29T08:35:41.450Z",
+    "updatedAt": "2026-06-29T08:35:41.450Z"
+  },
+  {
+    "guid": "331e1620-9e8c-47cc-9421-7508d719cbbb",
+    "assetId": "texture_331e16209e8c47cc94217508d719cbbb",
+    "kind": "texture",
+    "displayName": "地贴_大钱",
+    "relativePath": "../imported/textures/texture_331e16209e8c47cc94217508d719cbbb.png",
+    "originalFileName": "ground_decal_money_reference.png",
+    "codeKey": "ground_decal_money_reference",
+    "placeable": false,
+    "contentHash": "sha256:7606505320e88d46cdc0a703ace4c0f8b699426a33be5387d885a1bc4aac9623",
+    "byteSize": 10034,
+    "metadata": {
+      "sourceProject": "lumber-truck",
+      "usage": "groundDecalUiDefault",
+      "textureUsage": "material",
+      "capabilities": {
+        "materialTexture": true,
+        "environmentTexture": false
+      }
+    },
+    "createdAt": "2026-06-29T08:35:48.981Z",
+    "updatedAt": "2026-06-29T08:35:48.981Z"
+  },
+  {
+    "guid": "969907ee-4a1d-453e-a7b0-ee3247cb6bb1",
+    "assetId": "texture_969907ee4a1d453ea7b0ee3247cb6bb1",
+    "kind": "texture",
+    "displayName": "地贴_白框",
+    "relativePath": "../imported/textures/texture_969907ee4a1d453ea7b0ee3247cb6bb1.png",
+    "originalFileName": "ground_decal_border_reference.png",
+    "codeKey": "ground_decal_border_reference",
+    "placeable": false,
+    "contentHash": "sha256:9a2d7c0d30a304f6a4532f7ffa881b70466db02ad1137a47d1b1924c08cf987c",
+    "byteSize": 2393,
+    "metadata": {
+      "sourceProject": "lumber-truck",
+      "usage": "groundDecalUiDefault",
+      "textureUsage": "material",
+      "capabilities": {
+        "materialTexture": true,
+        "environmentTexture": false
+      }
+    },
+    "createdAt": "2026-06-29T08:35:35.460Z",
+    "updatedAt": "2026-06-29T08:35:35.460Z"
+  }
+]

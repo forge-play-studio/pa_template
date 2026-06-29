@@ -1,6 +1,6 @@
 import { DynamicTexture } from '@babylonjs/core/Materials/Textures/dynamicTexture';
 import type { Scene } from '@babylonjs/core/scene';
-import { resolveTextureAssetUrl } from '../assets';
+import { ASSET_IDS, resolveTextureAssetUrl } from '../assets';
 import type {
   GroundDecalUiColor,
   GroundDecalUiConfig,
@@ -10,9 +10,9 @@ import type {
 } from '../config';
 
 const TEXTURE_IDS = {
-  borderWhite: 'ground_decal_border_placeholder',
-  conveyor: 'ground_decal_main_logo_placeholder',
-  moneyLarge: 'ground_decal_sub_logo_placeholder',
+  borderWhite: ASSET_IDS.ground_decal_border_reference,
+  conveyor: ASSET_IDS.ground_decal_conveyor_reference,
+  moneyLarge: ASSET_IDS.ground_decal_money_reference,
 } as const;
 
 const BASE_COLOR: GroundDecalUiColor = { r: 0.08, g: 0.08, b: 0.08, a: 0.56 };
