@@ -664,6 +664,10 @@ function validateGroundDecal(value: unknown, path: string, add: (path: string, m
     add(path, 'groundDecal must be an object');
     return;
   }
+  if (value.version === 2) {
+    validateGroundDecalUi(value, path, add);
+    return;
+  }
   if (!isRecord(value.size)) {
     add(`${path}.size`, 'groundDecal.size must be an object');
   } else {
@@ -680,6 +684,145 @@ function validateGroundDecal(value: unknown, path: string, add: (path: string, m
       add(`${path}.${key}`, `${key} must be a finite number`);
     }
   }
+}
+
+function validateGroundDecalUi(value: Record<string, any>, path: string, add: (path: string, message: string) => void): void {
+  if (value.uiKind !== 'operation' && value.uiKind !== 'delivery') {
+    add(`${path}.uiKind`, 'groundDecal UI kind must be operation or delivery');
+  }
+  if (!isRecord(value.size)) {
+    add(`${path}.size`, 'groundDecal.size must be an object');
+  } else {
+    for (const key of ['width', 'depth']) {
+      if (typeof value.size[key] !== 'number' || !Number.isFinite(value.size[key]) || value.size[key] <= 0) {
+        add(`${path}.size.${key}`, 'groundDecal size must be a positive finite number');
+      }
+    }
+  }
+  if (value.aspectSourceLayerId != null && !nonEmptyString(value.aspectSourceLayerId)) {
+    add(`${path}.aspectSourceLayerId`, 'aspectSourceLayerId must be non-empty when present');
+  }
+  if (value.lockAspectToBorder != null && typeof value.lockAspectToBorder !== 'boolean') {
+    add(`${path}.lockAspectToBorder`, 'lockAspectToBorder must be boolean when present');
+  }
+  validateGroundDecalUiMask(value.mask, `${path}.mask`, add);
+  validateGroundDecalUiRendering(value.rendering, `${path}.rendering`, add);
+  if (!Array.isArray(value.layers)) {
+    add(`${path}.layers`, 'groundDecal UI layers must be an array');
+    return;
+  }
+  value.layers.forEach((layer: unknown, index: number) => validateGroundDecalUiLayer(layer, `${path}.layers[${index}]`, add));
+}
+
+function validateGroundDecalUiMask(value: unknown, path: string, add: (path: string, message: string) => void): void {
+  if (value == null) return;
+  if (!isRecord(value)) {
+    add(path, 'groundDecal UI mask must be an object');
+    return;
+  }
+  if (value.enabled != null && typeof value.enabled !== 'boolean') add(`${path}.enabled`, 'mask.enabled must be boolean');
+  if (value.source != null && value.source !== 'roundedRect' && value.source !== 'borderAlpha' && value.source !== 'texture') {
+    add(`${path}.source`, 'mask.source must be roundedRect, borderAlpha, or texture');
+  }
+  if (value.textureId != null && !nonEmptyString(value.textureId)) add(`${path}.textureId`, 'mask.textureId must be non-empty when present');
+  for (const key of ['cornerRadius', 'padding']) {
+    if (value[key] != null && (typeof value[key] !== 'number' || !Number.isFinite(value[key]) || value[key] < 0)) {
+      add(`${path}.${key}`, `${key} must be a non-negative finite number`);
+    }
+  }
+}
+
+function validateGroundDecalUiRendering(value: unknown, path: string, add: (path: string, message: string) => void): void {
+  if (value == null) return;
+  if (!isRecord(value)) {
+    add(path, 'groundDecal UI rendering must be an object');
+    return;
+  }
+  for (const key of ['textureWidth', 'textureHeight']) {
+    if (value[key] != null && (!Number.isInteger(value[key]) || value[key] <= 0)) {
+      add(`${path}.${key}`, `${key} must be a positive integer`);
+    }
+  }
+  for (const key of ['alphaIndex', 'diffuseTextureLevel', 'emissiveTextureLevel']) {
+    if (value[key] != null && (typeof value[key] !== 'number' || !Number.isFinite(value[key]))) {
+      add(`${path}.${key}`, `${key} must be a finite number`);
+    }
+  }
+}
+
+function validateGroundDecalUiLayer(value: unknown, path: string, add: (path: string, message: string) => void): void {
+  if (!isRecord(value)) {
+    add(path, 'groundDecal UI layer must be an object');
+    return;
+  }
+  if (!nonEmptyString(value.id)) add(`${path}.id`, 'layer.id must be non-empty');
+  if (!['base', 'border', 'mainLogo', 'subLogo', 'amount', 'progressFill'].includes(String(value.role))) {
+    add(`${path}.role`, 'layer.role is invalid');
+  }
+  if (value.enabled != null && typeof value.enabled !== 'boolean') add(`${path}.enabled`, 'layer.enabled must be boolean');
+  if (typeof value.zOrder !== 'number' || !Number.isFinite(value.zOrder)) add(`${path}.zOrder`, 'layer.zOrder must be a finite number');
+  if (value.opacity != null && (typeof value.opacity !== 'number' || !Number.isFinite(value.opacity))) add(`${path}.opacity`, 'layer.opacity must be finite');
+  validateGroundDecalUiRect(value.rect, `${path}.rect`, add);
+  if (value.kind === 'texture') {
+    if (!nonEmptyString(value.textureId)) add(`${path}.textureId`, 'texture layer textureId must be non-empty');
+  } else if (value.kind === 'color') {
+    validateGroundDecalUiColor(value.color, `${path}.color`, add);
+  } else if (value.kind === 'progress') {
+    if (typeof value.value !== 'number' || !Number.isFinite(value.value) || value.value < 0 || value.value > 1) {
+      add(`${path}.value`, 'progress value must be between 0 and 1');
+    }
+    if (value.direction != null && !['leftToRight', 'rightToLeft', 'bottomToTop', 'topToBottom'].includes(String(value.direction))) {
+      add(`${path}.direction`, 'progress direction is invalid');
+    }
+    validateGroundDecalUiColor(value.color, `${path}.color`, add);
+  } else if (value.kind === 'text') {
+    validateGroundDecalUiText(value.text, `${path}.text`, add);
+  } else {
+    add(`${path}.kind`, 'layer.kind must be texture, color, progress, or text');
+  }
+}
+
+function validateGroundDecalUiRect(value: unknown, path: string, add: (path: string, message: string) => void): void {
+  if (!isRecord(value)) {
+    add(path, 'layer.rect must be an object');
+    return;
+  }
+  for (const key of ['x', 'z', 'width', 'depth']) {
+    if (typeof value[key] !== 'number' || !Number.isFinite(value[key])) add(`${path}.${key}`, `rect.${key} must be a finite number`);
+  }
+  for (const key of ['width', 'depth']) {
+    if (typeof value[key] === 'number' && value[key] <= 0) add(`${path}.${key}`, `rect.${key} must be positive`);
+  }
+}
+
+function validateGroundDecalUiText(value: unknown, path: string, add: (path: string, message: string) => void): void {
+  if (!isRecord(value)) {
+    add(path, 'text layer text must be an object');
+    return;
+  }
+  if (typeof value.value !== 'string') add(`${path}.value`, 'text.value must be a string');
+  if (value.fontFamily != null && typeof value.fontFamily !== 'string') add(`${path}.fontFamily`, 'fontFamily must be a string');
+  if (value.fontSize != null && (typeof value.fontSize !== 'number' || !Number.isFinite(value.fontSize) || value.fontSize <= 0)) {
+    add(`${path}.fontSize`, 'fontSize must be a positive finite number');
+  }
+  if (value.fontWeight != null && typeof value.fontWeight !== 'string') add(`${path}.fontWeight`, 'fontWeight must be a string');
+  validateGroundDecalUiColor(value.color, `${path}.color`, add);
+  validateGroundDecalUiColor(value.strokeColor, `${path}.strokeColor`, add);
+  if (value.strokeWidth != null && (typeof value.strokeWidth !== 'number' || !Number.isFinite(value.strokeWidth) || value.strokeWidth < 0)) {
+    add(`${path}.strokeWidth`, 'strokeWidth must be a non-negative finite number');
+  }
+}
+
+function validateGroundDecalUiColor(value: unknown, path: string, add: (path: string, message: string) => void): void {
+  if (value == null) return;
+  if (!isRecord(value)) {
+    add(path, 'color must be an object');
+    return;
+  }
+  for (const key of ['r', 'g', 'b']) {
+    if (typeof value[key] !== 'number' || !Number.isFinite(value[key])) add(`${path}.${key}`, `color.${key} must be finite`);
+  }
+  if (value.a != null && (typeof value.a !== 'number' || !Number.isFinite(value.a))) add(`${path}.a`, 'color.a must be finite');
 }
 
 function validateNodeRendering(value: unknown, path: string, add: (path: string, message: string) => void): void {

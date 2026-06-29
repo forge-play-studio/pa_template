@@ -136,6 +136,9 @@ import type {
 } from './editor-scene-document';
 import type {
   ArtistMaterialProfile,
+  GroundDecalUiConfig,
+  GroundDecalUiKind,
+  LegacyGroundDecalConfig,
   MaterialOverrideConfig,
   OutlineOverrideConfig,
   SceneCameraProjection,
@@ -156,6 +159,7 @@ import {
   readEditorSceneNodeKind,
 } from './editor-scene-document';
 import { resolveSceneNodeFieldSchema } from './scene-node-field-schema';
+import { createDefaultGroundDecalUiConfig, isGroundDecalUiConfig } from '../services/GroundDecalUiService';
 import {
   DEFAULT_DIRECTIONAL_LIGHT_DIRECTION,
   LIGHT_DIRECTION_ELEVATION_ANGLE_PATH,
@@ -1102,9 +1106,11 @@ export function reduceEditorSceneDocument(
   document: EditorSceneDocument,
   command: DocumentCommand<EditorSceneDocument, EditorSceneDocumentPatch>,
 ): EditorSceneDocument {
-  return ensureEditorSceneGameObjectGuids(
-    normalizeEditorSceneRootTransformDocument(
-      reduceEditorSceneDocumentUnchecked(document, command),
+  return normalizeGroundDecalUiScales(
+    ensureEditorSceneGameObjectGuids(
+      normalizeEditorSceneRootTransformDocument(
+        reduceEditorSceneDocumentUnchecked(document, command),
+      ),
     ),
   );
 }
@@ -1790,6 +1796,47 @@ export function createEditorSceneCreatePrimitivePatch(
   ) as { patch: EditorSceneDocumentPatch; label: string; createdId: string; changedIds: string[] } | null;
 }
 
+export function createEditorSceneGroundDecalUiPatch(
+  document: EditorSceneDocument,
+  uiKind: GroundDecalUiKind,
+): { patch: EditorSceneDocumentPatch; label: string; createdId: string; changedIds: string[]; reprojectIds: string[] } {
+  const rootId = resolveEditorSceneRootContainerId(document);
+  const id = createUniqueEditorSceneId(
+    document.scene.gameObjects.map(gameObject => gameObject.id),
+    uiKind === 'delivery' ? 'delivery_ground_decal_ui' : 'operation_ground_decal_ui',
+  );
+  const name = createUniqueEditorSceneName(
+    document.scene.gameObjects.map(gameObject => gameObject.name ?? gameObject.id),
+    uiKind === 'delivery' ? 'Delivery Ground Decal UI' : 'Operation Ground Decal UI',
+  );
+  const gameObject: EditorSceneGameObject = {
+    id,
+    guid: createEditorSceneGameObjectGuid(),
+    name,
+    kind: 'transform',
+    ...(rootId ? { parentId: rootId } : {}),
+    active: true,
+    transformType: 'groundDecal',
+    groundDecal: createDefaultGroundDecalUiConfig(uiKind),
+    components: [{
+      type: 'Transform',
+      position: { x: 0, y: 0.02, z: 0 },
+      rotation: { x: 0, y: 0, z: 0 },
+      scale: { x: 1, y: 1, z: 1 },
+    }],
+  };
+  return {
+    label: `Add ${uiKind === 'delivery' ? 'Delivery' : 'Operation'} Ground Decal UI`,
+    patch: {
+      kind: 'game-object.create-primitive',
+      gameObject,
+    },
+    createdId: id,
+    changedIds: [id],
+    reprojectIds: [id],
+  };
+}
+
 export function createEditorSceneDeleteSubtreePatch(
   document: EditorSceneDocument,
   intent: SceneGraphDeleteIntent,
@@ -2213,6 +2260,8 @@ export function createEditorSceneInspectorPropertyPatch(
   if (isEditorSceneRootTransformPath(targetId, path)) return null;
   if (!validateEditorSceneInspectorValue(input.document, gameObject, path, value).ok) return null;
   if (isBlockedEditorSceneSystemFieldPatch(input.document, targetId, path, value)) return null;
+  const groundDecalUiScalePatch = createGroundDecalUiScaleInspectorPatch(input.document, gameObject, path, value);
+  if (groundDecalUiScalePatch) return groundDecalUiScalePatch;
   const changedIds = path.startsWith('transform.')
     ? collectEditorSceneSubtreeIdList(input.document, [targetId])
     : [targetId];
@@ -2231,6 +2280,44 @@ export function createEditorSceneInspectorPropertyPatch(
     changedIds,
     ...(reprojectIds ? { reprojectIds } : {}),
   };
+}
+
+function createGroundDecalUiScaleInspectorPatch(
+  document: EditorSceneDocument,
+  gameObject: EditorSceneGameObject,
+  path: string,
+  value: unknown,
+): { patch: EditorSceneDocumentPatch; label: string; changedId: string; changedIds: string[] } | null {
+  if (!isGroundDecalUiConfig(gameObject.groundDecal)) return null;
+  const uniform = resolveGroundDecalUiInspectorScale(path, value);
+  if (uniform === null) return null;
+  const changedIds = collectEditorSceneSubtreeIdList(document, [gameObject.id]);
+  return {
+    label: `Patch ${gameObject.id} transform.scale`,
+    patch: {
+      kind: 'game-object.field',
+      targetId: gameObject.id,
+      path: 'transform.scale',
+      value: { x: uniform, y: uniform, z: uniform },
+    },
+    changedId: gameObject.id,
+    changedIds,
+  };
+}
+
+function resolveGroundDecalUiInspectorScale(path: string, value: unknown): number | null {
+  if (path === 'transform.scale') {
+    const scale = value as Partial<EditorSceneVec3> | null;
+    if (!scale || typeof scale !== 'object') return null;
+    return resolveUniformScaleFromVec3({
+      x: typeof scale.x === 'number' ? scale.x : 1,
+      y: typeof scale.y === 'number' ? scale.y : 1,
+      z: typeof scale.z === 'number' ? scale.z : 1,
+    });
+  }
+  if (!/^transform\.scale\.(x|y|z)$/.test(path)) return null;
+  if (typeof value !== 'number' || !Number.isFinite(value)) return null;
+  return Math.max(0.001, Math.abs(value));
 }
 
 export function createEditorSceneAssetActionPatch(
@@ -2638,14 +2725,37 @@ function createEditorSceneInspectorSections(
       ),
     });
   }
-  return sections.sort((left, right) => (left.order ?? 0) - (right.order ?? 0));
+  const constrainedSections = isGroundDecalUiConfig(gameObject.groundDecal)
+    ? applyGroundDecalUiInspectorConstraints(sections)
+    : sections;
+  return constrainedSections.sort((left, right) => (left.order ?? 0) - (right.order ?? 0));
+}
+
+function applyGroundDecalUiInspectorConstraints(
+  sections: InspectorSection<EditorSceneDocument>[],
+): InspectorSection<EditorSceneDocument>[] {
+  return sections.map(section => ({
+    ...section,
+    properties: section.properties.map(property => (
+      /^transform\.scale\.(x|y|z)$/.test(property.path)
+        ? {
+            ...property,
+            controlOptions: {
+              ...property.controlOptions,
+              forceVectorLock: true,
+            },
+          }
+        : property
+    )),
+  }));
 }
 
 function createGroundDecalInspectorProperties(
   nodeKind: SceneNodeConfig['kind'],
   groundDecal: EditorSceneGameObject['groundDecal'],
 ): InspectorProperty<EditorSceneDocument>[] {
-  const decal = groundDecal ?? createDefaultGroundDecal();
+  if (isGroundDecalUiConfig(groundDecal)) return createGroundDecalUiInspectorProperties(nodeKind, groundDecal);
+  const decal = (groundDecal ?? createDefaultGroundDecal()) as LegacyGroundDecalConfig;
   const properties: InspectorProperty<EditorSceneDocument>[] = [
     createDocumentInspectorProperty(null, nodeKind, {
       path: 'groundDecal.size.width',
@@ -2723,6 +2833,47 @@ function createGroundDecalInspectorProperties(
     path: 'groundDecal.raw',
     label: 'Raw Ground Decal',
     value: groundDecal ?? 'not configured',
+    order: properties.length,
+    source: 'Document',
+    tags: ['Raw'],
+  });
+  return properties;
+}
+
+function createGroundDecalUiInspectorProperties(
+  nodeKind: SceneNodeConfig['kind'],
+  groundDecal: GroundDecalUiConfig,
+): InspectorProperty<EditorSceneDocument>[] {
+  const properties: InspectorProperty<EditorSceneDocument>[] = [
+    createReadonlyInspectorProperty('groundDecal.version', 'Version', groundDecal.version, 0),
+    createReadonlyInspectorProperty('groundDecal.uiKind', 'UI Kind', groundDecal.uiKind, 1),
+    createDocumentInspectorProperty(null, nodeKind, {
+      path: 'groundDecal.size.width',
+      label: 'Width',
+      valueType: 'number',
+      control: 'number',
+      value: groundDecal.size.width,
+      commitMode: 'live',
+      order: 2,
+      min: 0.001,
+      step: 0.1,
+    }),
+    createDocumentInspectorProperty(null, nodeKind, {
+      path: 'groundDecal.size.depth',
+      label: 'Depth',
+      valueType: 'number',
+      control: 'number',
+      value: groundDecal.size.depth,
+      commitMode: 'live',
+      order: 3,
+      min: 0.001,
+      step: 0.1,
+    }),
+  ];
+  appendReadonlyInspectorProperty(properties, {
+    path: 'groundDecal.raw',
+    label: 'Raw Ground Decal UI',
+    value: groundDecal,
     order: properties.length,
     source: 'Document',
     tags: ['Raw'],
@@ -4216,13 +4367,14 @@ export function patchEditorSceneGameObjectField(
     };
   }
 
-  return patchPlayableEditorSceneGameObjectField(
+  const patched = patchPlayableEditorSceneGameObjectField(
     document,
     targetId,
     path,
     value,
     EDITOR_SCENE_FIELD_MUTATION_OPTIONS,
   ) as EditorSceneDocument;
+  return normalizeGroundDecalUiScaleAfterFieldPatch(patched, targetId, path);
 }
 
 export function patchEditorSceneGameObjectsField(
@@ -4241,13 +4393,17 @@ export function patchEditorSceneGameObjectsField(
       patchEditorSceneGameObjectField(nextDocument, targetId, path, value)
     ), document);
   }
-  return patchPlayableEditorSceneGameObjectsField(
+  const patched = patchPlayableEditorSceneGameObjectsField(
     document,
     uniqueTargetIds,
     path,
     value,
     EDITOR_SCENE_FIELD_MUTATION_OPTIONS,
   ) as EditorSceneDocument;
+  return uniqueTargetIds.reduce(
+    (nextDocument, targetId) => normalizeGroundDecalUiScaleAfterFieldPatch(nextDocument, targetId, path),
+    patched,
+  );
 }
 
 function patchEditorSceneGameObjectsMetadataField(
@@ -4277,6 +4433,52 @@ function patchEditorSceneGameObjectsMetadataField(
       gameObjects,
     },
   };
+}
+
+function normalizeGroundDecalUiScaleAfterFieldPatch(
+  document: EditorSceneDocument,
+  targetId: string,
+  path: string,
+): EditorSceneDocument {
+  if (!path.startsWith('transform.scale')) return document;
+  return normalizeGroundDecalUiScales(document, targetId);
+}
+
+function normalizeGroundDecalUiScales(
+  document: EditorSceneDocument,
+  targetId?: string,
+): EditorSceneDocument {
+  let changed = false;
+  const gameObjects = document.scene.gameObjects.map((gameObject) => {
+    if ((targetId && gameObject.id !== targetId) || !isGroundDecalUiConfig(gameObject.groundDecal)) return gameObject;
+    const transform = findEditorSceneTransform(gameObject);
+    if (!transform?.scale) return gameObject;
+    const uniform = resolveUniformScaleFromVec3(transform.scale);
+    if (
+      Math.abs(transform.scale.x - uniform) < 0.000001
+      && Math.abs(transform.scale.y - uniform) < 0.000001
+      && Math.abs(transform.scale.z - uniform) < 0.000001
+    ) {
+      return gameObject;
+    }
+    changed = true;
+    return {
+      ...gameObject,
+      components: gameObject.components.map((component) => component === transform
+        ? { ...component, scale: { x: uniform, y: uniform, z: uniform } }
+        : component),
+    };
+  });
+  return changed
+    ? { ...document, scene: { ...document.scene, gameObjects } }
+    : document;
+}
+
+function resolveUniformScaleFromVec3(scale: EditorSceneVec3): number {
+  const values = [scale.x, scale.y, scale.z].filter(value => Number.isFinite(value));
+  if (values.length === 0) return 1;
+  const uniform = values.reduce((best, value) => Math.abs(value - 1) > Math.abs(best - 1) ? value : best, values[0]!);
+  return Math.max(0.001, Math.abs(uniform));
 }
 
 function patchEditorSceneMaterialAssetField(
@@ -4424,7 +4626,7 @@ function splitChildMaterialBindingFieldPath(path: string): string[] | null {
 }
 
 
-function createDefaultGroundDecal(): NonNullable<EditorSceneGameObject['groundDecal']> {
+function createDefaultGroundDecal(): LegacyGroundDecalConfig {
   return {
     size: { width: 1, depth: 1 },
     color: { r: 1, g: 1, b: 1 },
@@ -4434,16 +4636,18 @@ function createDefaultGroundDecal(): NonNullable<EditorSceneGameObject['groundDe
 function mergeGroundDecalDefaults(
   groundDecal: EditorSceneGameObject['groundDecal'],
 ): NonNullable<EditorSceneGameObject['groundDecal']> {
+  if (isGroundDecalUiConfig(groundDecal)) return groundDecal;
+  const legacyGroundDecal = groundDecal as LegacyGroundDecalConfig | undefined;
   const defaults = createDefaultGroundDecal();
   return {
     ...defaults,
-    ...(groundDecal ?? {}),
+    ...(legacyGroundDecal ?? {}),
     size: {
       ...defaults.size,
-      ...(groundDecal?.size ?? {}),
+      ...(legacyGroundDecal?.size ?? {}),
     },
-    color: groundDecal?.color
-      ? { ...defaults.color, ...groundDecal.color }
+    color: legacyGroundDecal?.color
+      ? { ...defaults.color, ...legacyGroundDecal.color }
       : defaults.color,
   };
 }
@@ -4890,6 +5094,14 @@ function createUniqueEditorSceneId(existingIds: string[], preferredId: string): 
   let suffix = 2;
   while (used.has(`${base}_${suffix}`)) suffix += 1;
   return `${base}_${suffix}`;
+}
+
+function createUniqueEditorSceneName(existingNames: string[], preferredName: string): string {
+  const used = new Set(existingNames);
+  if (!used.has(preferredName)) return preferredName;
+  let suffix = 2;
+  while (used.has(`${preferredName} ${suffix}`)) suffix += 1;
+  return `${preferredName} ${suffix}`;
 }
 
 function sanitizeEditorSceneId(value: string): string {
