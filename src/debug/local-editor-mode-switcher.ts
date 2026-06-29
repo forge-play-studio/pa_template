@@ -681,24 +681,72 @@ function createEditorSceneLibraryAssetPreview(asset: EditorSceneAssetLibraryItem
 function createEditorSceneInspectorTextureAssets(
   assets: readonly EditorSceneAssetLibraryItem[],
 ): EditorSceneInspectorTextureAsset[] {
-  return assets
-    .filter(asset => asset.kind === 'texture')
-    .flatMap((asset) => {
-      const url = resolveEditorSceneRuntimePreviewAssetUrl(editorAssets, asset, 'texture');
-      if (!url) return [];
-      const environmentTexture = isEnvironmentTextureAsset(asset, url);
-      return [{
-        id: asset.assetId,
-        label: asset.displayName || asset.assetId,
-        url,
-        meta: environmentTexture ? `${asset.assetId} · IBL` : asset.assetId,
-        usage: environmentTexture ? 'environment' : 'material',
-        capabilities: {
-          materialTexture: !environmentTexture,
-          environmentTexture,
-        },
-      }];
-    });
+  const textureAssets: EditorSceneInspectorTextureAsset[] = [];
+  const seenAssetIds = new Set<string>();
+
+  for (const asset of assets) {
+    if (asset.kind !== 'texture') continue;
+    const textureAsset = createInspectorTextureAssetFromLibraryItem(asset);
+    if (!textureAsset || seenAssetIds.has(textureAsset.id)) continue;
+    seenAssetIds.add(textureAsset.id);
+    textureAssets.push(textureAsset);
+  }
+
+  for (const entry of editorAssets.getAssetCatalogEntries({ kind: 'texture' })) {
+    const textureAsset = createInspectorTextureAssetFromCatalogEntry(entry);
+    if (!textureAsset || seenAssetIds.has(textureAsset.id)) continue;
+    seenAssetIds.add(textureAsset.id);
+    textureAssets.push(textureAsset);
+  }
+
+  return textureAssets;
+}
+
+function createInspectorTextureAssetFromLibraryItem(
+  asset: EditorSceneAssetLibraryItem,
+): EditorSceneInspectorTextureAsset | null {
+  const url = resolveEditorSceneRuntimePreviewAssetUrl(editorAssets, asset, 'texture');
+  if (!url) return null;
+  const environmentTexture = isEnvironmentTextureAsset(asset, url);
+  return createInspectorTextureAsset({
+    id: asset.assetId,
+    label: asset.displayName || asset.assetId,
+    url,
+    environmentTexture,
+  });
+}
+
+function createInspectorTextureAssetFromCatalogEntry(
+  entry: editorAssets.AssetCatalogEntry,
+): EditorSceneInspectorTextureAsset | null {
+  const url = editorAssets.resolveTextureAssetUrl(entry.assetId) ?? entry.url;
+  if (!url) return null;
+  const environmentTexture = isEnvironmentTextureCatalogEntry(entry, url);
+  return createInspectorTextureAsset({
+    id: entry.assetId,
+    label: entry.displayName || entry.assetId,
+    url,
+    environmentTexture,
+  });
+}
+
+function createInspectorTextureAsset(input: {
+  id: string;
+  label: string;
+  url: string;
+  environmentTexture: boolean;
+}): EditorSceneInspectorTextureAsset {
+  return {
+    id: input.id,
+    label: input.label,
+    url: input.url,
+    meta: input.environmentTexture ? `${input.id} · IBL` : input.id,
+    usage: input.environmentTexture ? 'environment' : 'material',
+    capabilities: {
+      materialTexture: !input.environmentTexture,
+      environmentTexture: input.environmentTexture,
+    },
+  };
 }
 
 function resolveEditorSceneTextureRefUrl(
@@ -731,6 +779,26 @@ function isEnvironmentTextureAsset(asset: EditorSceneAssetLibraryItem, resolvedU
     asset.assetId,
     typeof metadata.relativePath === 'string' ? metadata.relativePath : '',
     typeof metadata.originalFileName === 'string' ? metadata.originalFileName : '',
+  ];
+  return candidates.some(value => /\.(env|hdr|dds|ktx|ktx2)(?:[?#].*)?$/i.test(value));
+}
+
+function isEnvironmentTextureCatalogEntry(entry: editorAssets.AssetCatalogEntry, resolvedUrl: string): boolean {
+  const metadata = entry.metadata && typeof entry.metadata === 'object' && !Array.isArray(entry.metadata)
+    ? entry.metadata
+    : {};
+  if (metadata.textureUsage === 'environment' || metadata.usage === 'environment') return true;
+  const capabilities = metadata.capabilities && typeof metadata.capabilities === 'object' && !Array.isArray(metadata.capabilities)
+    ? metadata.capabilities as Record<string, unknown>
+    : null;
+  if (capabilities?.environmentTexture === true) return true;
+  if (capabilities?.environmentTexture === false) return false;
+  const candidates = [
+    resolvedUrl,
+    entry.displayName,
+    entry.assetId,
+    entry.relativePath,
+    entry.originalFileName ?? '',
   ];
   return candidates.some(value => /\.(env|hdr|dds|ktx|ktx2)(?:[?#].*)?$/i.test(value));
 }
