@@ -399,10 +399,72 @@ export interface ScenePrimitiveNode extends SceneNodeBase {
   overrides?: SceneNodeVisualOverrides;
 }
 
+export interface SceneMarkerBoxGeometryConfig {
+  kind: 'box';
+}
+
+export interface SceneMarkerPointGeometryConfig {
+  kind: 'point';
+  coordinateSpace?: 'world' | 'local';
+  position?: Position3D;
+  offset?: Position3D;
+  target?: SceneMarkerTargetRefConfig;
+}
+
+export interface SceneMarkerObjectBoundsGeometryConfig {
+  kind: 'object-bounds';
+  target: SceneMarkerTargetRefConfig;
+}
+
+export interface SceneMarkerPolyhedronGeometryConfig {
+  kind: 'polyhedron';
+  coordinateSpace?: 'world';
+  vertices: Position3D[];
+  faces?: number[][];
+}
+
+export type SceneMarkerGeometryConfig =
+  | SceneMarkerBoxGeometryConfig
+  | SceneMarkerPointGeometryConfig
+  | SceneMarkerObjectBoundsGeometryConfig
+  | SceneMarkerPolyhedronGeometryConfig;
+
+export interface SceneMarkerTargetRefConfig {
+  kind: string;
+  id: string;
+  label?: string;
+  path?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface SceneMarkerLocalFrameConfig {
+  origin: Position3D;
+  forward?: Position3D;
+  right?: Position3D;
+  up?: Position3D;
+  label?: string;
+  description?: string;
+}
+
+export interface SceneMarkerConfig {
+  schemaVersion: 1;
+  label: string;
+  type: string;
+  kind?: string;
+  tags?: string[];
+  note?: string;
+  color?: ColorRGB;
+  target?: SceneMarkerTargetRefConfig;
+  semanticFrame?: SceneMarkerLocalFrameConfig;
+  geometry: SceneMarkerGeometryConfig;
+  metadata?: Record<string, unknown>;
+}
+
 export interface SceneTransformNode extends SceneNodeBase {
   kind: 'transform';
   transformType?: TransformType;
   overrides?: SceneNodeVisualOverrides;
+  marker?: SceneMarkerConfig;
   groundDecal?: {
     size: {
       width: number;

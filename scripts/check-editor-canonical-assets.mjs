@@ -69,10 +69,6 @@ async function assertEditorAssetLibraryRuntime() {
   }).outputText;
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'editor-asset-library-check-'));
   const modulePath = path.join(tempDir, 'editor-asset-library.mjs');
-  const editorPackagePath = path.join(root, 'node_modules/@fps-games/editor');
-  const editorPackageLink = path.join(tempDir, 'node_modules/@fps-games/editor');
-  await fs.mkdir(path.dirname(editorPackageLink), { recursive: true });
-  await fs.symlink(editorPackagePath, editorPackageLink, 'dir');
   await fs.writeFile(modulePath, output);
   try {
     const module = await import(pathToFileURL(modulePath).href);
