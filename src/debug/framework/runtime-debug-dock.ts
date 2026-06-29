@@ -1,4 +1,4 @@
-export function createFlightPanelButton(ownerDocument: Document, text: string): HTMLButtonElement {
+export function createRuntimeDebugDockButton(ownerDocument: Document, text: string): HTMLButtonElement {
   const button = ownerDocument.createElement('button');
   button.type = 'button';
   button.textContent = text;
@@ -62,49 +62,7 @@ const RUNTIME_DEBUG_PANEL_DOCK_Z_INDEX = 2147483400;
 const RUNTIME_DEBUG_PANEL_TOGGLE_Z_INDEX = RUNTIME_DEBUG_PANEL_DOCK_Z_INDEX + 1;
 const RUNTIME_DEBUG_PANEL_MANAGER_Z_INDEX = RUNTIME_DEBUG_PANEL_DOCK_Z_INDEX + 2;
 const RUNTIME_DEBUG_PANEL_DEFAULT_ORDER = [
-  'IBL',
   'VFX',
-  '打包',
-  'NPC吸入',
-  'NPC特效',
-  'NPC Anim',
-  '最终特效',
-  'Spawn FX',
-  'Tree Chop',
-  '+100 钱币',
-  '背包',
-  'MAX',
-  '木材效果',
-  '木材Shader',
-  '木材禁入区',
-  '动物巡逻',
-  '堆叠排列',
-  '解锁鱼塘',
-  '解锁养鸡区',
-  '卡车UI',
-  '卡车尾气',
-  '卡车材质',
-  '收集车吸入',
-  '收集车材质',
-  '司机',
-  '支付数字',
-  '钱材质',
-  '指向箭头',
-  '描边测试',
-  '剪影描边',
-  'Player Halo',
-  'Flight',
-  'Flight Outline',
-  'Water',
-  'Audio',
-  '地贴排序',
-  '地贴镜头',
-  '采集镜头',
-  '路面',
-  'EndCam',
-  '外部摆场',
-  '资源',
-  'GLB导出',
 ] as const;
 const RUNTIME_DEBUG_PANEL_DEFAULT_ORDER_INDEX = new Map<string, number>(
   RUNTIME_DEBUG_PANEL_DEFAULT_ORDER.map((id, index) => [id, index]),
@@ -193,8 +151,7 @@ function getRuntimeDebugPanelMasterToggle(root: HTMLElement, dock: HTMLElement):
   toggle.setAttribute('data-input-layer', '');
   toggle.style.cssText = [
     'position:fixed',
-    // 与 SDK「进入编辑场景」工具条并列(同一行、在其左侧；右侧被金币 HUD 占用放不下)。
-    // 工具条居中(left ~50%)，这两个按钮在它左边依次排开。
+    // Keep the global toggles near the editor toolbar without occupying gameplay HUD space.
     'top:14px',
     'left:calc(50% - 352px)',
     `z-index:${RUNTIME_DEBUG_PANEL_TOGGLE_Z_INDEX}`,
@@ -234,7 +191,7 @@ function getRuntimeDebugPanelManagerToggle(root: HTMLElement, dock: HTMLElement)
   toggle.setAttribute('data-input-layer', '');
   toggle.style.cssText = [
     'position:fixed',
-    // 与「显示/隐藏 Debug 面板」并列, 共同排在 SDK 编辑工具条左侧同一行。
+    // Keep this manager toggle next to the global debug visibility toggle.
     'top:14px',
     'left:calc(50% - 222px)',
     `z-index:${RUNTIME_DEBUG_PANEL_TOGGLE_Z_INDEX}`,
@@ -711,7 +668,7 @@ function isTextSelectionOrFormControl(target: EventTarget | null): boolean {
   return !!target.closest('input,textarea,select,option,label,[contenteditable="true"]');
 }
 
-export function flightPanelNumberInputStyle(): string {
+export function runtimeDebugDockNumberInputStyle(): string {
   return [
     'width:100%',
     'box-sizing:border-box',

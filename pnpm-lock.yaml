@@ -19,7 +19,7 @@ importers:
         version: 0.1.5-beta.4
       '@fps/vfx':
         specifier: git+ssh://git@github.com/forge-play-studio/fps-vfx-library.git#v0.1.1
-        version: git+https://git@github.com:forge-play-studio/fps-vfx-library.git#2da3062b7ed8beb3bb7672cc1e4481ba89daed9f(@babylonjs/core@8.52.1)(@babylonjs/loaders@8.52.1(@babylonjs/core@8.52.1)(babylonjs-gltf2interface@8.46.2))
+        version: git+https://git@github.com:forge-play-studio/fps-vfx-library.git#d9e6f9ce43ea3ebdac792e81dcd214a6e72b7f2f(@babylonjs/core@8.52.1)(@babylonjs/loaders@8.52.1(@babylonjs/core@8.52.1)(babylonjs-gltf2interface@8.46.2))
     devDependencies:
       '@babylonjs/inspector':
         specifier: 8.52.1
@@ -799,8 +799,8 @@ packages:
       - '@fps-games/editor-playable-sdk'
       - '@fps-games/editor-protocol'
 
-  '@fps/vfx@git+https://git@github.com:forge-play-studio/fps-vfx-library.git#2da3062b7ed8beb3bb7672cc1e4481ba89daed9f':
-    resolution: {commit: 2da3062b7ed8beb3bb7672cc1e4481ba89daed9f, repo: git@github.com:forge-play-studio/fps-vfx-library.git, type: git}
+  '@fps/vfx@git+https://git@github.com:forge-play-studio/fps-vfx-library.git#d9e6f9ce43ea3ebdac792e81dcd214a6e72b7f2f':
+    resolution: {commit: d9e6f9ce43ea3ebdac792e81dcd214a6e72b7f2f, repo: git@github.com:forge-play-studio/fps-vfx-library.git, type: git}
     version: 0.1.1
     peerDependencies:
       '@babylonjs/core': ^8.0.0
@@ -2614,7 +2614,7 @@ snapshots:
 
   '@fps-games/editor@0.1.5-beta.4': {}
 
-  '@fps/vfx@git+https://git@github.com:forge-play-studio/fps-vfx-library.git#2da3062b7ed8beb3bb7672cc1e4481ba89daed9f(@babylonjs/core@8.52.1)(@babylonjs/loaders@8.52.1(@babylonjs/core@8.52.1)(babylonjs-gltf2interface@8.46.2))':
+  '@fps/vfx@git+https://git@github.com:forge-play-studio/fps-vfx-library.git#d9e6f9ce43ea3ebdac792e81dcd214a6e72b7f2f(@babylonjs/core@8.52.1)(@babylonjs/loaders@8.52.1(@babylonjs/core@8.52.1)(babylonjs-gltf2interface@8.46.2))':
     dependencies:
       '@babylonjs/core': 8.52.1
       '@babylonjs/loaders': 8.52.1(@babylonjs/core@8.52.1)(babylonjs-gltf2interface@8.46.2)

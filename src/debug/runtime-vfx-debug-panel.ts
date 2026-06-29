@@ -1,9 +1,9 @@
 import type { Game } from '../core/Game';
 import {
   applyRuntimeDebugButtonStyle,
-  createFlightPanelButton,
+  createRuntimeDebugDockButton,
   mountRuntimeDebugPanelContainer,
-} from './flight/flight-debug-dom';
+} from './framework/runtime-debug-dock';
 import type {
   VfxColorValue,
   VfxEffectPackage,
@@ -36,9 +36,9 @@ interface DropdownControl {
   close(): void;
 }
 
-const VFX_DEBUG_OPEN_STORAGE_KEY = 'lumber-order.vfx-debug.open';
-const VFX_DEBUG_EFFECT_STORAGE_KEY = 'lumber-order.vfx-debug.effect';
-const VFX_DEBUG_DRAFT_STORAGE_KEY = 'lumber-order.vfx-debug.draft';
+const VFX_DEBUG_OPEN_STORAGE_KEY = 'pa-template.vfx-debug.open';
+const VFX_DEBUG_EFFECT_STORAGE_KEY = 'pa-template.vfx-debug.effect';
+const VFX_DEBUG_DRAFT_STORAGE_KEY = 'pa-template.vfx-debug.draft';
 const VFX_DEBUG_PANEL_ATTRIBUTE = 'data-runtime-vfx-debug-panel';
 const PREVIEW_DEBOUNCE_MS = 180;
 const DEFAULT_SPAWN_PARAM_KEYS = {
@@ -85,7 +85,7 @@ export function mountRuntimeVfxDebugPanel(options: RuntimeVfxDebugPanelOptions):
     'pointer-events:none',
   ].join(';');
 
-  const toggleButton = createFlightPanelButton(ownerDocument, 'VFX');
+  const toggleButton = createRuntimeDebugDockButton(ownerDocument, 'VFX');
   toggleButton.title = '打开 VFX 调试面板';
 
   const panel = ownerDocument.createElement('section');
@@ -427,8 +427,9 @@ export function mountRuntimeVfxDebugPanel(options: RuntimeVfxDebugPanelOptions):
     const savePath = getEffectParamsRelativePath(effectPackage.id);
     const saveSummary = formatSavedParamsSummary(params);
     try {
-      await postDebugPanelConfigJson(win, `/__debug_panel_config?file=${encodeURIComponent(`effects/${effectPackage.id}/vfx-params.json`)}`, {
-        replace: params,
+      await postDebugPanelConfigJson(win, '/__vfx_debug_overrides', {
+        effectId: effectPackage.id,
+        params,
       });
       options.getGame()?.getEffectPackageService?.()?.setDebugOverride?.(effectPackage.id, params);
       clearLocalDraft(win, effectPackage.id);
@@ -542,7 +543,7 @@ export function mountRuntimeVfxDebugPanel(options: RuntimeVfxDebugPanelOptions):
     function renderOptions(): void {
       menu.innerHTML = '';
       for (const option of options) {
-        const optionButton = createFlightPanelButton(doc, option.label);
+        const optionButton = createRuntimeDebugDockButton(doc, option.label);
         optionButton.dataset.value = option.value;
         optionButton.style.width = '100%';
         optionButton.style.minHeight = '28px';
@@ -706,7 +707,7 @@ function formatStatusValue(value: VfxParamValue): string {
 }
 
 function createActionButton(ownerDocument: Document, text: string): HTMLButtonElement {
-  return createFlightPanelButton(ownerDocument, text);
+  return createRuntimeDebugDockButton(ownerDocument, text);
 }
 
 function inputStyle(): string {
