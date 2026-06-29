@@ -50,6 +50,9 @@ import {
   createEditorSceneMaterialBindingSummary as createPlayableEditorSceneMaterialBindingSummary,
   createEditorSceneMaterialPickerControlOptions as createPlayableEditorSceneMaterialPickerControlOptions,
   createEditorSceneDuplicatedPrefabDefinition as createPlayableEditorSceneDuplicatedPrefabDefinition,
+  createEditorScenePrefabGroupNode as createPlayableEditorScenePrefabGroupNode,
+  createEditorScenePrefabPrimitiveNode as createPlayableEditorScenePrefabPrimitiveNode,
+  createEditorScenePrefabNodeFromAsset as createPlayableEditorScenePrefabNodeFromAsset,
   createEditorScenePrefabDefinitionFromAsset as createPlayableEditorScenePrefabDefinitionFromAsset,
   createEditorScenePrefabDefinitionFromGameObject as createPlayableEditorScenePrefabDefinitionFromGameObject,
   createEditorSceneReadonlyInspectorProperty as createPlayableEditorSceneReadonlyInspectorProperty,
@@ -65,8 +68,10 @@ import {
   createEditorSceneSerializedObject as createPlayableEditorSceneSerializedObject,
   createEditorSceneTexturePickerControlOptions as createPlayableEditorSceneTexturePickerControlOptions,
   deleteEditorSceneMaterialAsset as deletePlayableEditorSceneMaterialAsset,
+  deleteEditorScenePrefabNode as deletePlayableEditorScenePrefabNode,
   degreesToEditorSceneRadians as degreesToPlayableEditorSceneRadians,
   describeEditorSceneRuntimeObject as describePlayableEditorSceneRuntimeObject,
+  ensureEditorScenePrefabComposition as ensurePlayableEditorScenePrefabComposition,
   ensureEditorSceneGameObjectGuids as ensurePlayableEditorSceneGameObjectGuids,
   getEditorSceneGameObjectWorldTransform as getPlayableEditorSceneGameObjectWorldTransform,
   getEditorSceneMaterialAssetDisplayName as getPlayableEditorSceneMaterialAssetDisplayName,
@@ -88,6 +93,8 @@ import {
   normalizeEditorSceneHierarchyDocument as normalizePlayableEditorSceneHierarchyDocument,
   normalizeEditorSceneMaterialAssetValue as normalizePlayableEditorSceneMaterialAssetValue,
   migrateEditorSceneDocumentRenderingAlphaIndex as migratePlayableEditorSceneDocumentRenderingAlphaIndex,
+  readEditorScenePrefabRootNodeId as readPlayableEditorScenePrefabRootNodeId,
+  readEditorScenePrefabNodes as readPlayableEditorScenePrefabNodes,
   radiansToEditorSceneDegrees as radiansToPlayableEditorSceneDegrees,
   parseEditorSceneDuplicateMaterialAssetValue as parsePlayableEditorSceneDuplicateMaterialAssetValue,
   parseEditorSceneMaterialAssetFieldPath as parsePlayableEditorSceneMaterialAssetFieldPath,
@@ -95,8 +102,13 @@ import {
   patchEditorSceneMaterialAssetField as patchPlayableEditorSceneMaterialAssetField,
   collectEditorSceneChildMaterialSlots as collectPlayableEditorSceneChildMaterialSlots,
   readEditorScenePrefabOverrideProfileFieldPath as readPlayableEditorScenePrefabOverrideProfileFieldPath,
+  readEditorScenePrefabNodeChildren as readPlayableEditorScenePrefabNodeChildren,
   collectEditorSceneMaterialAssetBindingIds as collectPlayableEditorSceneMaterialAssetBindingIds,
+  reparentEditorScenePrefabNode as reparentPlayableEditorScenePrefabNode,
+  renameEditorScenePrefabAsset as renamePlayableEditorScenePrefabAsset,
+  renameEditorScenePrefabNode as renamePlayableEditorScenePrefabNode,
   resolveEditorScenePrefabInstanceRelation as resolvePlayableEditorScenePrefabInstanceRelation,
+  setEditorScenePrefabNodeTransform as setPlayableEditorScenePrefabNodeTransform,
   readEditorSceneAssetMaterialSlots as readPlayableEditorSceneAssetMaterialSlots,
   readEditorSceneInspectorVec3 as readPlayableEditorSceneInspectorVec3,
   readEditorSceneRuntimeBoolean as readPlayableEditorSceneRuntimeBoolean,
@@ -128,6 +140,7 @@ import {
   type EditorSceneFieldInspectorExtraValidator as PlayableEditorSceneFieldInspectorExtraValidator,
   type EditorSceneHierarchyPatch as PlayableEditorSceneHierarchyPatch,
   type EditorSceneInspectorSourceTag as PlayableEditorSceneInspectorSourceTag,
+  type EditorScenePrefabNode as PlayableEditorScenePrefabNode,
   type EditorSceneReadonlyInspectorPropertyInput as PlayableEditorSceneReadonlyInspectorPropertyInput,
   type EditorSceneReadonlyInspectorSectionInput as PlayableEditorSceneReadonlyInspectorSectionInput,
   type EditorSceneRuntimeInspectorSnapshot as PlayableEditorSceneRuntimeInspectorSnapshot,
@@ -249,6 +262,11 @@ export type EditorSceneDocumentPatch =
     assetId: string;
     path: string;
     value: unknown;
+  }
+  | {
+    kind: 'scene.prefab-asset.replace';
+    assetId: string;
+    prefabAsset: EditorSceneAsset;
   }
   | {
     kind: 'scene.prefab-material-asset.duplicate-and-bind';
@@ -1203,6 +1221,13 @@ function reduceEditorSceneDocumentUnchecked(
         command.patch.value,
       );
     }
+    if (command.patch.kind === 'scene.prefab-asset.replace') {
+      return replaceEditorScenePrefabAsset(
+        document,
+        command.patch.assetId,
+        command.patch.prefabAsset,
+      );
+    }
     if (command.patch.kind === 'scene.prefab-material-asset.duplicate-and-bind') {
       return addEditorSceneMaterialAssetAndBindPrefabOverride(
         document,
@@ -2112,6 +2137,10 @@ export interface EditorSceneAssetActionPatchInput {
   assetId?: string;
   browserAssetId?: string;
   assetKind?: string;
+  targetPrefabAssetId?: string;
+  nodeId?: string;
+  parentNodeId?: string;
+  primitiveShape?: string;
   asset?: EditorSceneAssetLibraryItem | EditorSceneAsset | null;
   activeId: string | null;
   selectedIds?: readonly string[];
@@ -2187,78 +2216,66 @@ export function getEditorScenePrefabStageProjectionNodes(
 ) {
   const prefabAsset = findEditorScenePrefabAsset(document, descriptor.assetId);
   const sourceAssetId = descriptor.sourceAssetId ?? prefabAsset?.prefab?.sourceAssetId;
-  if (!prefabAsset?.prefab || !sourceAssetId) return [];
-  const sourceAsset = document.assets.find(asset => asset.id === sourceAssetId);
-  if (!sourceAsset) return [];
+  if (!prefabAsset?.prefab) return [];
+  const sourceAsset = sourceAssetId ? document.assets.find(asset => asset.id === sourceAssetId) : null;
   const previewNodeId = descriptor.previewNodeId ?? `prefab-stage:${prefabAsset.id}`;
-  const previewDocument = document.assets.some(asset => asset.id === sourceAsset.id)
-    ? document
-    : { ...document, assets: [...document.assets, sourceAsset] };
+  const compositionNodes = createEditorScenePrefabStageCompositionProjectionNodes(document, prefabAsset, {
+    previewNodeId,
+    label: descriptor.label,
+  });
+  if (compositionNodes.length === 0) return [];
+  const comparisonNodes = sourceAsset
+    ? [
+      {
+        ...createEditorScenePrefabStageModelProjectionNode(document, prefabAsset, sourceAsset, {
+          id: `${previewNodeId}:compare-clone`,
+          name: `${descriptor.label} Mesh Clone`,
+          position: { x: -2.4, y: 0, z: 0 },
+        }),
+        assetInstantiationMode: 'meshClone',
+      },
+      {
+        ...createEditorScenePrefabStageModelProjectionNode(document, prefabAsset, sourceAsset, {
+          id: `${previewNodeId}:compare-instance`,
+          name: `${descriptor.label} InstanceMesh`,
+          position: { x: 2.4, y: 0, z: 0 },
+        }),
+        assetInstantiationMode: 'instancedMesh',
+      },
+    ]
+    : [];
   return [
     createEditorScenePrefabStageEnvironmentLightNode(),
     createEditorScenePrefabStageDirectionalLightNode(),
-    createEditorScenePrefabStageModelProjectionNode(previewDocument, prefabAsset, sourceAsset, {
-      id: previewNodeId,
-      name: descriptor.label,
-      position: { x: 0, y: 0, z: 0 },
-    }),
-    {
-      ...createEditorScenePrefabStageModelProjectionNode(previewDocument, prefabAsset, sourceAsset, {
-        id: `${previewNodeId}:compare-clone`,
-        name: `${descriptor.label} Mesh Clone`,
-        position: { x: -2.4, y: 0, z: 0 },
-      }),
-      assetInstantiationMode: 'meshClone',
-    },
-    {
-      ...createEditorScenePrefabStageModelProjectionNode(previewDocument, prefabAsset, sourceAsset, {
-        id: `${previewNodeId}:compare-instance`,
-        name: `${descriptor.label} InstanceMesh`,
-        position: { x: 2.4, y: 0, z: 0 },
-      }),
-      assetInstantiationMode: 'instancedMesh',
-    },
+    ...compositionNodes,
+    ...comparisonNodes,
   ];
 }
 
 export function getEditorScenePrefabStageStructure(
   document: EditorSceneDocument,
   descriptor: { assetId: string; sourceAssetId?: string },
-  context: EditorScenePrefabStageContext = {},
+  _context: EditorScenePrefabStageContext = {},
 ) {
   const prefabAsset = findEditorScenePrefabAsset(document, descriptor.assetId);
-  const sourceAssetId = descriptor.sourceAssetId ?? prefabAsset?.prefab?.sourceAssetId;
-  const sourceAsset = sourceAssetId ? document.assets.find(asset => asset.id === sourceAssetId) : null;
-  const sourceItem = createEditorScenePrefabStageSourceItem(sourceAsset, sourceAssetId);
-  const materialSlotItems = createEditorScenePrefabStageMaterialSlotItems(sourceAsset);
-  const materialSlotGroup = createEditorScenePrefabStageMaterialSlotGroup(materialSlotItems, !!context.importStructureReady);
-  const rootItem = {
-    id: 'prefab-root',
-    label: prefabAsset?.displayName ?? descriptor.assetId,
-    kind: 'root',
-  };
-
-  if (context.importStructureReady || hasEditorScenePrefabStageRuntimeStructure(context.importStructure)) {
-    const runtimeGroups = createEditorScenePrefabStageRuntimeGroups(context.importStructure);
+  if (!prefabAsset?.prefab) {
     return [{
       id: 'prefab-scene',
-      label: 'Scene',
+      label: 'Prefab Scene Tree',
       kind: 'root',
-      children: [
-        rootItem,
-        sourceItem,
-        ...runtimeGroups,
-        ...(materialSlotGroup ? [materialSlotGroup] : []),
-      ],
+      children: [],
     }];
   }
-
+  const rootNodeId = readPlayableEditorScenePrefabRootNodeId(prefabAsset);
+  const rootNodes = readPlayableEditorScenePrefabNodeChildren(prefabAsset, null);
+  const editableRoots = rootNodeId
+    ? rootNodes.filter(node => node.id === rootNodeId)
+    : rootNodes;
   return [{
-    ...rootItem,
-    children: [
-      sourceItem,
-      ...(materialSlotGroup ? [materialSlotGroup] : []),
-    ],
+    id: 'prefab-root',
+    label: 'Prefab Scene Tree',
+    kind: 'root',
+    children: editableRoots.map(node => createEditorScenePrefabStageNodeTreeItem(prefabAsset, node)),
   }];
 }
 
@@ -2277,10 +2294,16 @@ export function getEditorScenePrefabStageInspectorObject(
     ? findEditorScenePrefabStageStructureItem(
       getEditorScenePrefabStageStructure(document, descriptor, context),
       selectedItemId,
-    )
+    ) ?? findEditorScenePrefabStageInspectorItem(document, descriptor, selectedItemId, context)
     : null;
-  const materialOverrideSection = selectedItem
-    ? createEditorScenePrefabMaterialOverrideInspectorSection(document, prefabAsset, selectedItem, context)
+  const materialOverrideTarget = selectedItem
+    ? resolveEditorScenePrefabStageMaterialOverrideTarget(document, descriptor, selectedItem, context)
+    : null;
+  const materialOverrideSection = materialOverrideTarget
+    ? createEditorScenePrefabMaterialOverrideInspectorSection(document, prefabAsset, materialOverrideTarget, context)
+    : null;
+  const sourceStructureSection = selectedItem
+    ? createEditorScenePrefabSourceStructureInspectorSection(document, descriptor, selectedItem, context)
     : null;
   return {
     targetIds: [prefabAsset.id],
@@ -2339,6 +2362,7 @@ export function getEditorScenePrefabStageInspectorObject(
           }),
         ].filter((property): property is InspectorProperty<EditorSceneDocument> => !!property),
       },
+      ...(sourceStructureSection ? [sourceStructureSection] : []),
       ...(materialOverrideSection ? [materialOverrideSection] : []),
     ],
   };
@@ -2380,6 +2404,122 @@ function createPrefabStageEditableProperty(input: {
       : { ok: false, message: `Invalid prefab field: ${input.path}.` },
     coerce: (value: unknown) => normalizeEditorScenePrefabAssetFieldValue(input.path, value),
   };
+}
+
+function createEditorScenePrefabSourceStructureInspectorSection(
+  document: EditorSceneDocument,
+  descriptor: { assetId: string; sourceAssetId?: string },
+  selectedItem: EditorScenePrefabStageStructureItem,
+  context: EditorScenePrefabStageContext,
+): InspectorSection<EditorSceneDocument> | null {
+  if (selectedItem.itemType !== 'prefab-node') return null;
+  if (selectedItem.kind !== 'model') return null;
+  const sourceAssetId = typeof selectedItem.sourceAssetId === 'string' ? selectedItem.sourceAssetId : null;
+  if (!sourceAssetId) return null;
+  const sourceAsset = document.assets.find(asset => asset.id === sourceAssetId);
+  const materialSlots = createEditorScenePrefabStageMaterialSlotItems(sourceAsset);
+  const runtimeNodeCount = readEditorSceneImportArray(context.importStructure, 'nodes').length;
+  const runtimeMaterialCount = readEditorSceneImportArray(context.importStructure, 'materials').length;
+  const runtimeTextureCount = readEditorSceneImportArray(context.importStructure, 'textures').length;
+  const runtimeAnimationCount = readEditorSceneImportArray(context.importStructure, 'animations').length;
+  const properties: InspectorProperty<EditorSceneDocument>[] = [
+    createReadonlyInspectorProperty(
+      'prefab.sourceStructure.sourceAsset',
+      'Source Asset',
+      sourceAsset?.displayName ?? sourceAssetId,
+      0,
+    ),
+    createReadonlyInspectorProperty(
+      'prefab.sourceStructure.assetId',
+      'Asset ID',
+      sourceAssetId,
+      1,
+    ),
+  ];
+  if (sourceAsset?.metadata?.relativePath) {
+    properties.push(createReadonlyInspectorProperty(
+      'prefab.sourceStructure.relativePath',
+      'Relative Path',
+      String(sourceAsset.metadata.relativePath),
+      2,
+    ));
+  }
+  properties.push(
+    createReadonlyInspectorProperty(
+      'prefab.sourceStructure.materialSlots',
+      'Material Slots',
+      String(materialSlots.length),
+      10,
+    ),
+    createReadonlyInspectorProperty(
+      'prefab.sourceStructure.runtimeNodes',
+      'Runtime Nodes',
+      String(runtimeNodeCount),
+      20,
+    ),
+    createReadonlyInspectorProperty(
+      'prefab.sourceStructure.runtimeMaterials',
+      'Runtime Materials',
+      String(runtimeMaterialCount),
+      21,
+    ),
+    createReadonlyInspectorProperty(
+      'prefab.sourceStructure.runtimeTextures',
+      'Runtime Textures',
+      String(runtimeTextureCount),
+      22,
+    ),
+    createReadonlyInspectorProperty(
+      'prefab.sourceStructure.runtimeAnimations',
+      'Runtime Animations',
+      String(runtimeAnimationCount),
+      23,
+    ),
+  );
+  if (materialSlots.length > 0) {
+    properties.push(createReadonlyInspectorProperty(
+      'prefab.sourceStructure.materialSlotSummary',
+      'Material Slot Summary',
+      materialSlots.map(slot => slot.label).join(', '),
+      30,
+    ));
+  }
+  return {
+    id: 'prefab-source-structure',
+    title: 'Source Structure',
+    summary: sourceAsset ? 'Readonly GLB / glTF anatomy' : 'Missing source asset',
+    persistence: 'readonly',
+    effect: sourceAsset ? 'active' : 'unsupported',
+    properties,
+  };
+}
+
+function resolveEditorScenePrefabStageMaterialOverrideTarget(
+  document: EditorSceneDocument,
+  descriptor: { assetId: string; sourceAssetId?: string },
+  selectedItem: EditorScenePrefabStageStructureItem,
+  context: EditorScenePrefabStageContext,
+): EditorScenePrefabStageStructureItem | null {
+  if (
+    selectedItem.itemType === 'prefab-material-slot'
+    || selectedItem.itemType === 'runtime-material'
+    || selectedItem.itemType === 'runtime-texture'
+  ) {
+    return selectedItem;
+  }
+  if (selectedItem.itemType !== 'prefab-node' || selectedItem.kind !== 'model') return null;
+  const sourceAssetId = typeof selectedItem.sourceAssetId === 'string'
+    ? selectedItem.sourceAssetId
+    : descriptor.sourceAssetId;
+  if (!sourceAssetId) return null;
+  const sourceAsset = document.assets.find(asset => asset.id === sourceAssetId);
+  const materialSlotItems = createEditorScenePrefabStageMaterialSlotItems(sourceAsset);
+  if (materialSlotItems.length > 0) return materialSlotItems[0] ?? null;
+  const runtimeMaterialGroup = hasEditorScenePrefabStageRuntimeStructure(context.importStructure)
+    ? createEditorScenePrefabStageRuntimeGroups(context.importStructure)
+      .find(group => group.id === 'prefab-import-materials')
+    : null;
+  return runtimeMaterialGroup?.children?.[0] ?? null;
 }
 
 export function createEditorSceneReadonlyInspectorSection(
@@ -2598,11 +2738,170 @@ export function createEditorSceneAssetActionPatch(
       createdId: prefabAsset.id,
     };
   }
+  if (input.actionId === 'asset.add-to-current-prefab') {
+    if (!input.assetId || !input.targetPrefabAssetId) return null;
+    const targetPrefabAsset = findEditorScenePrefabAsset(input.document, input.targetPrefabAssetId);
+    const sourceAsset = createEditorSceneSourceAssetFromActionInput(input);
+    const nodeCreateOptions = readEditorScenePrefabNodeCreateActionValue(input.value);
+    if (!targetPrefabAsset || !sourceAsset) return null;
+    const result = createPlayableEditorScenePrefabNodeFromAsset(targetPrefabAsset, sourceAsset, {
+      parentId: input.parentNodeId,
+      ...(nodeCreateOptions.name ? { name: nodeCreateOptions.name } : {}),
+      ...(nodeCreateOptions.sourceNodePath ? { sourceNodePath: nodeCreateOptions.sourceNodePath } : {}),
+      ...(nodeCreateOptions.transform ? { transform: nodeCreateOptions.transform } : {}),
+    });
+    if (!result.ok || !result.changed) return null;
+    return {
+      label: `Add ${sourceAsset.displayName ?? sourceAsset.id} to prefab ${targetPrefabAsset.displayName ?? targetPrefabAsset.id}`,
+      patch: {
+        kind: 'scene.prefab-asset.replace',
+        assetId: targetPrefabAsset.id,
+        prefabAsset: result.prefabAsset,
+      },
+      changedId: targetPrefabAsset.id,
+      changedIds: [targetPrefabAsset.id],
+      createdId: result.createdNodeId,
+    };
+  }
+  if (input.actionId === 'prefab.node.createPrimitive') {
+    if (!input.targetPrefabAssetId) return null;
+    const targetPrefabAsset = findEditorScenePrefabAsset(input.document, input.targetPrefabAssetId);
+    const primitiveShape = normalizeEditorScenePrimitiveShape(input.primitiveShape ?? input.value);
+    const nodeCreateOptions = readEditorScenePrefabNodeCreateActionValue(input.value);
+    if (!targetPrefabAsset || !primitiveShape) return null;
+    const result = createPlayableEditorScenePrefabPrimitiveNode(targetPrefabAsset, {
+      parentId: input.parentNodeId ?? input.nodeId,
+      shape: primitiveShape,
+      ...(nodeCreateOptions.name ? { name: nodeCreateOptions.name } : {}),
+      ...(nodeCreateOptions.transform ? { transform: nodeCreateOptions.transform } : {}),
+    });
+    if (!result.ok || !result.changed) return null;
+    return createEditorScenePrefabNodeMutationPatchResult(
+      targetPrefabAsset,
+      result.prefabAsset,
+      `Create ${primitiveShape} in prefab ${targetPrefabAsset.displayName ?? targetPrefabAsset.id}`,
+      {
+        createdId: result.createdNodeId,
+        changedId: result.selectedNodeId ?? result.createdNodeId,
+      },
+    );
+  }
+  if (input.actionId === 'prefab.node.createGroup') {
+    if (!input.targetPrefabAssetId) return null;
+    const targetPrefabAsset = findEditorScenePrefabAsset(input.document, input.targetPrefabAssetId);
+    const nodeCreateOptions = readEditorScenePrefabNodeCreateActionValue(input.value);
+    if (!targetPrefabAsset) return null;
+    const result = createPlayableEditorScenePrefabGroupNode(targetPrefabAsset, {
+      parentId: input.parentNodeId ?? input.nodeId,
+      ...(nodeCreateOptions.name ? { name: nodeCreateOptions.name } : {}),
+      ...(nodeCreateOptions.transform ? { transform: nodeCreateOptions.transform } : {}),
+    });
+    if (!result.ok || !result.changed) return null;
+    return createEditorScenePrefabNodeMutationPatchResult(
+      targetPrefabAsset,
+      result.prefabAsset,
+      `Create group in prefab ${targetPrefabAsset.displayName ?? targetPrefabAsset.id}`,
+      {
+        createdId: result.createdNodeId,
+        changedId: result.selectedNodeId ?? result.createdNodeId,
+      },
+    );
+  }
+  if (input.actionId === 'prefab.node.delete') {
+    if (!input.targetPrefabAssetId || !input.nodeId) return null;
+    const targetPrefabAsset = findEditorScenePrefabAsset(input.document, input.targetPrefabAssetId);
+    if (!targetPrefabAsset) return null;
+    const result = deletePlayableEditorScenePrefabNode(targetPrefabAsset, input.nodeId);
+    if (!result.ok || !result.changed) return null;
+    return createEditorScenePrefabNodeMutationPatchResult(
+      targetPrefabAsset,
+      result.prefabAsset,
+      `Delete prefab node ${input.nodeId}`,
+      {
+        changedId: readPlayableEditorScenePrefabRootNodeId(result.prefabAsset) ?? targetPrefabAsset.id,
+      },
+    );
+  }
+  if (input.actionId === 'prefab.node.setTransform') {
+    if (!input.targetPrefabAssetId || !input.nodeId) return null;
+    const targetPrefabAsset = findEditorScenePrefabAsset(input.document, input.targetPrefabAssetId);
+    const transformValue = readEditorScenePrefabNodeTransformActionValue(input.value);
+    if (!targetPrefabAsset || !transformValue) return null;
+    const result = setPlayableEditorScenePrefabNodeTransform(targetPrefabAsset, input.nodeId, transformValue);
+    if (!result.ok || !result.changed) return null;
+    return createEditorScenePrefabNodeMutationPatchResult(
+      targetPrefabAsset,
+      result.prefabAsset,
+      `Set prefab node ${input.nodeId} transform`,
+      {
+        changedId: result.selectedNodeId ?? input.nodeId,
+      },
+    );
+  }
+  if (input.actionId === 'prefab.node.reparent') {
+    if (!input.targetPrefabAssetId || !input.nodeId || !input.parentNodeId) return null;
+    const targetPrefabAsset = findEditorScenePrefabAsset(input.document, input.targetPrefabAssetId);
+    if (!targetPrefabAsset) return null;
+    const result = reparentPlayableEditorScenePrefabNode(targetPrefabAsset, input.nodeId, input.parentNodeId);
+    if (!result.ok || !result.changed) return null;
+    return createEditorScenePrefabNodeMutationPatchResult(
+      targetPrefabAsset,
+      result.prefabAsset,
+      `Reparent prefab node ${input.nodeId}`,
+      {
+        changedId: result.selectedNodeId ?? input.nodeId,
+      },
+    );
+  }
+  if (input.actionId === 'prefab.node.rename') {
+    if (!input.targetPrefabAssetId || !input.nodeId) return null;
+    const targetPrefabAsset = findEditorScenePrefabAsset(input.document, input.targetPrefabAssetId);
+    if (!targetPrefabAsset) return null;
+    const result = renamePlayableEditorScenePrefabNode(targetPrefabAsset, input.nodeId, input.value);
+    if (!result.ok || !result.changed) return null;
+    return createEditorScenePrefabNodeMutationPatchResult(
+      targetPrefabAsset,
+      result.prefabAsset,
+      `Rename prefab node ${input.nodeId}`,
+      {
+        changedId: result.selectedNodeId ?? input.nodeId,
+      },
+    );
+  }
+  if (input.actionId === 'asset.rename') {
+    if (!input.assetId) return null;
+    const result = renamePlayableEditorScenePrefabAsset(input.document, input.assetId, input.value);
+    if (!result.ok || !result.changed) return null;
+    return {
+      label: `Rename prefab ${input.assetId}`,
+      patch: {
+        kind: 'scene.prefab-asset.replace',
+        assetId: input.assetId,
+        prefabAsset: result.prefabAsset as EditorSceneAsset,
+      },
+      changedId: input.assetId,
+      changedIds: [input.assetId],
+    };
+  }
   if (input.actionId === 'asset.edit-prefab-field') {
     if (!input.assetId) return null;
     const prefabAsset = findEditorScenePrefabAsset(input.document, input.assetId);
     if (!prefabAsset) return null;
     const fieldPath = typeof input.fieldPath === 'string' ? input.fieldPath.trim() : '';
+    if (fieldPath === 'displayName') {
+      const result = renamePlayableEditorScenePrefabAsset(input.document, input.assetId, input.value);
+      if (!result.ok || !result.changed) return null;
+      return {
+        label: `Rename prefab ${input.assetId}`,
+        patch: {
+          kind: 'scene.prefab-asset.replace',
+          assetId: input.assetId,
+          prefabAsset: result.prefabAsset as EditorSceneAsset,
+        },
+        changedId: input.activeId ?? input.assetId,
+        changedIds: [input.assetId],
+      };
+    }
     const duplicateMaterialAssetId = parseDuplicateMaterialAssetValue(input.value);
     if (duplicateMaterialAssetId && isEditorScenePrefabMaterialAssetIdOverridePath(fieldPath)) {
       const sourceMaterialAsset = findEditorSceneMaterialAsset(input.document, duplicateMaterialAssetId);
@@ -2746,6 +3045,75 @@ function createEditorSceneSourceAssetFromActionInput(
   return documentAsset ? structuredClone(documentAsset) : null;
 }
 
+function createEditorScenePrefabNodeMutationPatchResult(
+  targetPrefabAsset: EditorSceneAsset,
+  prefabAsset: EditorSceneAsset,
+  label: string,
+  ids: { createdId?: string; changedId?: string | null } = {},
+): { patch: EditorSceneDocumentPatch; label: string; changedId?: string; createdId?: string; changedIds: string[] } {
+  return {
+    label,
+    patch: {
+      kind: 'scene.prefab-asset.replace',
+      assetId: targetPrefabAsset.id,
+      prefabAsset,
+    },
+    ...(ids.changedId ? { changedId: ids.changedId } : {}),
+    ...(ids.createdId ? { createdId: ids.createdId } : {}),
+    changedIds: [targetPrefabAsset.id],
+  };
+}
+
+function readEditorScenePrefabNodeTransformActionValue(
+  value: unknown,
+): NonNullable<PlayableEditorScenePrefabNode['transform']> | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
+  if (record.type !== 'Transform') return null;
+  if (record.mode === 'matrix' && 'matrix' in record) {
+    return structuredClone(record) as unknown as NonNullable<PlayableEditorScenePrefabNode['transform']>;
+  }
+  if (!isEditorSceneVec3Like(record.position) || !isEditorSceneVec3Like(record.rotation)) return null;
+  return {
+    type: 'Transform',
+    position: { ...record.position },
+    rotation: { ...record.rotation },
+    ...(isEditorSceneVec3Like(record.scale) ? { scale: { ...record.scale } } : {}),
+  };
+}
+
+function readEditorScenePrefabNodeCreateActionValue(
+  value: unknown,
+): {
+  name?: string;
+  sourceNodePath?: string;
+  transform?: NonNullable<PlayableEditorScenePrefabNode['transform']>;
+} {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  const record = value as Record<string, unknown>;
+  const name = typeof record.name === 'string' && record.name.trim() ? record.name.trim() : undefined;
+  const sourceNodePath = typeof record.sourceNodePath === 'string' && record.sourceNodePath.trim()
+    ? record.sourceNodePath.trim()
+    : undefined;
+  const transform = readEditorScenePrefabNodeTransformActionValue(record.transform);
+  return {
+    ...(name ? { name } : {}),
+    ...(sourceNodePath ? { sourceNodePath } : {}),
+    ...(transform ? { transform } : {}),
+  };
+}
+
+function isEditorSceneVec3Like(value: unknown): value is EditorSceneVec3 {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const record = value as Partial<EditorSceneVec3>;
+  return typeof record.x === 'number'
+    && Number.isFinite(record.x)
+    && typeof record.y === 'number'
+    && Number.isFinite(record.y)
+    && typeof record.z === 'number'
+    && Number.isFinite(record.z);
+}
+
 function createEditorScenePrefabStageEnvironmentLightNode() {
   return {
     id: 'prefab-stage:environment-light',
@@ -2819,6 +3187,123 @@ function createEditorScenePrefabStageModelProjectionNode(
   };
 }
 
+function createEditorScenePrefabStageCompositionProjectionNodes(
+  document: EditorSceneDocument,
+  prefabAsset: EditorSceneAsset,
+  input: { previewNodeId: string; label: string },
+): unknown[] {
+  const nodes = readPlayableEditorScenePrefabNodes(prefabAsset);
+  const rootNodeId = readPlayableEditorScenePrefabRootNodeId(prefabAsset);
+  if (nodes.length === 0 || !rootNodeId) return [];
+  const projectionNodes = nodes.flatMap((node) => {
+    const projected = createEditorScenePrefabStageProjectionNodeFromCompositionNode(
+      document,
+      prefabAsset,
+      node,
+      {
+        previewNodeId: input.previewNodeId,
+        rootNodeId,
+        fallbackRootLabel: input.label,
+      },
+    );
+    return projected ? [projected] : [];
+  });
+  const hasRenderableNode = projectionNodes.some((node) => {
+    const record = node as Record<string, unknown>;
+    return record.asset != null || record.primitive != null || record.light != null;
+  });
+  return hasRenderableNode ? projectionNodes : [];
+}
+
+function createEditorScenePrefabStageProjectionNodeFromCompositionNode(
+  document: EditorSceneDocument,
+  prefabAsset: EditorSceneAsset,
+  node: PlayableEditorScenePrefabNode,
+  input: { previewNodeId: string; rootNodeId: string; fallbackRootLabel: string },
+): unknown | null {
+  const transform = createEditorScenePrefabStageNodeTransform(node);
+  const parentId = node.parentId
+    ? createEditorScenePrefabStageProjectionNodeId(input.previewNodeId, input.rootNodeId, node.parentId)
+    : null;
+  const gameObject: EditorSceneGameObject = {
+    id: createEditorScenePrefabStageProjectionNodeId(input.previewNodeId, input.rootNodeId, node.id),
+    name: node.name ?? (node.id === input.rootNodeId ? input.fallbackRootLabel : createEditorScenePrefabStageNodeFallbackLabel(node)),
+    kind: createEditorScenePrefabStageProjectionKind(node),
+    ...(parentId ? { parentId } : {}),
+    active: node.defaults?.active ?? (node.id === input.rootNodeId ? prefabAsset.prefab?.defaults?.active ?? true : true),
+    ...(node.defaults?.shadowMode ?? (node.id === input.rootNodeId ? prefabAsset.prefab?.defaults?.shadowMode : undefined)
+      ? { shadowMode: node.defaults?.shadowMode ?? prefabAsset.prefab?.defaults?.shadowMode }
+      : {}),
+    components: [transform],
+  };
+
+  if (node.kind === 'model') {
+    const sourceAsset = node.sourceAssetId ? document.assets.find(asset => asset.id === node.sourceAssetId) : null;
+    if (!sourceAsset) return null;
+    gameObject.kind = 'instance';
+    gameObject.components.push({
+      type: 'ModelRenderer',
+      assetId: sourceAsset.id,
+    });
+    gameObject.overrides = structuredClone(node.overrides ?? prefabAsset.prefab?.overrides ?? {}) as EditorSceneGameObject['overrides'];
+    gameObject.prefab = {
+      prefabId: prefabAsset.id,
+      ...(prefabAsset.guid ? { prefabGuid: prefabAsset.guid } : {}),
+      sourceAssetId: sourceAsset.id,
+    };
+  } else if (node.kind === 'prefabInstance') {
+    const childPrefabAsset = node.childPrefabId ? findEditorScenePrefabAsset(document, node.childPrefabId) : null;
+    const childSourceAssetId = childPrefabAsset?.prefab?.sourceAssetId;
+    const childSourceAsset = childSourceAssetId ? document.assets.find(asset => asset.id === childSourceAssetId) : null;
+    if (!childPrefabAsset || !childSourceAsset) return null;
+    gameObject.kind = 'instance';
+    gameObject.components.push({
+      type: 'ModelRenderer',
+      assetId: childSourceAsset.id,
+    });
+    gameObject.overrides = structuredClone(node.overrides ?? childPrefabAsset.prefab?.overrides ?? {}) as EditorSceneGameObject['overrides'];
+    gameObject.prefab = {
+      prefabId: childPrefabAsset.id,
+      ...(childPrefabAsset.guid ? { prefabGuid: childPrefabAsset.guid } : {}),
+      sourceAssetId: childSourceAsset.id,
+    };
+  } else if (node.kind === 'primitive' && node.primitive?.shape) {
+    gameObject.kind = 'primitive';
+    gameObject.primitive = structuredClone(node.primitive) as EditorSceneGameObject['primitive'];
+  } else if (node.kind === 'light' && node.light) {
+    gameObject.kind = 'transform';
+    gameObject.light = structuredClone(node.light);
+  }
+
+  return createPlayableEditorSceneRuntimePreviewNode(document, gameObject);
+}
+
+function createEditorScenePrefabStageProjectionNodeId(
+  previewNodeId: string,
+  rootNodeId: string,
+  nodeId: string,
+): string {
+  return nodeId === rootNodeId ? previewNodeId : `${previewNodeId}:${nodeId}`;
+}
+
+function createEditorScenePrefabStageProjectionKind(node: PlayableEditorScenePrefabNode): EditorSceneGameObject['kind'] {
+  if (node.kind === 'model' || node.kind === 'prefabInstance') return 'instance';
+  if (node.kind === 'primitive') return 'primitive';
+  return 'group';
+}
+
+function createEditorScenePrefabStageNodeTransform(
+  node: PlayableEditorScenePrefabNode,
+): NonNullable<EditorSceneGameObject['components'][number]> {
+  if (node.transform?.type === 'Transform') return structuredClone(node.transform);
+  return {
+    type: 'Transform',
+    position: { x: 0, y: 0, z: 0 },
+    rotation: { x: 0, y: 0, z: 0 },
+    scale: { x: 1, y: 1, z: 1 },
+  };
+}
+
 type EditorScenePrefabStageContext = EditorSceneInspectorContext & {
   importStructureReady?: boolean;
   importStructure?: unknown;
@@ -2842,6 +3327,64 @@ type EditorScenePrefabMaterialOverrideTarget = EditorScenePrefabStageStructureIt
   slotId?: string;
   ownerNodePath?: string;
 };
+
+function createEditorScenePrefabStageNodeTreeItem(
+  prefabAsset: EditorSceneAsset,
+  node: PlayableEditorScenePrefabNode,
+): EditorScenePrefabStageStructureItem {
+  const children = readPlayableEditorScenePrefabNodeChildren(prefabAsset, node.id)
+    .map(child => createEditorScenePrefabStageNodeTreeItem(prefabAsset, child));
+  return {
+    id: `prefab-node:${node.id}`,
+    nodeId: node.id,
+    label: node.name ?? createEditorScenePrefabStageNodeFallbackLabel(node),
+    kind: node.kind,
+    itemType: 'prefab-node',
+    ...(node.guid ? { guid: node.guid } : {}),
+    ...(node.sourceAssetId ? { sourceAssetId: node.sourceAssetId } : {}),
+    ...(node.childPrefabId ? { childPrefabId: node.childPrefabId } : {}),
+    ...(node.sourceNodePath ? { sourceNodePath: node.sourceNodePath } : {}),
+    ...(node.transform ? { transform: structuredClone(node.transform) } : {}),
+    ...(node.primitive ? { primitive: structuredClone(node.primitive) } : {}),
+    ...(node.defaults && Object.keys(node.defaults).length > 0 ? { defaults: structuredClone(node.defaults) } : {}),
+    ...(node.overrides && Object.keys(node.overrides).length > 0 ? { overrides: structuredClone(node.overrides) } : {}),
+    ...(children.length > 0 ? { children } : {}),
+  };
+}
+
+function createEditorScenePrefabStageNodeFallbackLabel(
+  node: PlayableEditorScenePrefabNode,
+): string {
+  if (node.kind === 'model') return node.sourceAssetId ?? node.id;
+  if (node.kind === 'prefabInstance') return node.childPrefabId ?? node.id;
+  if (node.kind === 'primitive') return node.primitive?.shape ?? node.id;
+  return node.id;
+}
+
+function findEditorScenePrefabStageInspectorItem(
+  document: EditorSceneDocument,
+  descriptor: { assetId: string; sourceAssetId?: string },
+  selectedItemId: string,
+  context: EditorScenePrefabStageContext,
+): EditorScenePrefabStageStructureItem | null {
+  const prefabAsset = findEditorScenePrefabAsset(document, descriptor.assetId);
+  const sourceAssetId = descriptor.sourceAssetId ?? prefabAsset?.prefab?.sourceAssetId;
+  const sourceAsset = sourceAssetId ? document.assets.find(asset => asset.id === sourceAssetId) : null;
+  const sourceItem = createEditorScenePrefabStageSourceItem(sourceAsset, sourceAssetId);
+  const materialSlotItems = createEditorScenePrefabStageMaterialSlotItems(sourceAsset);
+  const materialSlotGroup = createEditorScenePrefabStageMaterialSlotGroup(materialSlotItems, !!context.importStructureReady);
+  const runtimeGroups = hasEditorScenePrefabStageRuntimeStructure(context.importStructure)
+    ? createEditorScenePrefabStageRuntimeGroups(context.importStructure)
+    : [];
+  return findEditorScenePrefabStageStructureItem(
+    [
+      sourceItem,
+      ...(materialSlotGroup ? [materialSlotGroup] : []),
+      ...runtimeGroups,
+    ],
+    selectedItemId,
+  );
+}
 
 function createEditorScenePrefabStageSourceItem(
   sourceAsset: EditorSceneAsset | undefined | null,
@@ -5674,8 +6217,9 @@ function addEditorScenePrefabAsset(
   if (sourceAsset && !nextAssets.some(asset => asset.id === sourceAsset.id)) {
     nextAssets.push(structuredClone(sourceAsset));
   }
+  const normalizedPrefabAsset = syncEditorScenePrefabRootNodeFields(prefabAsset);
   if (!nextAssets.some(asset => asset.id === prefabAsset.id)) {
-    nextAssets.push(structuredClone(prefabAsset));
+    nextAssets.push(structuredClone(normalizedPrefabAsset));
   }
   if (nextAssets.length === document.assets.length) return document;
   return {
@@ -5690,13 +6234,32 @@ function patchEditorScenePrefabAssetField(
   path: string,
   value: unknown,
 ): EditorSceneDocument {
+  if (path === 'displayName') return document;
   const asset = findEditorScenePrefabAsset(document, assetId);
   if (!asset) return document;
-  const patchedAsset = patchEditorScenePrefabAsset(asset, path, value);
+  const patchedAsset = patchEditorScenePrefabAsset(normalizeEditorScenePrefabAssetComposition(asset), path, value);
   if (JSON.stringify(patchedAsset) === JSON.stringify(asset)) return document;
   return {
     ...document,
     assets: document.assets.map(candidate => candidate.id === assetId ? patchedAsset : candidate),
+  };
+}
+
+function replaceEditorScenePrefabAsset(
+  document: EditorSceneDocument,
+  assetId: string,
+  prefabAsset: EditorSceneAsset,
+): EditorSceneDocument {
+  const existing = findEditorScenePrefabAsset(document, assetId);
+  if (!existing) return document;
+  const normalizedPrefabAsset = syncEditorScenePrefabRootNodeFields({
+    ...structuredClone(prefabAsset),
+    id: assetId,
+  });
+  if (JSON.stringify(normalizedPrefabAsset) === JSON.stringify(existing)) return document;
+  return {
+    ...document,
+    assets: document.assets.map(candidate => candidate.id === assetId ? normalizedPrefabAsset : candidate),
   };
 }
 
@@ -5706,10 +6269,7 @@ function patchEditorScenePrefabAsset(
   value: unknown,
 ): EditorSceneAsset {
   if (path === 'displayName') {
-    return {
-      ...structuredClone(prefabAsset),
-      displayName: value as string,
-    };
+    return prefabAsset;
   }
   if (path === 'prefab.defaults.active' || path === 'prefab.defaults.shadowMode') {
     const next = structuredClone(prefabAsset);
@@ -5725,9 +6285,34 @@ function patchEditorScenePrefabAsset(
     }
     if (Object.keys(prefab.defaults).length === 0) delete prefab.defaults;
     next.prefab = prefab;
-    return next;
+    return syncEditorScenePrefabRootNodeFields(next);
   }
   return patchPlayableEditorScenePrefabOverride(prefabAsset, path, value) as EditorSceneAsset;
+}
+
+function normalizeEditorScenePrefabAssetComposition(prefabAsset: EditorSceneAsset): EditorSceneAsset {
+  if (!isPlayableEditorScenePrefabAsset(prefabAsset)) return prefabAsset;
+  const result = ensurePlayableEditorScenePrefabComposition(prefabAsset);
+  return result.ok ? result.prefabAsset as EditorSceneAsset : prefabAsset;
+}
+
+function syncEditorScenePrefabRootNodeFields(prefabAsset: EditorSceneAsset): EditorSceneAsset {
+  if (!isPlayableEditorScenePrefabAsset(prefabAsset)) return prefabAsset;
+  const next = normalizeEditorScenePrefabAssetComposition(prefabAsset);
+  const rootNodeId = readPlayableEditorScenePrefabRootNodeId(next);
+  if (!rootNodeId || !Array.isArray(next.prefab?.nodes)) return next;
+  const rootIndex = next.prefab.nodes.findIndex(node => node.id === rootNodeId);
+  if (rootIndex < 0) return next;
+  const rootNode = structuredClone(next.prefab.nodes[rootIndex]!);
+  rootNode.name = next.displayName ?? rootNode.name;
+  if (next.prefab.defaults) {
+    rootNode.defaults = structuredClone(next.prefab.defaults);
+  } else {
+    delete rootNode.defaults;
+  }
+  next.prefab.nodes = [...next.prefab.nodes];
+  next.prefab.nodes[rootIndex] = rootNode;
+  return next;
 }
 
 function addEditorSceneMaterialAssetAndBind(
