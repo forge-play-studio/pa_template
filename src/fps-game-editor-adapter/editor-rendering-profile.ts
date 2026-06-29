@@ -6,7 +6,6 @@ import {
   type EditorSceneRenderingPanelLanguage,
   type EditorSceneRenderingTextureAsset,
   type PlayableBabylonRenderingSetConfigInput,
-  type PlayableBabylonPlanarShadowPolicyInput,
   type PlayableLocalEditorPatchResult,
   type PlayableLocalEditorRenderingCapability,
   resolveEditorSceneRenderingAlphaIndexPresetValueMigration,
@@ -53,7 +52,6 @@ export function createEditorRenderingCapability(
     setStaticShadowArtifact: ({ artifact }) => setActiveStaticShadowArtifact(artifact),
     shadowPreview: {
       directionalLightNodeId: EDITOR_SCENE_SUN_LIGHT_ID,
-      planar: () => createProjectPlanarShadowPolicyInput(),
       enabled: ({ document }) => {
         const sunObject = document.scene.gameObjects.find(gameObject => gameObject.id === EDITOR_SCENE_SUN_LIGHT_ID);
         return sunObject?.active !== false;
@@ -129,18 +127,4 @@ function resolveEditorRenderingPanelLanguage(
   const mainCamera = document.scene.gameObjects.find(gameObject => gameObject.id === EDITOR_SCENE_MAIN_CAMERA_ID);
   if (mainCamera?.camera?.inspectorLanguage === 'en') return 'en';
   return 'zh';
-}
-
-function createProjectPlanarShadowPolicyInput(): PlayableBabylonPlanarShadowPolicyInput {
-  const rootPatterns = getProjectPlanarShadowRootPatterns();
-  return {
-    autoDetectAllCasters: false,
-    additionalCasterIncludePatterns: rootPatterns,
-    additionalRootBoundaryPatterns: rootPatterns,
-  };
-}
-
-function getProjectPlanarShadowRootPatterns(): string[] {
-  const sceneRootId = configService.getSceneRootId();
-  return Array.from(new Set([sceneRootId, 'scene_builder_root'].filter(Boolean)));
 }
