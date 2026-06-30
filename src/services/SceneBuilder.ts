@@ -631,7 +631,14 @@ export class SceneBuilder {
 
     const runtimeNode = this.createRuntimeNode(nodeConfig);
     runtimeNode.id = nodeConfig.id;
-    this.attachSceneNodeMetadata(runtimeNode, nodeConfig.id, nodeConfig.source, nodeConfig.shadowMode);
+    this.attachSceneNodeMetadata(
+      runtimeNode,
+      nodeConfig.id,
+      nodeConfig.source,
+      nodeConfig.shadowMode,
+      nodeConfig.shadow,
+      nodeConfig.shadowPlan,
+    );
     this.applyTransform(runtimeNode, nodeConfig.transform);
     runtimeNode.parent = parent;
     runtimeNode.setEnabled(nodeConfig.enabled !== false);
@@ -713,6 +720,8 @@ export class SceneBuilder {
         runtimeKind: 'primitive',
         primitiveShape: shape,
         ...(nodeConfig.shadowMode ? { shadowMode: nodeConfig.shadowMode } : {}),
+        ...(nodeConfig.shadow ? { shadow: structuredClone(nodeConfig.shadow) } : {}),
+        ...(nodeConfig.shadowPlan ? { shadowPlan: structuredClone(nodeConfig.shadowPlan) } : {}),
       },
     };
     const materialKind = this.resolvePrimitiveMaterialKind(nodeConfig);
@@ -1261,6 +1270,8 @@ export class SceneBuilder {
     nodeId: string,
     source?: SceneRuntimeSourceBinding,
     shadowMode?: SceneNodeConfig['shadowMode'],
+    shadow?: SceneNodeConfig['shadow'],
+    shadowPlan?: SceneNodeConfig['shadowPlan'],
   ): void {
     const metadata = node.metadata && typeof node.metadata === 'object' ? node.metadata : {};
     const editorProjection = metadata.editorProjection
@@ -1276,6 +1287,8 @@ export class SceneBuilder {
         ...editorProjection,
         nodeId,
         ...(shadowMode ? { shadowMode } : {}),
+        ...(shadow ? { shadow: structuredClone(shadow) } : {}),
+        ...(shadowPlan ? { shadowPlan: structuredClone(shadowPlan) } : {}),
       },
     };
     if (source) {

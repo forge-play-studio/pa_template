@@ -1178,7 +1178,6 @@
         "id": "plane",
         "name": "Shadow Receiver Plane",
         "parentId": "root",
-        "shadowMode": "static",
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
@@ -1207,13 +1206,15 @@
         "kind": "primitive",
         "primitive": {
           "shape": "plane"
+        },
+        "shadow": {
+          "receive": "enabled"
         }
       },
       {
         "id": "cube",
         "name": "Cube",
         "parentId": "root",
-        "shadowMode": "static",
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
@@ -1248,7 +1249,6 @@
         "id": "sphere",
         "name": "Sphere",
         "parentId": "root",
-        "shadowMode": "static",
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
@@ -1283,7 +1283,6 @@
         "id": "capsule",
         "name": "Capsule",
         "parentId": "root",
-        "shadowMode": "static",
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
@@ -1349,7 +1348,6 @@
         "id": "shadow_fixture_player",
         "name": "阴影测试-主角",
         "parentId": "shadow_fixture_group",
-        "shadowMode": "static",
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
@@ -1384,7 +1382,6 @@
         "id": "shadow_fixture_worker",
         "name": "阴影测试-工人",
         "parentId": "shadow_fixture_group",
-        "shadowMode": "static",
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
@@ -1419,7 +1416,6 @@
         "id": "shadow_fixture_truck",
         "name": "阴影测试-小蓝卡车",
         "parentId": "shadow_fixture_group",
-        "shadowMode": "static",
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
@@ -1454,7 +1450,6 @@
         "id": "shadow_fixture_pine_tree",
         "name": "阴影测试-松树",
         "parentId": "shadow_fixture_group",
-        "shadowMode": "static",
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
@@ -1489,7 +1484,6 @@
         "id": "shadow_fixture_bush",
         "name": "阴影测试-阔叶灌木",
         "parentId": "shadow_fixture_group",
-        "shadowMode": "static",
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
@@ -1524,7 +1518,6 @@
         "id": "shadow_fixture_rocks",
         "name": "阴影测试-岩石组",
         "parentId": "shadow_fixture_group",
-        "shadowMode": "static",
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
@@ -1559,7 +1552,6 @@
         "id": "shadow_fixture_fence",
         "name": "阴影测试-栅栏",
         "parentId": "shadow_fixture_group",
-        "shadowMode": "static",
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
@@ -1594,7 +1586,6 @@
         "id": "shadow_fixture_log_bundle",
         "name": "阴影测试-成捆木材",
         "parentId": "shadow_fixture_group",
-        "shadowMode": "static",
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
@@ -1629,7 +1620,6 @@
         "id": "shadow_fixture_crate",
         "name": "阴影测试-箱子",
         "parentId": "shadow_fixture_group",
-        "shadowMode": "static",
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
@@ -1664,7 +1654,6 @@
         "id": "shadow_fixture_barrel",
         "name": "阴影测试-木桶",
         "parentId": "shadow_fixture_group",
-        "shadowMode": "static",
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
@@ -1699,7 +1688,6 @@
         "id": "shadow_fixture_chicken",
         "name": "阴影测试-鸡",
         "parentId": "shadow_fixture_group",
-        "shadowMode": "static",
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
@@ -1734,7 +1722,6 @@
         "id": "shadow_fixture_hay_bale",
         "name": "阴影测试-干草卷",
         "parentId": "shadow_fixture_group",
-        "shadowMode": "static",
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
@@ -1769,7 +1756,6 @@
         "id": "shadow_fixture_counter",
         "name": "阴影测试-收银台",
         "parentId": "shadow_fixture_group",
-        "shadowMode": "static",
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",

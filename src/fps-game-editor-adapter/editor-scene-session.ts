@@ -78,7 +78,14 @@ import {
   getEditorSceneHierarchyItems as getPlayableEditorSceneHierarchyItems,
   findEditorSceneMaterialAsset as findPlayableEditorSceneMaterialAsset,
   findEditorSceneInspectorTextureAsset as findPlayableEditorSceneInspectorTextureAsset,
+  createEditorSceneShadowCastOptions as createPlayableEditorSceneShadowCastOptions,
+  createEditorSceneShadowLightOptions as createPlayableEditorSceneShadowLightOptions,
+  createEditorSceneShadowPolicyOptions as createPlayableEditorSceneShadowPolicyOptions,
+  createEditorSceneShadowQualityOptions as createPlayableEditorSceneShadowQualityOptions,
+  createEditorSceneShadowReceiveOptions as createPlayableEditorSceneShadowReceiveOptions,
   EDITOR_SCENE_SHADOW_INSPECTOR_LANGUAGE_PATH as PLAYABLE_EDITOR_SCENE_SHADOW_INSPECTOR_LANGUAGE_PATH,
+  getEditorSceneShadowInspectorText as getPlayableEditorSceneShadowInspectorText,
+  mergeEditorShadowSettings as mergePlayableEditorShadowSettings,
   isEditorScenePrefabAsset as isPlayableEditorScenePrefabAsset,
   isEditorScenePrefabCoreMaterialOverridePath as isPlayableEditorScenePrefabCoreMaterialOverridePath,
   isEditorSceneCameraGameObject as isPlayableEditorSceneCameraGameObject,
@@ -103,11 +110,15 @@ import {
   collectEditorSceneChildMaterialSlots as collectPlayableEditorSceneChildMaterialSlots,
   readEditorScenePrefabOverrideProfileFieldPath as readPlayableEditorScenePrefabOverrideProfileFieldPath,
   readEditorScenePrefabNodeChildren as readPlayableEditorScenePrefabNodeChildren,
+  readEditorShadowSettings as readPlayableEditorShadowSettings,
+  readEditorShadowSettingsWithLegacy as readPlayableEditorShadowSettingsWithLegacy,
+  resolveEditorShadowPlan as resolvePlayableEditorShadowPlan,
   collectEditorSceneMaterialAssetBindingIds as collectPlayableEditorSceneMaterialAssetBindingIds,
   reparentEditorScenePrefabNode as reparentPlayableEditorScenePrefabNode,
   renameEditorScenePrefabAsset as renamePlayableEditorScenePrefabAsset,
   renameEditorScenePrefabNode as renamePlayableEditorScenePrefabNode,
   resolveEditorScenePrefabInstanceRelation as resolvePlayableEditorScenePrefabInstanceRelation,
+  setEditorScenePrefabNodeShadow as setPlayableEditorScenePrefabNodeShadow,
   setEditorScenePrefabNodeTransform as setPlayableEditorScenePrefabNodeTransform,
   readEditorSceneAssetMaterialSlots as readPlayableEditorSceneAssetMaterialSlots,
   readEditorSceneInspectorVec3 as readPlayableEditorSceneInspectorVec3,
@@ -1080,6 +1091,15 @@ function createEditorSceneRootTransformComponent(): EditorSceneGameObject['compo
     position: { ...EDITOR_SCENE_ROOT_TRANSFORM.position },
     rotation: { ...EDITOR_SCENE_ROOT_TRANSFORM.rotation },
     scale: { ...EDITOR_SCENE_ROOT_TRANSFORM.scale },
+  };
+}
+
+function createEditorSceneIdentityTransformComponent(): EditorSceneGameObject['components'][number] {
+  return {
+    type: 'Transform',
+    position: { x: 0, y: 0, z: 0 },
+    rotation: { x: 0, y: 0, z: 0 },
+    scale: { x: 1, y: 1, z: 1 },
   };
 }
 
@@ -2351,7 +2371,7 @@ export function getEditorScenePrefabStageInspectorObject(
   const prefabAsset = findEditorScenePrefabAsset(document, descriptor.assetId);
   if (!prefabAsset) return null;
   const sourceAsset = descriptor.sourceAssetId
-    ? document.assets.find(asset => asset.id === descriptor.sourceAssetId)
+    ? document.assets.find(asset => asset.id === descriptor.sourceAssetId) ?? null
     : null;
   const selectedItem = selectedItemId
     ? findEditorScenePrefabStageStructureItem(
@@ -2408,20 +2428,22 @@ export function getEditorScenePrefabStageInspectorObject(
             value: prefabAsset.prefab?.defaults?.active ?? true,
             order: 2,
           }),
+          ...createPrefabStageShadowResolvedDefaultProperties(prefabAsset, sourceAsset, 3),
+          ...createPrefabStageShadowDefaultProperties(prefabAsset, 10),
           createPrefabStageEditableProperty({
             path: 'prefab.defaults.shadowMode',
-            label: 'Default Shadow Mode',
+            label: 'Legacy Default shadowMode',
             valueType: 'enum',
             control: 'enum',
             value: prefabAsset.prefab?.defaults?.shadowMode ?? 'default',
             options: PREFAB_STAGE_SHADOW_MODE_OPTIONS,
-            order: 3,
+            order: 80,
           }),
           createEditorSceneReadonlyInspectorProperty({
             path: 'prefab.selectedItem',
             label: 'Selected Item',
             value: selectedItemId ?? 'Preview Root',
-            order: 4,
+            order: 90,
           }),
         ].filter((property): property is InspectorProperty<EditorSceneDocument> => !!property),
       },
@@ -2439,6 +2461,253 @@ const PREFAB_STAGE_SHADOW_MODE_OPTIONS = [
   { label: 'Planar Shadow', value: 'planar' },
 ] as const;
 
+function createPrefabStageShadowResolvedDefaultProperties(
+  prefabAsset: EditorSceneAsset,
+  sourceAsset: EditorSceneAsset | null,
+  startOrder: number,
+): InspectorProperty<EditorSceneDocument>[] {
+  const text = getPlayableEditorSceneShadowInspectorText('en');
+  const defaults = prefabAsset.prefab?.defaults;
+  const result = readPlayableEditorShadowSettingsWithLegacy({
+    shadow: defaults?.shadow,
+    shadowMode: defaults?.shadowMode,
+  });
+  const sourceResult = readPrefabStageSourceAssetShadowSettings(sourceAsset);
+  const plan = resolvePlayableEditorShadowPlan(createPrefabStageShadowResolvePlanInput(prefabAsset, sourceAsset));
+  const diagnostics = plan.diagnostics
+    .map(diagnostic => `${diagnostic.severity}:${diagnostic.code} - ${diagnostic.message}`)
+    .join('\n');
+  const properties: Array<InspectorProperty<EditorSceneDocument> | null> = [
+    createPlayableEditorSceneReadonlyInspectorProperty({
+      path: 'prefab.shadow.resolved.source',
+      label: text.resolvedSource,
+      value: result.shadow || (defaults?.shadowMode && defaults.shadowMode !== 'default')
+        ? 'Prefab defaults'
+        : sourceResult
+          ? text.sourceAssetDefaults
+          : text.sourceInherited,
+      order: startOrder + 0,
+      source: 'Derived',
+      tooltip: text.tooltips.resolvedSource,
+    }),
+    createPlayableEditorSceneReadonlyInspectorProperty({
+      path: 'prefab.shadow.resolved.policy',
+      label: text.resolvedPolicy,
+      value: `${text.summaryPolicy(plan.mode)} / ${plan.backend}`,
+      order: startOrder + 1,
+      source: 'Derived',
+      tooltip: text.tooltips.resolvedPolicy,
+    }),
+    createPlayableEditorSceneReadonlyInspectorProperty({
+      path: 'prefab.shadow.resolved.quality',
+      label: text.resolvedQuality,
+      value: plan.quality,
+      order: startOrder + 2,
+      source: 'Derived',
+      tooltip: text.tooltips.resolvedQuality,
+    }),
+    createPlayableEditorSceneReadonlyInspectorProperty({
+      path: 'prefab.shadow.resolved.receiver',
+      label: text.resolvedReceivers,
+      value: plan.receiverIds.length > 0 ? plan.receiverIds.join(', ') : text.none,
+      order: startOrder + 3,
+      source: 'Derived',
+      tooltip: text.tooltips.resolvedReceivers,
+    }),
+    createPlayableEditorSceneReadonlyInspectorProperty({
+      path: 'prefab.shadow.resolved.light',
+      label: text.resolvedLight,
+      value: plan.lightId ?? text.none,
+      order: startOrder + 4,
+      source: 'Derived',
+      tooltip: text.tooltips.resolvedLight,
+    }),
+  ];
+  if (plan.mode === 'static') {
+    properties.push(createPlayableEditorSceneReadonlyInspectorProperty({
+      path: 'prefab.shadow.static.bakeState',
+      label: text.staticBakeState,
+      value: text.staticBakeAuthored,
+      order: startOrder + 5,
+      source: 'Derived',
+      tooltip: text.tooltips.staticBakeState,
+    }));
+  }
+  if (diagnostics) {
+    properties.push(createPlayableEditorSceneReadonlyInspectorProperty({
+      path: 'prefab.shadow.resolved.diagnostics',
+      label: text.resolvedDiagnostics,
+      value: diagnostics,
+      order: startOrder + 6,
+      source: 'Derived',
+      tooltip: text.tooltips.resolvedDiagnostics,
+      effect: plan.diagnostics.some(diagnostic => diagnostic.severity === 'error')
+        ? 'unsupported'
+        : 'derived',
+    }));
+  }
+  return properties.filter((property): property is InspectorProperty<EditorSceneDocument> => !!property);
+}
+
+function createPrefabStageShadowResolvePlanInput(
+  prefabAsset: EditorSceneAsset,
+  sourceAsset: EditorSceneAsset | null,
+): Parameters<typeof resolvePlayableEditorShadowPlan>[0] {
+  const defaults = prefabAsset.prefab?.defaults;
+  const casterId = 'prefab-stage:shadow-default-caster';
+  const receiverId = 'prefab-stage:shadow-default-receiver';
+  const defaultMode = getActiveRenderingProfile().shadows.defaultMode;
+  return {
+    document: {
+      schemaVersion: 1,
+      assets: sourceAsset ? [sourceAsset] : [],
+      scene: {
+        gameObjects: [
+          {
+            id: 'prefab-stage:shadow-root',
+            name: 'Prefab Stage Shadow Root',
+            kind: 'group',
+            components: [createEditorSceneIdentityTransformComponent()],
+          },
+          {
+            id: casterId,
+            name: prefabAsset.displayName ?? prefabAsset.id,
+            kind: 'instance',
+            parentId: 'prefab-stage:shadow-root',
+            ...(defaults?.shadow ? { shadow: defaults.shadow } : {}),
+            ...(defaults?.shadowMode ? { shadowMode: defaults.shadowMode } : {}),
+            components: [
+              createEditorSceneIdentityTransformComponent(),
+              ...(sourceAsset ? [{
+                type: 'ModelRenderer',
+                assetId: sourceAsset.id,
+              } as const] : []),
+            ],
+          },
+          {
+            id: receiverId,
+            name: 'Prefab Stage Shadow Receiver',
+            kind: 'primitive',
+            parentId: 'prefab-stage:shadow-root',
+            primitive: { shape: 'plane' },
+            shadow: { receive: 'enabled' },
+            components: [createEditorSceneIdentityTransformComponent()],
+          },
+          {
+            id: EDITOR_SCENE_SUN_LIGHT_ID,
+            name: 'Prefab Stage Directional Light',
+            kind: 'transform',
+            parentId: 'prefab-stage:shadow-root',
+            light: mergeEditorSceneLightDefaults(undefined, 'directional'),
+            components: [createEditorSceneIdentityTransformComponent()],
+          },
+        ],
+      },
+    },
+    casterId,
+    fallbackMode: defaultMode === 'planar' ? 'projected' : defaultMode,
+  };
+}
+
+function readPrefabStageSourceAssetShadowSettings(
+  sourceAsset: EditorSceneAsset | null,
+) {
+  const defaults = sourceAsset?.defaults as { shadow?: unknown; shadowMode?: EditorSceneGameObject['shadowMode'] } | undefined;
+  if (!defaults) return undefined;
+  return readPlayableEditorShadowSettingsWithLegacy({
+    shadow: defaults.shadow,
+    shadowMode: defaults.shadowMode,
+  }).shadow;
+}
+
+function createPrefabStageShadowDefaultProperties(
+  prefabAsset: EditorSceneAsset,
+  startOrder: number,
+): InspectorProperty<EditorSceneDocument>[] {
+  const text = getPlayableEditorSceneShadowInspectorText('en');
+  const shadow = prefabAsset.prefab?.defaults?.shadow;
+  return [
+    createPrefabStageEditableProperty({
+      path: 'prefab.defaults.shadow.cast',
+      label: 'Default Caster',
+      valueType: 'enum',
+      control: 'enum',
+      value: shadow?.cast ?? 'inherit',
+      options: createPlayableEditorSceneShadowCastOptions(text),
+      order: startOrder + 0,
+      tooltip: text.tooltips.cast,
+    }),
+    createPrefabStageEditableProperty({
+      path: 'prefab.defaults.shadow.receive',
+      label: 'Default Receiver',
+      valueType: 'enum',
+      control: 'enum',
+      value: shadow?.receive ?? 'inherit',
+      options: createPlayableEditorSceneShadowReceiveOptions(text),
+      order: startOrder + 1,
+      tooltip: text.tooltips.receive,
+    }),
+    createPrefabStageEditableProperty({
+      path: 'prefab.defaults.shadow.mode',
+      label: 'Default Shadow Policy',
+      valueType: 'enum',
+      control: 'enum',
+      value: shadow?.mode ?? 'inherit',
+      options: createPlayableEditorSceneShadowPolicyOptions(text),
+      order: startOrder + 2,
+      tooltip: text.tooltips.policy,
+    }),
+    createPrefabStageEditableProperty({
+      path: 'prefab.defaults.shadow.quality',
+      label: 'Default Shadow Quality',
+      valueType: 'enum',
+      control: 'enum',
+      value: shadow?.quality ?? 'inherit',
+      options: createPlayableEditorSceneShadowQualityOptions(text),
+      order: startOrder + 3,
+      tooltip: text.tooltips.quality,
+    }),
+    createPrefabStageEditableProperty({
+      path: 'prefab.defaults.shadow.light.mode',
+      label: 'Default Shadow Light',
+      valueType: 'enum',
+      control: 'enum',
+      value: shadow?.light?.mode ?? 'inherit',
+      options: createPlayableEditorSceneShadowLightOptions(text),
+      order: startOrder + 4,
+      tooltip: text.tooltips.light,
+    }),
+    createPrefabStageEditableProperty({
+      path: 'prefab.defaults.shadow.light.lightId',
+      label: 'Default Explicit Light ID',
+      valueType: 'string',
+      control: 'string',
+      value: shadow?.light?.lightId ?? '',
+      order: startOrder + 5,
+      tooltip: text.tooltips.lightId,
+    }),
+    ...[
+      ['prefab.defaults.shadow.params.opacity', text.opacity, shadow?.params?.opacity ?? null, text.tooltips.opacity],
+      ['prefab.defaults.shadow.params.softness', text.softness, shadow?.params?.softness ?? null, text.tooltips.softness],
+      ['prefab.defaults.shadow.params.bias', text.bias, shadow?.params?.bias ?? null, text.tooltips.bias],
+      ['prefab.defaults.shadow.params.normalBias', text.normalBias, shadow?.params?.normalBias ?? null, text.tooltips.normalBias],
+      ['prefab.defaults.shadow.params.maxDistance', text.maxDistance, shadow?.params?.maxDistance ?? null, text.tooltips.maxDistance],
+      ['prefab.defaults.shadow.params.resolution', text.resolution, shadow?.params?.resolution ?? null, text.tooltips.resolution],
+      ['prefab.defaults.shadow.params.cascadeCount', text.cascadeCount, shadow?.params?.cascadeCount ?? null, text.tooltips.cascadeCount],
+      ['prefab.defaults.shadow.params.bakeSamples', text.bakeSamples, shadow?.params?.bakeSamples ?? null, text.tooltips.bakeSamples],
+      ['prefab.defaults.shadow.params.blurKernel', text.blurKernel, shadow?.params?.blurKernel ?? null, text.tooltips.blurKernel],
+    ].map(([path, label, value, tooltip], index) => createPrefabStageEditableProperty({
+      path: path as string,
+      label: label as string,
+      valueType: 'number',
+      control: 'number',
+      value,
+      order: startOrder + 10 + index,
+      tooltip: tooltip as string,
+    })),
+  ];
+}
+
 function createPrefabStageEditableProperty(input: {
   path: string;
   label: string;
@@ -2447,6 +2716,7 @@ function createPrefabStageEditableProperty(input: {
   value: unknown;
   order: number;
   options?: InspectorProperty<EditorSceneDocument>['options'];
+  tooltip?: string;
 }): InspectorProperty<EditorSceneDocument> {
   return {
     path: input.path,
@@ -2459,6 +2729,7 @@ function createPrefabStageEditableProperty(input: {
     commitMode: input.control === 'string' ? 'blur' : 'immediate',
     order: input.order,
     ...(input.options ? { options: input.options } : {}),
+    ...(input.tooltip ? { tooltip: input.tooltip } : {}),
     validate: (value: unknown) => validateEditorScenePrefabAssetFieldValue(
       input.path,
       normalizeEditorScenePrefabAssetFieldValue(input.path, value),
@@ -2901,6 +3172,22 @@ export function createEditorSceneAssetActionPatch(
       },
     );
   }
+  if (input.actionId === 'prefab.node.setShadow') {
+    if (!input.targetPrefabAssetId || !input.nodeId) return null;
+    const targetPrefabAsset = findEditorScenePrefabAsset(input.document, input.targetPrefabAssetId);
+    const shadowValue = input.value == null ? null : readPlayableEditorShadowSettings(input.value);
+    if (!targetPrefabAsset || (input.value != null && !shadowValue)) return null;
+    const result = setPlayableEditorScenePrefabNodeShadow(targetPrefabAsset, input.nodeId, shadowValue);
+    if (!result.ok || !result.changed) return null;
+    return createEditorScenePrefabNodeMutationPatchResult(
+      targetPrefabAsset,
+      result.prefabAsset,
+      `Set prefab node ${input.nodeId} shadow`,
+      {
+        changedId: result.selectedNodeId ?? input.nodeId,
+      },
+    );
+  }
   if (input.actionId === 'prefab.node.reparent') {
     if (!input.targetPrefabAssetId || !input.nodeId || !input.parentNodeId) return null;
     const targetPrefabAsset = findEditorScenePrefabAsset(input.document, input.targetPrefabAssetId);
@@ -3226,6 +3513,7 @@ function createEditorScenePrefabStageModelProjectionNode(
     kind: 'instance',
     active: prefabAsset.prefab?.defaults?.active ?? true,
     ...(prefabAsset.prefab?.defaults?.shadowMode ? { shadowMode: prefabAsset.prefab.defaults.shadowMode } : {}),
+    ...(prefabAsset.prefab?.defaults?.shadow ? { shadow: structuredClone(prefabAsset.prefab.defaults.shadow) } : {}),
     overrides: structuredClone(prefabAsset.prefab?.overrides ?? {}) as EditorSceneGameObject['overrides'],
     components: [{
       type: 'Transform',
@@ -3285,6 +3573,10 @@ function createEditorScenePrefabStageProjectionNodeFromCompositionNode(
   input: { previewNodeId: string; rootNodeId: string; fallbackRootLabel: string },
 ): unknown | null {
   const transform = createEditorScenePrefabStageNodeTransform(node);
+  const shadow = mergePlayableEditorShadowSettings(
+    prefabAsset.prefab?.defaults?.shadow,
+    node.defaults?.shadow,
+  );
   const parentId = node.parentId
     ? createEditorScenePrefabStageProjectionNodeId(input.previewNodeId, input.rootNodeId, node.parentId)
     : null;
@@ -3297,6 +3589,7 @@ function createEditorScenePrefabStageProjectionNodeFromCompositionNode(
     ...(node.defaults?.shadowMode ?? (node.id === input.rootNodeId ? prefabAsset.prefab?.defaults?.shadowMode : undefined)
       ? { shadowMode: node.defaults?.shadowMode ?? prefabAsset.prefab?.defaults?.shadowMode }
       : {}),
+    ...(shadow ? { shadow } : {}),
     components: [transform],
   };
 
@@ -4074,6 +4367,14 @@ function normalizeEditorScenePrefabAssetFieldValue(path: string, value: unknown)
   if (path === 'displayName' && typeof value === 'string') return value.trim();
   if (path === 'prefab.defaults.active') return value == null ? null : value;
   if (path === 'prefab.defaults.shadowMode') return value == null || value === 'default' ? null : value;
+  if (isEditorScenePrefabDefaultShadowPath(path)) {
+    if (value == null) return null;
+    if (path === 'prefab.defaults.shadow.light.lightId' && typeof value === 'string') {
+      const trimmed = value.trim();
+      return trimmed ? trimmed : null;
+    }
+    return value;
+  }
   const profilePath = readPlayableEditorScenePrefabOverrideProfileFieldPath(path);
   if (profilePath) return normalizeEditorSceneMaterialAssetValue(profilePath, value);
   if (isEditorScenePrefabMaterialAssetIdOverridePath(path) && typeof value === 'string') {
@@ -4087,11 +4388,23 @@ function validateEditorScenePrefabAssetFieldValue(path: string, value: unknown):
   if (path === 'displayName') return typeof value === 'string' && value.length > 0;
   if (path === 'prefab.defaults.active') return value == null || typeof value === 'boolean';
   if (path === 'prefab.defaults.shadowMode') return value == null || isPlayableEditorSceneShadowMode(value);
+  if (isEditorScenePrefabDefaultShadowPath(path)) {
+    const fieldPath = path.slice('prefab.defaults.'.length);
+    return validatePlayableEditorSceneFieldInspectorValue({
+      path: fieldPath,
+      nodeKind: 'instance',
+      value,
+    }).ok;
+  }
   if (!isEditorScenePrefabCoreMaterialOverridePath(path)) return false;
   const profilePath = readPlayableEditorScenePrefabOverrideProfileFieldPath(path);
   if (profilePath) return validateEditorSceneMaterialAssetFieldValue(profilePath, value);
   return isEditorScenePrefabMaterialAssetIdOverridePath(path)
     && (value == null || (typeof value === 'string' && value.trim().length > 0));
+}
+
+function isEditorScenePrefabDefaultShadowPath(path: string): boolean {
+  return path.startsWith('prefab.defaults.shadow.');
 }
 
 function isEditorScenePrefabCoreMaterialOverridePath(path: string): boolean {
@@ -6345,23 +6658,48 @@ function patchEditorScenePrefabAsset(
   if (path === 'displayName') {
     return prefabAsset;
   }
-  if (path === 'prefab.defaults.active' || path === 'prefab.defaults.shadowMode') {
+  if (path === 'prefab.defaults.active' || path === 'prefab.defaults.shadowMode' || isEditorScenePrefabDefaultShadowPath(path)) {
     const next = structuredClone(prefabAsset);
     const prefab = structuredClone(next.prefab ?? prefabAsset.prefab)!;
     prefab.defaults = { ...(prefab.defaults ?? {}) };
     if (path === 'prefab.defaults.active') {
       if (value == null) delete prefab.defaults.active;
       else prefab.defaults.active = value as boolean;
-    } else if (value == null) {
+    } else if (path === 'prefab.defaults.shadowMode' && value == null) {
       delete prefab.defaults.shadowMode;
-    } else {
+    } else if (path === 'prefab.defaults.shadowMode') {
       prefab.defaults.shadowMode = value as NonNullable<typeof prefab.defaults.shadowMode>;
+    } else {
+      applyPlayableEditorSceneJsonFieldPatch(
+        prefab.defaults as unknown as Record<string, unknown>,
+        path.slice('prefab.defaults.'.length),
+        value,
+      );
+      cleanupEditorScenePrefabDefaultShadow(prefab.defaults);
     }
     if (Object.keys(prefab.defaults).length === 0) delete prefab.defaults;
     next.prefab = prefab;
     return syncEditorScenePrefabRootNodeFields(next);
   }
   return patchPlayableEditorScenePrefabOverride(prefabAsset, path, value) as EditorSceneAsset;
+}
+
+function cleanupEditorScenePrefabDefaultShadow(defaults: NonNullable<NonNullable<EditorSceneAsset['prefab']>['defaults']>): void {
+  const shadow = defaults.shadow as unknown;
+  if (!shadow || typeof shadow !== 'object' || Array.isArray(shadow)) {
+    delete defaults.shadow;
+    return;
+  }
+  const shadowRecord = shadow as Record<string, unknown>;
+  const light = shadowRecord.light;
+  if (light && typeof light === 'object' && !Array.isArray(light) && Object.keys(light).length === 0) {
+    delete shadowRecord.light;
+  }
+  const params = shadowRecord.params;
+  if (params && typeof params === 'object' && !Array.isArray(params) && Object.keys(params).length === 0) {
+    delete shadowRecord.params;
+  }
+  if (Object.keys(shadowRecord).length === 0) delete defaults.shadow;
 }
 
 function normalizeEditorScenePrefabAssetComposition(prefabAsset: EditorSceneAsset): EditorSceneAsset {
@@ -6862,6 +7200,7 @@ function isBlockedEditorSceneSystemFieldPatch(
 
 function isEditorSceneProjectionShapePath(path: string): boolean {
   return path === 'shadowMode'
+    || path.startsWith('shadow.')
     || path === 'transformType'
     || path.startsWith('rendering.')
     || path.startsWith('primitive.')

@@ -894,7 +894,7 @@ function createEditorSceneSerializedMultiPropertyPatch(
         })),
       },
       changedIds: input.targetIds,
-      ...(input.path === 'shadowMode' ? { reprojectIds: input.targetIds } : {}),
+      ...(isEditorSceneShadowProjectionPath(input.path) ? { reprojectIds: input.targetIds } : {}),
     };
   }
   const result = createPlayableEditorSceneSerializedMultiTransformPatch(input);
@@ -906,7 +906,11 @@ function createEditorSceneSerializedMultiPropertyPatch(
 }
 
 function isEditorSceneSerializedMultiFieldPath(path: string): boolean {
-  return path === 'shadowMode' || path === 'metadata.shadowInspectorLanguage';
+  return isEditorSceneShadowProjectionPath(path) || path === 'metadata.shadowInspectorLanguage';
+}
+
+function isEditorSceneShadowProjectionPath(path: string): boolean {
+  return path === 'shadowMode' || path.startsWith('shadow.');
 }
 
 function createEditorSceneTransformPatch(
