@@ -14,7 +14,7 @@ import type {
 export interface ProjectEditorAssetCatalogEntry extends PlayableEditorSceneAssetCatalogEntry<AssetExternalRef> {
   guid: string;
   assetId: string;
-  kind: 'model' | 'texture' | 'image' | 'sound';
+  kind: 'model' | 'prefab' | 'texture' | 'image' | 'sound';
   displayName: string;
   relativePath: string;
   originalFileName?: string;

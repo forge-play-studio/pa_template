@@ -9,9 +9,7 @@ import {
   createEditorSceneRuntimePreviewImportPlan,
   createEditorSceneRuntimePreviewMissingAssetUrlDiagnostic,
   createEditorSceneRuntimePreviewNode,
-  EDITOR_SCENE_STATIC_SHADOW_BAKE_ACTION_PATH,
-  createEditorSceneMaterialBrowserAssetItems as createPlayableEditorSceneMaterialBrowserAssetItems,
-  createEditorSceneSerializedMultiTransformPatch as createPlayableEditorSceneSerializedMultiTransformPatch,
+  createEditorScenePrefabAgentSummary,
   createEditorSceneTransformBatchPatch as createPlayableEditorSceneTransformBatchPatch,
   createEditorSceneTransformPatch as createPlayableEditorSceneTransformPatch,
   normalizePlayableForgePlayCommandName,
@@ -36,8 +34,6 @@ import {
   type PlayableLocalEditorHostCompatibilityReport,
   type PlayableLocalEditorHostBridgeContext,
   type PlayableLocalEditorHarnessApi,
-  type PlayableLocalEditorMultiPropertyCapabilityInput,
-  type PlayableLocalEditorMultiPropertyPatchInput,
   type PlayableLocalEditorPropertyPatchInput,
   type PlayableLocalEditorTransformBatchPatchInput,
   type PlayableLocalEditorTransformInspectorPreviewInput,
@@ -69,11 +65,15 @@ import { enrichEditorSceneDocumentAssets } from '../fps-game-editor-adapter/edit
 import {
   createEditorSceneCreateGroupPatch,
   createEditorSceneCreatePrimitivePatch,
+  createEditorSceneBrowserAssetItems,
   createEditorSceneDeleteSubtreePatch,
   createEditorSceneDuplicateSelectionPatch,
   createEditorSceneGroupSelectionPatch,
   createEditorSceneGroundDecalUiPatch,
   createEditorSceneHierarchyMovePatch,
+  createEditorSceneMarkerGraphPatch,
+  canCreateEditorSceneSerializedMultiPropertyPatch,
+  createEditorSceneSerializedMultiPropertyPatch,
   createEditorSceneInspectorPropertyPatch,
   createEditorScenePlacedAssetPatch,
   createEditorSceneAssetActionPatch,
@@ -84,7 +84,14 @@ import {
   getEditorSceneHierarchyItems,
   getEditorSceneInspectorMultiObject,
   getEditorSceneInspectorObject,
+  getEditorSceneMarkerGraph,
+  getEditorSceneMarkerTypeCatalog,
+  getEditorSceneRelationTypeCatalog,
   getEditorSceneRuntimeInspectorSections,
+  getEditorScenePrefabStageDescriptor,
+  getEditorScenePrefabStageInspectorObject,
+  getEditorScenePrefabStageProjectionNodes,
+  getEditorScenePrefabStageStructure,
   getEditorSceneSerializedObject,
   getEditorSceneSerializedMultiObject,
   normalizeEditorSceneHierarchyDocument,
@@ -122,14 +129,6 @@ type ProjectGameRestartWindow = Window & {
   __restartProjectGame?: (context?: ProjectGameRestartContext) => Promise<void> | void;
   __localEditorProjectionImportStats?: EditorProjectionImportStats;
 };
-
-type EditorPrimitiveProjectionShape = 'cube' | 'sphere' | 'plane' | 'capsule';
-type EditorPrimitiveProjectionMaterialKind = 'pbr' | 'standard';
-
-interface EditorPrimitiveProjectionInstancingEntry {
-  shape: EditorPrimitiveProjectionShape;
-  materialKind: EditorPrimitiveProjectionMaterialKind;
-}
 
 interface EditorProjectionImportStats {
   importModelCalls: number;
@@ -191,8 +190,6 @@ const editorProjectionImportStats: EditorProjectionImportStats = {
 type EditorSceneRuntimePreviewImportPlan = NonNullable<ReturnType<typeof createEditorSceneRuntimePreviewImportPlan>>;
 
 const editorProjectionImportPlanCache = new WeakMap<object, EditorSceneRuntimePreviewImportPlan>();
-const editorPrimitiveProjectionInstancingByNodeId = new Map<string, EditorPrimitiveProjectionInstancingEntry>();
-const editorPrimitiveProjectionSourceMeshes = new WeakMap<object, Map<string, any>>();
 
 const editorProjectionModelImporter = createBabylonAssetContainerProjectionImporter({
   loadContainer: async (context) => {
@@ -314,6 +311,12 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
       assetBrowser: {
         getBrowserAssetItems: createEditorSceneBrowserAssetItems,
       },
+      markerGraph: {
+        getMarkerGraph: getEditorSceneMarkerGraph,
+        getMarkerTypeCatalog: getEditorSceneMarkerTypeCatalog,
+        getRelationTypeCatalog: getEditorSceneRelationTypeCatalog,
+        createMarkerGraphPatch: createEditorSceneMarkerGraphPatch,
+      },
       agentContext: {
         describeSceneObject: input => describeEditorSceneAgentObject(input.document, input.objectId),
         describeSceneObjectSet: input => describeEditorSceneAgentObjectSet(input.document, input.objectIds),
@@ -367,6 +370,25 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
         getSceneCameraPreviewRig: createSceneCameraPreviewRig,
         getWorldAppearance: editorLightingPreviewAdapter.getWorldAppearance as (document: EditorSceneDocument) => unknown | null,
       },
+      prefabStage: {
+        getPrefabStageDescriptor: (document, input) => getEditorScenePrefabStageDescriptor(document, input),
+        getPrefabStageProjectionNodes: (document, descriptor) => (
+          getEditorScenePrefabStageProjectionNodes(document, descriptor) as unknown as PlayableBabylonProjectionNode[]
+        ),
+        getPrefabStageStructure: (document, descriptor, context) => (
+          getEditorScenePrefabStageStructure(
+            document,
+            descriptor as Parameters<typeof getEditorScenePrefabStageStructure>[1],
+            context as Parameters<typeof getEditorScenePrefabStageStructure>[2],
+          )
+        ),
+        getPrefabStageInspectorObject: (document, descriptor, selectedItemId, context) => (
+          getEditorScenePrefabStageInspectorObject(document, descriptor as Parameters<typeof getEditorScenePrefabStageInspectorObject>[1], selectedItemId, {
+            ...context,
+            textureAssets: createEditorSceneInspectorTextureAssets(currentEditorAssetLibrary),
+          } as Parameters<typeof getEditorScenePrefabStageInspectorObject>[3])
+        ),
+      },
       rendering: editorRenderingCapability,
     },
     persistenceAdapter: {
@@ -383,7 +405,6 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
         const restartProjectGame = (window as ProjectGameRestartWindow).__restartProjectGame;
         if (typeof restartProjectGame === 'function') {
           await restartProjectGame(context);
-          scheduleEditorHostCleanupAfterRunGame();
           return;
         }
         options.onBeforeReload?.();
@@ -391,16 +412,13 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
       },
     },
     worldAdapter: {
-      disposeWorld: async () => {
-        await runBeforeEnterEditor();
-        await options.disposeGameWorld();
-      },
+      disposeWorld: options.disposeGameWorld,
       getCanvas() {
         const canvas = document.getElementById('renderCanvas');
         if (!(canvas instanceof HTMLCanvasElement)) return null;
         return canvas;
       },
-      loadPreviewEngine: async () => createEditorPreviewBabylonModule(await import('@babylonjs/core') as BabylonModule),
+      loadPreviewEngine: () => import('@babylonjs/core') as Promise<BabylonModule>,
       createPreviewEngine(babylon, canvas) {
         return new babylon.Engine(canvas, true, {
           preserveDrawingBuffer: true,
@@ -413,7 +431,7 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
       resolveAssetId: asset => asset.assetId,
       toBrowserAssetItem(asset) {
         return {
-          id: asset.assetId,
+          id: asset.kind === 'prefab' ? `prefab:${asset.assetId}` : asset.assetId,
           guid: asset.guid,
           assetId: asset.assetId,
           kind: asset.kind,
@@ -423,6 +441,15 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
           origin: asset.origin,
           dedupeKey: asset.dedupeKey,
           placeable: asset.placeable,
+          prefab: asset.prefab
+            ? {
+                id: asset.assetId,
+                name: asset.displayName,
+                sourceAssetId: asset.prefab.sourceAssetId,
+                sourceAssetGuid: asset.prefab.sourceAssetGuid,
+                defaults: structuredClone(asset.prefab.defaults ?? {}),
+              }
+            : undefined,
           preview: createEditorSceneLibraryAssetPreview(asset),
           disabled: asset.placeable === false,
         };
@@ -464,26 +491,6 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
   });
   setLocalEditorAssetBridgeActive(true);
 
-  let disposed = false;
-  let cleanupAfterRunGameScheduled = false;
-
-  const disposeEditorHost = (disposeOptions: { preserveAssetBridgeActive?: boolean } = {}): void => {
-    if (disposed) return;
-    disposed = true;
-    disposeLegacyAssetBypass();
-    if (!disposeOptions.preserveAssetBridgeActive) setLocalEditorAssetBridgeActive(false);
-    host.dispose();
-    if (editorHost === host) editorHost = null;
-  };
-
-  const scheduleEditorHostCleanupAfterRunGame = (): void => {
-    if (cleanupAfterRunGameScheduled) return;
-    cleanupAfterRunGameScheduled = true;
-    window.setTimeout(() => {
-      disposeEditorHost({ preserveAssetBridgeActive: true });
-    }, 0);
-  };
-
   return {
     async enterEditor() {
       await runBeforeEnterEditor();
@@ -494,7 +501,9 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
       detachedForEditor = true;
     },
     dispose() {
-      disposeEditorHost();
+      disposeLegacyAssetBypass();
+      setLocalEditorAssetBridgeActive(false);
+      host.dispose();
     },
   };
 }
@@ -507,124 +516,6 @@ function createEditorGrid(BABYLON: BabylonModule, scene: any, camera?: any) {
     name: 'pa-template-editor-grid',
     halfLineCount: 96,
   });
-}
-
-function createEditorPreviewBabylonModule(BABYLON: BabylonModule): BabylonModule {
-  const MeshBuilder = BABYLON.MeshBuilder;
-  if (!MeshBuilder) return BABYLON;
-  return {
-    ...BABYLON,
-    MeshBuilder: {
-      ...MeshBuilder,
-      CreateBox: createEditorPrimitiveProjectionBuilder(BABYLON, 'cube', MeshBuilder.CreateBox),
-      CreateSphere: createEditorPrimitiveProjectionBuilder(BABYLON, 'sphere', MeshBuilder.CreateSphere),
-      CreateGround: createEditorPrimitiveProjectionBuilder(BABYLON, 'plane', MeshBuilder.CreateGround),
-      CreateCapsule: createEditorPrimitiveProjectionBuilder(BABYLON, 'capsule', MeshBuilder.CreateCapsule),
-    },
-  };
-}
-
-function createEditorPrimitiveProjectionBuilder(
-  BABYLON: BabylonModule,
-  shape: EditorPrimitiveProjectionShape,
-  originalBuilder: unknown,
-) {
-  if (typeof originalBuilder !== 'function') return originalBuilder;
-  const buildPrimitiveMesh = originalBuilder as (name: string, options: Record<string, unknown>, scene: unknown) => any;
-  return (name: string, options: Record<string, unknown>, scene: unknown) => {
-    const request = readEditorPrimitiveProjectionMeshRequest(name);
-    if (!request || request.shape !== shape) {
-      return buildPrimitiveMesh(name, options, scene);
-    }
-    const instancing = editorPrimitiveProjectionInstancingByNodeId.get(request.nodeId);
-    if (!instancing || instancing.shape !== shape) {
-      return buildPrimitiveMesh(name, options, scene);
-    }
-    const source = getOrCreateEditorPrimitiveProjectionSourceMesh({
-      BABYLON,
-      scene,
-      shape,
-      materialKind: instancing.materialKind,
-      options,
-      originalBuilder: buildPrimitiveMesh,
-    });
-    const instance = typeof source?.createInstance === 'function'
-      ? source.createInstance(name)
-      : null;
-    if (!instance) return buildPrimitiveMesh(name, options, scene);
-    configureEditorPrimitiveProjectionInstance(instance, source);
-    return instance;
-  };
-}
-
-function getOrCreateEditorPrimitiveProjectionSourceMesh(input: {
-  BABYLON: BabylonModule;
-  scene: unknown;
-  shape: EditorPrimitiveProjectionShape;
-  materialKind: EditorPrimitiveProjectionMaterialKind;
-  options: Record<string, unknown>;
-  originalBuilder: (name: string, options: Record<string, unknown>, scene: unknown) => any;
-}): any | null {
-  if (!input.scene || typeof input.scene !== 'object') return null;
-  let sceneCache = editorPrimitiveProjectionSourceMeshes.get(input.scene);
-  if (!sceneCache) {
-    sceneCache = new Map();
-    editorPrimitiveProjectionSourceMeshes.set(input.scene, sceneCache);
-  }
-  const cacheKey = `${input.shape}:${input.materialKind}`;
-  const cached = sceneCache.get(cacheKey);
-  if (cached && !cached.isDisposed?.()) return cached;
-  const sourceName = `__pa_template_editor_primitive_source_${cacheKey.replace(/[^a-z0-9_-]/gi, '_')}`;
-  const source = input.originalBuilder(sourceName, input.options, input.scene);
-  if (!source) return null;
-  source.isVisible = false;
-  source.isPickable = false;
-  source.metadata = {
-    ...(source.metadata && typeof source.metadata === 'object' ? source.metadata : {}),
-    editorProjection: {
-      helper: 'primitiveSource',
-      primitiveShape: input.shape,
-      materialKind: input.materialKind,
-    },
-  };
-  sceneCache.set(cacheKey, source);
-  return source;
-}
-
-function configureEditorPrimitiveProjectionInstance(instance: any, source: any): void {
-  try {
-    Object.defineProperty(instance, 'material', {
-      configurable: true,
-      enumerable: true,
-      get() {
-        return source.material ?? null;
-      },
-      set(value: unknown) {
-        if (!value) return;
-        if (!source.material) {
-          source.material = value;
-          return;
-        }
-        if (value !== source.material && typeof (value as { dispose?: unknown }).dispose === 'function') {
-          (value as { dispose: () => void }).dispose();
-        }
-      },
-    });
-  } catch {}
-}
-
-function readEditorPrimitiveProjectionMeshRequest(name: string): { nodeId: string; shape: EditorPrimitiveProjectionShape } | null {
-  for (const shape of ['cube', 'sphere', 'plane', 'capsule'] as const) {
-    const suffix = `.${shape}Projection`;
-    if (!name.endsWith(suffix)) continue;
-    const nodeId = name.slice(0, -suffix.length);
-    return nodeId ? { nodeId, shape } : null;
-  }
-  return null;
-}
-
-function createEditorSceneBrowserAssetItems(editorScene: EditorSceneDocument) {
-  return createPlayableEditorSceneMaterialBrowserAssetItems(editorScene);
 }
 
 function logPlayableLocalEditorHostCompatibilityReport(
@@ -783,10 +674,7 @@ function isEnvironmentTextureCatalogEntry(entry: editorAssets.AssetCatalogEntry,
 }
 
 function createProjectionNodes(editorScene: EditorSceneDocument): PlayableBabylonProjectionNode[] {
-  const nodes = editorScene.scene.gameObjects.map(gameObject => createProjectionNode(editorScene, gameObject));
-  editorPrimitiveProjectionInstancingByNodeId.clear();
-  for (const node of nodes) rememberEditorPrimitiveProjectionInstancing(node);
-  return nodes;
+  return editorScene.scene.gameObjects.map(gameObject => createProjectionNode(editorScene, gameObject));
 }
 
 function createProjectionNode(
@@ -805,32 +693,7 @@ function createProjectionNode(
     };
     node.primitive = null;
   }
-  rememberEditorPrimitiveProjectionInstancing(node);
   return node;
-}
-
-function rememberEditorPrimitiveProjectionInstancing(node: PlayableBabylonProjectionNode): void {
-  const shape = readEditorPrimitiveProjectionShape(node.primitive?.shape);
-  if (!shape || hasEditorPrimitiveProjectionMaterialOverride(node)) {
-    editorPrimitiveProjectionInstancingByNodeId.delete(node.id);
-    return;
-  }
-  editorPrimitiveProjectionInstancingByNodeId.set(node.id, {
-    shape,
-    materialKind: node.artistMaterialKind === 'standard' ? 'standard' : 'pbr',
-  });
-}
-
-function readEditorPrimitiveProjectionShape(value: unknown): EditorPrimitiveProjectionShape | null {
-  return value === 'cube' || value === 'sphere' || value === 'plane' || value === 'capsule' ? value : null;
-}
-
-function hasEditorPrimitiveProjectionMaterialOverride(node: PlayableBabylonProjectionNode): boolean {
-  return hasObjectEntries(node.artistMaterialProfile) || hasObjectEntries(node.artistMaterialSlotProfiles);
-}
-
-function hasObjectEntries(value: unknown): boolean {
-  return !!value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length > 0;
 }
 
 function createSceneCameraPreviewRig(
@@ -978,79 +841,6 @@ function createEditorSceneSerializedPropertyPatch(
   input: PlayableLocalEditorPropertyPatchInput<EditorSceneDocument>,
 ): { patch: EditorSceneDocumentPatch; label: string; changedId: string; changedIds: string[]; reprojectIds?: string[] } | null {
   return createEditorSceneInspectorPropertyPatch(input);
-}
-
-function canCreateEditorSceneSerializedMultiPropertyPatch(
-  input: PlayableLocalEditorMultiPropertyCapabilityInput<EditorSceneDocument>,
-): boolean {
-  return input.path.startsWith('transform.')
-    || isEditorSceneSerializedMultiFieldPath(input.path)
-    || input.path === EDITOR_SCENE_STATIC_SHADOW_BAKE_ACTION_PATH;
-}
-
-function createEditorSceneSerializedMultiPropertyPatch(
-  input: PlayableLocalEditorMultiPropertyPatchInput<EditorSceneDocument>,
-): { patch: EditorSceneDocumentPatch; label: string; changedIds: string[]; reprojectIds?: string[] } | null {
-  if (isEditorSceneSerializedScalePath(input.path)) {
-    const fieldPatches = input.targetIds.map((targetId) => createEditorSceneInspectorPropertyPatch({
-      document: input.document,
-      targetId,
-      path: input.path,
-      value: input.value,
-    }));
-    if (fieldPatches.some((patch) => !patch || patch.patch.kind !== 'game-object.field')) return null;
-    const changedIds = Array.from(new Set(fieldPatches.flatMap((patch) => patch?.changedIds ?? [])));
-    return {
-      label: `Patch ${input.targetIds.length} GameObjects ${input.path}`,
-      patch: {
-        kind: 'game-object.field-batch',
-        fields: fieldPatches.map((patch) => {
-          const field = patch!.patch as Extract<EditorSceneDocumentPatch, { kind: 'game-object.field' }>;
-          return {
-            targetId: field.targetId,
-            path: field.path,
-            value: field.value,
-          };
-        }),
-      },
-      changedIds,
-    };
-  }
-  if (input.targetIds.some((targetId) => !createEditorSceneInspectorPropertyPatch({
-    document: input.document,
-    targetId,
-    path: input.path,
-    value: input.value,
-  }))) return null;
-  if (isEditorSceneSerializedMultiFieldPath(input.path)) {
-    return {
-      label: `Patch ${input.targetIds.length} GameObjects ${input.path}`,
-      patch: {
-        kind: 'game-object.field-batch',
-        fields: input.targetIds.map((targetId) => ({
-          targetId,
-          path: input.path,
-          value: input.value,
-        })),
-      },
-      changedIds: input.targetIds,
-      ...(input.path === 'shadowMode' ? { reprojectIds: input.targetIds } : {}),
-    };
-  }
-  const result = createPlayableEditorSceneSerializedMultiTransformPatch(input);
-  if (!result) return null;
-  return {
-    ...result,
-    patch: result.patch as EditorSceneDocumentPatch,
-  };
-}
-
-function isEditorSceneSerializedMultiFieldPath(path: string): boolean {
-  return path === 'shadowMode' || path === 'metadata.shadowInspectorLanguage';
-}
-
-function isEditorSceneSerializedScalePath(path: string): boolean {
-  return path === 'transform.scale' || /^transform\.scale\.(x|y|z)$/.test(path);
 }
 
 function createEditorSceneTransformPatch(
@@ -1489,7 +1279,7 @@ function summarizeEditorScene(editorScene: EditorSceneDocument): string {
   return `editorScene assets=${editorScene.assets.length}, gameObjects=${editorScene.scene.gameObjects.length}`;
 }
 
-function describeEditorSceneAgentObject(
+export function describeEditorSceneAgentObject(
   editorScene: EditorSceneDocument,
   objectId: string,
 ) {
@@ -1497,17 +1287,26 @@ function describeEditorSceneAgentObject(
   if (!gameObject) return null;
   const nodeKind = readEditorSceneNodeKind(gameObject);
   const asset = findEditorSceneAgentAsset(editorScene, gameObject);
+  const prefab = createPaTemplatePrefabAgentSummary(editorScene, gameObject.id);
   const label = gameObject.name || gameObject.id;
   return {
-    domainKind: `pa-template:${nodeKind}`,
-    domainRole: resolveEditorSceneAgentGameplayRole(gameObject),
+    domainKind: prefab ? 'pa-template:prefab-instance' : `pa-template:${nodeKind}`,
+    domainRole: prefab ? 'prefab-instance' : resolveEditorSceneAgentGameplayRole(gameObject),
     functionLabel: label,
-    functionDescription: asset
+    functionDescription: prefab
+      ? `${label} is a prefab instance of ${prefab.prefabDisplayName || prefab.prefabId} using source asset ${prefab.sourceAssetDisplayName || prefab.sourceAssetId || 'unknown'}.`
+      : asset
       ? `${label} is a ${nodeKind} scene node using asset ${asset.displayName || asset.id}.`
       : `${label} is a ${nodeKind} scene node in the editable scene document.`,
     domainHints: [
-      `Interpret this as a ${nodeKind} node from pa_template's scene graph.`,
+      prefab
+        ? 'Interpret this as a prefab instance. Prefer editing reusable defaults through prefab override paths when the user asks to change the template.'
+        : `Interpret this as a ${nodeKind} node from pa_template's scene graph.`,
       ...(asset ? [`Asset reference: ${asset.displayName || asset.id}.`] : []),
+      ...(prefab ? [
+        `Prefab definition: ${prefab.prefabDisplayName || prefab.prefabId}.`,
+        `Prefab relation status: ${prefab.status}.`,
+      ] : []),
     ],
     bindingCandidates: [
       {
@@ -1516,6 +1315,22 @@ function describeEditorSceneAgentObject(
         label,
         path: `scene.gameObjects.${gameObject.id}`,
       },
+      ...(prefab ? [{
+        kind: 'prefab-definition',
+        id: prefab.prefabId,
+        label: prefab.prefabDisplayName || prefab.prefabId,
+        path: `assets.${prefab.prefabId}`,
+      }, ...(prefab.sourceAssetId ? [{
+        kind: 'prefab-source-asset',
+        id: prefab.sourceAssetId,
+        label: prefab.sourceAssetDisplayName || prefab.sourceAssetId,
+        path: `assets.${prefab.sourceAssetId}`,
+      }] : []), ...prefab.materialTargets.map(target => ({
+        kind: 'prefab-material-override-target',
+        id: target.slotId || target.ownerNodePath || target.bindingPath,
+        label: target.label,
+        path: `assets.${prefab.prefabId}.${target.bindingPath}`,
+      }))] : []),
       ...(asset ? [{
         kind: 'scene-asset',
         id: asset.id,
@@ -1529,21 +1344,30 @@ function describeEditorSceneAgentObject(
         path: 'scene.gameObjects',
         label,
       },
+      ...(prefab ? [{
+        kind: 'scene-document',
+        path: `assets.${prefab.prefabId}.prefab`,
+        label: prefab.prefabDisplayName || prefab.prefabId,
+      }] : []),
     ],
     metadata: {
       nodeKind,
+      ...(prefab ? { prefab: toEditorSceneAgentJsonValue(prefab) } : {}),
       ...(asset ? { assetId: asset.id, assetDisplayName: asset.displayName || asset.id } : {}),
     },
   };
 }
 
-function describeEditorSceneAgentObjectSet(
+export function describeEditorSceneAgentObjectSet(
   editorScene: EditorSceneDocument,
   objectIds: readonly string[],
 ) {
   const gameObjects = findEditorSceneAgentGameObjects(editorScene, objectIds);
   if (gameObjects.length === 0) return null;
   const nodeKinds = [...new Set(gameObjects.map(readEditorSceneNodeKind))];
+  const prefabSummaries = gameObjects
+    .map(gameObject => createPaTemplatePrefabAgentSummary(editorScene, gameObject.id))
+    .filter((prefab): prefab is NonNullable<ReturnType<typeof createEditorScenePrefabAgentSummary>> => !!prefab);
   return {
     domainKind: 'pa-template:scene-object-set',
     domainRole: 'selection',
@@ -1552,6 +1376,9 @@ function describeEditorSceneAgentObjectSet(
     domainHints: [
       'Consider these nodes together before proposing scene edits or gameplay bindings.',
       `Selected node kinds: ${nodeKinds.join(', ')}.`,
+      ...(prefabSummaries.length > 0
+        ? [`Selected prefab instances: ${prefabSummaries.map(prefab => prefab.prefabDisplayName || prefab.prefabId).join(', ')}.`]
+        : []),
     ],
     relationshipHints: [{
       type: 'selection',
@@ -1567,8 +1394,20 @@ function describeEditorSceneAgentObjectSet(
     metadata: {
       objectCount: gameObjects.length,
       nodeKinds,
+      ...(prefabSummaries.length > 0 ? { prefabs: toEditorSceneAgentJsonValue(prefabSummaries) } : {}),
     },
   };
+}
+
+function toEditorSceneAgentJsonValue(value: unknown): any {
+  return value;
+}
+
+function createPaTemplatePrefabAgentSummary(
+  editorScene: EditorSceneDocument,
+  objectId: string,
+): ReturnType<typeof createEditorScenePrefabAgentSummary> {
+  return createEditorScenePrefabAgentSummary(editorScene as never, objectId);
 }
 
 function describeEditorSceneAgentRegionBinding(

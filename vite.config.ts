@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'fs';
 import { mkdir, writeFile } from 'fs/promises';
 import path from 'path';
 import { viteSingleFile } from 'vite-plugin-singlefile';
@@ -107,6 +107,7 @@ const fpsEditorPackageJsonPath = localFpsGameEditorRepo
 const allowedThirdPartyPackages = [
   '@babylonjs/core',
   '@babylonjs/loaders',
+  '@fps/vfx',
   ...PLAYABLE_EDITOR_PACKAGE_IDS,
 ];
 
@@ -692,6 +693,106 @@ function invalidateViteFileModules(server: any, files: string[]): void {
   }
 }
 
+// VFX debug overrides API（仅 dev serve）：读取/写入 src/assets/vfx/effects/<id>/vfx-params.json。
+function vfxDebugOverridesApiPlugin() {
+  return {
+    name: 'vfx-debug-overrides-api',
+    apply: 'serve' as const,
+    configureServer(server: any) {
+      server.middlewares.use('/__vfx_debug_overrides', async (req: any, res: any) => {
+        if (req.method === 'GET') {
+          res.setHeader('Content-Type', 'application/json; charset=utf-8');
+          res.end(JSON.stringify(readAllVfxEffectParams(), null, 2));
+          return;
+        }
+
+        if (req.method !== 'POST') {
+          sendJson(res, 405, { ok: false, error: 'method_not_allowed' });
+          return;
+        }
+
+        try {
+          const body = await readJsonBody(req);
+          const effectId = typeof body.effectId === 'string' ? body.effectId.trim() : '';
+          const params = readOptionalRecord(body.params);
+          if (!effectId || !params) {
+            sendJson(res, 400, { ok: false, error: 'missing_effect_id_or_params' });
+            return;
+          }
+
+          const paramsPath = resolveVfxEffectParamsPath(effectId);
+          if (!paramsPath) {
+            sendJson(res, 400, { ok: false, error: 'unsupported_effect_id' });
+            return;
+          }
+
+          const payload = {
+            schemaVersion: 'vfx-params/1.0',
+            effectId,
+            updatedAt: new Date().toISOString(),
+            params,
+          };
+          await mkdir(path.dirname(paramsPath), { recursive: true });
+          await writeFile(paramsPath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+          invalidateViteFileModules(server, [
+            paramsPath,
+            resolve(__dirname, 'src/assets/vfx/index.ts'),
+          ]);
+          sendJson(res, 200, { ok: true, path: paramsPath, params: payload });
+        } catch (error) {
+          sendJson(res, 500, { ok: false, error: error instanceof Error ? error.message : String(error) });
+        }
+      });
+    },
+  };
+}
+
+function resolveVfxEffectParamsPath(effectId: string): string | null {
+  // debug-only 端点:仅需保证落点不逃出 effects 目录(防写错文件);不做字符白名单,故下划线 id 也支持。
+  const effectDir = resolve(__dirname, 'src/assets/vfx/effects', effectId);
+  const vfxRoot = resolve(__dirname, 'src/assets/vfx/effects');
+  if (!effectDir.startsWith(`${vfxRoot}${path.sep}`)) return null;
+  return resolve(effectDir, 'vfx-params.json');
+}
+
+function readAllVfxEffectParams(): Record<string, unknown> {
+  const effectsRoot = resolve(__dirname, 'src/assets/vfx/effects');
+  const result: Record<string, unknown> = {};
+  if (!existsSync(effectsRoot)) return result;
+  for (const effectId of readdirSync(effectsRoot, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)) {
+    const paramsPath = resolveVfxEffectParamsPath(effectId);
+    if (!paramsPath || !existsSync(paramsPath)) continue;
+    try {
+      const value = JSON.parse(stripVfxJsonBom(readFileSync(paramsPath, 'utf8')) || '{}') as { params?: unknown };
+      result[effectId] = value.params && typeof value.params === 'object' && !Array.isArray(value.params)
+        ? value.params
+        : value;
+    } catch {
+      result[effectId] = {};
+    }
+  }
+  return result;
+}
+
+function readOptionalRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+
+function sendJson(res: any, statusCode: number, body: Record<string, unknown>): void {
+  res.statusCode = statusCode;
+  setProjectAuthoringCorsHeaders(res);
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.end(JSON.stringify(body));
+}
+
+function stripVfxJsonBom(value: string): string {
+  return value.charCodeAt(0) === 0xfeff ? value.slice(1) : value;
+}
+
 export default defineConfig({
   cacheDir: process.env.VITE_CACHE_DIR || `node_modules/.vite-fps-editor-${readFpsEditorVersion()}`,
   define: {
@@ -714,6 +815,7 @@ export default defineConfig({
     // 新版 fps-game-editor 不注入 Babylon Inspector UI。
     inspectorPlugin(),
     debugPanelConfigApiPlugin(),
+    vfxDebugOverridesApiPlugin(),
     projectAuthoringApiPlugin(),
     // 开发模式模型强缓存 + URL 版本化（mtime）
     modelCachePlugin({
