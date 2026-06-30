@@ -187,7 +187,15 @@ import {
   readEditorSceneNodeKind,
 } from './editor-scene-document';
 import { resolveSceneNodeFieldSchema } from './scene-node-field-schema';
-import { createDefaultGroundDecalUiConfig, isGroundDecalUiConfig } from '../services/GroundDecalUiService';
+import {
+  addGroundDecalUiDeliveryPair,
+  canAddGroundDecalUiDeliveryPair,
+  canRemoveGroundDecalUiDeliveryPair,
+  createDefaultGroundDecalUiConfig,
+  getGroundDecalUiDeliveryPairs,
+  isGroundDecalUiConfig,
+  removeGroundDecalUiDeliveryPair,
+} from '../services/GroundDecalUiService';
 import {
   DEFAULT_DIRECTIONAL_LIGHT_DIRECTION,
   LIGHT_DIRECTION_ELEVATION_ANGLE_PATH,
@@ -243,6 +251,11 @@ export type EditorSceneDocumentPatch =
       path: string;
       value: unknown;
     }>;
+  }
+  | {
+    kind: 'game-object.ground-decal-ui.replace';
+    targetId: string;
+    groundDecal: GroundDecalUiConfig;
   }
   | {
     kind: 'scene.material-asset.field';
@@ -906,6 +919,8 @@ interface GroundDecalUiLayoutInspectorValue {
 
 const MATERIAL_LANGUAGE_OPTIONS = CAMERA_LANGUAGE_OPTIONS;
 const DEFAULT_GROUND_DECAL_UI_TEXTURE_TINT: GroundDecalUiColor = { r: 1, g: 1, b: 1, a: 1 };
+const GROUND_DECAL_UI_ADD_DELIVERY_PAIR_ACTION_ID = 'ground-decal-ui.delivery-pair.add';
+const GROUND_DECAL_UI_REMOVE_DELIVERY_PAIR_ACTION_ID = 'ground-decal-ui.delivery-pair.remove';
 
 function createMaterialLightingModelOptions(text: ArtistMaterialInspectorText): Array<{ label: string; value: 'lit' | 'unlit' }> {
   return [
@@ -1265,6 +1280,13 @@ function reduceEditorSceneDocumentUnchecked(
       return command.patch.fields.reduce((nextDocument, field) => (
         patchEditorSceneGameObjectField(nextDocument, field.targetId, field.path, field.value)
       ), document);
+    }
+    if (command.patch.kind === 'game-object.ground-decal-ui.replace') {
+      return replaceEditorSceneGroundDecalUi(
+        document,
+        command.patch.targetId,
+        command.patch.groundDecal,
+      );
     }
     if (command.patch.kind === 'game-object.field' && parseGroundDecalUiLayerPatchPath(command.patch.path)) {
       return patchEditorSceneGameObjectField(
@@ -2631,6 +2653,8 @@ function canEditEditorSceneSerializedMultiShadowTarget(gameObject: EditorSceneGa
 export function createEditorSceneAssetActionPatch(
   input: EditorSceneAssetActionPatchInput,
 ): { patch: EditorSceneDocumentPatch; label: string; changedId?: string; createdId?: string; changedIds?: string[]; reprojectIds?: string[] } | null {
+  const groundDecalUiDeliveryPairPatch = createGroundDecalUiDeliveryPairActionPatch(input);
+  if (groundDecalUiDeliveryPairPatch) return groundDecalUiDeliveryPairPatch;
   if (input.actionId === 'asset.create-material') {
     const materialAsset = createEditorSceneCreatedMaterialAsset(
       input.document,
@@ -2735,6 +2759,40 @@ export function createEditorSceneAssetActionPatch(
     changedId: input.activeId ?? changedIds[0],
     changedIds,
     ...(reprojectIds ? { reprojectIds } : {}),
+  };
+}
+
+function createGroundDecalUiDeliveryPairActionPatch(
+  input: EditorSceneAssetActionPatchInput,
+): { patch: EditorSceneDocumentPatch; label: string; changedId: string; changedIds: string[]; reprojectIds: string[] } | null {
+  if (
+    input.actionId !== GROUND_DECAL_UI_ADD_DELIVERY_PAIR_ACTION_ID
+    && input.actionId !== GROUND_DECAL_UI_REMOVE_DELIVERY_PAIR_ACTION_ID
+  ) {
+    return null;
+  }
+  if (!input.activeId) return null;
+  const gameObject = findEditorSceneGameObject(input.document, input.activeId);
+  if (!gameObject || !isGroundDecalUiConfig(gameObject.groundDecal) || gameObject.groundDecal.uiKind !== 'delivery') {
+    return null;
+  }
+  const nextGroundDecal = input.actionId === GROUND_DECAL_UI_ADD_DELIVERY_PAIR_ACTION_ID
+    ? addGroundDecalUiDeliveryPair(gameObject.groundDecal)
+    : removeGroundDecalUiDeliveryPair(gameObject.groundDecal);
+  if (!nextGroundDecal) return null;
+  const label = input.actionId === GROUND_DECAL_UI_ADD_DELIVERY_PAIR_ACTION_ID
+    ? `Add delivery UI pair on ${gameObject.name ?? gameObject.id}`
+    : `Remove delivery UI pair on ${gameObject.name ?? gameObject.id}`;
+  return {
+    label,
+    patch: {
+      kind: 'game-object.ground-decal-ui.replace',
+      targetId: gameObject.id,
+      groundDecal: nextGroundDecal,
+    },
+    changedId: gameObject.id,
+    changedIds: [gameObject.id],
+    reprojectIds: [gameObject.id],
   };
 }
 
@@ -3372,6 +3430,37 @@ function createEditorScenePrefabRelationActionProperty(input: {
   };
 }
 
+function createGroundDecalUiDeliveryPairActionProperty(input: {
+  path: string;
+  label: string;
+  actionId: string;
+  order: number;
+  disabledReason?: string;
+}): InspectorProperty<EditorSceneDocument> {
+  return {
+    path: input.path,
+    label: input.label,
+    valueType: 'string',
+    control: 'custom',
+    customControl: 'inspector-action-button',
+    controlOptions: {
+      actionId: input.actionId,
+      label: input.label,
+      icon: 'asset',
+      disabled: !!input.disabledReason,
+    },
+    value: input.actionId,
+    readOnly: false,
+    persistence: 'readonly',
+    commitMode: 'immediate',
+    order: input.order,
+    tags: ['GroundDecalUI', 'Action'],
+    tooltip: input.disabledReason ?? input.label,
+    effect: input.disabledReason ? 'unsupported' : 'active',
+    disabledReason: input.disabledReason,
+  };
+}
+
 function resolveEditorScenePrefabRelationSeverity(
   diagnostics: readonly { severity: 'info' | 'warning' | 'error' }[],
 ): 'ok' | 'info' | 'warning' | 'error' {
@@ -3548,6 +3637,31 @@ function createGroundDecalUiInspectorProperties(
     }),
   ];
   let order = 10;
+  if (groundDecal.uiKind === 'delivery') {
+    const pairCount = getGroundDecalUiDeliveryPairs(groundDecal).length;
+    properties.push(createGroundDecalUiDeliveryPairActionProperty({
+      path: 'groundDecal.deliveryPairs.add',
+      label: 'Add Sub Logo + Number',
+      actionId: GROUND_DECAL_UI_ADD_DELIVERY_PAIR_ACTION_ID,
+      order,
+      disabledReason: canAddGroundDecalUiDeliveryPair(groundDecal)
+        ? undefined
+        : pairCount >= 2
+          ? 'Delivery decal already has two pairs.'
+          : 'Delivery decal is missing the primary pair.',
+    }));
+    order += 1;
+    properties.push(createGroundDecalUiDeliveryPairActionProperty({
+      path: 'groundDecal.deliveryPairs.remove',
+      label: 'Remove Sub Logo + Number',
+      actionId: GROUND_DECAL_UI_REMOVE_DELIVERY_PAIR_ACTION_ID,
+      order,
+      disabledReason: canRemoveGroundDecalUiDeliveryPair(groundDecal)
+        ? undefined
+        : 'Delivery decal must keep at least one pair.',
+    }));
+    order += 1;
+  }
   const layoutLayers: GroundDecalUiLayoutInspectorLayer[] = [];
   for (let index = 0; index < groundDecal.layers.length; index += 1) {
     const layer = groundDecal.layers[index];
@@ -3605,7 +3719,7 @@ function createGroundDecalUiInspectorProperties(
     if (layer.kind === 'text' && layer.role === 'amount') {
       properties.push(createDocumentInspectorProperty(null, nodeKind, {
         path: `groundDecal.layers.${index}.text.value`,
-        label: 'Number Text',
+        label: `${label} Text`,
         valueType: 'string',
         control: 'string',
         value: layer.text.value,
@@ -3964,11 +4078,17 @@ function createGroundDecalUiTextureOptions(
 function getGroundDecalUiLayerDisplayLabel(layer: GroundDecalUiLayer): string {
   if (layer.role === 'border') return 'Border';
   if (layer.role === 'mainLogo') return 'Main Logo';
-  if (layer.role === 'subLogo') return 'Sub Logo';
-  if (layer.role === 'amount') return 'Number';
+  if (layer.role === 'subLogo') return `Sub Logo ${readGroundDecalUiDeliveryPairIndexFromLayerId(layer.id) ?? 1}`;
+  if (layer.role === 'amount') return `Number ${readGroundDecalUiDeliveryPairIndexFromLayerId(layer.id) ?? 1}`;
   if (layer.role === 'base') return 'Base';
   if (layer.role === 'progressFill') return 'Progress';
   return layer.id;
+}
+
+function readGroundDecalUiDeliveryPairIndexFromLayerId(layerId: string): 1 | 2 | null {
+  if (layerId === 'subLogo' || layerId === 'amount') return 1;
+  if (layerId === 'subLogo2' || layerId === 'amount2') return 2;
+  return null;
 }
 
 function createCameraInspectorProperties(
@@ -7617,6 +7737,32 @@ function patchEditorSceneGameObjectsMetadataField(
     if (next.metadata && Object.keys(next.metadata).length === 0) delete next.metadata;
     changed = true;
     return next;
+  });
+  if (!changed) return document;
+  return {
+    ...document,
+    scene: {
+      ...document.scene,
+      gameObjects,
+    },
+  };
+}
+
+function replaceEditorSceneGroundDecalUi(
+  document: EditorSceneDocument,
+  targetId: string,
+  groundDecal: GroundDecalUiConfig,
+): EditorSceneDocument {
+  if (!isGroundDecalUiConfig(groundDecal)) return document;
+  let changed = false;
+  const gameObjects = document.scene.gameObjects.map((entry) => {
+    if (entry.id !== targetId || !isGroundDecalUiConfig(entry.groundDecal)) return entry;
+    if (entry.groundDecal.uiKind !== groundDecal.uiKind) return entry;
+    changed = true;
+    return {
+      ...entry,
+      groundDecal: structuredClone(groundDecal),
+    };
   });
   if (!changed) return document;
   return {

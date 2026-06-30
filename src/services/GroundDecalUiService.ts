@@ -7,6 +7,8 @@ import type {
   GroundDecalUiKind,
   GroundDecalUiLayer,
   GroundDecalUiRect,
+  GroundDecalUiTextLayer,
+  GroundDecalUiTextureLayer,
 } from '../config';
 
 const TEXTURE_IDS = {
@@ -19,6 +21,18 @@ const BASE_COLOR: GroundDecalUiColor = { r: 0.08, g: 0.08, b: 0.08, a: 0.56 };
 const PROGRESS_COLOR: GroundDecalUiColor = { r: 0.16, g: 0.56, b: 1, a: 0.88 };
 const DEFAULT_TEXTURE_SIZE = 512;
 const imageCache = new Map<string, Promise<HTMLImageElement | null>>();
+export const GROUND_DECAL_UI_DELIVERY_PAIR_MAX = 2;
+
+const DELIVERY_PAIR_LAYER_IDS = [
+  { subLogoId: 'subLogo', amountId: 'amount' },
+  { subLogoId: 'subLogo2', amountId: 'amount2' },
+] as const;
+
+export interface GroundDecalUiDeliveryPair {
+  index: 1 | 2;
+  subLogoLayer: GroundDecalUiTextureLayer;
+  amountLayer: GroundDecalUiTextLayer;
+}
 
 export function isGroundDecalUiConfig(value: unknown): value is GroundDecalUiConfig {
   return !!value
@@ -121,6 +135,52 @@ export function createDefaultGroundDecalUiConfig(uiKind: GroundDecalUiKind): Gro
   };
 }
 
+export function getGroundDecalUiDeliveryPairs(decal: GroundDecalUiConfig): GroundDecalUiDeliveryPair[] {
+  if (decal.uiKind !== 'delivery') return [];
+  const pairs: GroundDecalUiDeliveryPair[] = [];
+  for (let index = 1; index <= GROUND_DECAL_UI_DELIVERY_PAIR_MAX; index += 1) {
+    const pair = getGroundDecalUiDeliveryPair(decal, index as 1 | 2);
+    if (pair) pairs.push(pair);
+  }
+  return pairs;
+}
+
+export function canAddGroundDecalUiDeliveryPair(decal: GroundDecalUiConfig): boolean {
+  if (decal.uiKind !== 'delivery') return false;
+  return !!getGroundDecalUiDeliveryPair(decal, 1) && !getGroundDecalUiDeliveryPair(decal, 2);
+}
+
+export function canRemoveGroundDecalUiDeliveryPair(decal: GroundDecalUiConfig): boolean {
+  if (decal.uiKind !== 'delivery') return false;
+  return !!getGroundDecalUiDeliveryPair(decal, 2);
+}
+
+export function addGroundDecalUiDeliveryPair(decal: GroundDecalUiConfig): GroundDecalUiConfig | null {
+  if (!canAddGroundDecalUiDeliveryPair(decal)) return null;
+  const primaryPair = getGroundDecalUiDeliveryPair(decal, 1);
+  if (!primaryPair) return null;
+  const secondaryLayers = createGroundDecalUiDeliveryPairLayers(2, primaryPair);
+  const borderIndex = decal.layers.findIndex(layer => layer.id === 'border');
+  const insertIndex = borderIndex >= 0 ? borderIndex : decal.layers.length;
+  return {
+    ...decal,
+    layers: [
+      ...decal.layers.slice(0, insertIndex),
+      ...secondaryLayers,
+      ...decal.layers.slice(insertIndex),
+    ],
+  };
+}
+
+export function removeGroundDecalUiDeliveryPair(decal: GroundDecalUiConfig): GroundDecalUiConfig | null {
+  if (!canRemoveGroundDecalUiDeliveryPair(decal)) return null;
+  const idsToRemove = new Set<string>(['subLogo2', 'amount2']);
+  return {
+    ...decal,
+    layers: decal.layers.filter(layer => !idsToRemove.has(layer.id)),
+  };
+}
+
 function createBaseLayer(): GroundDecalUiConfig['layers'][number] {
   return {
     id: 'base',
@@ -130,6 +190,46 @@ function createBaseLayer(): GroundDecalUiConfig['layers'][number] {
     zOrder: 0,
     rect: { x: 0, z: 0, width: 1, depth: 1 },
   };
+}
+
+function getGroundDecalUiDeliveryPair(
+  decal: GroundDecalUiConfig,
+  index: 1 | 2,
+): GroundDecalUiDeliveryPair | null {
+  const ids = DELIVERY_PAIR_LAYER_IDS[index - 1];
+  const subLogoLayer = decal.layers.find((layer): layer is GroundDecalUiTextureLayer => (
+    layer.id === ids.subLogoId
+    && layer.role === 'subLogo'
+    && layer.kind === 'texture'
+  ));
+  const amountLayer = decal.layers.find((layer): layer is GroundDecalUiTextLayer => (
+    layer.id === ids.amountId
+    && layer.role === 'amount'
+    && layer.kind === 'text'
+  ));
+  if (!subLogoLayer || !amountLayer) return null;
+  return { index, subLogoLayer, amountLayer };
+}
+
+function createGroundDecalUiDeliveryPairLayers(
+  index: 2,
+  sourcePair: GroundDecalUiDeliveryPair,
+): [GroundDecalUiTextureLayer, GroundDecalUiTextLayer] {
+  const ids = DELIVERY_PAIR_LAYER_IDS[index - 1];
+  return [
+    {
+      ...structuredClone(sourcePair.subLogoLayer),
+      id: ids.subLogoId,
+      zOrder: Math.max(26, sourcePair.subLogoLayer.zOrder + 1),
+      rect: { x: -0.25, z: 0.25, width: 0.5, depth: 0.5 },
+    },
+    {
+      ...structuredClone(sourcePair.amountLayer),
+      id: ids.amountId,
+      zOrder: Math.max(31, sourcePair.amountLayer.zOrder + 1),
+      rect: { x: 0.2, z: 0.25, width: 0.28, depth: 0.22 },
+    },
+  ];
 }
 
 function createBorderLayer(): GroundDecalUiConfig['layers'][number] {

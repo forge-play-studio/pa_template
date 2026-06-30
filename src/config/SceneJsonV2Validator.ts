@@ -712,6 +712,10 @@ function validateGroundDecalUi(value: Record<string, any>, path: string, add: (p
     return;
   }
   value.layers.forEach((layer: unknown, index: number) => validateGroundDecalUiLayer(layer, `${path}.layers[${index}]`, add));
+  validateGroundDecalUiLayerIds(value.layers, `${path}.layers`, add);
+  if (value.uiKind === 'delivery') {
+    validateDeliveryGroundDecalUiPairs(value.layers, `${path}.layers`, add);
+  }
 }
 
 function validateGroundDecalUiMask(value: unknown, path: string, add: (path: string, message: string) => void): void {
@@ -780,6 +784,82 @@ function validateGroundDecalUiLayer(value: unknown, path: string, add: (path: st
     validateGroundDecalUiText(value.text, `${path}.text`, add);
   } else {
     add(`${path}.kind`, 'layer.kind must be texture, color, progress, or text');
+  }
+}
+
+function validateGroundDecalUiLayerIds(layers: unknown[], path: string, add: (path: string, message: string) => void): void {
+  const seen = new Map<string, number>();
+  layers.forEach((layer, index) => {
+    if (!isRecord(layer) || !nonEmptyString(layer.id)) return;
+    const previousIndex = seen.get(layer.id);
+    if (previousIndex != null) {
+      add(`${path}[${index}].id`, `layer.id must be unique; duplicate of layers[${previousIndex}]`);
+      return;
+    }
+    seen.set(layer.id, index);
+  });
+}
+
+function validateDeliveryGroundDecalUiPairs(layers: unknown[], path: string, add: (path: string, message: string) => void): void {
+  const records = layers.filter(isRecord);
+  const subLogoLayers = records.filter(layer => layer.role === 'subLogo');
+  const amountLayers = records.filter(layer => layer.role === 'amount');
+  if (subLogoLayers.length < 1 || amountLayers.length < 1) {
+    add(path, 'delivery groundDecal UI requires at least one subLogo + amount pair');
+  }
+  if (subLogoLayers.length > 2 || amountLayers.length > 2) {
+    add(path, 'delivery groundDecal UI supports at most two subLogo + amount pairs');
+  }
+  if (subLogoLayers.length !== amountLayers.length) {
+    add(path, 'delivery groundDecal UI subLogo and amount layers must be paired');
+  }
+
+  validateDeliveryGroundDecalUiPairSlot(records, path, add, {
+    index: 1,
+    subLogoId: 'subLogo',
+    amountId: 'amount',
+    required: true,
+  });
+  validateDeliveryGroundDecalUiPairSlot(records, path, add, {
+    index: 2,
+    subLogoId: 'subLogo2',
+    amountId: 'amount2',
+    required: false,
+  });
+
+  for (const layer of subLogoLayers) {
+    if (layer.id !== 'subLogo' && layer.id !== 'subLogo2') {
+      add(`${path}.${String(layer.id)}`, 'delivery subLogo layer id must be subLogo or subLogo2');
+    }
+  }
+  for (const layer of amountLayers) {
+    if (layer.id !== 'amount' && layer.id !== 'amount2') {
+      add(`${path}.${String(layer.id)}`, 'delivery amount layer id must be amount or amount2');
+    }
+  }
+}
+
+function validateDeliveryGroundDecalUiPairSlot(
+  layers: Record<string, any>[],
+  path: string,
+  add: (path: string, message: string) => void,
+  slot: { index: 1 | 2; subLogoId: string; amountId: string; required: boolean },
+): void {
+  const subLogoLayer = layers.find(layer => layer.id === slot.subLogoId);
+  const amountLayer = layers.find(layer => layer.id === slot.amountId);
+  if (slot.required && (!subLogoLayer || !amountLayer)) {
+    add(path, `delivery groundDecal UI requires pair ${slot.index}`);
+  }
+  if (!!subLogoLayer !== !!amountLayer) {
+    add(path, `delivery groundDecal UI pair ${slot.index} must contain both subLogo and amount`);
+  }
+  if (subLogoLayer) {
+    if (subLogoLayer.role !== 'subLogo') add(`${path}.${slot.subLogoId}.role`, `pair ${slot.index} subLogo role must be subLogo`);
+    if (subLogoLayer.kind !== 'texture') add(`${path}.${slot.subLogoId}.kind`, `pair ${slot.index} subLogo must be a texture layer`);
+  }
+  if (amountLayer) {
+    if (amountLayer.role !== 'amount') add(`${path}.${slot.amountId}.role`, `pair ${slot.index} amount role must be amount`);
+    if (amountLayer.kind !== 'text') add(`${path}.${slot.amountId}.kind`, `pair ${slot.index} amount must be a text layer`);
   }
 }
 
