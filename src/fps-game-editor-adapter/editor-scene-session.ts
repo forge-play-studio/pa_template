@@ -140,6 +140,8 @@ import {
   applyEditorSceneSerializedPropertyPatch as applyPlayableEditorSceneSerializedPropertyPatch,
   patchEditorSceneGameObjectField as patchPlayableEditorSceneGameObjectField,
   patchEditorSceneGameObjectsField as patchPlayableEditorSceneGameObjectsField,
+  patchEditorSceneDirectionalLightOrientationAngles as patchPlayableEditorSceneDirectionalLightOrientationAngles,
+  readEditorSceneDirectionalLightOrientation as readPlayableEditorSceneDirectionalLightOrientation,
   validateEditorSceneMaterialAssetFieldValue as validatePlayableEditorSceneMaterialAssetFieldValue,
   validateEditorSceneFieldInspectorValue as validatePlayableEditorSceneFieldInspectorValue,
   validateEditorSceneGroupSelection as validatePlayableEditorSceneGroupSelection,
@@ -149,6 +151,7 @@ import {
   type EditorSceneDocumentMutationPatch as PlayableEditorSceneDocumentMutationPatch,
   type EditorSceneFieldMutationOptions as PlayableEditorSceneFieldMutationOptions,
   type EditorSceneFieldInspectorExtraValidator as PlayableEditorSceneFieldInspectorExtraValidator,
+  type EditorSceneGameObject as PlayableEditorSceneGameObject,
   type EditorSceneHierarchyPatch as PlayableEditorSceneHierarchyPatch,
   type EditorSceneInspectorSourceTag as PlayableEditorSceneInspectorSourceTag,
   type EditorScenePrefabNode as PlayableEditorScenePrefabNode,
@@ -200,11 +203,9 @@ import {
   LIGHT_DIRECTION_HORIZONTAL_ANGLE_PATH,
   LIGHT_DIRECTION_HORIZONTAL_MAX_DEG,
   LIGHT_DIRECTION_HORIZONTAL_MIN_DEG,
-  createDirectionalLightDirectionFromAngles,
   isDirectionalLightAnglePath,
   normalizeDirectionVector,
   normalizeDirectionalLightAngleValue,
-  readDirectionalLightAngles,
 } from './editor-lighting-utils';
 import { getActiveRenderingProfile } from '../rendering/editor-rendering-profile-store';
 
@@ -1265,6 +1266,14 @@ function reduceEditorSceneDocumentUnchecked(
           field.value,
         ),
         document,
+      );
+    }
+    if (command.patch.kind === 'game-object.field' && isDirectionalLightAnglePath(command.patch.path)) {
+      return patchEditorSceneGameObjectField(
+        document,
+        command.patch.targetId,
+        command.patch.path,
+        command.patch.value,
       );
     }
     if (command.patch.kind === 'game-object.rendering-alpha-index-migration') {
@@ -3003,6 +3012,20 @@ export function createEditorSceneInspectorPropertyPatch(
   if (isEditorSceneRootTransformPath(targetId, path)) return null;
   if (!validateEditorSceneInspectorValue(input.document, gameObject, path, value).ok) return null;
   if (isBlockedEditorSceneSystemFieldPatch(input.document, targetId, path, value)) return null;
+  if (isDirectionalLightAnglePath(path) && typeof value === 'number' && Number.isFinite(value)) {
+    return {
+      label: `Patch ${targetId} ${path}`,
+      patch: {
+        kind: 'game-object.field',
+        targetId,
+        path,
+        value,
+      },
+      changedId: targetId,
+      changedIds: [targetId],
+      reprojectIds: [targetId],
+    };
+  }
   const changedIds = path.startsWith('transform.')
     ? collectEditorSceneSubtreeIdList(input.document, [targetId])
     : [targetId];
@@ -4695,7 +4718,7 @@ function createEditorSceneInspectorSections(
       summary: light.type === 'hemispheric' ? lightText.hemisphericSummary : lightText.directionalSummary,
       persistence: 'document',
       collapsedByDefault: false,
-      properties: createLightInspectorProperties(nodeKind, light),
+      properties: createLightInspectorProperties(nodeKind, gameObject, light),
     });
     if (light.type === 'directional') {
       const shadowSummarySection = createDirectionalLightShadowSummaryInspectorSection(light, lightText);
@@ -5124,6 +5147,7 @@ function createCameraNumberInspectorProperty(
 
 function createLightInspectorProperties(
   nodeKind: SceneNodeConfig['kind'],
+  gameObject: EditorSceneGameObject,
   light: EditorSceneLight,
 ): InspectorProperty<EditorSceneDocument>[] {
   const language = getLightInspectorLanguage(light);
@@ -5187,7 +5211,8 @@ function createLightInspectorProperties(
     }));
     order += 1;
   } else {
-    const angles = readDirectionalLightAngles(light.direction);
+    const orientation = readPlayableEditorSceneDirectionalLightOrientation(gameObject as PlayableEditorSceneGameObject);
+    const angles = orientation ?? { horizontalAngleDeg: 0, elevationAngleDeg: 90 };
     properties.push(createDocumentInspectorProperty(null, nodeKind, {
       path: LIGHT_DIRECTION_HORIZONTAL_ANGLE_PATH,
       label: text.horizontalAngle,
@@ -6437,19 +6462,7 @@ export function patchEditorSceneGameObjectField(
     if (isBlockedEditorSceneSystemFieldPatch(document, targetId, path, normalizedValue)) return document;
 
     if (isDirectionalLightAnglePath(path) && typeof normalizedValue === 'number' && Number.isFinite(normalizedValue)) {
-      const light = mergeEditorSceneLightDefaults(gameObject.light, 'directional');
-      if (light.type !== 'directional') return document;
-      const angles = readDirectionalLightAngles(light.direction);
-      return patchPlayableEditorSceneGameObjectField(
-        document,
-        targetId,
-        'light.direction',
-        createDirectionalLightDirectionFromAngles(
-          path === LIGHT_DIRECTION_HORIZONTAL_ANGLE_PATH ? normalizedValue : angles.horizontalAngleDeg,
-          path === LIGHT_DIRECTION_ELEVATION_ANGLE_PATH ? normalizedValue : angles.elevationAngleDeg,
-        ),
-        EDITOR_SCENE_FIELD_MUTATION_OPTIONS,
-      ) as EditorSceneDocument;
+      return patchEditorSceneDirectionalLightAngleField(document, targetId, path, normalizedValue);
     }
 
     return {
@@ -6474,6 +6487,29 @@ export function patchEditorSceneGameObjectField(
     value,
     EDITOR_SCENE_FIELD_MUTATION_OPTIONS,
   ) as EditorSceneDocument;
+}
+
+function patchEditorSceneDirectionalLightAngleField(
+  document: EditorSceneDocument,
+  targetId: string,
+  path: string,
+  value: number,
+): EditorSceneDocument {
+  const gameObject = findEditorSceneGameObject(document, targetId);
+  if (!gameObject) return document;
+  const patchedGameObject = patchPlayableEditorSceneDirectionalLightOrientationAngles(gameObject as PlayableEditorSceneGameObject, {
+    ...(path === LIGHT_DIRECTION_HORIZONTAL_ANGLE_PATH ? { horizontalAngleDeg: value } : {}),
+    ...(path === LIGHT_DIRECTION_ELEVATION_ANGLE_PATH ? { elevationAngleDeg: value } : {}),
+  }) as EditorSceneGameObject;
+  if (patchedGameObject === gameObject) return document;
+
+  return {
+    ...document,
+    scene: {
+      ...document.scene,
+      gameObjects: document.scene.gameObjects.map(entry => entry.id === targetId ? patchedGameObject : entry),
+    },
+  };
 }
 
 export function patchEditorSceneGameObjectsField(
