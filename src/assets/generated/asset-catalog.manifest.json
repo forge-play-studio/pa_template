@@ -1,39 +1,21 @@
 [
   {
-    "guid": "698866d1-1ac3-4d3d-8504-b1ada7c3f306",
-    "assetId": "asset_698866d11ac34d3d8504b1ada7c3f306",
+    "guid": "1791b38e-b27c-45bb-abc8-b986605e4de5",
+    "assetId": "asset_1791b38eb27c45bbabc8b986605e4de5",
     "kind": "model",
-    "displayName": "Axe and Bear - Axe Prop",
-    "relativePath": "../imported/asset_698866d11ac34d3d8504b1ada7c3f306.glb",
-    "originalFileName": "axe-prop-model.glb",
-    "codeKey": "axe_and_bear_axe_prop_model",
+    "displayName": "Lumber Order - Conveyor Model",
+    "relativePath": "../imported/asset_1791b38eb27c45bbabc8b986605e4de5.glb",
+    "originalFileName": "传送带.glb",
+    "codeKey": "lumber_order_conveyor_model",
     "placeable": true,
-    "contentHash": "sha256:d47d72f02eb93530bb15322141cee8cde78f9c7eff6d84caa5028957a68bd41e",
-    "byteSize": 37616,
+    "contentHash": "sha256:060c597299f547c89d750667c90db7f4f2cab11f3903d87c729336c57fd18a82",
+    "byteSize": 55312,
     "external": {
-      "platformAssetId": "axe_and_bear:axe_prop_model",
-      "assetPath": "src/assets/models/axe-prop-model.glb"
+      "platformAssetId": "lumber_order:conveyor_model",
+      "assetPath": "src/assets/传送带.glb"
     },
-    "createdAt": "2026-05-29T05:50:58.928Z",
-    "updatedAt": "2026-05-29T05:50:58.928Z"
-  },
-  {
-    "guid": "bf50e45f-7422-44bd-96f4-7946981c37a0",
-    "assetId": "asset_bf50e45f742244bd96f47946981c37a0",
-    "kind": "model",
-    "displayName": "Axe and Bear - Fence Prop",
-    "relativePath": "../imported/asset_bf50e45f742244bd96f47946981c37a0.glb",
-    "originalFileName": "fence-prop-model.glb",
-    "codeKey": "axe_and_bear_fence_prop_model",
-    "placeable": true,
-    "contentHash": "sha256:e4a2b2083ecad594b344af2a88c8eb456844dd530ff87af28712e3d3aeea11f7",
-    "byteSize": 62120,
-    "external": {
-      "platformAssetId": "axe_and_bear:fence_prop_model",
-      "assetPath": "src/assets/models/fence-prop-model.glb"
-    },
-    "createdAt": "2026-05-29T05:50:59.640Z",
-    "updatedAt": "2026-05-29T05:50:59.640Z"
+    "createdAt": "2026-05-29T05:51:00.728Z",
+    "updatedAt": "2026-05-29T05:51:00.728Z"
   },
   {
     "guid": "3dfe0d10-5f85-4757-b226-4fce3cc1e59c",
@@ -54,22 +36,40 @@
     "updatedAt": "2026-05-29T05:51:00.007Z"
   },
   {
-    "guid": "de16bd66-ee34-4358-9e89-778bae314202",
-    "assetId": "asset_de16bd66ee3443589e89778bae314202",
+    "guid": "606796e8-7765-4f96-b4d3-c3cf3745757a",
+    "assetId": "asset_606796e877654f96b4d3c3cf3745757a",
     "kind": "model",
-    "displayName": "Axe and Bear - SM 房子推车",
-    "relativePath": "../imported/asset_de16bd66ee3443589e89778bae314202.glb",
-    "originalFileName": "SM_房子推车.glb",
-    "codeKey": "axe_and_bear_house_cart_model",
+    "displayName": "Lumber Order - 木板",
+    "relativePath": "../imported/asset_606796e877654f96b4d3c3cf3745757a.glb",
+    "originalFileName": "lumber_order_plank.glb",
+    "codeKey": "lumber_order_plank",
     "placeable": true,
-    "contentHash": "sha256:2e6495192bfd35705c06420a1df2f27647dbd1722ee39f6aeeb92024d22c5989",
-    "byteSize": 841372,
+    "contentHash": "sha256:bc1ed52cdc2b476516c05642b950c5d6aa1861f50741124a6a3438be0668d433",
+    "byteSize": 61072,
     "external": {
-      "platformAssetId": "axe_and_bear:house_cart_model",
-      "assetPath": "src/assets/SM_房子推车.glb"
+      "platformAssetId": "lumber_order:lumber_order_plank",
+      "assetPath": "src/assets/木板.glb"
     },
-    "createdAt": "2026-06-02T08:30:03.017Z",
-    "updatedAt": "2026-06-02T08:30:03.017Z"
+    "createdAt": "2026-05-29T03:39:22.098Z",
+    "updatedAt": "2026-05-29T03:39:22.098Z"
+  },
+  {
+    "guid": "698866d1-1ac3-4d3d-8504-b1ada7c3f306",
+    "assetId": "asset_698866d11ac34d3d8504b1ada7c3f306",
+    "kind": "model",
+    "displayName": "Axe and Bear - Axe Prop",
+    "relativePath": "../imported/asset_698866d11ac34d3d8504b1ada7c3f306.glb",
+    "originalFileName": "axe-prop-model.glb",
+    "codeKey": "axe_and_bear_axe_prop_model",
+    "placeable": true,
+    "contentHash": "sha256:d47d72f02eb93530bb15322141cee8cde78f9c7eff6d84caa5028957a68bd41e",
+    "byteSize": 37616,
+    "external": {
+      "platformAssetId": "axe_and_bear:axe_prop_model",
+      "assetPath": "src/assets/models/axe-prop-model.glb"
+    },
+    "createdAt": "2026-05-29T05:50:58.928Z",
+    "updatedAt": "2026-05-29T05:50:58.928Z"
   },
   {
     "guid": "9330ffd6-27bb-403e-aca8-1058b0651132",
@@ -126,22 +126,22 @@
     "updatedAt": "2026-05-29T05:50:59.286Z"
   },
   {
-    "guid": "1791b38e-b27c-45bb-abc8-b986605e4de5",
-    "assetId": "asset_1791b38eb27c45bbabc8b986605e4de5",
+    "guid": "bf50e45f-7422-44bd-96f4-7946981c37a0",
+    "assetId": "asset_bf50e45f742244bd96f47946981c37a0",
     "kind": "model",
-    "displayName": "Lumber Order - Conveyor Model",
-    "relativePath": "../imported/asset_1791b38eb27c45bbabc8b986605e4de5.glb",
-    "originalFileName": "传送带.glb",
-    "codeKey": "lumber_order_conveyor_model",
+    "displayName": "Axe and Bear - Fence Prop",
+    "relativePath": "../imported/asset_bf50e45f742244bd96f47946981c37a0.glb",
+    "originalFileName": "fence-prop-model.glb",
+    "codeKey": "axe_and_bear_fence_prop_model",
     "placeable": true,
-    "contentHash": "sha256:060c597299f547c89d750667c90db7f4f2cab11f3903d87c729336c57fd18a82",
-    "byteSize": 55312,
+    "contentHash": "sha256:e4a2b2083ecad594b344af2a88c8eb456844dd530ff87af28712e3d3aeea11f7",
+    "byteSize": 62120,
     "external": {
-      "platformAssetId": "lumber_order:conveyor_model",
-      "assetPath": "src/assets/传送带.glb"
+      "platformAssetId": "axe_and_bear:fence_prop_model",
+      "assetPath": "src/assets/models/fence-prop-model.glb"
     },
-    "createdAt": "2026-05-29T05:51:00.728Z",
-    "updatedAt": "2026-05-29T05:51:00.728Z"
+    "createdAt": "2026-05-29T05:50:59.640Z",
+    "updatedAt": "2026-05-29T05:50:59.640Z"
   },
   {
     "guid": "d940f34a-6637-4c40-abba-0a46372028ab",
@@ -180,22 +180,22 @@
     "updatedAt": "2026-05-29T03:39:21.784Z"
   },
   {
-    "guid": "606796e8-7765-4f96-b4d3-c3cf3745757a",
-    "assetId": "asset_606796e877654f96b4d3c3cf3745757a",
+    "guid": "de16bd66-ee34-4358-9e89-778bae314202",
+    "assetId": "asset_de16bd66ee3443589e89778bae314202",
     "kind": "model",
-    "displayName": "Lumber Order - 木板",
-    "relativePath": "../imported/asset_606796e877654f96b4d3c3cf3745757a.glb",
-    "originalFileName": "lumber_order_plank.glb",
-    "codeKey": "lumber_order_plank",
+    "displayName": "Axe and Bear - SM 房子推车",
+    "relativePath": "../imported/asset_de16bd66ee3443589e89778bae314202.glb",
+    "originalFileName": "SM_房子推车.glb",
+    "codeKey": "axe_and_bear_house_cart_model",
     "placeable": true,
-    "contentHash": "sha256:bc1ed52cdc2b476516c05642b950c5d6aa1861f50741124a6a3438be0668d433",
-    "byteSize": 61072,
+    "contentHash": "sha256:2e6495192bfd35705c06420a1df2f27647dbd1722ee39f6aeeb92024d22c5989",
+    "byteSize": 841372,
     "external": {
-      "platformAssetId": "lumber_order:lumber_order_plank",
-      "assetPath": "src/assets/木板.glb"
+      "platformAssetId": "axe_and_bear:house_cart_model",
+      "assetPath": "src/assets/SM_房子推车.glb"
     },
-    "createdAt": "2026-05-29T03:39:22.098Z",
-    "updatedAt": "2026-05-29T03:39:22.098Z"
+    "createdAt": "2026-06-02T08:30:03.017Z",
+    "updatedAt": "2026-06-02T08:30:03.017Z"
   },
   {
     "guid": "ff8c8304-0af4-43fe-8381-477634be9254",
@@ -216,60 +216,6 @@
     "updatedAt": "2026-05-29T03:39:22.404Z"
   },
   {
-    "guid": "2b5cefba-d1ab-4f85-8427-650fbab48c91",
-    "assetId": "texture_2b5cefbad1ab4f858427650fbab48c91",
-    "kind": "texture",
-    "displayName": "Axe and Bear - Fence Wood Texture",
-    "relativePath": "../imported/textures/texture_2b5cefbad1ab4f858427650fbab48c91.png",
-    "originalFileName": "fence-wood-decal-texture.png",
-    "codeKey": "axe_and_bear_fence_wood_texture",
-    "placeable": true,
-    "contentHash": "sha256:c7351be9703022cf58e7127873c79d8d3171b57a80ac4907e8913570d5f7509e",
-    "byteSize": 12388,
-    "external": {
-      "platformAssetId": "axe_and_bear:fence_wood_texture",
-      "assetPath": "src/assets/ui/fence-wood-decal-texture.png"
-    },
-    "createdAt": "2026-05-29T05:51:01.470Z",
-    "updatedAt": "2026-05-29T05:51:01.470Z"
-  },
-  {
-    "guid": "b2badd56-37c3-4786-b003-1178c8034523",
-    "assetId": "texture_b2badd5637c34786b0031178c8034523",
-    "kind": "texture",
-    "displayName": "Axe and Bear - Foot Glow Mask",
-    "relativePath": "../imported/textures/texture_b2badd5637c34786b0031178c8034523.png",
-    "originalFileName": "foot-glow-ui-texture.png",
-    "codeKey": "axe_and_bear_foot_glow_mask_texture",
-    "placeable": true,
-    "contentHash": "sha256:d74c44109b258c45acd00fe8ed035ae7aa3d471186231c6fba14d76d192087bf",
-    "byteSize": 4051,
-    "external": {
-      "platformAssetId": "axe_and_bear:foot_glow_mask_texture",
-      "assetPath": "src/assets/ui/foot-glow-ui-texture.png"
-    },
-    "createdAt": "2026-05-29T05:51:02.192Z",
-    "updatedAt": "2026-05-29T05:51:02.192Z"
-  },
-  {
-    "guid": "d77b8872-bf7f-4f2a-b2e3-ae1035c0d76b",
-    "assetId": "texture_d77b8872bf7f4f2ab2e3ae1035c0d76b",
-    "kind": "texture",
-    "displayName": "Axe and Bear - Ground Texture",
-    "relativePath": "../imported/textures/texture_d77b8872bf7f4f2ab2e3ae1035c0d76b.jpg",
-    "originalFileName": "ground-environment-texture.jpg",
-    "codeKey": "axe_and_bear_ground_texture",
-    "placeable": true,
-    "contentHash": "sha256:138dab3e6eb0cf149d259ee7b2d20d843626d1da13f1f1e475b191de480ece4c",
-    "byteSize": 25911,
-    "external": {
-      "platformAssetId": "axe_and_bear:ground_texture",
-      "assetPath": "src/assets/ui/ground-environment-texture.jpg"
-    },
-    "createdAt": "2026-05-29T05:51:01.850Z",
-    "updatedAt": "2026-05-29T05:51:01.850Z"
-  },
-  {
     "guid": "03caa475-4ebb-4725-a4f7-7470214d0bc7",
     "assetId": "texture_03caa4754ebb4725a4f77470214d0bc7",
     "kind": "texture",
@@ -288,40 +234,45 @@
     "updatedAt": "2026-05-29T05:51:02.537Z"
   },
   {
-    "guid": "97ce653a-39fe-4fd1-be45-ba61acd7aa39",
-    "assetId": "texture_97ce653a39fe4fd1be45ba61acd7aa39",
+    "guid": "2b5cefba-d1ab-4f85-8427-650fbab48c91",
+    "assetId": "texture_2b5cefbad1ab4f858427650fbab48c91",
     "kind": "texture",
-    "displayName": "Axe and Bear - Weapon Wood Texture",
-    "relativePath": "../imported/textures/texture_97ce653a39fe4fd1be45ba61acd7aa39.png",
-    "originalFileName": "weapon-wood-decal-texture.png",
-    "codeKey": "axe_and_bear_weapon_wood_texture",
+    "displayName": "Axe and Bear - Fence Wood Texture",
+    "relativePath": "../imported/textures/texture_2b5cefbad1ab4f858427650fbab48c91.png",
+    "originalFileName": "fence-wood-decal-texture.png",
+    "codeKey": "axe_and_bear_fence_wood_texture",
     "placeable": true,
-    "contentHash": "sha256:c7ec8f9c7c19ed84bc63340a30f518778203ebe8f4cca29255eafdd96160776b",
-    "byteSize": 13643,
+    "contentHash": "sha256:c7351be9703022cf58e7127873c79d8d3171b57a80ac4907e8913570d5f7509e",
+    "byteSize": 12388,
     "external": {
-      "platformAssetId": "axe_and_bear:weapon_wood_texture",
-      "assetPath": "src/assets/ui/weapon-wood-decal-texture.png"
+      "platformAssetId": "axe_and_bear:fence_wood_texture",
+      "assetPath": "src/assets/ui/fence-wood-decal-texture.png"
     },
-    "createdAt": "2026-05-29T05:51:01.108Z",
-    "updatedAt": "2026-05-29T05:51:01.108Z"
+    "createdAt": "2026-05-29T05:51:01.470Z",
+    "updatedAt": "2026-05-29T05:51:01.470Z"
   },
   {
-    "guid": "95a107f5-3bd4-452f-a735-67f1dde207e2",
-    "assetId": "texture_95a107f53bd4452fa73567f1dde207e2",
+    "guid": "331e1620-9e8c-47cc-9421-7508d719cbbb",
+    "assetId": "texture_331e16209e8c47cc94217508d719cbbb",
     "kind": "texture",
-    "displayName": "Lumber Order - Conveyor Texture",
-    "relativePath": "../imported/textures/texture_95a107f53bd4452fa73567f1dde207e2.png",
-    "originalFileName": "lumber_order_conveyor.png",
-    "codeKey": "lumber_order_conveyor_texture",
-    "placeable": true,
-    "contentHash": "sha256:959a0a2544ec4405dca7c1ea804e63dc5b55f14829e01e1404cfb01565b2730e",
-    "byteSize": 18741,
-    "external": {
-      "platformAssetId": "lumber_order:lumber_order_conveyor_texture",
-      "assetPath": "src/assets/imported/textures/conveyor.png"
+    "displayName": "地贴_大钱",
+    "relativePath": "../imported/textures/texture_331e16209e8c47cc94217508d719cbbb.png",
+    "originalFileName": "ground_decal_money_reference.png",
+    "codeKey": "ground_decal_money_reference",
+    "placeable": false,
+    "contentHash": "sha256:7606505320e88d46cdc0a703ace4c0f8b699426a33be5387d885a1bc4aac9623",
+    "byteSize": 10034,
+    "metadata": {
+      "sourceProject": "lumber-truck",
+      "usage": "groundDecalUiDefault",
+      "textureUsage": "material",
+      "capabilities": {
+        "materialTexture": true,
+        "environmentTexture": false
+      }
     },
-    "createdAt": "2026-05-29T03:39:22.714Z",
-    "updatedAt": "2026-05-29T03:39:22.714Z"
+    "createdAt": "2026-06-29T08:35:48.981Z",
+    "updatedAt": "2026-06-29T08:35:48.981Z"
   },
   {
     "guid": "4c92ba88-8f9e-43a9-b68a-c55de347e43b",
@@ -342,24 +293,6 @@
     "updatedAt": "2026-05-29T03:39:23.008Z"
   },
   {
-    "guid": "79af58d2-8dfe-40bb-a5cd-2422a40a4635",
-    "assetId": "texture_79af58d28dfe40bba5cd2422a40a4635",
-    "kind": "texture",
-    "displayName": "Lumber Order - Upgrade Decal Texture",
-    "relativePath": "../imported/textures/texture_79af58d28dfe40bba5cd2422a40a4635.png",
-    "originalFileName": "升级车.png",
-    "codeKey": "lumber_order_upgrade_decal_texture",
-    "placeable": true,
-    "contentHash": "sha256:72f0146cd104d14ef891339655f26ea71a96bb357c066e56893a7051193b9f33",
-    "byteSize": 10865,
-    "external": {
-      "platformAssetId": "lumber_order:upgrade_decal_texture",
-      "assetPath": "src/assets/升级车.png"
-    },
-    "createdAt": "2026-05-29T05:51:03.251Z",
-    "updatedAt": "2026-05-29T05:51:03.251Z"
-  },
-  {
     "guid": "54deade1-8b1f-4231-816a-a32bb627f0bb",
     "assetId": "texture_54deade18b1f4231816aa32bb627f0bb",
     "kind": "texture",
@@ -378,6 +311,101 @@
     "updatedAt": "2026-05-29T03:39:23.318Z"
   },
   {
+    "guid": "79af58d2-8dfe-40bb-a5cd-2422a40a4635",
+    "assetId": "texture_79af58d28dfe40bba5cd2422a40a4635",
+    "kind": "texture",
+    "displayName": "Lumber Order - Upgrade Decal Texture",
+    "relativePath": "../imported/textures/texture_79af58d28dfe40bba5cd2422a40a4635.png",
+    "originalFileName": "升级车.png",
+    "codeKey": "lumber_order_upgrade_decal_texture",
+    "placeable": true,
+    "contentHash": "sha256:72f0146cd104d14ef891339655f26ea71a96bb357c066e56893a7051193b9f33",
+    "byteSize": 10865,
+    "external": {
+      "platformAssetId": "lumber_order:upgrade_decal_texture",
+      "assetPath": "src/assets/升级车.png"
+    },
+    "createdAt": "2026-05-29T05:51:03.251Z",
+    "updatedAt": "2026-05-29T05:51:03.251Z"
+  },
+  {
+    "guid": "95a107f5-3bd4-452f-a735-67f1dde207e2",
+    "assetId": "texture_95a107f53bd4452fa73567f1dde207e2",
+    "kind": "texture",
+    "displayName": "Lumber Order - Conveyor Texture",
+    "relativePath": "../imported/textures/texture_95a107f53bd4452fa73567f1dde207e2.png",
+    "originalFileName": "lumber_order_conveyor.png",
+    "codeKey": "lumber_order_conveyor_texture",
+    "placeable": true,
+    "contentHash": "sha256:959a0a2544ec4405dca7c1ea804e63dc5b55f14829e01e1404cfb01565b2730e",
+    "byteSize": 18741,
+    "external": {
+      "platformAssetId": "lumber_order:lumber_order_conveyor_texture",
+      "assetPath": "src/assets/imported/textures/conveyor.png"
+    },
+    "createdAt": "2026-05-29T03:39:22.714Z",
+    "updatedAt": "2026-05-29T03:39:22.714Z"
+  },
+  {
+    "guid": "969907ee-4a1d-453e-a7b0-ee3247cb6bb1",
+    "assetId": "texture_969907ee4a1d453ea7b0ee3247cb6bb1",
+    "kind": "texture",
+    "displayName": "地贴_白框",
+    "relativePath": "../imported/textures/texture_969907ee4a1d453ea7b0ee3247cb6bb1.png",
+    "originalFileName": "ground_decal_border_reference.png",
+    "codeKey": "ground_decal_border_reference",
+    "placeable": false,
+    "contentHash": "sha256:9a2d7c0d30a304f6a4532f7ffa881b70466db02ad1137a47d1b1924c08cf987c",
+    "byteSize": 2393,
+    "metadata": {
+      "sourceProject": "lumber-truck",
+      "usage": "groundDecalUiDefault",
+      "textureUsage": "material",
+      "capabilities": {
+        "materialTexture": true,
+        "environmentTexture": false
+      }
+    },
+    "createdAt": "2026-06-29T08:35:35.460Z",
+    "updatedAt": "2026-06-29T08:35:35.460Z"
+  },
+  {
+    "guid": "97ce653a-39fe-4fd1-be45-ba61acd7aa39",
+    "assetId": "texture_97ce653a39fe4fd1be45ba61acd7aa39",
+    "kind": "texture",
+    "displayName": "Axe and Bear - Weapon Wood Texture",
+    "relativePath": "../imported/textures/texture_97ce653a39fe4fd1be45ba61acd7aa39.png",
+    "originalFileName": "weapon-wood-decal-texture.png",
+    "codeKey": "axe_and_bear_weapon_wood_texture",
+    "placeable": true,
+    "contentHash": "sha256:c7ec8f9c7c19ed84bc63340a30f518778203ebe8f4cca29255eafdd96160776b",
+    "byteSize": 13643,
+    "external": {
+      "platformAssetId": "axe_and_bear:weapon_wood_texture",
+      "assetPath": "src/assets/ui/weapon-wood-decal-texture.png"
+    },
+    "createdAt": "2026-05-29T05:51:01.108Z",
+    "updatedAt": "2026-05-29T05:51:01.108Z"
+  },
+  {
+    "guid": "b2badd56-37c3-4786-b003-1178c8034523",
+    "assetId": "texture_b2badd5637c34786b0031178c8034523",
+    "kind": "texture",
+    "displayName": "Axe and Bear - Foot Glow Mask",
+    "relativePath": "../imported/textures/texture_b2badd5637c34786b0031178c8034523.png",
+    "originalFileName": "foot-glow-ui-texture.png",
+    "codeKey": "axe_and_bear_foot_glow_mask_texture",
+    "placeable": true,
+    "contentHash": "sha256:d74c44109b258c45acd00fe8ed035ae7aa3d471186231c6fba14d76d192087bf",
+    "byteSize": 4051,
+    "external": {
+      "platformAssetId": "axe_and_bear:foot_glow_mask_texture",
+      "assetPath": "src/assets/ui/foot-glow-ui-texture.png"
+    },
+    "createdAt": "2026-05-29T05:51:02.192Z",
+    "updatedAt": "2026-05-29T05:51:02.192Z"
+  },
+  {
     "guid": "d58d713b-f12d-4510-95d5-5c604e79afd3",
     "assetId": "texture_d58d713bf12d451095d55c604e79afd3",
     "kind": "texture",
@@ -394,5 +422,46 @@
     },
     "createdAt": "2026-05-29T05:51:02.894Z",
     "updatedAt": "2026-05-29T05:51:02.894Z"
+  },
+  {
+    "guid": "d77b8872-bf7f-4f2a-b2e3-ae1035c0d76b",
+    "assetId": "texture_d77b8872bf7f4f2ab2e3ae1035c0d76b",
+    "kind": "texture",
+    "displayName": "Axe and Bear - Ground Texture",
+    "relativePath": "../imported/textures/texture_d77b8872bf7f4f2ab2e3ae1035c0d76b.jpg",
+    "originalFileName": "ground-environment-texture.jpg",
+    "codeKey": "axe_and_bear_ground_texture",
+    "placeable": true,
+    "contentHash": "sha256:138dab3e6eb0cf149d259ee7b2d20d843626d1da13f1f1e475b191de480ece4c",
+    "byteSize": 25911,
+    "external": {
+      "platformAssetId": "axe_and_bear:ground_texture",
+      "assetPath": "src/assets/ui/ground-environment-texture.jpg"
+    },
+    "createdAt": "2026-05-29T05:51:01.850Z",
+    "updatedAt": "2026-05-29T05:51:01.850Z"
+  },
+  {
+    "guid": "ee97d50a-7eb4-42b5-905a-dd9aaae74f2c",
+    "assetId": "texture_ee97d50a7eb442b5905add9aaae74f2c",
+    "kind": "texture",
+    "displayName": "地贴_传送带",
+    "relativePath": "../imported/textures/texture_ee97d50a7eb442b5905add9aaae74f2c.png",
+    "originalFileName": "ground_decal_conveyor_reference.png",
+    "codeKey": "ground_decal_conveyor_reference",
+    "placeable": false,
+    "contentHash": "sha256:822c7759161df2fafe2fdbc59a561492f43bf70fb5f698c50c2b742bb75f2f7e",
+    "byteSize": 4356,
+    "metadata": {
+      "sourceProject": "lumber-truck",
+      "usage": "groundDecalUiDefault",
+      "textureUsage": "material",
+      "capabilities": {
+        "materialTexture": true,
+        "environmentTexture": false
+      }
+    },
+    "createdAt": "2026-06-29T08:35:41.450Z",
+    "updatedAt": "2026-06-29T08:35:41.450Z"
   }
 ]

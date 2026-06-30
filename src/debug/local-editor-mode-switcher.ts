@@ -9,7 +9,6 @@ import {
   createEditorSceneRuntimePreviewImportPlan,
   createEditorSceneRuntimePreviewMissingAssetUrlDiagnostic,
   createEditorSceneRuntimePreviewNode,
-  createEditorSceneRuntimePreviewNodes,
   createEditorScenePrefabAgentSummary,
   createEditorSceneTransformBatchPatch as createPlayableEditorSceneTransformBatchPatch,
   createEditorSceneTransformPatch as createPlayableEditorSceneTransformPatch,
@@ -52,6 +51,7 @@ import {
 } from '@fps-games/editor/playable-sdk';
 import baseSceneConfig from '../config/scene.json';
 import type {
+  GroundDecalUiConfig,
   SceneConfig,
 } from '../config/types';
 import type { EditorSceneDocument } from '../fps-game-editor-adapter/editor-scene-document';
@@ -69,6 +69,7 @@ import {
   createEditorSceneDeleteSubtreePatch,
   createEditorSceneDuplicateSelectionPatch,
   createEditorSceneGroupSelectionPatch,
+  createEditorSceneGroundDecalUiPatch,
   createEditorSceneHierarchyMovePatch,
   createEditorSceneMarkerGraphPatch,
   canCreateEditorSceneSerializedMultiPropertyPatch,
@@ -115,6 +116,7 @@ import {
   hasEditorRenderingDraftChanges,
   resetEditorRenderingDraft,
 } from '../fps-game-editor-adapter/editor-rendering-profile';
+import { createGroundDecalUiDynamicTexture, isGroundDecalUiConfig } from '../services/GroundDecalUiService';
 import * as editorAssets from '../assets';
 
 type BabylonModule = Record<string, any>;
@@ -348,6 +350,22 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
         createSceneGraphMovePatch: createEditorSceneHierarchyMovePatch,
         createSceneGraphGroupSelectionPatch: createEditorSceneGroupSelectionPatch,
       },
+      hierarchyActions: {
+        contextActions: [
+          {
+            id: 'ground-decal-ui.create-operation',
+            label: '添加操作类地贴 UI',
+            placement: 'after-create',
+            run: context => createEditorSceneGroundDecalUiPatch(context.document, 'operation') as any,
+          },
+          {
+            id: 'ground-decal-ui.create-delivery',
+            label: '添加交付类地贴 UI',
+            placement: 'after-create',
+            run: context => createEditorSceneGroundDecalUiPatch(context.document, 'delivery') as any,
+          },
+        ],
+      },
       worldPreview: {
         getSceneCameraPreviewRig: createSceneCameraPreviewRig,
         getWorldAppearance: editorLightingPreviewAdapter.getWorldAppearance as (document: EditorSceneDocument) => unknown | null,
@@ -533,24 +551,72 @@ function createEditorSceneLibraryAssetPreview(asset: EditorSceneAssetLibraryItem
 function createEditorSceneInspectorTextureAssets(
   assets: readonly EditorSceneAssetLibraryItem[],
 ): EditorSceneInspectorTextureAsset[] {
-  return assets
-    .filter(asset => asset.kind === 'texture')
-    .flatMap((asset) => {
-      const url = resolveEditorSceneRuntimePreviewAssetUrl(editorAssets, asset, 'texture');
-      if (!url) return [];
-      const environmentTexture = isEnvironmentTextureAsset(asset, url);
-      return [{
-        id: asset.assetId,
-        label: asset.displayName || asset.assetId,
-        url,
-        meta: environmentTexture ? `${asset.assetId} · IBL` : asset.assetId,
-        usage: environmentTexture ? 'environment' : 'material',
-        capabilities: {
-          materialTexture: !environmentTexture,
-          environmentTexture,
-        },
-      }];
-    });
+  const textureAssets: EditorSceneInspectorTextureAsset[] = [];
+  const seenAssetIds = new Set<string>();
+
+  for (const asset of assets) {
+    if (asset.kind !== 'texture') continue;
+    const textureAsset = createInspectorTextureAssetFromLibraryItem(asset);
+    if (!textureAsset || seenAssetIds.has(textureAsset.id)) continue;
+    seenAssetIds.add(textureAsset.id);
+    textureAssets.push(textureAsset);
+  }
+
+  for (const entry of editorAssets.getAssetCatalogEntries({ kind: 'texture' })) {
+    const textureAsset = createInspectorTextureAssetFromCatalogEntry(entry);
+    if (!textureAsset || seenAssetIds.has(textureAsset.id)) continue;
+    seenAssetIds.add(textureAsset.id);
+    textureAssets.push(textureAsset);
+  }
+
+  return textureAssets;
+}
+
+function createInspectorTextureAssetFromLibraryItem(
+  asset: EditorSceneAssetLibraryItem,
+): EditorSceneInspectorTextureAsset | null {
+  const url = resolveEditorSceneRuntimePreviewAssetUrl(editorAssets, asset, 'texture');
+  if (!url) return null;
+  const environmentTexture = isEnvironmentTextureAsset(asset, url);
+  return createInspectorTextureAsset({
+    id: asset.assetId,
+    label: asset.displayName || asset.assetId,
+    url,
+    environmentTexture,
+  });
+}
+
+function createInspectorTextureAssetFromCatalogEntry(
+  entry: editorAssets.AssetCatalogEntry,
+): EditorSceneInspectorTextureAsset | null {
+  const url = editorAssets.resolveTextureAssetUrl(entry.assetId) ?? entry.url;
+  if (!url) return null;
+  const environmentTexture = isEnvironmentTextureCatalogEntry(entry, url);
+  return createInspectorTextureAsset({
+    id: entry.assetId,
+    label: entry.displayName || entry.assetId,
+    url,
+    environmentTexture,
+  });
+}
+
+function createInspectorTextureAsset(input: {
+  id: string;
+  label: string;
+  url: string;
+  environmentTexture: boolean;
+}): EditorSceneInspectorTextureAsset {
+  return {
+    id: input.id,
+    label: input.label,
+    url: input.url,
+    meta: input.environmentTexture ? `${input.id} · IBL` : input.id,
+    usage: input.environmentTexture ? 'environment' : 'material',
+    capabilities: {
+      materialTexture: !input.environmentTexture,
+      environmentTexture: input.environmentTexture,
+    },
+  };
 }
 
 function resolveEditorSceneTextureRefUrl(
@@ -587,15 +653,47 @@ function isEnvironmentTextureAsset(asset: EditorSceneAssetLibraryItem, resolvedU
   return candidates.some(value => /\.(env|hdr|dds|ktx|ktx2)(?:[?#].*)?$/i.test(value));
 }
 
+function isEnvironmentTextureCatalogEntry(entry: editorAssets.AssetCatalogEntry, resolvedUrl: string): boolean {
+  const metadata = entry.metadata && typeof entry.metadata === 'object' && !Array.isArray(entry.metadata)
+    ? entry.metadata
+    : {};
+  if (metadata.textureUsage === 'environment' || metadata.usage === 'environment') return true;
+  const capabilities = metadata.capabilities && typeof metadata.capabilities === 'object' && !Array.isArray(metadata.capabilities)
+    ? metadata.capabilities as Record<string, unknown>
+    : null;
+  if (capabilities?.environmentTexture === true) return true;
+  if (capabilities?.environmentTexture === false) return false;
+  const candidates = [
+    resolvedUrl,
+    entry.displayName,
+    entry.assetId,
+    entry.relativePath,
+    entry.originalFileName ?? '',
+  ];
+  return candidates.some(value => /\.(env|hdr|dds|ktx|ktx2)(?:[?#].*)?$/i.test(value));
+}
+
 function createProjectionNodes(editorScene: EditorSceneDocument): PlayableBabylonProjectionNode[] {
-  return createEditorSceneRuntimePreviewNodes(editorScene) as unknown as PlayableBabylonProjectionNode[];
+  return editorScene.scene.gameObjects.map(gameObject => createProjectionNode(editorScene, gameObject));
 }
 
 function createProjectionNode(
   editorScene: EditorSceneDocument,
   gameObject: EditorSceneGameObject,
 ): PlayableBabylonProjectionNode {
-  return createEditorSceneRuntimePreviewNode(editorScene, gameObject) as unknown as PlayableBabylonProjectionNode;
+  const node = createEditorSceneRuntimePreviewNode(editorScene, gameObject) as unknown as PlayableBabylonProjectionNode;
+  if (isGroundDecalUiConfig(gameObject.groundDecal)) {
+    node.asset = {
+      id: `ground-decal-ui:${gameObject.id}`,
+      metadata: {
+        assetId: `ground-decal-ui:${gameObject.id}`,
+        type: 'texture',
+        groundDecalUi: structuredClone(gameObject.groundDecal),
+      },
+    };
+    node.primitive = null;
+  }
+  return node;
 }
 
 function createSceneCameraPreviewRig(
@@ -609,6 +707,8 @@ async function importEditorProjectionModel(
 ): Promise<PlayableBabylonProjectionImportResult | null> {
   editorProjectionImportStats.importModelCalls += 1;
   publishEditorProjectionImportStats();
+  const groundDecalUi = readPreviewGroundDecalUiConfig(context.asset);
+  if (groundDecalUi) return createGroundDecalUiProjectionResult(context, groundDecalUi);
   const assetId = readEditorSceneRuntimePreviewAssetId(context.asset);
   if (!assetId) {
     editorProjectionImportStats.fallbackCount += 1;
@@ -626,6 +726,16 @@ async function importEditorProjectionModel(
   if (importPlan.kind === 'groundDecal') return createGroundDecalProjectionResult(context, importPlan.decal);
 
   return await editorProjectionModelImporter(context) ?? null;
+}
+
+function readPreviewGroundDecalUiConfig(asset: unknown): GroundDecalUiConfig | null {
+  const metadata = asset && typeof asset === 'object' && !Array.isArray(asset)
+    ? (asset as { metadata?: unknown }).metadata
+    : null;
+  const groundDecalUi = metadata && typeof metadata === 'object' && !Array.isArray(metadata)
+    ? (metadata as { groundDecalUi?: unknown }).groundDecalUi
+    : null;
+  return isGroundDecalUiConfig(groundDecalUi) ? groundDecalUi : null;
 }
 
 function warnProjectionAssetUrlMissing(asset: unknown, kind: 'model' | 'texture'): void {
@@ -698,6 +808,35 @@ async function createGroundDecalProjectionResult(
   return { meshes: [mesh], transformNodes: [], animationGroups: [] };
 }
 
+async function createGroundDecalUiProjectionResult(
+  context: PlayableBabylonProjectionImportContext,
+  decal: GroundDecalUiConfig,
+): Promise<PlayableBabylonProjectionImportResult> {
+  const [{ MeshBuilder }, { StandardMaterial }, { Color3 }] = await Promise.all([
+    import('@babylonjs/core/Meshes/meshBuilder'),
+    import('@babylonjs/core/Materials/standardMaterial'),
+    import('@babylonjs/core/Maths/math.color'),
+  ]);
+  const mesh = MeshBuilder.CreateGround(`${context.node.id}.groundDecalUiProjection`, {
+    width: decal.size.width,
+    height: decal.size.depth,
+  }, context.scene);
+  mesh.isPickable = false;
+  mesh.receiveShadows = false;
+  mesh.alphaIndex = decal.rendering?.alphaIndex ?? 100;
+  const mat = new StandardMaterial(`${context.node.id}.groundDecalUiProjectionMaterial`, context.scene);
+  const { texture } = createGroundDecalUiDynamicTexture(`${context.node.id}.groundDecalUiProjectionTexture`, context.scene as any, decal);
+  mat.diffuseTexture = texture;
+  mat.useAlphaFromDiffuseTexture = true;
+  mat.diffuseColor = new Color3(1, 1, 1);
+  mat.emissiveColor = new Color3(1, 1, 1);
+  mat.specularColor = new Color3(0, 0, 0);
+  mat.backFaceCulling = false;
+  mat.disableLighting = true;
+  mesh.material = mat;
+  return { meshes: [mesh], transformNodes: [], animationGroups: [] };
+}
+
 function createEditorSceneSerializedPropertyPatch(
   input: PlayableLocalEditorPropertyPatchInput<EditorSceneDocument>,
 ): { patch: EditorSceneDocumentPatch; label: string; changedId: string; changedIds: string[]; reprojectIds?: string[] } | null {
@@ -707,7 +846,7 @@ function createEditorSceneSerializedPropertyPatch(
 function createEditorSceneTransformPatch(
   input: PlayableLocalEditorTransformPatchInput<EditorSceneDocument>,
 ): { patch: EditorSceneDocumentPatch; label: string; changedId: string; changedIds: string[] } | null {
-  const result = createPlayableEditorSceneTransformPatch(input as any);
+  const result = createPlayableEditorSceneTransformPatch(normalizeGroundDecalUiTransformInput(input) as any);
   if (!result) return null;
   return {
     ...result,
@@ -718,18 +857,64 @@ function createEditorSceneTransformPatch(
 function createEditorSceneTransformInspectorPreview(
   input: PlayableLocalEditorTransformInspectorPreviewInput<EditorSceneDocument>,
 ) {
-  return toEditorSceneLocalTransformFromWorld(input.document, input.targetId, input.transform);
+  const transform = toEditorSceneLocalTransformFromWorld(input.document, input.targetId, input.transform);
+  return transform ? normalizeGroundDecalUiTransform(input.document, input.targetId, transform) : transform;
 }
 
 function createEditorSceneTransformBatchPatch(
   input: PlayableLocalEditorTransformBatchPatchInput<EditorSceneDocument>,
 ): { patch: EditorSceneDocumentPatch; label: string; changedIds: string[] } | null {
-  const result = createPlayableEditorSceneTransformBatchPatch(input as any);
+  const result = createPlayableEditorSceneTransformBatchPatch({
+    ...input,
+    targets: (input.targets as any[]).map(target => ({
+      ...target,
+      after: normalizeGroundDecalUiTransform(input.document, target.id, target.after, target.before),
+    })),
+  } as any);
   if (!result) return null;
   return {
     ...result,
     patch: result.patch as EditorSceneDocumentPatch,
   };
+}
+
+function normalizeGroundDecalUiTransformInput(
+  input: PlayableLocalEditorTransformPatchInput<EditorSceneDocument>,
+): PlayableLocalEditorTransformPatchInput<EditorSceneDocument> {
+  return {
+    ...input,
+    after: normalizeGroundDecalUiTransform(input.document, input.targetId, input.after, input.before),
+  };
+}
+
+function normalizeGroundDecalUiTransform(
+  document: EditorSceneDocument,
+  targetId: string,
+  transform: any,
+  before?: any,
+): any {
+  if (!isGroundDecalUiGameObject(document, targetId) || !transform?.scale) return transform;
+  const uniform = resolveUniformGroundDecalUiScale(transform.scale, before?.scale);
+  return {
+    ...transform,
+    scale: { x: uniform, y: uniform, z: uniform },
+  };
+}
+
+function resolveUniformGroundDecalUiScale(scale: { x?: number; y?: number; z?: number }, before?: { x?: number; y?: number; z?: number }): number {
+  const candidates = [
+    { value: scale.x, delta: Math.abs((scale.x ?? 1) - (before?.x ?? 1)) },
+    { value: scale.y, delta: Math.abs((scale.y ?? 1) - (before?.y ?? 1)) },
+    { value: scale.z, delta: Math.abs((scale.z ?? 1) - (before?.z ?? 1)) },
+  ].filter(candidate => typeof candidate.value === 'number' && Number.isFinite(candidate.value));
+  if (candidates.length === 0) return 1;
+  candidates.sort((left, right) => right.delta - left.delta);
+  return Math.max(0.001, Math.abs(candidates[0]!.value as number));
+}
+
+function isGroundDecalUiGameObject(document: EditorSceneDocument, targetId: string): boolean {
+  const gameObject = document.scene.gameObjects.find(candidate => candidate.id === targetId);
+  return isGroundDecalUiConfig(gameObject?.groundDecal);
 }
 
 const LOCAL_EDITOR_ASSET_BRIDGE_ACTIVE_FLAG = '__projectLocalEditorAssetBridgeActive';

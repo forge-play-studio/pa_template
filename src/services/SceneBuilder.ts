@@ -29,6 +29,7 @@ import { AssetLoader } from './AssetLoader';
 import { ModelPool } from './ModelPool';
 import { RenderingService } from './RenderingService';
 import { ShadowService } from './ShadowService';
+import { createGroundDecalUiDynamicTexture, isGroundDecalUiConfig } from './GroundDecalUiService';
 import { applyMaterialDebugAdjustments } from '../utils/materialDebugAdjust';
 
 import renderingConfig from '../config/rendering.json';
@@ -36,6 +37,7 @@ import {
   configService,
   type ArtistMaterialProfile,
   type ColorRGB,
+  type GroundDecalUiConfig,
   type MaterialOverrideConfig,
   type OutlineOverrideConfig,
   type SceneAssetConfig,
@@ -1191,6 +1193,10 @@ export class SceneBuilder {
 
   private attachTransformRuntime(nodeConfig: SceneTransformNode, runtimeNode: TransformNode): void {
     if (nodeConfig.transformType !== 'groundDecal' || !nodeConfig.groundDecal) return;
+    if (isGroundDecalUiConfig(nodeConfig.groundDecal)) {
+      this.attachGroundDecalUiRuntime(nodeConfig, runtimeNode, nodeConfig.groundDecal);
+      return;
+    }
 
     const mat = new StandardMaterial(`${nodeConfig.id}_mat`, this.scene);
     const color = nodeConfig.groundDecal.color ?? { r: 1, g: 1, b: 1 };
@@ -1219,6 +1225,45 @@ export class SceneBuilder {
     }
 
     (runtimeNode as any).material = mat;
+  }
+
+  private attachGroundDecalUiRuntime(
+    nodeConfig: SceneTransformNode,
+    runtimeNode: TransformNode,
+    decal: GroundDecalUiConfig,
+  ): void {
+    const mesh = runtimeNode as any;
+    mesh.isPickable = false;
+    mesh.receiveShadows = false;
+    mesh.alphaIndex = decal.rendering?.alphaIndex ?? 100;
+    mesh.metadata = {
+      ...(mesh.metadata ?? {}),
+      disableBlobShadow: true,
+      disableStaticProjectedShadow: true,
+      disablePlanarShadow: true,
+      groundDecalUi: {
+        nodeId: nodeConfig.id,
+        uiKind: decal.uiKind,
+      },
+    };
+
+    const mat = new StandardMaterial(`${nodeConfig.id}_ground_decal_ui_mat`, this.scene);
+    const { texture } = createGroundDecalUiDynamicTexture(`${nodeConfig.id}_ground_decal_ui_texture`, this.scene, decal);
+    mat.diffuseTexture = texture;
+    mat.useAlphaFromDiffuseTexture = true;
+    mat.diffuseColor = new Color3(1, 1, 1);
+    mat.emissiveColor = new Color3(1, 1, 1);
+    mat.specularColor = new Color3(0, 0, 0);
+    mat.backFaceCulling = false;
+    mat.disableLighting = true;
+    if (typeof decal.rendering?.diffuseTextureLevel === 'number' && Number.isFinite(decal.rendering.diffuseTextureLevel)) {
+      mat.diffuseTexture.level = decal.rendering.diffuseTextureLevel;
+    }
+    if (typeof decal.rendering?.emissiveTextureLevel === 'number' && Number.isFinite(decal.rendering.emissiveTextureLevel) && decal.rendering.emissiveTextureLevel > 0) {
+      mat.emissiveTexture = texture;
+      mat.emissiveTexture.level = decal.rendering.emissiveTextureLevel;
+    }
+    mesh.material = mat;
   }
 
   private applySceneNodeRendering(

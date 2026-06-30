@@ -38,6 +38,8 @@ import {
   type SpatialMarkerTargetRef,
 } from '@fps-games/editor/playable-sdk';
 
+export { isEditorSceneTrsTransformComponent };
+
 export type { EditorSceneCameraInspectorLanguage };
 
 export interface EditorSceneVec3 extends PlayableEditorSceneVec3 {}
