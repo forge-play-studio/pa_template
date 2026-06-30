@@ -355,8 +355,8 @@
     "originalFileName": "ground_decal_border_reference.png",
     "codeKey": "ground_decal_border_reference",
     "placeable": false,
-    "contentHash": "sha256:9a2d7c0d30a304f6a4532f7ffa881b70466db02ad1137a47d1b1924c08cf987c",
-    "byteSize": 2393,
+    "contentHash": "sha256:fe4d1450283b16a49a7eb1a924f51044e61108df416dedc3e54563659a04cfa4",
+    "byteSize": 4352,
     "metadata": {
       "sourceProject": "lumber-truck",
       "usage": "groundDecalUiDefault",
