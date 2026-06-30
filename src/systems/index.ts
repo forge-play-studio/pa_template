@@ -21,6 +21,8 @@ export type { UpgradeState } from './UpgradeSystem';
 export { GuideSystem } from './GuideSystem';
 export type { GuideSnapshot } from './GuideSystem';
 export { EndConditionSystem } from './EndConditionSystem';
+export { ProjectVfxDirector } from './ProjectVfxDirector';
+export type { ProjectVfxOffsetConfig, ProjectVfxUsageTarget, ProjectVfxVector3Config } from './ProjectVfxDirector';
 export type {
   ZoneActor,
   ZoneConfig,

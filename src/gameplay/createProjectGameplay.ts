@@ -9,6 +9,7 @@ import {
   GameplayStateSystem,
   GuideSystem,
   InventorySystem,
+  ProjectVfxDirector,
   QueueSystem,
   ResourcesSystem,
   ThreeCSystem,
@@ -32,6 +33,7 @@ export interface ProjectGameplayRuntime {
     upgrades: UpgradeSystem;
     guide: GuideSystem;
     endConditions: EndConditionSystem;
+    vfxDirector: ProjectVfxDirector;
   };
 }
 
@@ -67,6 +69,7 @@ export function createProjectGameplayRuntime(context: GameplayRuntimeContext): P
   });
   const guide = new GuideSystem(PROJECT_GAMEPLAY_CONFIG.guideTargets, runtimeNodes);
   const endConditions = new EndConditionSystem(PROJECT_GAMEPLAY_CONFIG.endConditions, gameplayState);
+  const vfxDirector = new ProjectVfxDirector(runtimeNodes, context.sceneVfxService);
 
   const modules: GameplayModule[] = [
     gameplayState,
@@ -80,6 +83,7 @@ export function createProjectGameplayRuntime(context: GameplayRuntimeContext): P
     upgrades,
     guide,
     endConditions,
+    vfxDirector,
   ];
 
   return {
@@ -99,6 +103,7 @@ export function createProjectGameplayRuntime(context: GameplayRuntimeContext): P
       upgrades,
       guide,
       endConditions,
+      vfxDirector,
     },
   };
 }

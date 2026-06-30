@@ -65,7 +65,7 @@ import { configService, PROJECT_GAMEPLAY_CONFIG } from '../config';
 import type { SceneConfig } from '../config';
 import { createProjectGameplayRuntime } from '../gameplay';
 import type { GameplayModule, ProjectGameplayRuntime } from '../gameplay';
-import type { EffectPackageService } from '@fps-games/vfx';
+import type { EffectPackageService } from '@fps/vfx';
 import type { VfxParamValues, VfxSpawnTransform } from '../assets/vfx';
 
 export interface GameOptions {

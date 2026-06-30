@@ -1,0 +1,157 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "project-vfx-usages/1.0",
+  "title": "Project VFX Usages",
+  "description": "Project-owned VFX mount instances. Effect params are intentionally open-ended; attachment and offset shape are validated here.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "usages"],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "schemaVersion": {
+      "const": "project-vfx-usages/1.0"
+    },
+    "updatedAt": {
+      "type": "string"
+    },
+    "usages": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/usage"
+      }
+    }
+  },
+  "$defs": {
+    "usage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "effect", "placement", "positionSource", "lifecycle"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "label": {
+          "type": "string"
+        },
+        "effect": {
+          "type": "string",
+          "minLength": 1
+        },
+        "placement": {
+          "enum": ["socket", "node"]
+        },
+        "positionSource": {
+          "$ref": "#/$defs/positionSource"
+        },
+        "offset": {
+          "$ref": "#/$defs/offset"
+        },
+        "lifecycle": {
+          "enum": ["follow", "loop", "oneshot"]
+        },
+        "repeatIntervalSec": {
+          "type": "number",
+          "minimum": 0
+        },
+        "params": {
+          "$ref": "#/$defs/params"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "placement": { "const": "socket" }
+            },
+            "required": ["placement"]
+          },
+          "then": {
+            "properties": {
+              "positionSource": {
+                "properties": {
+                  "kind": { "const": "socket" }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "placement": { "const": "node" }
+            },
+            "required": ["placement"]
+          },
+          "then": {
+            "properties": {
+              "positionSource": {
+                "properties": {
+                  "kind": { "const": "node" }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "positionSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "nodeId"],
+      "properties": {
+        "kind": {
+          "enum": ["socket", "node"]
+        },
+        "nodeId": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "offset": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "position": {
+          "$ref": "#/$defs/vector3"
+        },
+        "rotation": {
+          "description": "Euler rotation in radians. The debug panel may display degrees, but this file stores radians.",
+          "$ref": "#/$defs/vector3"
+        },
+        "scale": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/vector3"
+            }
+          ]
+        }
+      }
+    },
+    "vector3": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "z": { "type": "number" }
+      },
+      "minProperties": 1
+    },
+    "params": {
+      "type": "object",
+      "propertyNames": {
+        "not": {
+          "pattern": "^__debug\\."
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}
