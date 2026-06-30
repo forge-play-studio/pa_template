@@ -5,7 +5,7 @@
     "authoringSource": {
       "sourceId": "scene.main",
       "sourceType": "scene",
-      "revision": 47
+      "revision": 53
     }
   },
   "assets": [
@@ -1576,6 +1576,161 @@
             }
           }
         }
+      },
+      {
+        "id": "marker",
+        "name": "Marker",
+        "kind": "transform",
+        "active": true,
+        "marker": {
+          "schemaVersion": 1,
+          "type": "collection-area",
+          "kind": "region",
+          "semanticFrame": {
+            "origin": {
+              "x": 0,
+              "y": 0.25,
+              "z": 0
+            },
+            "right": {
+              "x": 1,
+              "y": 0,
+              "z": 0
+            },
+            "up": {
+              "x": 0,
+              "y": 1,
+              "z": 0
+            },
+            "forward": {
+              "x": 0,
+              "y": 0,
+              "z": 1
+            },
+            "label": "Marker"
+          },
+          "geometry": {
+            "kind": "box"
+          }
+        },
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": 2,
+              "y": 0.5,
+              "z": 0
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0.027415631890326912,
+              "z": 0
+            },
+            "scale": {
+              "x": 4,
+              "y": 1,
+              "z": 4
+            }
+          }
+        ],
+        "guid": "go_4a5526de-48ce-44a2-ad02-23b7c1febf70",
+        "parentId": "root"
+      },
+      {
+        "id": "marker-2",
+        "name": "Marker",
+        "kind": "transform",
+        "active": true,
+        "marker": {
+          "schemaVersion": 1,
+          "type": "",
+          "kind": "point",
+          "semanticFrame": {
+            "origin": {
+              "x": -3.4419445991516113,
+              "y": 0.5,
+              "z": -1.4533823728561401
+            },
+            "right": {
+              "x": 1,
+              "y": 0,
+              "z": 0
+            },
+            "up": {
+              "x": 0,
+              "y": 1,
+              "z": 0
+            },
+            "forward": {
+              "x": 0,
+              "y": 0,
+              "z": 1
+            },
+            "label": "Marker 2"
+          },
+          "geometry": {
+            "kind": "point",
+            "coordinateSpace": "world"
+          }
+        },
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": -3.4419445991516113,
+              "y": 0.5,
+              "z": -1.4533823728561401
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 0.5,
+              "y": 0.5,
+              "z": 0.5
+            }
+          }
+        ],
+        "guid": "go_67a9e19f-c714-44ff-b5da-ec51692c98a1",
+        "parentId": "root"
+      },
+      {
+        "id": "marker-3",
+        "name": "Marker 2",
+        "kind": "transform",
+        "active": true,
+        "marker": {
+          "schemaVersion": 1,
+          "type": "",
+          "kind": "point",
+          "geometry": {
+            "kind": "point",
+            "coordinateSpace": "world"
+          }
+        },
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": 0,
+              "y": 0.25,
+              "z": 0
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 0.5,
+              "y": 0.5,
+              "z": 0.5
+            }
+          }
+        ],
+        "guid": "go_23a288a0-3c51-49c7-a047-dfab0c5994d5"
       }
     ],
     "materialAssets": [
@@ -2178,6 +2333,28 @@
           }
         }
       }
-    ]
+    ],
+    "markerGraph": {
+      "schemaVersion": 1,
+      "markers": [],
+      "relations": [
+        {
+          "id": "rel_contains_marker_marker_scene_object_cube",
+          "type": "contains",
+          "label": "Contains",
+          "from": {
+            "kind": "marker",
+            "id": "marker",
+            "label": "Marker"
+          },
+          "to": {
+            "kind": "scene-object",
+            "id": "cube",
+            "label": "Cube"
+          },
+          "directed": true
+        }
+      ]
+    }
   }
 }

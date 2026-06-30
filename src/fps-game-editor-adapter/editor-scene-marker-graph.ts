@@ -106,14 +106,15 @@ export function createEditorSceneMarkerGraphPatch(
   document: EditorSceneDocument,
   command: PlayableLocalEditorMarkerGraphCommand,
 ): { patch: EditorSceneDocumentPatch; label: string; changedId?: string; changedIds?: string[]; selectId?: string | null } | null {
-  if (!isEditorSceneMarkerGraphCommandSupported(document, command)) return null;
+  const normalizedCommand = normalizeEditorSceneMarkerGraphCommand(document, command);
+  if (!isEditorSceneMarkerGraphCommandSupported(document, normalizedCommand)) return null;
   return {
     patch: {
       kind: 'scene.marker-graph',
-      command: cloneMarkerGraphCommand(command),
+      command: cloneMarkerGraphCommand(normalizedCommand),
     },
-    label: createEditorSceneMarkerGraphPatchLabel(command),
-    ...getEditorSceneMarkerGraphPatchSelection(command),
+    label: createEditorSceneMarkerGraphPatchLabel(normalizedCommand),
+    ...getEditorSceneMarkerGraphPatchSelection(normalizedCommand),
   };
 }
 
@@ -1239,6 +1240,43 @@ function reverseRelation(graph: SpatialMarkerGraph, relationId: string): Spatial
     };
   });
   return changed ? { ...graph, relations } : graph;
+}
+
+function normalizeEditorSceneMarkerGraphCommand(
+  document: EditorSceneDocument,
+  command: PlayableLocalEditorMarkerGraphCommand,
+): PlayableLocalEditorMarkerGraphCommand {
+  if (command.type !== 'marker.create-box') return command;
+  const marker = cloneMarker(command.marker);
+  const existingIds = new Set(document.scene.gameObjects.map(gameObject => gameObject.id));
+  const existingLabels = new Set(document.scene.gameObjects.map(gameObject => gameObject.name.trim()).filter(Boolean));
+  if (existingIds.has(marker.id)) {
+    marker.id = createUniqueMarkerCreateId(marker.id, existingIds);
+  }
+  if (!marker.label.trim() || existingLabels.has(marker.label.trim())) {
+    marker.label = createUniqueMarkerCreateLabel(marker.label || marker.id, existingLabels);
+  }
+  return {
+    ...command,
+    marker,
+  };
+}
+
+function createUniqueMarkerCreateId(baseId: string, existingIds: ReadonlySet<string>): string {
+  const base = sanitizeMarkerGameObjectId(baseId).replace(/-\d+$/, '') || 'marker';
+  if (!existingIds.has(base)) return base;
+  let index = 2;
+  while (existingIds.has(`${base}-${index}`)) index += 1;
+  return `${base}-${index}`;
+}
+
+function createUniqueMarkerCreateLabel(baseLabel: string, existingLabels: ReadonlySet<string>): string {
+  const trimmed = baseLabel.trim() || 'Marker';
+  const base = trimmed.replace(/\s+\d+$/, '') || 'Marker';
+  if (!existingLabels.has(base)) return base;
+  let index = 2;
+  while (existingLabels.has(`${base} ${index}`)) index += 1;
+  return `${base} ${index}`;
 }
 
 function isEditorSceneMarkerGraphCommandSupported(

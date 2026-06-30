@@ -1762,8 +1762,16 @@ export function getEditorSceneHierarchyItems(document: EditorSceneDocument): Sce
   const gameObjectsById = new Map(document.scene.gameObjects.map(gameObject => [gameObject.id, gameObject]));
   const result: SceneGraphTreeItem[] = [];
   for (const item of items) {
-    result.push(item);
     const gameObject = gameObjectsById.get(item.id);
+    const nextItem = gameObject && isEditorSceneMarkerGameObject(gameObject)
+      ? {
+          ...item,
+          role: 'marker' as const,
+          icon: 'view-overlay',
+          canHaveChildren: false,
+        }
+      : item;
+    result.push(nextItem);
     if (!gameObject || readEditorSceneNodeKind(gameObject) === 'primitive') continue;
     const slots = collectEditorSceneChildMaterialSlots(document, gameObject);
     for (const [slotIndex, slot] of slots.entries()) {
