@@ -45,6 +45,8 @@
     "@babylonjs/loaders": "8.52.1",
     "@fps-games/editor": "0.1.6-beta.1",
     "@fps-games/vfx": "0.1.1",
+    "@sentry/browser": "^10.62.0",
+    "@sentry/core": "^10.62.0",
     "brotli-dec-wasm": "^2.3.2"
   },
   "appConfig": {

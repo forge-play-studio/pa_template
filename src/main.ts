@@ -3,6 +3,7 @@
  * 初始化游戏应用（新系统）
  */
 
+import { captureSentryException, initSentry } from './instrument';
 import { LoadingScreen } from './ui';
 import { Game } from './core/Game';
 import { playableAnalyticsService } from './services';
@@ -141,6 +142,8 @@ async function disposeProjectGameWorldForEditor(): Promise<void> {
  */
 async function init(): Promise<void> {
   try {
+    await initSentry();
+
     // 开发模式：暴露 BABYLON 供 AI 调试脚本使用
     if (import.meta.env.DEV) {
       const BABYLON = await import('@babylonjs/core');
@@ -189,6 +192,7 @@ async function init(): Promise<void> {
 
   } catch (error) {
     console.error('[Main] Failed to initialize game:', error);
+    captureSentryException(error);
     // 发生错误时也隐藏加载页面
     clearLoadingScreen();
   }

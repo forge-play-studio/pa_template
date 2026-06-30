@@ -81,6 +81,9 @@ const isProduction = process.env.NODE_ENV === 'production';
 const bridgeEnabled = process.env.BRIDGE_ENABLED !== 'false';
 const bundleStatsEnabled = process.env.BUNDLE_STATS === 'true';
 const buildMatrix = process.env.BUILD_MATRIX === 'true';
+const enableSentry = process.env.ENABLE_SENTRY === 'true' || (isProduction && process.env.ENABLE_SENTRY !== 'false');
+const sentryDsn = 'https://fe79e849915019c692eccba5db996991@o4511341401210880.ingest.us.sentry.io/4511251791609856';
+const sentryRelease = process.env.SENTRY_RELEASE || `${pkg.name}@${pkg.version}`;
 const defaultBuildLocale = (i18nConfig.buildVersions[0] || 'EN').toUpperCase();
 const locale = (process.env.LOCALE || defaultBuildLocale).toUpperCase();
 const channel = (process.env.CHANNEL || analyticsConfig.adNetwork || 'applovin') as AdNetwork;
@@ -108,6 +111,9 @@ const allowedThirdPartyPackages = [
   '@babylonjs/core',
   '@babylonjs/loaders',
   '@fps-games/vfx',
+  '@sentry/browser',
+  '@sentry/browser-utils',
+  '@sentry/core',
   ...PLAYABLE_EDITOR_PACKAGE_IDS,
 ];
 
@@ -804,6 +810,9 @@ export default defineConfig({
     __RTL__: JSON.stringify(localeMeta.isRTL),
     __MULTI_LOCALE__: JSON.stringify(isMultiLocale),
     __BUNDLED_LOCALES__: JSON.stringify(bundledLocales),
+    __ENABLE_SENTRY__: JSON.stringify(enableSentry),
+    __SENTRY_DSN__: JSON.stringify(sentryDsn),
+    __SENTRY_RELEASE__: JSON.stringify(sentryRelease),
   },
   plugins: [
     // 平台 bridge 自动注入（仅开发模式）
