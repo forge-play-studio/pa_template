@@ -462,7 +462,6 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
     const commandName = normalizePlayableForgePlayCommandName(name) ?? name;
     return handleLegacyProjectAssetCommand(commandName, params, normalizeLoadedPlatformAssetPayload, host);
   });
-  const disposeTemporaryShiftSSaveAndRun = installTemporaryShiftSSaveAndRun(host);
   setLocalEditorAssetBridgeActive(true);
 
   let disposed = false;
@@ -472,7 +471,6 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
     if (disposed) return;
     disposed = true;
     disposeLegacyAssetBypass();
-    disposeTemporaryShiftSSaveAndRun();
     if (!disposeOptions.preserveAssetBridgeActive) setLocalEditorAssetBridgeActive(false);
     host.dispose();
     if (editorHost === host) editorHost = null;
@@ -499,25 +497,6 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
       disposeEditorHost();
     },
   };
-}
-
-function installTemporaryShiftSSaveAndRun(host: PlayableLocalEditorHost<EditorSceneDocument>): () => void {
-  const onKeyDown = (event: KeyboardEvent): void => {
-    if (!event.shiftKey || event.metaKey || event.ctrlKey || event.altKey || event.key.toLowerCase() !== 's') return;
-    if (isEditableShortcutTarget(event.target)) return;
-    event.preventDefault();
-    event.stopPropagation();
-    void host.harness.saveAndRunGame();
-  };
-  document.addEventListener('keydown', onKeyDown, { capture: true });
-  return () => document.removeEventListener('keydown', onKeyDown, { capture: true });
-}
-
-function isEditableShortcutTarget(target: EventTarget | null): boolean {
-  const element = target instanceof Element ? target : null;
-  if (!element) return false;
-  if (element.closest('input, textarea, select, [contenteditable="true"]')) return true;
-  return false;
 }
 
 function createEditorGrid(BABYLON: BabylonModule, scene: any, camera?: any) {
@@ -987,6 +966,7 @@ async function createGroundDecalUiProjectionResult(
   mat.diffuseTexture = texture;
   mat.useAlphaFromDiffuseTexture = true;
   mat.diffuseColor = new Color3(1, 1, 1);
+  mat.emissiveColor = new Color3(1, 1, 1);
   mat.specularColor = new Color3(0, 0, 0);
   mat.backFaceCulling = false;
   mat.disableLighting = true;

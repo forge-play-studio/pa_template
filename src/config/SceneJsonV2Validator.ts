@@ -765,6 +765,7 @@ function validateGroundDecalUiLayer(value: unknown, path: string, add: (path: st
   validateGroundDecalUiRect(value.rect, `${path}.rect`, add);
   if (value.kind === 'texture') {
     if (!nonEmptyString(value.textureId)) add(`${path}.textureId`, 'texture layer textureId must be non-empty');
+    validateGroundDecalUiColor(value.tint, `${path}.tint`, add);
   } else if (value.kind === 'color') {
     validateGroundDecalUiColor(value.color, `${path}.color`, add);
   } else if (value.kind === 'progress') {

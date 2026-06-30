@@ -1252,6 +1252,7 @@ export class SceneBuilder {
     mat.diffuseTexture = texture;
     mat.useAlphaFromDiffuseTexture = true;
     mat.diffuseColor = new Color3(1, 1, 1);
+    mat.emissiveColor = new Color3(1, 1, 1);
     mat.specularColor = new Color3(0, 0, 0);
     mat.backFaceCulling = false;
     mat.disableLighting = true;

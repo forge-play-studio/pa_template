@@ -61,7 +61,7 @@ export function createDefaultGroundDecalUiConfig(uiKind: GroundDecalUiKind): Gro
           kind: 'texture',
           textureId: TEXTURE_IDS.moneyLarge,
           zOrder: 20,
-          rect: { x: 0, z: 0, width: 0.48, depth: 0.48 },
+          rect: { x: 0, z: 0, width: 1, depth: 1 },
         },
         createBorderLayer(),
       ],
@@ -88,7 +88,7 @@ export function createDefaultGroundDecalUiConfig(uiKind: GroundDecalUiKind): Gro
         kind: 'texture',
         textureId: TEXTURE_IDS.conveyor,
         zOrder: 20,
-        rect: { x: -0.22, z: 0, width: 0.28, depth: 0.48 },
+        rect: { x: 0, z: 0, width: 1, depth: 1 },
       },
       {
         id: 'subLogo',
@@ -96,7 +96,7 @@ export function createDefaultGroundDecalUiConfig(uiKind: GroundDecalUiKind): Gro
         kind: 'texture',
         textureId: TEXTURE_IDS.moneyLarge,
         zOrder: 25,
-        rect: { x: 0.08, z: 0, width: 0.22, depth: 0.38 },
+        rect: { x: -0.25, z: -0.25, width: 0.5, depth: 0.5 },
       },
       {
         id: 'amount',
@@ -114,7 +114,7 @@ export function createDefaultGroundDecalUiConfig(uiKind: GroundDecalUiKind): Gro
           baseline: 'middle',
         },
         zOrder: 30,
-        rect: { x: 0.34, z: 0, width: 0.22, depth: 0.42 },
+        rect: { x: 0.2, z: -0.25, width: 0.28, depth: 0.22 },
       },
       createBorderLayer(),
     ],
@@ -156,8 +156,6 @@ export function createGroundDecalUiDynamicTexture(
   const size = resolveGroundDecalUiTextureSize(decal);
   const texture = new DynamicTexture(name, size, scene, false);
   texture.hasAlpha = true;
-  texture.vScale = -1;
-  texture.vOffset = 1;
   const ready = renderGroundDecalUiDynamicTexture(texture, decal);
   return { texture, ready };
 }
@@ -261,7 +259,65 @@ async function drawTextureLayer(
     drawMissingTexturePlaceholder(ctx, rect);
     return;
   }
+  if (layer.tint) {
+    drawTintedImage(ctx, image, rect, layer.tint);
+    return;
+  }
   ctx.drawImage(image, rect.x, rect.y, rect.width, rect.height);
+}
+
+function drawTintedImage(
+  ctx: CanvasRenderingContext2D,
+  image: HTMLImageElement,
+  rect: ReturnType<typeof resolveLayerPixelRect>,
+  tint: GroundDecalUiColor,
+): void {
+  const inheritedAlpha = ctx.globalAlpha;
+  const tintAlpha = Math.max(0, Math.min(1, tint.a ?? 1));
+  const totalAlpha = inheritedAlpha * tintAlpha;
+  if (isWhiteTint(tint)) {
+    ctx.globalAlpha = totalAlpha;
+    ctx.drawImage(image, rect.x, rect.y, rect.width, rect.height);
+    ctx.globalAlpha = inheritedAlpha;
+    return;
+  }
+  const ownerDocument = ctx.canvas.ownerDocument;
+  const canvas = ownerDocument.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(rect.width));
+  canvas.height = Math.max(1, Math.round(rect.height));
+  const tintContext = canvas.getContext('2d');
+  if (!tintContext) {
+    ctx.globalAlpha = totalAlpha;
+    ctx.drawImage(image, rect.x, rect.y, rect.width, rect.height);
+    ctx.globalAlpha = inheritedAlpha;
+    return;
+  }
+  try {
+    tintContext.drawImage(image, 0, 0, canvas.width, canvas.height);
+    const imageData = tintContext.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imageData.data;
+    const r = Math.max(0, Math.min(1, tint.r));
+    const g = Math.max(0, Math.min(1, tint.g));
+    const b = Math.max(0, Math.min(1, tint.b));
+    for (let index = 0; index < data.length; index += 4) {
+      data[index] = Math.round(data[index] * r);
+      data[index + 1] = Math.round(data[index + 1] * g);
+      data[index + 2] = Math.round(data[index + 2] * b);
+      data[index + 3] = Math.round(data[index + 3] * totalAlpha);
+    }
+    tintContext.putImageData(imageData, 0, 0);
+    ctx.globalAlpha = 1;
+    ctx.drawImage(canvas, rect.x, rect.y, rect.width, rect.height);
+    ctx.globalAlpha = inheritedAlpha;
+  } catch {
+    ctx.globalAlpha = totalAlpha;
+    ctx.drawImage(image, rect.x, rect.y, rect.width, rect.height);
+    ctx.globalAlpha = inheritedAlpha;
+  }
+}
+
+function isWhiteTint(tint: GroundDecalUiColor): boolean {
+  return tint.r >= 0.999 && tint.g >= 0.999 && tint.b >= 0.999;
 }
 
 function drawTextLayer(
