@@ -15,11 +15,11 @@ importers:
         specifier: 8.52.1
         version: 8.52.1(@babylonjs/core@8.52.1)(babylonjs-gltf2interface@8.56.2)
       '@fps-games/editor':
-        specifier: link:../../packages/editor
-        version: link:../../packages/editor
-      '@fps/vfx':
-        specifier: git+ssh://git@github.com/forge-play-studio/fps-vfx-library.git#v0.1.1
-        version: git+https://git@github.com:forge-play-studio/fps-vfx-library.git#d9e6f9ce43ea3ebdac792e81dcd214a6e72b7f2f(@babylonjs/core@8.52.1)(@babylonjs/loaders@8.52.1(@babylonjs/core@8.52.1)(babylonjs-gltf2interface@8.56.2))
+        specifier: 0.1.6-beta.1
+        version: 0.1.6-beta.1
+      '@fps-games/vfx':
+        specifier: 0.1.1
+        version: 0.1.1(@babylonjs/core@8.52.1)(@babylonjs/loaders@8.52.1(@babylonjs/core@8.52.1)(babylonjs-gltf2interface@8.56.2))
       brotli-dec-wasm:
         specifier: ^2.3.2
         version: 2.3.2
@@ -791,9 +791,19 @@ packages:
   '@fluentui/tokens@1.0.0-alpha.23':
     resolution: {integrity: sha512-uxrzF9Z+J10naP0pGS7zPmzSkspSS+3OJDmYIK3o1nkntQrgBXq3dBob4xSlTDm5aOQ0kw6EvB9wQgtlyy4eKQ==}
 
-  '@fps/vfx@git+https://git@github.com:forge-play-studio/fps-vfx-library.git#d9e6f9ce43ea3ebdac792e81dcd214a6e72b7f2f':
-    resolution: {commit: d9e6f9ce43ea3ebdac792e81dcd214a6e72b7f2f, repo: git@github.com:forge-play-studio/fps-vfx-library.git, type: git}
-    version: 0.1.1
+  '@fps-games/editor@0.1.6-beta.1':
+    resolution: {integrity: sha512-E8d6ToFd4A10aMFPbbEnntgzOKnVRpgd8xN35JhpOBzgPrOEN/e2ZDo713EyxbwZmvYnzvU5NdGLuIOIZ6AjVQ==}
+    bundledDependencies:
+      - '@fps-games/babylon-renderer'
+      - '@fps-games/editor-babylon'
+      - '@fps-games/editor-browser'
+      - '@fps-games/editor-core'
+      - '@fps-games/editor-forge-play'
+      - '@fps-games/editor-playable-sdk'
+      - '@fps-games/editor-protocol'
+
+  '@fps-games/vfx@0.1.1':
+    resolution: {integrity: sha512-+1RW0h1GZisjeoZGXp9eeYkxnVeoikDwLH73K3fIy8QU/5dbZqk/kkBvku0Gta0b8sZEQrFWNwX1kIUV6tUN0A==}
     peerDependencies:
       '@babylonjs/core': ^8.0.0
       '@babylonjs/loaders': ^8.0.0
@@ -2619,7 +2629,9 @@ snapshots:
     dependencies:
       '@swc/helpers': 0.5.23
 
-  '@fps/vfx@git+https://git@github.com:forge-play-studio/fps-vfx-library.git#d9e6f9ce43ea3ebdac792e81dcd214a6e72b7f2f(@babylonjs/core@8.52.1)(@babylonjs/loaders@8.52.1(@babylonjs/core@8.52.1)(babylonjs-gltf2interface@8.56.2))':
+  '@fps-games/editor@0.1.6-beta.1': {}
+
+  '@fps-games/vfx@0.1.1(@babylonjs/core@8.52.1)(@babylonjs/loaders@8.52.1(@babylonjs/core@8.52.1)(babylonjs-gltf2interface@8.56.2))':
     dependencies:
       '@babylonjs/core': 8.52.1
       '@babylonjs/loaders': 8.52.1(@babylonjs/core@8.52.1)(babylonjs-gltf2interface@8.56.2)

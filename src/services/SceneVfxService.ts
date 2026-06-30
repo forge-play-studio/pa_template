@@ -25,7 +25,7 @@ import {
   type VfxParamValues,
   type VfxSpawnTransform,
 } from '../assets/vfx';
-import { EffectPackageService } from '@fps/vfx';
+import { EffectPackageService } from '@fps-games/vfx';
 
 export interface SceneVfxWarmupEntry {
   effectId: string;

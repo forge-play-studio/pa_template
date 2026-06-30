@@ -1249,7 +1249,7 @@ function normalizeEditorSceneMarkerGraphCommand(
   if (command.type !== 'marker.create-box') return command;
   const marker = cloneMarker(command.marker);
   const existingIds = new Set(document.scene.gameObjects.map(gameObject => gameObject.id));
-  const existingLabels = new Set(document.scene.gameObjects.map(gameObject => gameObject.name.trim()).filter(Boolean));
+  const existingLabels = new Set(document.scene.gameObjects.map(gameObject => (gameObject.name ?? '').trim()).filter(Boolean));
   if (existingIds.has(marker.id)) {
     marker.id = createUniqueMarkerCreateId(marker.id, existingIds);
   }
