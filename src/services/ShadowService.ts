@@ -134,6 +134,7 @@ type RuntimeStaticProjectedShadowArtifactSystem = Pick<
 
 type SceneShadowMode = 'none' | 'blob' | 'static' | 'planar' | 'dynamic';
 type ShadowServiceMode = 'none' | 'blob' | 'static' | 'legacy' | 'planar' | 'mixed';
+const SHADOW_DEBUG_STORAGE_KEY = 'fps.shadow.debug';
 
 // ============================================================
 // ShadowService 类
@@ -179,6 +180,14 @@ export class ShadowService {
    * 初始化阴影系统
    */
   initialize(): void {
+    this.logShadowDebug('service.initialize.start', {
+      configEnabled: this.config.enabled,
+      defaultMode: this.config.defaultMode,
+      blobEnabled: this.config.blob.enabled,
+      staticProjectedEnabled: this.config.staticProjected.enabled,
+      planarEnabled: this.isPlanarEnabled(),
+      meshCount: this.scene.meshes.length,
+    });
     if (this.config.blob.enabled) this.initializeBlobShadows();
     if (this.config.staticProjected.enabled) this.initializeStaticProjectedShadows();
     if (this.isPlanarEnabled()) this.initializePlanarShadows();
@@ -188,6 +197,11 @@ export class ShadowService {
     this.mode = this.resolveServiceMode();
     this.applyShadowMeshes();
     this.attachNewMeshObserver();
+    this.logShadowDebug('service.initialize.complete', {
+      mode: this.mode,
+      shadowsEnabled: this.scene.shadowsEnabled,
+      shadowGenerator: this.describeShadowGenerator(),
+    });
   }
 
   private initializeLegacyShadows(): void {
@@ -259,6 +273,12 @@ export class ShadowService {
     this.light.orthoTop = this.config.shadowOrtho.top;
     this.light.orthoBottom = this.config.shadowOrtho.bottom;
 
+    this.logShadowDebug('service.legacyGenerator.ready', {
+      useCsm: this.shadowGenerator instanceof CascadedShadowGenerator,
+      settings,
+      light: this.describeDirectionalLight(),
+      generator: this.describeShadowGenerator(),
+    });
   }
 
   /**
@@ -275,6 +295,11 @@ export class ShadowService {
     );
     this.staticProjectedShadowArtifactSystem?.refreshBindings();
     this.planarShadowSystem?.refresh();
+    this.logShadowDebug('service.refreshShadowMeshes', {
+      mode: this.mode,
+      meshCount: this.scene.meshes.length,
+      shadowGenerator: this.describeShadowGenerator(),
+    });
   }
 
   /**
@@ -378,17 +403,30 @@ export class ShadowService {
     this.removeMeshFromShadowSystems(mesh);
     if (this.isGeneratedShadowExcluded(mesh)) {
       mesh.receiveShadows = false;
+      this.logShadowDebug('service.mesh.excluded', this.describeMeshShadowDecision(mesh, {
+        mode: 'none',
+        receiveShadows: false,
+        dynamicReady: false,
+      }));
       return;
     }
 
+    const mode = this.resolveMeshShadowMode(mesh);
+    const dynamicReady = mode === 'dynamic'
+      ? this.ensureDynamicShadowGenerator()
+      : !!this.shadowGenerator;
     const receiveShadows = this.isShadowReceiver(mesh);
-    mesh.receiveShadows = receiveShadows && !!this.shadowGenerator;
+    mesh.receiveShadows = receiveShadows && dynamicReady;
+    this.logShadowDebug('service.mesh.apply', this.describeMeshShadowDecision(mesh, {
+      mode,
+      receiveShadows,
+      dynamicReady,
+    }));
     if (this.planarShadowSystem) {
       if (receiveShadows) this.planarShadowSystem.addReceiver(mesh);
       else this.planarShadowSystem.removeReceiver(mesh);
     }
 
-    const mode = this.resolveMeshShadowMode(mesh);
     if (mode === 'blob') {
       this.blobShadowSystem?.addCaster(mesh);
       return;
@@ -401,7 +439,9 @@ export class ShadowService {
       return;
     }
     if (mode === 'dynamic' && this.shadowGenerator) {
+      this.applyDynamicShadowGeneratorPlan(mesh);
       this.shadowGenerator.addShadowCaster(mesh, true);
+      this.refreshDynamicShadowReceivers();
     }
   }
 
@@ -476,6 +516,152 @@ export class ShadowService {
     if (plan.mode === 'static' || plan.backend === 'static-baked') return 'static';
     if (plan.mode === 'blob' || plan.backend === 'blob') return 'blob';
     return 'none';
+  }
+
+  private ensureDynamicShadowGenerator(): boolean {
+    if (this.shadowGenerator) return true;
+    this.initializeLegacyShadows();
+    this.mode = this.resolveServiceMode();
+    if (!this.shadowGenerator) {
+      this.logShadowDebug('service.dynamicGenerator.unavailable', {
+        mode: this.mode,
+        shadowsEnabled: this.scene.shadowsEnabled,
+      });
+      return false;
+    }
+    this.refreshDynamicShadowReceivers();
+    this.logShadowDebug('service.dynamicGenerator.ready', {
+      mode: this.mode,
+      light: this.describeDirectionalLight(),
+      generator: this.describeShadowGenerator(),
+    });
+    return true;
+  }
+
+  private refreshDynamicShadowReceivers(): void {
+    if (!this.shadowGenerator) return;
+    for (const mesh of this.scene.meshes) {
+      if (typeof mesh.isDisposed === 'function' && mesh.isDisposed()) continue;
+      if (this.isGeneratedShadowExcluded(mesh)) continue;
+      mesh.receiveShadows = this.isShadowReceiver(mesh);
+    }
+  }
+
+  private applyDynamicShadowGeneratorPlan(mesh: AbstractMesh): void {
+    if (!this.shadowGenerator) return;
+    const plan = this.readMeshShadowPlan(mesh);
+    const params = plan?.params;
+    this.configureDynamicShadowGeneratorFilter();
+    if (params) {
+      if (typeof this.shadowGenerator.setDarkness === 'function') {
+        this.shadowGenerator.setDarkness(this.clamp01(1 - params.opacity));
+      }
+      this.shadowGenerator.bias = params.bias;
+      this.shadowGenerator.normalBias = params.normalBias;
+      if (Number.isFinite(params.blurKernel)) {
+        this.shadowGenerator.blurKernel = params.blurKernel;
+      }
+    }
+    this.logShadowDebug('service.dynamicPlan.apply', {
+      mesh: this.describeMesh(mesh),
+      plan: this.describeResolvedPlan(plan),
+      generator: this.describeShadowGenerator(),
+    });
+  }
+
+  private configureDynamicShadowGeneratorFilter(): void {
+    if (!this.shadowGenerator) return;
+    this.shadowGenerator.useBlurExponentialShadowMap = false;
+    this.shadowGenerator.useKernelBlur = false;
+    this.shadowGenerator.usePercentageCloserFiltering = true;
+    this.shadowGenerator.filteringQuality = ShadowGenerator.QUALITY_HIGH;
+  }
+
+  private clamp01(value: number): number {
+    if (!Number.isFinite(value)) return 0;
+    return Math.min(1, Math.max(0, value));
+  }
+
+  private describeMeshShadowDecision(mesh: AbstractMesh, decision: {
+    mode: SceneShadowMode;
+    receiveShadows: boolean;
+    dynamicReady: boolean;
+  }): Record<string, unknown> {
+    return {
+      mesh: this.describeMesh(mesh),
+      decision,
+      plan: this.describeResolvedPlan(this.readMeshShadowPlan(mesh)),
+      shadowMode: this.readMeshShadowMode(mesh),
+      receive: this.readMeshShadowReceive(mesh),
+    };
+  }
+
+  private describeMesh(mesh: AbstractMesh): Record<string, unknown> {
+    const projection = this.readEditorProjectionMetadata(mesh);
+    return {
+      name: mesh.name,
+      id: mesh.id,
+      nodeId: projection?.nodeId,
+      rootNodeId: projection?.rootNodeId,
+      enabled: typeof mesh.isEnabled === 'function' ? mesh.isEnabled() : true,
+      visible: mesh.isVisible,
+      receiveShadows: mesh.receiveShadows,
+    };
+  }
+
+  private describeResolvedPlan(plan: EditorShadowResolvedPlan | null): Record<string, unknown> | null {
+    if (!plan) return null;
+    return {
+      casterId: plan.casterId,
+      receiverIds: plan.receiverIds,
+      lightId: plan.lightId,
+      backend: plan.backend,
+      mode: plan.mode,
+      quality: plan.quality,
+      params: plan.params,
+      stale: plan.stale,
+      diagnostics: plan.diagnostics,
+    };
+  }
+
+  private describeDirectionalLight(): Record<string, unknown> {
+    return {
+      name: this.light.name,
+      id: this.light.id,
+      enabled: typeof this.light.isEnabled === 'function' ? this.light.isEnabled() : true,
+      intensity: this.light.intensity,
+      position: describeShadowVec3(this.light.position),
+      direction: describeShadowVec3(this.light.direction),
+      orthoLeft: this.light.orthoLeft,
+      orthoRight: this.light.orthoRight,
+      orthoTop: this.light.orthoTop,
+      orthoBottom: this.light.orthoBottom,
+      shadowMinZ: this.light.shadowMinZ,
+      shadowMaxZ: this.light.shadowMaxZ,
+    };
+  }
+
+  private describeShadowGenerator(): Record<string, unknown> | null {
+    if (!this.shadowGenerator) return null;
+    return {
+      className: this.shadowGenerator.getClassName?.(),
+      mapSize: this.shadowGenerator.getShadowMap?.()?.getSize?.(),
+      darkness: this.shadowGenerator.getDarkness?.(),
+      bias: this.shadowGenerator.bias,
+      normalBias: this.shadowGenerator.normalBias,
+      useBlurExponentialShadowMap: this.shadowGenerator.useBlurExponentialShadowMap,
+      blurKernel: this.shadowGenerator.blurKernel,
+      renderList: (this.shadowGenerator.getShadowMap?.()?.renderList ?? []).map(mesh => this.describeMesh(mesh)),
+    };
+  }
+
+  private logShadowDebug(event: string, details: Record<string, unknown>): void {
+    if (!isShadowDebugLoggingEnabled()) return;
+    try {
+      console.info('[fps-shadow-debug]', event, `json=${stringifyShadowDebugDetails(details)}`, details);
+    } catch {
+      // Debug logging must never affect gameplay/runtime rendering.
+    }
   }
 
   private readMeshShadowMode(mesh: AbstractMesh): SceneShadowMode | 'default' | null {
@@ -718,5 +904,47 @@ export class ShadowService {
       this.planarShadowSystem = null;
     }
 
+  }
+}
+
+function describeShadowVec3(value: unknown): { x: number; y: number; z: number } | null {
+  const vec = value as { x?: unknown; y?: unknown; z?: unknown } | null | undefined;
+  return typeof vec?.x === 'number'
+    && typeof vec.y === 'number'
+    && typeof vec.z === 'number'
+    && Number.isFinite(vec.x)
+    && Number.isFinite(vec.y)
+    && Number.isFinite(vec.z)
+    ? { x: vec.x, y: vec.y, z: vec.z }
+    : null;
+}
+
+function stringifyShadowDebugDetails(details: Record<string, unknown>): string {
+  try {
+    return JSON.stringify(details);
+  } catch {
+    return '{"error":"shadowDebugDetailsNotSerializable"}';
+  }
+}
+
+function isShadowDebugLoggingEnabled(): boolean {
+  const global = globalThis as {
+    __FPS_SHADOW_DEBUG__?: unknown;
+    localStorage?: { getItem?: (key: string) => string | null };
+    location?: { search?: string };
+    process?: { env?: Record<string, string | undefined> };
+  };
+  if (global.__FPS_SHADOW_DEBUG__ === true) return true;
+  const env = global.process?.env?.FPS_SHADOW_DEBUG;
+  if (env === '1' || env === 'true') return true;
+  try {
+    const search = global.location?.search ?? '';
+    if (/(?:[?&])fpsShadowDebug(?:=1|=true|&|$)/.test(search)) return true;
+  } catch {}
+  try {
+    const stored = global.localStorage?.getItem?.(SHADOW_DEBUG_STORAGE_KEY);
+    return stored === '1' || stored === 'true';
+  } catch {
+    return false;
   }
 }

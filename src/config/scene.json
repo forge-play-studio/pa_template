@@ -8,10 +8,10 @@
     "generatedFrom": {
       "sourceId": "scene.main",
       "sourceType": "scene",
-      "revision": 53,
+      "revision": 54,
       "compilerId": "@fps-games/editor.playable-sdk.scene-compiler",
       "compilerVersion": "1",
-      "compiledAt": "2026-06-28T06:08:03.887Z"
+      "compiledAt": "2026-06-30T17:49:17.768Z"
     }
   },
   "gameplay": {
@@ -105,7 +105,66 @@
                 }
               ]
             }
-          ]
+          ],
+          "assetAnalysis": {
+            "kind": "gltf",
+            "format": "glb",
+            "summary": "1 nodes, 1 meshes, 2 primitives, 2 materials",
+            "complexity": "low",
+            "sceneCount": 1,
+            "nodeCount": 1,
+            "meshCount": 1,
+            "primitiveCount": 2,
+            "materialCount": 2,
+            "textureCount": 2,
+            "imageCount": 2,
+            "animationCount": 0,
+            "skinCount": 0,
+            "meshes": [
+              {
+                "meshIndex": 0,
+                "name": "男主",
+                "primitiveCount": 2,
+                "materialIndices": [
+                  0,
+                  1
+                ],
+                "materialNames": [
+                  "ren_C_Mat",
+                  "maozi_C_Mat"
+                ]
+              }
+            ],
+            "materials": [
+              {
+                "sourceMaterialIndex": 0,
+                "materialName": "ren_C_Mat",
+                "metallicFactor": 0,
+                "roughnessFactor": 0.5,
+                "alphaMode": "opaque",
+                "textureSlots": [
+                  {
+                    "slot": "baseColor",
+                    "textureIndex": 0
+                  }
+                ]
+              },
+              {
+                "sourceMaterialIndex": 1,
+                "materialName": "maozi_C_Mat",
+                "metallicFactor": 0,
+                "roughnessFactor": 0.5,
+                "alphaMode": "opaque",
+                "textureSlots": [
+                  {
+                    "slot": "baseColor",
+                    "textureIndex": 1
+                  }
+                ]
+              }
+            ],
+            "diagnostics": []
+          }
         }
       },
       {
@@ -175,7 +234,69 @@
                 }
               ]
             }
-          ]
+          ],
+          "assetAnalysis": {
+            "kind": "gltf",
+            "format": "glb",
+            "summary": "62 nodes, 1 meshes, 1 primitives, 1 materials",
+            "complexity": "low",
+            "sceneCount": 1,
+            "nodeCount": 62,
+            "meshCount": 1,
+            "primitiveCount": 1,
+            "materialCount": 1,
+            "textureCount": 1,
+            "imageCount": 1,
+            "animationCount": 1,
+            "skinCount": 1,
+            "meshes": [
+              {
+                "meshIndex": 0,
+                "name": "gongren_Rig:fbx_city_npc_worker_male03",
+                "primitiveCount": 1,
+                "materialIndices": [
+                  0
+                ],
+                "materialNames": [
+                  "lambert2"
+                ]
+              }
+            ],
+            "materials": [
+              {
+                "sourceMaterialIndex": 0,
+                "materialName": "lambert2",
+                "baseColorFactor": [
+                  1,
+                  1,
+                  1,
+                  1
+                ],
+                "metallicFactor": 0,
+                "roughnessFactor": 0.4500536322593689,
+                "alphaMode": "opaque",
+                "textureSlots": [
+                  {
+                    "slot": "baseColor",
+                    "textureIndex": 0,
+                    "texCoord": 0
+                  }
+                ]
+              }
+            ],
+            "diagnostics": [
+              {
+                "severity": "info",
+                "source": "asset",
+                "code": "asset.analysis.riggedOrAnimated",
+                "message": "GLTF asset contains animation or skin data.",
+                "details": {
+                  "animationCount": 1,
+                  "skinCount": 1
+                }
+              }
+            ]
+          }
         }
       },
       {
@@ -411,7 +532,106 @@
                 }
               ]
             }
-          ]
+          ],
+          "assetAnalysis": {
+            "kind": "gltf",
+            "format": "glb",
+            "summary": "14 nodes, 5 meshes, 5 primitives, 1 materials",
+            "complexity": "low",
+            "sceneCount": 1,
+            "nodeCount": 14,
+            "meshCount": 5,
+            "primitiveCount": 5,
+            "materialCount": 1,
+            "textureCount": 1,
+            "imageCount": 1,
+            "animationCount": 1,
+            "skinCount": 5,
+            "meshes": [
+              {
+                "meshIndex": 0,
+                "name": "ST_kache_Rig:polySurface119",
+                "primitiveCount": 1,
+                "materialIndices": [
+                  0
+                ],
+                "materialNames": [
+                  "ST_kache_Rig:lambert21"
+                ]
+              },
+              {
+                "meshIndex": 1,
+                "name": "ST_kache_Rig:polySurface108",
+                "primitiveCount": 1,
+                "materialIndices": [
+                  0
+                ],
+                "materialNames": [
+                  "ST_kache_Rig:lambert21"
+                ]
+              },
+              {
+                "meshIndex": 2,
+                "name": "ST_kache_Rig:polySurface96",
+                "primitiveCount": 1,
+                "materialIndices": [
+                  0
+                ],
+                "materialNames": [
+                  "ST_kache_Rig:lambert21"
+                ]
+              },
+              {
+                "meshIndex": 3,
+                "name": "ST_kache_Rig:polySurface99",
+                "primitiveCount": 1,
+                "materialIndices": [
+                  0
+                ],
+                "materialNames": [
+                  "ST_kache_Rig:lambert21"
+                ]
+              },
+              {
+                "meshIndex": 4,
+                "name": "ST_kache_Rig:polySurface102",
+                "primitiveCount": 1,
+                "materialIndices": [
+                  0
+                ],
+                "materialNames": [
+                  "ST_kache_Rig:lambert21"
+                ]
+              }
+            ],
+            "materials": [
+              {
+                "sourceMaterialIndex": 0,
+                "materialName": "ST_kache_Rig:lambert21",
+                "metallicFactor": 0,
+                "roughnessFactor": 0.165830582,
+                "alphaMode": "opaque",
+                "textureSlots": [
+                  {
+                    "slot": "baseColor",
+                    "textureIndex": 0
+                  }
+                ]
+              }
+            ],
+            "diagnostics": [
+              {
+                "severity": "info",
+                "source": "asset",
+                "code": "asset.analysis.riggedOrAnimated",
+                "message": "GLTF asset contains animation or skin data.",
+                "details": {
+                  "animationCount": 1,
+                  "skinCount": 5
+                }
+              }
+            ]
+          }
         }
       },
       {
@@ -467,7 +687,51 @@
                 }
               ]
             }
-          ]
+          ],
+          "assetAnalysis": {
+            "kind": "gltf",
+            "format": "glb",
+            "summary": "1 nodes, 1 meshes, 1 primitives, 1 materials",
+            "complexity": "low",
+            "sceneCount": 1,
+            "nodeCount": 1,
+            "meshCount": 1,
+            "primitiveCount": 1,
+            "materialCount": 1,
+            "textureCount": 1,
+            "imageCount": 1,
+            "animationCount": 0,
+            "skinCount": 0,
+            "meshes": [
+              {
+                "meshIndex": 0,
+                "name": "Mesh",
+                "primitiveCount": 1,
+                "materialIndices": [
+                  0
+                ],
+                "materialNames": [
+                  "Material #104"
+                ]
+              }
+            ],
+            "materials": [
+              {
+                "sourceMaterialIndex": 0,
+                "materialName": "Material #104",
+                "metallicFactor": 0,
+                "roughnessFactor": 0.5527864098548889,
+                "alphaMode": "opaque",
+                "textureSlots": [
+                  {
+                    "slot": "baseColor",
+                    "textureIndex": 0
+                  }
+                ]
+              }
+            ],
+            "diagnostics": []
+          }
         }
       },
       {
@@ -523,7 +787,51 @@
                 }
               ]
             }
-          ]
+          ],
+          "assetAnalysis": {
+            "kind": "gltf",
+            "format": "glb",
+            "summary": "1 nodes, 1 meshes, 1 primitives, 1 materials",
+            "complexity": "low",
+            "sceneCount": 1,
+            "nodeCount": 1,
+            "meshCount": 1,
+            "primitiveCount": 1,
+            "materialCount": 1,
+            "textureCount": 1,
+            "imageCount": 1,
+            "animationCount": 0,
+            "skinCount": 0,
+            "meshes": [
+              {
+                "meshIndex": 0,
+                "name": "SM_SSD_S_M_huacaoo49",
+                "primitiveCount": 1,
+                "materialIndices": [
+                  0
+                ],
+                "materialNames": [
+                  "SSD_S_M_Cao_C3_Mat"
+                ]
+              }
+            ],
+            "materials": [
+              {
+                "sourceMaterialIndex": 0,
+                "materialName": "SSD_S_M_Cao_C3_Mat",
+                "metallicFactor": 1,
+                "roughnessFactor": 0.5527864098548889,
+                "alphaMode": "opaque",
+                "textureSlots": [
+                  {
+                    "slot": "baseColor",
+                    "textureIndex": 0
+                  }
+                ]
+              }
+            ],
+            "diagnostics": []
+          }
         }
       },
       {
@@ -579,7 +887,51 @@
                 }
               ]
             }
-          ]
+          ],
+          "assetAnalysis": {
+            "kind": "gltf",
+            "format": "glb",
+            "summary": "1 nodes, 1 meshes, 1 primitives, 1 materials",
+            "complexity": "low",
+            "sceneCount": 1,
+            "nodeCount": 1,
+            "meshCount": 1,
+            "primitiveCount": 1,
+            "materialCount": 1,
+            "textureCount": 1,
+            "imageCount": 1,
+            "animationCount": 0,
+            "skinCount": 0,
+            "meshes": [
+              {
+                "meshIndex": 0,
+                "name": "Mesh",
+                "primitiveCount": 1,
+                "materialIndices": [
+                  0
+                ],
+                "materialNames": [
+                  "standardSurface2"
+                ]
+              }
+            ],
+            "materials": [
+              {
+                "sourceMaterialIndex": 0,
+                "materialName": "standardSurface2",
+                "metallicFactor": 0,
+                "roughnessFactor": 0.5527864098548889,
+                "alphaMode": "opaque",
+                "textureSlots": [
+                  {
+                    "slot": "baseColor",
+                    "textureIndex": 0
+                  }
+                ]
+              }
+            ],
+            "diagnostics": []
+          }
         }
       },
       {
@@ -635,7 +987,51 @@
                 }
               ]
             }
-          ]
+          ],
+          "assetAnalysis": {
+            "kind": "gltf",
+            "format": "glb",
+            "summary": "1 nodes, 1 meshes, 1 primitives, 1 materials",
+            "complexity": "low",
+            "sceneCount": 1,
+            "nodeCount": 1,
+            "meshCount": 1,
+            "primitiveCount": 1,
+            "materialCount": 1,
+            "textureCount": 1,
+            "imageCount": 1,
+            "animationCount": 0,
+            "skinCount": 0,
+            "meshes": [
+              {
+                "meshIndex": 0,
+                "name": "ZHALAN__5_",
+                "primitiveCount": 1,
+                "materialIndices": [
+                  0
+                ],
+                "materialNames": [
+                  "ZHALAN_Mat"
+                ]
+              }
+            ],
+            "materials": [
+              {
+                "sourceMaterialIndex": 0,
+                "materialName": "ZHALAN_Mat",
+                "metallicFactor": 1,
+                "roughnessFactor": 0.5527864098548889,
+                "alphaMode": "opaque",
+                "textureSlots": [
+                  {
+                    "slot": "baseColor",
+                    "textureIndex": 0
+                  }
+                ]
+              }
+            ],
+            "diagnostics": []
+          }
         }
       },
       {
@@ -722,7 +1118,74 @@
                 }
               ]
             }
-          ]
+          ],
+          "assetAnalysis": {
+            "kind": "gltf",
+            "format": "glb",
+            "summary": "1 nodes, 1 meshes, 2 primitives, 2 materials",
+            "complexity": "low",
+            "sceneCount": 1,
+            "nodeCount": 1,
+            "meshCount": 1,
+            "primitiveCount": 2,
+            "materialCount": 2,
+            "textureCount": 2,
+            "imageCount": 2,
+            "animationCount": 0,
+            "skinCount": 0,
+            "meshes": [
+              {
+                "meshIndex": 0,
+                "name": "asset_20fda03a2e3c410da8df4741b_eae9a5__1781600584273_upload__1_",
+                "primitiveCount": 2,
+                "materialIndices": [
+                  0,
+                  1
+                ],
+                "materialNames": [
+                  "MI_Pipe_Stacks_01a_asset_20fda0_4_741b2eae9a5__1780739654514_upload_asset_20fda03a2e3c410da8df4741b_eae9a5__1781600584273_upload__1_",
+                  "lambert2_SM_木材-单根_单根木材_asset_20_4_741b2eae9a5__1780739654514_upload_asset_20fda03a2e3c410da8df4741b_eae9a5__1781600584273_upload__1_"
+                ]
+              }
+            ],
+            "materials": [
+              {
+                "sourceMaterialIndex": 0,
+                "materialName": "MI_Pipe_Stacks_01a_asset_20fda0_4_741b2eae9a5__1780739654514_upload_asset_20fda03a2e3c410da8df4741b_eae9a5__1781600584273_upload__1_",
+                "metallicFactor": 0,
+                "roughnessFactor": 0.498039246,
+                "alphaMode": "opaque",
+                "textureSlots": [
+                  {
+                    "slot": "baseColor",
+                    "textureIndex": 0,
+                    "texCoord": 1
+                  }
+                ]
+              },
+              {
+                "sourceMaterialIndex": 1,
+                "materialName": "lambert2_SM_木材-单根_单根木材_asset_20_4_741b2eae9a5__1780739654514_upload_asset_20fda03a2e3c410da8df4741b_eae9a5__1781600584273_upload__1_",
+                "baseColorFactor": [
+                  0.796875,
+                  0.796875,
+                  0.796875,
+                  1
+                ],
+                "metallicFactor": 0,
+                "roughnessFactor": 1,
+                "alphaMode": "opaque",
+                "textureSlots": [
+                  {
+                    "slot": "baseColor",
+                    "textureIndex": 1,
+                    "texCoord": 1
+                  }
+                ]
+              }
+            ],
+            "diagnostics": []
+          }
         }
       },
       {
@@ -789,7 +1252,57 @@
                 }
               ]
             }
-          ]
+          ],
+          "assetAnalysis": {
+            "kind": "gltf",
+            "format": "glb",
+            "summary": "1 nodes, 1 meshes, 1 primitives, 1 materials",
+            "complexity": "low",
+            "sceneCount": 1,
+            "nodeCount": 1,
+            "meshCount": 1,
+            "primitiveCount": 1,
+            "materialCount": 1,
+            "textureCount": 1,
+            "imageCount": 1,
+            "animationCount": 0,
+            "skinCount": 0,
+            "meshes": [
+              {
+                "meshIndex": 0,
+                "name": "xiangzi",
+                "primitiveCount": 1,
+                "materialIndices": [
+                  0
+                ],
+                "materialNames": [
+                  "xiangzi01_Mat_卡通风格手绘木质板箱组_xiangzi01-_xiangzi"
+                ]
+              }
+            ],
+            "materials": [
+              {
+                "sourceMaterialIndex": 0,
+                "materialName": "xiangzi01_Mat_卡通风格手绘木质板箱组_xiangzi01-_xiangzi",
+                "baseColorFactor": [
+                  1,
+                  1,
+                  0.845049024,
+                  1
+                ],
+                "metallicFactor": 1,
+                "roughnessFactor": 1,
+                "alphaMode": "opaque",
+                "textureSlots": [
+                  {
+                    "slot": "baseColor",
+                    "textureIndex": 0
+                  }
+                ]
+              }
+            ],
+            "diagnostics": []
+          }
         }
       },
       {
@@ -845,7 +1358,51 @@
                 }
               ]
             }
-          ]
+          ],
+          "assetAnalysis": {
+            "kind": "gltf",
+            "format": "glb",
+            "summary": "1 nodes, 1 meshes, 1 primitives, 1 materials",
+            "complexity": "low",
+            "sceneCount": 1,
+            "nodeCount": 1,
+            "meshCount": 1,
+            "primitiveCount": 1,
+            "materialCount": 1,
+            "textureCount": 1,
+            "imageCount": 1,
+            "animationCount": 0,
+            "skinCount": 0,
+            "meshes": [
+              {
+                "meshIndex": 0,
+                "name": "SM_mutong",
+                "primitiveCount": 1,
+                "materialIndices": [
+                  0
+                ],
+                "materialNames": [
+                  "T_Mat"
+                ]
+              }
+            ],
+            "materials": [
+              {
+                "sourceMaterialIndex": 0,
+                "materialName": "T_Mat",
+                "metallicFactor": 1,
+                "roughnessFactor": 0.5527864098548889,
+                "alphaMode": "opaque",
+                "textureSlots": [
+                  {
+                    "slot": "baseColor",
+                    "textureIndex": 0
+                  }
+                ]
+              }
+            ],
+            "diagnostics": []
+          }
         }
       },
       {
@@ -909,7 +1466,68 @@
                 }
               ]
             }
-          ]
+          ],
+          "assetAnalysis": {
+            "kind": "gltf",
+            "format": "glb",
+            "summary": "16 nodes, 1 meshes, 1 primitives, 1 materials",
+            "complexity": "low",
+            "sceneCount": 1,
+            "nodeCount": 16,
+            "meshCount": 1,
+            "primitiveCount": 1,
+            "materialCount": 1,
+            "textureCount": 1,
+            "imageCount": 1,
+            "animationCount": 1,
+            "skinCount": 1,
+            "meshes": [
+              {
+                "meshIndex": 0,
+                "name": "ji2",
+                "primitiveCount": 1,
+                "materialIndices": [
+                  0
+                ],
+                "materialNames": [
+                  "Mat_ji"
+                ]
+              }
+            ],
+            "materials": [
+              {
+                "sourceMaterialIndex": 0,
+                "materialName": "Mat_ji",
+                "baseColorFactor": [
+                  0.6470588445663452,
+                  0.6470588445663452,
+                  0.6470588445663452,
+                  1
+                ],
+                "metallicFactor": 0,
+                "roughnessFactor": 1,
+                "alphaMode": "opaque",
+                "textureSlots": [
+                  {
+                    "slot": "baseColor",
+                    "textureIndex": 0
+                  }
+                ]
+              }
+            ],
+            "diagnostics": [
+              {
+                "severity": "info",
+                "source": "asset",
+                "code": "asset.analysis.riggedOrAnimated",
+                "message": "GLTF asset contains animation or skin data.",
+                "details": {
+                  "animationCount": 1,
+                  "skinCount": 1
+                }
+              }
+            ]
+          }
         }
       },
       {
@@ -965,7 +1583,51 @@
                 }
               ]
             }
-          ]
+          ],
+          "assetAnalysis": {
+            "kind": "gltf",
+            "format": "glb",
+            "summary": "1 nodes, 1 meshes, 1 primitives, 1 materials",
+            "complexity": "low",
+            "sceneCount": 1,
+            "nodeCount": 1,
+            "meshCount": 1,
+            "primitiveCount": 1,
+            "materialCount": 1,
+            "textureCount": 1,
+            "imageCount": 1,
+            "animationCount": 0,
+            "skinCount": 0,
+            "meshes": [
+              {
+                "meshIndex": 0,
+                "name": "SM_maiduo",
+                "primitiveCount": 1,
+                "materialIndices": [
+                  0
+                ],
+                "materialNames": [
+                  "麦垛-_Mat"
+                ]
+              }
+            ],
+            "materials": [
+              {
+                "sourceMaterialIndex": 0,
+                "materialName": "麦垛-_Mat",
+                "metallicFactor": 1,
+                "roughnessFactor": 0.5527864098548889,
+                "alphaMode": "opaque",
+                "textureSlots": [
+                  {
+                    "slot": "baseColor",
+                    "textureIndex": 0
+                  }
+                ]
+              }
+            ],
+            "diagnostics": []
+          }
         }
       },
       {
@@ -1021,7 +1683,51 @@
                 }
               ]
             }
-          ]
+          ],
+          "assetAnalysis": {
+            "kind": "gltf",
+            "format": "glb",
+            "summary": "1 nodes, 1 meshes, 1 primitives, 1 materials",
+            "complexity": "low",
+            "sceneCount": 1,
+            "nodeCount": 1,
+            "meshCount": 1,
+            "primitiveCount": 1,
+            "materialCount": 1,
+            "textureCount": 1,
+            "imageCount": 1,
+            "animationCount": 0,
+            "skinCount": 0,
+            "meshes": [
+              {
+                "meshIndex": 0,
+                "name": "收银桌子",
+                "primitiveCount": 1,
+                "materialIndices": [
+                  0
+                ],
+                "materialNames": [
+                  "收银桌子aa_Mat"
+                ]
+              }
+            ],
+            "materials": [
+              {
+                "sourceMaterialIndex": 0,
+                "materialName": "收银桌子aa_Mat",
+                "metallicFactor": 0,
+                "roughnessFactor": 0.5,
+                "alphaMode": "opaque",
+                "textureSlots": [
+                  {
+                    "slot": "baseColor",
+                    "textureIndex": 0
+                  }
+                ]
+              }
+            ],
+            "diagnostics": []
+          }
         }
       }
     ],
@@ -1033,7 +1739,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 53,
+          "revision": 54,
           "objectGuid": "go_2406b122-d63b-4971-bf66-7d78a8776543",
           "objectId": "main_camera",
           "component": "Transform"
@@ -1089,7 +1795,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 53,
+          "revision": 54,
           "objectGuid": "go_environment_light_default",
           "objectId": "environment_light",
           "component": "Transform"
@@ -1135,7 +1841,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 53,
+          "revision": 54,
           "objectGuid": "go_7017d029-9d69-4381-91ac-75093053caa9",
           "objectId": "sun_light",
           "component": "Transform"
@@ -1147,14 +1853,14 @@
             "z": 0
           },
           "rotation": {
-            "x": 0,
-            "y": 0,
+            "x": 0.9,
+            "y": -0.7,
             "z": 0
           },
           "scale": {
-            "x": 1,
+            "x": 0.9999999999999999,
             "y": 1,
-            "z": 1
+            "z": 0.9999999999999999
           }
         },
         "kind": "transform",
@@ -1163,9 +1869,9 @@
           "type": "directional",
           "intensity": 2,
           "direction": {
-            "x": 0.35944184840597154,
-            "y": -0.8290376503546882,
-            "z": -0.42836681933697457
+            "x": 0.475434,
+            "y": -0.783327,
+            "z": -0.400452
           },
           "diffuseColor": {
             "r": 1,
@@ -1178,10 +1884,33 @@
         "id": "plane",
         "name": "Shadow Receiver Plane",
         "parentId": "root",
+        "shadow": {
+          "receive": "enabled",
+          "mode": "none"
+        },
+        "shadowPlan": {
+          "casterId": "plane",
+          "receiverIds": [],
+          "backend": "none",
+          "mode": "none",
+          "quality": "medium",
+          "params": {
+            "opacity": 0.42,
+            "softness": 0.4,
+            "bias": 0.001,
+            "normalBias": 0.01,
+            "maxDistance": 48,
+            "resolution": 1024,
+            "cascadeCount": 2,
+            "bakeSamples": 24,
+            "blurKernel": 4
+          },
+          "diagnostics": []
+        },
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 53,
+          "revision": 54,
           "objectGuid": "go_20efbb4a-c323-4ea3-911c-23c72827d7b9",
           "objectId": "plane",
           "component": "PrimitiveRenderer"
@@ -1206,19 +1935,47 @@
         "kind": "primitive",
         "primitive": {
           "shape": "plane"
-        },
-        "shadow": {
-          "receive": "enabled"
         }
       },
       {
         "id": "cube",
         "name": "Cube",
         "parentId": "root",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25
+          }
+        },
+        "shadowPlan": {
+          "casterId": "cube",
+          "receiverIds": [
+            "plane"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 53,
+          "revision": 54,
           "objectGuid": "go_ac4a2824-3625-468c-aeee-d7c75dedc814",
           "objectId": "cube",
           "component": "PrimitiveRenderer"
@@ -1249,10 +2006,41 @@
         "id": "sphere",
         "name": "Sphere",
         "parentId": "root",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25
+          }
+        },
+        "shadowPlan": {
+          "casterId": "sphere",
+          "receiverIds": [
+            "plane"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 53,
+          "revision": 54,
           "objectGuid": "go_cc80f1b1-57b9-4373-baba-eed140d90c8f",
           "objectId": "sphere",
           "component": "PrimitiveRenderer"
@@ -1283,10 +2071,41 @@
         "id": "capsule",
         "name": "Capsule",
         "parentId": "root",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25
+          }
+        },
+        "shadowPlan": {
+          "casterId": "capsule",
+          "receiverIds": [
+            "plane"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 53,
+          "revision": 54,
           "objectGuid": "go_68778bee-9b2d-44bb-9a37-cfa42efa2846",
           "objectId": "capsule",
           "component": "PrimitiveRenderer"
@@ -1320,7 +2139,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 53,
+          "revision": 54,
           "objectGuid": "go_shadow_fixture_group",
           "objectId": "shadow_fixture_group",
           "component": "GameObject"
@@ -1348,10 +2167,41 @@
         "id": "shadow_fixture_player",
         "name": "阴影测试-主角",
         "parentId": "shadow_fixture_group",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25
+          }
+        },
+        "shadowPlan": {
+          "casterId": "shadow_fixture_player",
+          "receiverIds": [
+            "plane"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 53,
+          "revision": 54,
           "objectGuid": "go_shadow_fixture_player",
           "objectId": "shadow_fixture_player",
           "component": "ModelRenderer"
@@ -1376,16 +2226,54 @@
         "kind": "instance",
         "instance": {
           "assetId": "asset_699aee4da2b84a3eb07f4496872ad249"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_7bdc2eef": {
+              "materialAssetId": "mat_cd94c2cdcc94413aab94bfa7ca94be14"
+            }
+          }
         }
       },
       {
         "id": "shadow_fixture_worker",
         "name": "阴影测试-工人",
         "parentId": "shadow_fixture_group",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25
+          }
+        },
+        "shadowPlan": {
+          "casterId": "shadow_fixture_worker",
+          "receiverIds": [
+            "plane"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 53,
+          "revision": 54,
           "objectGuid": "go_shadow_fixture_worker",
           "objectId": "shadow_fixture_worker",
           "component": "ModelRenderer"
@@ -1410,16 +2298,54 @@
         "kind": "instance",
         "instance": {
           "assetId": "asset_ade25007e0964563b197b21c2759c027"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_74e9cbf9": {
+              "materialAssetId": "mat_e6871821e587468ea48714fbe3871368"
+            }
+          }
         }
       },
       {
         "id": "shadow_fixture_truck",
         "name": "阴影测试-小蓝卡车",
         "parentId": "shadow_fixture_group",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25
+          }
+        },
+        "shadowPlan": {
+          "casterId": "shadow_fixture_truck",
+          "receiverIds": [
+            "plane"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 53,
+          "revision": 54,
           "objectGuid": "go_shadow_fixture_truck",
           "objectId": "shadow_fixture_truck",
           "component": "ModelRenderer"
@@ -1444,16 +2370,66 @@
         "kind": "instance",
         "instance": {
           "assetId": "asset_4b2358ee5d9441cd8cae8b389bb98c46"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_91c449a4": {
+              "materialAssetId": "mat_fee306e8ffe3487ba0e30a0e01e30ba1"
+            },
+            "slot_47f2cfb8": {
+              "materialAssetId": "mat_fee306e8ffe3487ba0e30a0e01e30ba1"
+            },
+            "slot_5278c34c": {
+              "materialAssetId": "mat_fee306e8ffe3487ba0e30a0e01e30ba1"
+            },
+            "slot_a58a01f0": {
+              "materialAssetId": "mat_fee306e8ffe3487ba0e30a0e01e30ba1"
+            },
+            "slot_ab17af44": {
+              "materialAssetId": "mat_fee306e8ffe3487ba0e30a0e01e30ba1"
+            }
+          }
         }
       },
       {
         "id": "shadow_fixture_pine_tree",
         "name": "阴影测试-松树",
         "parentId": "shadow_fixture_group",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25
+          }
+        },
+        "shadowPlan": {
+          "casterId": "shadow_fixture_pine_tree",
+          "receiverIds": [
+            "plane"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 53,
+          "revision": 54,
           "objectGuid": "go_shadow_fixture_pine_tree",
           "objectId": "shadow_fixture_pine_tree",
           "component": "ModelRenderer"
@@ -1478,16 +2454,54 @@
         "kind": "instance",
         "instance": {
           "assetId": "asset_edc2f992438c4450afc1c6354ec21500"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_1463c7d6": {
+              "materialAssetId": "mat_0cd17a040dd14b97aed17d2a0fd17ebd"
+            }
+          }
         }
       },
       {
         "id": "shadow_fixture_bush",
         "name": "阴影测试-阔叶灌木",
         "parentId": "shadow_fixture_group",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25
+          }
+        },
+        "shadowPlan": {
+          "casterId": "shadow_fixture_bush",
+          "receiverIds": [
+            "plane"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 53,
+          "revision": 54,
           "objectGuid": "go_shadow_fixture_bush",
           "objectId": "shadow_fixture_bush",
           "component": "ModelRenderer"
@@ -1512,16 +2526,54 @@
         "kind": "instance",
         "instance": {
           "assetId": "asset_af82a4f117d84ff58bedb41aa11bad5c"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_a3b38496": {
+              "materialAssetId": "mat_43f0690444f04a97a5f06c2a46f06dbd"
+            }
+          }
         }
       },
       {
         "id": "shadow_fixture_rocks",
         "name": "阴影测试-岩石组",
         "parentId": "shadow_fixture_group",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25
+          }
+        },
+        "shadowPlan": {
+          "casterId": "shadow_fixture_rocks",
+          "receiverIds": [
+            "plane"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 53,
+          "revision": 54,
           "objectGuid": "go_shadow_fixture_rocks",
           "objectId": "shadow_fixture_rocks",
           "component": "ModelRenderer"
@@ -1546,16 +2598,54 @@
         "kind": "instance",
         "instance": {
           "assetId": "asset_2286fa2ec19e45df8b1b188717c7c4e9"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_0a33f1e4": {
+              "materialAssetId": "mat_7ac6a4c67bc64659a8c6a1a079c6a333"
+            }
+          }
         }
       },
       {
         "id": "shadow_fixture_fence",
         "name": "阴影测试-栅栏",
         "parentId": "shadow_fixture_group",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25
+          }
+        },
+        "shadowPlan": {
+          "casterId": "shadow_fixture_fence",
+          "receiverIds": [
+            "plane"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 53,
+          "revision": 54,
           "objectGuid": "go_shadow_fixture_fence",
           "objectId": "shadow_fixture_fence",
           "component": "ModelRenderer"
@@ -1580,16 +2670,54 @@
         "kind": "instance",
         "instance": {
           "assetId": "asset_e726be04042849088cf73e4f2f92c00f"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_134be123": {
+              "materialAssetId": "mat_9cf2c5419bf243aeaaf2c21b99f2c088"
+            }
+          }
         }
       },
       {
         "id": "shadow_fixture_log_bundle",
         "name": "阴影测试-成捆木材",
         "parentId": "shadow_fixture_group",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25
+          }
+        },
+        "shadowPlan": {
+          "casterId": "shadow_fixture_log_bundle",
+          "receiverIds": [
+            "plane"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 53,
+          "revision": 54,
           "objectGuid": "go_shadow_fixture_log_bundle",
           "objectId": "shadow_fixture_log_bundle",
           "component": "ModelRenderer"
@@ -1614,16 +2742,54 @@
         "kind": "instance",
         "instance": {
           "assetId": "asset_52549a6dc9a34a5da036b7e771a907b3"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_fa0049a6": {
+              "materialAssetId": "mat_e42b5114e52b42a7a62b543ae72b55cd"
+            }
+          }
         }
       },
       {
         "id": "shadow_fixture_crate",
         "name": "阴影测试-箱子",
         "parentId": "shadow_fixture_group",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25
+          }
+        },
+        "shadowPlan": {
+          "casterId": "shadow_fixture_crate",
+          "receiverIds": [
+            "plane"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 53,
+          "revision": 54,
           "objectGuid": "go_shadow_fixture_crate",
           "objectId": "shadow_fixture_crate",
           "component": "ModelRenderer"
@@ -1648,16 +2814,54 @@
         "kind": "instance",
         "instance": {
           "assetId": "asset_759b595e81934517ba0251b16bd31061"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_8656a283": {
+              "materialAssetId": "mat_af644f91ae644dfead644c6bac644ad8"
+            }
+          }
         }
       },
       {
         "id": "shadow_fixture_barrel",
         "name": "阴影测试-木桶",
         "parentId": "shadow_fixture_group",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25
+          }
+        },
+        "shadowPlan": {
+          "casterId": "shadow_fixture_barrel",
+          "receiverIds": [
+            "plane"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 53,
+          "revision": 54,
           "objectGuid": "go_shadow_fixture_barrel",
           "objectId": "shadow_fixture_barrel",
           "component": "ModelRenderer"
@@ -1682,16 +2886,54 @@
         "kind": "instance",
         "instance": {
           "assetId": "asset_7612f54e381044e4b035ea6a988bfb89"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_f3f14d2b": {
+              "materialAssetId": "mat_5af6dde959f64c56a8f6dac357f6d930"
+            }
+          }
         }
       },
       {
         "id": "shadow_fixture_chicken",
         "name": "阴影测试-鸡",
         "parentId": "shadow_fixture_group",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25
+          }
+        },
+        "shadowPlan": {
+          "casterId": "shadow_fixture_chicken",
+          "receiverIds": [
+            "plane"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 53,
+          "revision": 54,
           "objectGuid": "go_shadow_fixture_chicken",
           "objectId": "shadow_fixture_chicken",
           "component": "ModelRenderer"
@@ -1716,16 +2958,54 @@
         "kind": "instance",
         "instance": {
           "assetId": "asset_97121f40170c40d1aaf63b8c2cf0bf24"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_db1ccc4e": {
+              "materialAssetId": "mat_0f3404b210344645ad34018c0e34031f"
+            }
+          }
         }
       },
       {
         "id": "shadow_fixture_hay_bale",
         "name": "阴影测试-干草卷",
         "parentId": "shadow_fixture_group",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25
+          }
+        },
+        "shadowPlan": {
+          "casterId": "shadow_fixture_hay_bale",
+          "receiverIds": [
+            "plane"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 53,
+          "revision": 54,
           "objectGuid": "go_shadow_fixture_hay_bale",
           "objectId": "shadow_fixture_hay_bale",
           "component": "ModelRenderer"
@@ -1750,16 +3030,54 @@
         "kind": "instance",
         "instance": {
           "assetId": "asset_26e79030d245465885b6e4349c9d81d9"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_c6401e21": {
+              "materialAssetId": "mat_d133a063d0334ed0a333a389d233a1f6"
+            }
+          }
         }
       },
       {
         "id": "shadow_fixture_counter",
         "name": "阴影测试-收银台",
         "parentId": "shadow_fixture_group",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25
+          }
+        },
+        "shadowPlan": {
+          "casterId": "shadow_fixture_counter",
+          "receiverIds": [
+            "plane"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 53,
+          "revision": 54,
           "objectGuid": "go_shadow_fixture_counter",
           "objectId": "shadow_fixture_counter",
           "component": "ModelRenderer"
@@ -1784,6 +3102,13 @@
         "kind": "instance",
         "instance": {
           "assetId": "asset_094bc5a89357455bb002b6b6a67e9295"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_5cd8df33": {
+              "materialAssetId": "mat_8f0c05718e0c43dead0c024b8c0c00b8"
+            }
+          }
         }
       }
     ],
@@ -1859,12 +3184,585 @@
             "intensity": 0
           }
         }
+      },
+      {
+        "id": "mat_cd94c2cdcc94413aab94bfa7ca94be14",
+        "guid": "cd94c2cd-cc94-413a-ab94-bfa7ca94be14",
+        "name": "ren_C_Mat",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "699aee4d-a2b8-4a3e-b07f-4496872ad249",
+          "sourceAssetId": "asset_699aee4da2b84a3eb07f4496872ad249",
+          "sourceSlotId": "slot_7bdc2eef",
+          "sourceMaterialIndex": 0,
+          "sourceMaterialName": "ren_C_Mat"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 0.5,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_ceae7442cfae45d5acae711ccdae72af",
+        "guid": "ceae7442-cfae-45d5-acae-711ccdae72af",
+        "name": "maozi_C_Mat",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "699aee4d-a2b8-4a3e-b07f-4496872ad249",
+          "sourceAssetId": "asset_699aee4da2b84a3eb07f4496872ad249",
+          "sourceSlotId": "slot_7bdc2eef",
+          "sourceMaterialIndex": 1,
+          "sourceMaterialName": "maozi_C_Mat"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 0.5,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_e6871821e587468ea48714fbe3871368",
+        "guid": "e6871821-e587-468e-a487-14fbe3871368",
+        "name": "lambert2",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "ade25007-e096-4563-b197-b21c2759c027",
+          "sourceAssetId": "asset_ade25007e0964563b197b21c2759c027",
+          "sourceSlotId": "slot_74e9cbf9",
+          "sourceMaterialIndex": 0,
+          "sourceMaterialName": "lambert2"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 0.4500536322593689,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          },
+          "alpha": {
+            "mode": "opaque"
+          }
+        }
+      },
+      {
+        "id": "mat_fee306e8ffe3487ba0e30a0e01e30ba1",
+        "guid": "fee306e8-ffe3-487b-a0e3-0a0e01e30ba1",
+        "name": "ST_kache_Rig:lambert21",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "4b2358ee-5d94-41cd-8cae-8b389bb98c46",
+          "sourceAssetId": "asset_4b2358ee5d9441cd8cae8b389bb98c46",
+          "sourceSlotId": "slot_91c449a4",
+          "sourceMaterialIndex": 0,
+          "sourceMaterialName": "ST_kache_Rig:lambert21"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 0.165830582,
+          "emission": {
+            "color": {
+              "r": 0.8,
+              "g": 0.8,
+              "b": 0.8
+            },
+            "intensity": 1
+          }
+        }
+      },
+      {
+        "id": "mat_0cd17a040dd14b97aed17d2a0fd17ebd",
+        "guid": "0cd17a04-0dd1-4b97-aed1-7d2a0fd17ebd",
+        "name": "Material #104",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "edc2f992-438c-4450-afc1-c6354ec21500",
+          "sourceAssetId": "asset_edc2f992438c4450afc1c6354ec21500",
+          "sourceSlotId": "slot_1463c7d6",
+          "sourceMaterialIndex": 0,
+          "sourceMaterialName": "Material #104"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 0.5527864098548889,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_43f0690444f04a97a5f06c2a46f06dbd",
+        "guid": "43f06904-44f0-4a97-a5f0-6c2a46f06dbd",
+        "name": "SSD_S_M_Cao_C3_Mat",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "af82a4f1-17d8-4ff5-8bed-b41aa11bad5c",
+          "sourceAssetId": "asset_af82a4f117d84ff58bedb41aa11bad5c",
+          "sourceSlotId": "slot_a3b38496",
+          "sourceMaterialIndex": 0,
+          "sourceMaterialName": "SSD_S_M_Cao_C3_Mat"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 1,
+          "roughness": 0.5527864098548889,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_7ac6a4c67bc64659a8c6a1a079c6a333",
+        "guid": "7ac6a4c6-7bc6-4659-a8c6-a1a079c6a333",
+        "name": "standardSurface2",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "2286fa2e-c19e-45df-8b1b-188717c7c4e9",
+          "sourceAssetId": "asset_2286fa2ec19e45df8b1b188717c7c4e9",
+          "sourceSlotId": "slot_0a33f1e4",
+          "sourceMaterialIndex": 0,
+          "sourceMaterialName": "standardSurface2"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 0.5527864098548889,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_9cf2c5419bf243aeaaf2c21b99f2c088",
+        "guid": "9cf2c541-9bf2-43ae-aaf2-c21b99f2c088",
+        "name": "ZHALAN_Mat",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "e726be04-0428-4908-8cf7-3e4f2f92c00f",
+          "sourceAssetId": "asset_e726be04042849088cf73e4f2f92c00f",
+          "sourceSlotId": "slot_134be123",
+          "sourceMaterialIndex": 0,
+          "sourceMaterialName": "ZHALAN_Mat"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 1,
+          "roughness": 0.5527864098548889,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_e42b5114e52b42a7a62b543ae72b55cd",
+        "guid": "e42b5114-e52b-42a7-a62b-543ae72b55cd",
+        "name": "MI_Pipe_Stacks_01a_asset_20fda0_4_741b2eae9a5__1780739654514_upload_asset_20fda03a2e3c410da8df4741b_eae9a5__1781600584273_upload__1_",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "52549a6d-c9a3-4a5d-a036-b7e771a907b3",
+          "sourceAssetId": "asset_52549a6dc9a34a5da036b7e771a907b3",
+          "sourceSlotId": "slot_fa0049a6",
+          "sourceMaterialIndex": 0,
+          "sourceMaterialName": "MI_Pipe_Stacks_01a_asset_20fda0_4_741b2eae9a5__1780739654514_upload_asset_20fda03a2e3c410da8df4741b_eae9a5__1781600584273_upload__1_"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 0.498039246,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_431236bf4212452ca51239e544123852",
+        "guid": "431236bf-4212-452c-a512-39e544123852",
+        "name": "lambert2_SM_木材-单根_单根木材_asset_20_4_741b2eae9a5__1780739654514_upload_asset_20fda03a2e3c410da8df4741b_eae9a5__1781600584273_upload__1_",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "52549a6d-c9a3-4a5d-a036-b7e771a907b3",
+          "sourceAssetId": "asset_52549a6dc9a34a5da036b7e771a907b3",
+          "sourceSlotId": "slot_fa0049a6",
+          "sourceMaterialIndex": 1,
+          "sourceMaterialName": "lambert2_SM_木材-单根_单根木材_asset_20_4_741b2eae9a5__1780739654514_upload_asset_20fda03a2e3c410da8df4741b_eae9a5__1781600584273_upload__1_"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 0.796875,
+              "g": 0.796875,
+              "b": 0.796875
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 1,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_af644f91ae644dfead644c6bac644ad8",
+        "guid": "af644f91-ae64-4dfe-ad64-4c6bac644ad8",
+        "name": "xiangzi01_Mat_卡通风格手绘木质板箱组_xiangzi01-_xiangzi",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "759b595e-8193-4517-ba02-51b16bd31061",
+          "sourceAssetId": "asset_759b595e81934517ba0251b16bd31061",
+          "sourceSlotId": "slot_8656a283",
+          "sourceMaterialIndex": 0,
+          "sourceMaterialName": "xiangzi01_Mat_卡通风格手绘木质板箱组_xiangzi01-_xiangzi"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 0.845049024
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 1,
+          "roughness": 1,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_5af6dde959f64c56a8f6dac357f6d930",
+        "guid": "5af6dde9-59f6-4c56-a8f6-dac357f6d930",
+        "name": "T_Mat",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "7612f54e-3810-44e4-b035-ea6a988bfb89",
+          "sourceAssetId": "asset_7612f54e381044e4b035ea6a988bfb89",
+          "sourceSlotId": "slot_f3f14d2b",
+          "sourceMaterialIndex": 0,
+          "sourceMaterialName": "T_Mat"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 1,
+          "roughness": 0.5527864098548889,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_0f3404b210344645ad34018c0e34031f",
+        "guid": "0f3404b2-1034-4645-ad34-018c0e34031f",
+        "name": "Mat_ji",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "97121f40-170c-40d1-aaf6-3b8c2cf0bf24",
+          "sourceAssetId": "asset_97121f40170c40d1aaf63b8c2cf0bf24",
+          "sourceSlotId": "slot_db1ccc4e",
+          "sourceMaterialIndex": 0,
+          "sourceMaterialName": "Mat_ji"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 0.6470588445663452,
+              "g": 0.6470588445663452,
+              "b": 0.6470588445663452
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 1,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_d133a063d0334ed0a333a389d233a1f6",
+        "guid": "d133a063-d033-4ed0-a333-a389d233a1f6",
+        "name": "麦垛-_Mat",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "26e79030-d245-4658-85b6-e4349c9d81d9",
+          "sourceAssetId": "asset_26e79030d245465885b6e4349c9d81d9",
+          "sourceSlotId": "slot_c6401e21",
+          "sourceMaterialIndex": 0,
+          "sourceMaterialName": "麦垛-_Mat"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 1,
+          "roughness": 0.5527864098548889,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_8f0c05718e0c43dead0c024b8c0c00b8",
+        "guid": "8f0c0571-8e0c-43de-ad0c-024b8c0c00b8",
+        "name": "收银桌子aa_Mat",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "094bc5a8-9357-455b-b002-b6b6a67e9295",
+          "sourceAssetId": "asset_094bc5a89357455bb002b6b6a67e9295",
+          "sourceSlotId": "slot_5cd8df33",
+          "sourceMaterialIndex": 0,
+          "sourceMaterialName": "收银桌子aa_Mat"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 0.5,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
       }
     ],
     "materials": [],
     "textures": []
   },
   "render": {},
-  "version": 50,
-  "updatedAt": "2026-06-28T06:08:03.888Z"
+  "version": 51,
+  "updatedAt": "2026-06-30T17:49:17.789Z"
 }
