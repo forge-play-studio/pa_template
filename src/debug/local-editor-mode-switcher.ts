@@ -70,6 +70,7 @@ import {
   createEditorSceneDuplicateSelectionPatch,
   createEditorSceneGroupSelectionPatch,
   createEditorSceneHierarchyMovePatch,
+  createEditorSceneMarkerGraphPatch,
   canCreateEditorSceneSerializedMultiPropertyPatch,
   createEditorSceneSerializedMultiPropertyPatch,
   createEditorSceneInspectorPropertyPatch,
@@ -82,6 +83,9 @@ import {
   getEditorSceneHierarchyItems,
   getEditorSceneInspectorMultiObject,
   getEditorSceneInspectorObject,
+  getEditorSceneMarkerGraph,
+  getEditorSceneMarkerTypeCatalog,
+  getEditorSceneRelationTypeCatalog,
   getEditorSceneRuntimeInspectorSections,
   getEditorScenePrefabStageDescriptor,
   getEditorScenePrefabStageInspectorObject,
@@ -304,6 +308,12 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
       },
       assetBrowser: {
         getBrowserAssetItems: createEditorSceneBrowserAssetItems,
+      },
+      markerGraph: {
+        getMarkerGraph: getEditorSceneMarkerGraph,
+        getMarkerTypeCatalog: getEditorSceneMarkerTypeCatalog,
+        getRelationTypeCatalog: getEditorSceneRelationTypeCatalog,
+        createMarkerGraphPatch: createEditorSceneMarkerGraphPatch,
       },
       agentContext: {
         describeSceneObject: input => describeEditorSceneAgentObject(input.document, input.objectId),
