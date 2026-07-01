@@ -54,7 +54,6 @@ import {
   type PlayablePlatformAssetExternal,
   type EditorSceneRuntimePreviewGroundDecalDescriptor,
 } from '@fps-games/editor/playable-sdk';
-import type { EditorAgentJsonObject } from '@fps-games/editor-protocol';
 import baseSceneConfig from '../config/scene.json';
 import type {
   SceneConfig,
@@ -123,6 +122,16 @@ import {
 import * as editorAssets from '../assets';
 
 type BabylonModule = Record<string, any>;
+
+type EditorSceneAgentJsonValue =
+  | null
+  | string
+  | number
+  | boolean
+  | EditorSceneAgentJsonValue[]
+  | { [key: string]: EditorSceneAgentJsonValue };
+
+type EditorSceneAgentJsonObject = { [key: string]: EditorSceneAgentJsonValue };
 
 type ProjectGameRestartContext = {
   reason?: string;
@@ -1408,8 +1417,8 @@ export function describeEditorSceneAgentObjectSet(
   };
 }
 
-function toEditorSceneAgentJsonObject<T extends object>(value: T): EditorAgentJsonObject {
-  return structuredClone(value) as unknown as EditorAgentJsonObject;
+function toEditorSceneAgentJsonObject<T extends object>(value: T): EditorSceneAgentJsonObject {
+  return structuredClone(value) as unknown as EditorSceneAgentJsonObject;
 }
 
 function createEditorSceneAgentPrefabBindingCandidates(prefabSummary: NonNullable<ReturnType<typeof createEditorScenePrefabAgentSummary>>) {
