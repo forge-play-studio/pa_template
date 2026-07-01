@@ -17,14 +17,62 @@ import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 
 import { configService, type SceneVfxEffectConfig, type SceneVfxParticleSystemConfig } from '../config';
 import { UIImages } from '../assets';
+import {
+  VFX_REGISTRY,
+  type VfxDebugAnchor,
+  type VfxEffectHandle,
+  type VfxEffectPackage,
+  type VfxParamValues,
+  type VfxSpawnTransform,
+} from '../assets/vfx';
+import { EffectPackageService } from '@fps-games/vfx';
+
+export interface SceneVfxWarmupEntry {
+  effectId: string;
+  params?: Partial<VfxParamValues>;
+  spawnTransform?: VfxSpawnTransform | Vector3;
+}
+
+export interface SceneVfxServiceOptions {
+  getDebugAnchorPosition?: (anchor: VfxDebugAnchor) => Vector3 | null;
+}
 
 export class SceneVfxService {
   private scene: Scene;
+  private effectPackageService: EffectPackageService;
   private particleSystems: ParticleSystem[] = [];
   private emitters: TransformNode[] = [];
 
-  constructor(scene: Scene) {
+  constructor(scene: Scene, options: SceneVfxServiceOptions = {}) {
     this.scene = scene;
+    this.effectPackageService = new EffectPackageService(scene, {
+      registry: VFX_REGISTRY,
+      getDebugAnchorPosition: options.getDebugAnchorPosition,
+    });
+  }
+
+  getEffectPackageService(): EffectPackageService {
+    return this.effectPackageService;
+  }
+
+  getEffectPackages(): VfxEffectPackage[] {
+    return this.effectPackageService.getEffectPackages();
+  }
+
+  getMergedParams(effectId: string, explicitParams?: Partial<VfxParamValues>): VfxParamValues | null {
+    return this.effectPackageService.getMergedParams(effectId, explicitParams);
+  }
+
+  playEffectPackage(
+    effectId: string,
+    params: Partial<VfxParamValues> = {},
+    spawnTransform?: VfxSpawnTransform | Vector3,
+  ): VfxEffectHandle | null {
+    return this.effectPackageService.playEffectPackage(effectId, params, spawnTransform);
+  }
+
+  async warmupEffectPackages(entries: SceneVfxWarmupEntry[]): Promise<void> {
+    await Promise.all(entries.map((entry) => this.warmupEffectPackage(entry)));
   }
 
   /** 从配置初始化所有场景特效 */
@@ -102,7 +150,35 @@ export class SceneVfxService {
     this.particleSystems.push(system);
   }
 
+  private async warmupEffectPackage(entry: SceneVfxWarmupEntry): Promise<void> {
+    let handle: VfxEffectHandle | null = null;
+    try {
+      handle = this.playEffectPackage(entry.effectId, entry.params ?? {}, entry.spawnTransform);
+      if (!handle) return;
+      await handle.ready;
+      await this.waitForAnimationFrames(2);
+    } catch (error) {
+      console.warn(`[SceneVfxService] Failed to warm up effect package "${entry.effectId}".`, error);
+    } finally {
+      handle?.dispose();
+    }
+  }
+
+  private async waitForAnimationFrames(frameCount: number): Promise<void> {
+    for (let i = 0; i < frameCount; i += 1) {
+      await new Promise<void>((resolve) => {
+        if (typeof requestAnimationFrame === 'function') {
+          requestAnimationFrame(() => resolve());
+          return;
+        }
+        window.setTimeout(resolve, 0);
+      });
+    }
+  }
+
   dispose(): void {
+    this.effectPackageService.dispose();
+
     for (const ps of this.particleSystems) {
       ps.stop();
       ps.dispose();

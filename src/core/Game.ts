@@ -65,6 +65,8 @@ import { configService, PROJECT_GAMEPLAY_CONFIG } from '../config';
 import type { SceneConfig } from '../config';
 import { createProjectGameplayRuntime } from '../gameplay';
 import type { GameplayModule, ProjectGameplayRuntime } from '../gameplay';
+import type { EffectPackageService } from '@fps-games/vfx';
+import type { VfxParamValues, VfxSpawnTransform } from '../assets/vfx';
 
 export interface GameOptions {
   canvasId: string;
@@ -404,6 +406,18 @@ export class Game {
 
   getSceneNodeRuntime(id: string): any | null {
     return this.sceneBuilder?.getSceneNodeRuntime(id) ?? null;
+  }
+
+  getSceneVfxService(): SceneVfxService | null {
+    return this.sceneVfxService;
+  }
+
+  getEffectPackageService(): EffectPackageService | null {
+    return this.sceneVfxService?.getEffectPackageService() ?? null;
+  }
+
+  playEffectPackage(effectId: string, params: Partial<VfxParamValues> = {}, spawnTransform?: VfxSpawnTransform | Vector3) {
+    return this.sceneVfxService?.playEffectPackage(effectId, params, spawnTransform) ?? null;
   }
 
   /**

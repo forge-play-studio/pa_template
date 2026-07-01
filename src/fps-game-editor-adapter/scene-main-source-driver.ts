@@ -110,9 +110,7 @@ export function createSceneMainSourceDriver(
         throw error;
       }
       if (renderingConfig) markActiveRenderingConfigSaved(saved.renderingConfig ?? renderingConfig);
-      if (staticShadowArtifactDirty) {
-        markActiveStaticShadowArtifactSaved(saved.companionConfigs?.staticShadows ?? staticShadowArtifact);
-      }
+      if (staticShadowArtifactDirty) markActiveStaticShadowArtifactSaved(saved.companionConfigs?.staticShadows ?? staticShadowArtifact);
       lastCompiledArtifact = saved.compiledArtifact ?? null;
       syncRuntimeSceneConfigForCurrentTab(saved.compiledArtifact?.data);
       return {

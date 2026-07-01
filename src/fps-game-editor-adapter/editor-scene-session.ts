@@ -20,6 +20,7 @@ import {
   type SerializedMultiObject,
   type SerializedObject,
   type SerializedPropertyPatch,
+  type PlayableLocalEditorMarkerGraphCommand,
   combineEditorTransforms,
   createIdentityEditorTransform,
   getTopLevelSceneGraphNodeIds,
@@ -175,6 +176,7 @@ import type {
 } from './editor-scene-document';
 import type {
   ArtistMaterialProfile,
+  LegacyGroundDecalConfig,
   MaterialOverrideConfig,
   OutlineOverrideConfig,
   SceneCameraProjection,
@@ -192,6 +194,7 @@ import {
 import {
   findEditorSceneModelRenderer,
   findEditorSceneTransform,
+  isEditorSceneTrsTransformComponent,
   readEditorSceneNodeKind,
 } from './editor-scene-document';
 import { resolveSceneNodeFieldSchema } from './scene-node-field-schema';
@@ -285,6 +288,10 @@ export type EditorSceneDocumentPatch =
     assetId: string;
     bindingPath: string;
     materialAsset: SceneMaterialAssetConfig;
+  }
+  | {
+    kind: 'scene.marker-graph';
+    command: PlayableLocalEditorMarkerGraphCommand;
   }
   | {
     kind: 'game-object.create-from-asset';
@@ -4625,7 +4632,7 @@ function toLocalTransformFromParentWorld(
 
 function readRawGameObjectLocalTransform(gameObject: EditorSceneGameObject): EditorTransformSnapshot {
   const transform = findEditorSceneTransform(gameObject);
-  if (!transform) return identityTransform();
+  if (!transform || !isEditorSceneTrsTransformComponent(transform)) return identityTransform();
   return {
     position: { ...transform.position },
     rotation: { ...transform.rotation },
@@ -4918,14 +4925,15 @@ function createGroundDecalInspectorProperties(
   nodeKind: SceneNodeConfig['kind'],
   groundDecal: EditorSceneGameObject['groundDecal'],
 ): InspectorProperty<EditorSceneDocument>[] {
-  const decal = groundDecal ?? createDefaultGroundDecal();
+  const size = groundDecal?.size ?? createDefaultGroundDecal().size;
+  const legacyDecal = readLegacyGroundDecalConfig(groundDecal) ?? createDefaultGroundDecal();
   const properties: InspectorProperty<EditorSceneDocument>[] = [
     createDocumentInspectorProperty(null, nodeKind, {
       path: 'groundDecal.size.width',
       label: 'Width',
       valueType: 'number',
       control: 'number',
-      value: decal.size.width,
+      value: size.width,
       commitMode: 'live',
       order: 0,
       min: 0.001,
@@ -4936,7 +4944,7 @@ function createGroundDecalInspectorProperties(
       label: 'Depth',
       valueType: 'number',
       control: 'number',
-      value: decal.size.depth,
+      value: size.depth,
       commitMode: 'live',
       order: 1,
       min: 0.001,
@@ -4947,7 +4955,7 @@ function createGroundDecalInspectorProperties(
       label: 'Texture ID',
       valueType: 'string',
       control: 'string',
-      value: decal.textureId ?? '',
+      value: legacyDecal.textureId ?? '',
       commitMode: 'blur',
       order: 2,
       coerce: (value: unknown) => normalizeEditorSceneInspectorValue('groundDecal.textureId', value),
@@ -4957,7 +4965,7 @@ function createGroundDecalInspectorProperties(
       label: 'Color',
       valueType: 'color',
       control: 'color',
-      value: decal.color ?? { r: 1, g: 1, b: 1 },
+      value: legacyDecal.color ?? { r: 1, g: 1, b: 1 },
       commitMode: 'immediate',
       order: 3,
     }),
@@ -4966,7 +4974,7 @@ function createGroundDecalInspectorProperties(
       label: 'Alpha Index',
       valueType: 'number',
       control: 'number',
-      value: decal.alphaIndex ?? 0,
+      value: legacyDecal.alphaIndex ?? 0,
       commitMode: 'live',
       order: 4,
       step: 1,
@@ -4976,7 +4984,7 @@ function createGroundDecalInspectorProperties(
       label: 'Diffuse Level',
       valueType: 'number',
       control: 'number',
-      value: decal.diffuseTextureLevel ?? 1,
+      value: legacyDecal.diffuseTextureLevel ?? 1,
       commitMode: 'live',
       order: 5,
       step: 0.05,
@@ -4986,7 +4994,7 @@ function createGroundDecalInspectorProperties(
       label: 'Emissive Level',
       valueType: 'number',
       control: 'number',
-      value: decal.emissiveTextureLevel ?? 0,
+      value: legacyDecal.emissiveTextureLevel ?? 0,
       commitMode: 'live',
       order: 6,
       step: 0.05,
@@ -6858,7 +6866,7 @@ function splitChildMaterialBindingFieldPath(path: string): string[] | null {
 }
 
 
-function createDefaultGroundDecal(): NonNullable<EditorSceneGameObject['groundDecal']> {
+function createDefaultGroundDecal(): LegacyGroundDecalConfig {
   return {
     size: { width: 1, depth: 1 },
     color: { r: 1, g: 1, b: 1 },
@@ -6867,19 +6875,27 @@ function createDefaultGroundDecal(): NonNullable<EditorSceneGameObject['groundDe
 
 function mergeGroundDecalDefaults(
   groundDecal: EditorSceneGameObject['groundDecal'],
-): NonNullable<EditorSceneGameObject['groundDecal']> {
+): LegacyGroundDecalConfig {
   const defaults = createDefaultGroundDecal();
+  const legacyGroundDecal = readLegacyGroundDecalConfig(groundDecal);
   return {
     ...defaults,
-    ...(groundDecal ?? {}),
+    ...(legacyGroundDecal ?? {}),
     size: {
       ...defaults.size,
-      ...(groundDecal?.size ?? {}),
+      ...(legacyGroundDecal?.size ?? groundDecal?.size ?? {}),
     },
-    color: groundDecal?.color
-      ? { ...defaults.color, ...groundDecal.color }
+    color: legacyGroundDecal?.color
+      ? { ...defaults.color, ...legacyGroundDecal.color }
       : defaults.color,
   };
+}
+
+function readLegacyGroundDecalConfig(
+  groundDecal: EditorSceneGameObject['groundDecal'],
+): LegacyGroundDecalConfig | null {
+  if (!groundDecal || (groundDecal as { version?: unknown }).version === 2) return null;
+  return groundDecal as LegacyGroundDecalConfig;
 }
 
 function createDefaultEditorSceneCameraGameObject(

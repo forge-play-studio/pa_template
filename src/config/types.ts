@@ -406,21 +406,187 @@ export interface ScenePrimitiveNode extends SceneNodeBase {
   overrides?: SceneNodeVisualOverrides;
 }
 
+export interface SceneMarkerBoxGeometryConfig {
+  kind: 'box';
+}
+
+export interface SceneMarkerPointGeometryConfig {
+  kind: 'point';
+  coordinateSpace?: 'world' | 'local';
+  position?: Position3D;
+  offset?: Position3D;
+  target?: SceneMarkerTargetRefConfig;
+}
+
+export interface SceneMarkerObjectBoundsGeometryConfig {
+  kind: 'object-bounds';
+  target: SceneMarkerTargetRefConfig;
+}
+
+export interface SceneMarkerPolyhedronGeometryConfig {
+  kind: 'polyhedron';
+  coordinateSpace?: 'world';
+  vertices: Position3D[];
+  faces?: number[][];
+}
+
+export type SceneMarkerGeometryConfig =
+  | SceneMarkerBoxGeometryConfig
+  | SceneMarkerPointGeometryConfig
+  | SceneMarkerObjectBoundsGeometryConfig
+  | SceneMarkerPolyhedronGeometryConfig;
+
+export interface SceneMarkerTargetRefConfig {
+  kind: string;
+  id: string;
+  label?: string;
+  path?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface SceneMarkerLocalFrameConfig {
+  origin: Position3D;
+  forward?: Position3D;
+  right?: Position3D;
+  up?: Position3D;
+  label?: string;
+  description?: string;
+}
+
+export interface SceneMarkerConfig {
+  schemaVersion: 1;
+  label: string;
+  type: string;
+  kind?: string;
+  tags?: string[];
+  note?: string;
+  color?: ColorRGB;
+  target?: SceneMarkerTargetRefConfig;
+  semanticFrame?: SceneMarkerLocalFrameConfig;
+  geometry: SceneMarkerGeometryConfig;
+  metadata?: Record<string, unknown>;
+}
+
+export type GroundDecalUiKind = 'operation' | 'delivery';
+
+export type GroundDecalUiLayerRole =
+  | 'base'
+  | 'border'
+  | 'mainLogo'
+  | 'subLogo'
+  | 'amount'
+  | 'progressFill';
+
+export interface GroundDecalUiRect {
+  x: number;
+  z: number;
+  width: number;
+  depth: number;
+}
+
+export interface GroundDecalUiColor {
+  r: number;
+  g: number;
+  b: number;
+  a?: number;
+}
+
+export interface GroundDecalUiLayerBase {
+  id: string;
+  role: GroundDecalUiLayerRole;
+  enabled?: boolean;
+  zOrder: number;
+  rect: GroundDecalUiRect;
+  opacity?: number;
+}
+
+export interface GroundDecalUiTextureLayer extends GroundDecalUiLayerBase {
+  kind: 'texture';
+  textureId: string;
+  tint?: GroundDecalUiColor;
+}
+
+export interface GroundDecalUiColorLayer extends GroundDecalUiLayerBase {
+  kind: 'color';
+  color: GroundDecalUiColor;
+}
+
+export interface GroundDecalUiTextLayer extends GroundDecalUiLayerBase {
+  kind: 'text';
+  text: {
+    value: string;
+    fontFamily?: string;
+    fontSize?: number;
+    fontWeight?: string;
+    color: GroundDecalUiColor;
+    strokeColor?: GroundDecalUiColor;
+    strokeWidth?: number;
+    align?: 'left' | 'center' | 'right';
+    baseline?: 'top' | 'middle' | 'bottom';
+  };
+}
+
+export interface GroundDecalUiProgressLayer extends GroundDecalUiLayerBase {
+  kind: 'progress';
+  value: number;
+  direction?: 'leftToRight' | 'rightToLeft' | 'bottomToTop' | 'topToBottom';
+  color: GroundDecalUiColor;
+}
+
+export type GroundDecalUiLayer =
+  | GroundDecalUiTextureLayer
+  | GroundDecalUiColorLayer
+  | GroundDecalUiTextLayer
+  | GroundDecalUiProgressLayer;
+
+export interface GroundDecalUiMaskConfig {
+  enabled: boolean;
+  source: 'roundedRect' | 'borderAlpha' | 'texture';
+  textureId?: string;
+  cornerRadius?: number;
+  padding?: number;
+}
+
+export interface GroundDecalUiRenderingConfig {
+  textureWidth?: number;
+  textureHeight?: number;
+  alphaIndex?: number;
+  diffuseTextureLevel?: number;
+  emissiveTextureLevel?: number;
+}
+
+export interface GroundDecalUiConfig {
+  version: 2;
+  uiKind: GroundDecalUiKind;
+  size: {
+    width: number;
+    depth: number;
+  };
+  aspectSourceLayerId?: string;
+  lockAspectToBorder?: boolean;
+  layers: GroundDecalUiLayer[];
+  mask?: GroundDecalUiMaskConfig;
+  rendering?: GroundDecalUiRenderingConfig;
+}
+
+export interface LegacyGroundDecalConfig {
+  size: {
+    width: number;
+    depth: number;
+  };
+  textureId?: string;
+  color?: ColorRGB;
+  alphaIndex?: number;
+  diffuseTextureLevel?: number;
+  emissiveTextureLevel?: number;
+}
+
 export interface SceneTransformNode extends SceneNodeBase {
   kind: 'transform';
   transformType?: TransformType;
   overrides?: SceneNodeVisualOverrides;
-  groundDecal?: {
-    size: {
-      width: number;
-      depth: number;
-    };
-    textureId?: string;
-    color?: ColorRGB;
-    alphaIndex?: number;
-    diffuseTextureLevel?: number;
-    emissiveTextureLevel?: number;
-  };
+  marker?: SceneMarkerConfig;
+  groundDecal?: LegacyGroundDecalConfig | GroundDecalUiConfig;
   camera?: SceneCameraRigConfig;
   light?: SceneLightConfig;
 }

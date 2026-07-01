@@ -110,6 +110,7 @@ const fpsEditorPackageJsonPath = localFpsGameEditorRepo
 const allowedThirdPartyPackages = [
   '@babylonjs/core',
   '@babylonjs/loaders',
+  '@fps-games/vfx',
   ...PLAYABLE_EDITOR_PACKAGE_IDS,
 ];
 

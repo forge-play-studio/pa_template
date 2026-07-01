@@ -70,6 +70,22 @@ const BABYLON_MATERIAL_RUNTIME = { Color3, MaterialPluginBase, Texture };
 
 const DEFAULT_CAMERA_FOV = 0.85;
 
+type LegacyGroundDecalRuntimeConfig = {
+  size: { width: number; depth: number };
+  textureId?: string;
+  color?: ColorRGB;
+  alphaIndex?: number;
+  diffuseTextureLevel?: number;
+  emissiveTextureLevel?: number;
+};
+
+function readLegacyGroundDecalConfig(
+  groundDecal: SceneTransformNode['groundDecal'],
+): LegacyGroundDecalRuntimeConfig | null {
+  if (!groundDecal || (groundDecal as { version?: unknown }).version === 2) return null;
+  return groundDecal as LegacyGroundDecalRuntimeConfig;
+}
+
 /** 场景环境构建结果 */
 export interface SceneEnvironment {
   camera: ArcRotateCamera;
@@ -1209,18 +1225,20 @@ export class SceneBuilder {
 
   private attachTransformRuntime(nodeConfig: SceneTransformNode, runtimeNode: TransformNode): void {
     if (nodeConfig.transformType !== 'groundDecal' || !nodeConfig.groundDecal) return;
+    const legacyGroundDecal = readLegacyGroundDecalConfig(nodeConfig.groundDecal);
+    if (!legacyGroundDecal) return;
 
-    if (typeof nodeConfig.groundDecal.alphaIndex === 'number' && Number.isFinite(nodeConfig.groundDecal.alphaIndex)) {
-      (runtimeNode as any).alphaIndex = nodeConfig.groundDecal.alphaIndex;
+    if (typeof legacyGroundDecal.alphaIndex === 'number' && Number.isFinite(legacyGroundDecal.alphaIndex)) {
+      (runtimeNode as any).alphaIndex = legacyGroundDecal.alphaIndex;
     }
 
     const mat = new StandardMaterial(`${nodeConfig.id}_mat`, this.scene);
-    const color = nodeConfig.groundDecal.color ?? { r: 1, g: 1, b: 1 };
+    const color = legacyGroundDecal.color ?? { r: 1, g: 1, b: 1 };
     mat.diffuseColor = new Color3(color.r, color.g, color.b);
     mat.specularColor = new Color3(0, 0, 0);
     mat.backFaceCulling = false;
 
-    const textureUrl = nodeConfig.groundDecal.textureId ? resolveTextureAssetUrl(nodeConfig.groundDecal.textureId) : undefined;
+    const textureUrl = legacyGroundDecal.textureId ? resolveTextureAssetUrl(legacyGroundDecal.textureId) : undefined;
     if (textureUrl) {
       const texture = new Texture(textureUrl, this.scene);
       texture.hasAlpha = true;
@@ -1229,14 +1247,14 @@ export class SceneBuilder {
       texture.vScale = -1;
       texture.vOffset = 1;
       mat.diffuseTexture = texture;
-      if (typeof nodeConfig.groundDecal.diffuseTextureLevel === 'number' && Number.isFinite(nodeConfig.groundDecal.diffuseTextureLevel)) {
-        mat.diffuseTexture.level = nodeConfig.groundDecal.diffuseTextureLevel;
+      if (typeof legacyGroundDecal.diffuseTextureLevel === 'number' && Number.isFinite(legacyGroundDecal.diffuseTextureLevel)) {
+        mat.diffuseTexture.level = legacyGroundDecal.diffuseTextureLevel;
       }
       mat.useAlphaFromDiffuseTexture = true;
       mat.diffuseColor = new Color3(1, 1, 1);
-      if (typeof nodeConfig.groundDecal.emissiveTextureLevel === 'number' && Number.isFinite(nodeConfig.groundDecal.emissiveTextureLevel)) {
+      if (typeof legacyGroundDecal.emissiveTextureLevel === 'number' && Number.isFinite(legacyGroundDecal.emissiveTextureLevel)) {
         mat.emissiveTexture = mat.emissiveTexture ?? texture;
-        mat.emissiveTexture.level = nodeConfig.groundDecal.emissiveTextureLevel;
+        mat.emissiveTexture.level = legacyGroundDecal.emissiveTextureLevel;
       }
     }
 

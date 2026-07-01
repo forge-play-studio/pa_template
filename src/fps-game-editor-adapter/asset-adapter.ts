@@ -5,7 +5,7 @@ import {
 } from '../services/AssetManager';
 import {
   createPlayableBridgeEventPayload,
-  executePlayableAssetTransportPlan as executeTransportPlan,
+  executePlayableAssetTransportPlan,
   readPlayableAssetImportInput,
   readPlayableAssetRegistrationPlanInput,
   readPlayableAssetUnregistrationPlanInput,
@@ -91,23 +91,6 @@ function toProjectAssetExternalRef(value: PlayablePlatformAssetExternal | undefi
   return value ? { ...value } : undefined;
 }
 
-function readProjectAssetRegistrationPlanInput(params: Record<string, unknown>) {
-  const planInput = readPlayableAssetRegistrationPlanInput(params);
-  return {
-    ...planInput,
-    assetId: optionalString(params.projectAssetId) ?? planInput.assetId,
-    platformAssetId: optionalString(params.platformAssetId) ?? optionalString(params.assetId),
-  };
-}
-
-function readProjectAssetUnregistrationPlanInput(params: Record<string, unknown>) {
-  const planInput = readPlayableAssetUnregistrationPlanInput(params);
-  return {
-    ...planInput,
-    assetId: optionalString(params.projectAssetId) ?? optionalString(params.assetId) ?? planInput.assetId,
-  };
-}
-
 function resolveCanonicalRegistration(
   plan: ReturnType<typeof planAssetRegistration>,
   registered: Record<string, unknown> | null,
@@ -147,7 +130,7 @@ export function createProjectFpsGameEditorAssetAdapter(
     async handleCommand(name, params, context) {
       if (name === EDITOR_COMMAND_NAME.ASSET_REGISTRATION_PLAN) {
         try {
-          const planInput = readProjectAssetRegistrationPlanInput(params);
+          const planInput = readPlayableAssetRegistrationPlanInput(params);
           const plan = planAssetRegistration(planInput as any);
           emitBridgeEvent(EDITOR_EVENT_NAME.ASSET_REGISTRATION_PLANNED, plan as unknown as Record<string, unknown>);
         } catch (error) {
@@ -162,7 +145,7 @@ export function createProjectFpsGameEditorAssetAdapter(
 
       if (name === EDITOR_COMMAND_NAME.ASSET_UNREGISTRATION_PLAN) {
         try {
-          const planInput = readProjectAssetUnregistrationPlanInput(params);
+          const planInput = readPlayableAssetUnregistrationPlanInput(params);
           if (planInput.assetId) assertSceneAssetUnused(planInput.assetId);
           const plan = planAssetUnregistration(planInput);
           emitBridgeEvent(EDITOR_EVENT_NAME.ASSET_UNREGISTRATION_PLANNED, plan as unknown as Record<string, unknown>);
@@ -180,17 +163,16 @@ export function createProjectFpsGameEditorAssetAdapter(
         if (isLocalEditorAssetBridgeActive()) return true;
         ensureProjectEditorDocumentLoaded();
         const importInput = readPlayableAssetImportInput(params);
-        const inferredAssetPath = importInput.inferredAssetPath;
         const inferredAssetUrl = optionalString(params.assetUrl)?.trim()
-          || (inferredAssetPath ? `/@fs${inferredAssetPath}` : '');
+          || (importInput.inferredAssetPath ? `/@fs${importInput.inferredAssetPath}` : '');
         const registrationPlan = planAssetRegistration({
           ...importInput,
           assetName: importInput.rawAssetName || undefined,
-          assetPath: inferredAssetPath,
+          assetPath: importInput.inferredAssetPath,
           assetUrl: inferredAssetUrl,
         } as any);
-        const registered = inferredAssetPath
-          ? await executeTransportPlan(registrationPlan.transportPlan)
+        const registered = importInput.inferredAssetPath
+          ? await executePlayableAssetTransportPlan(registrationPlan.transportPlan)
           : null;
         const canonical = resolveCanonicalRegistration(registrationPlan, registered, inferredAssetUrl);
 

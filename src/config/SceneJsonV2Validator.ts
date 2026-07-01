@@ -664,6 +664,10 @@ function validateGroundDecal(value: unknown, path: string, add: (path: string, m
     add(path, 'groundDecal must be an object');
     return;
   }
+  if (value.version === 2) {
+    validateGroundDecalUi(value, path, add);
+    return;
+  }
   if (!isRecord(value.size)) {
     add(`${path}.size`, 'groundDecal.size must be an object');
   } else {
@@ -680,6 +684,226 @@ function validateGroundDecal(value: unknown, path: string, add: (path: string, m
       add(`${path}.${key}`, `${key} must be a finite number`);
     }
   }
+}
+
+function validateGroundDecalUi(value: Record<string, any>, path: string, add: (path: string, message: string) => void): void {
+  if (value.uiKind !== 'operation' && value.uiKind !== 'delivery') {
+    add(`${path}.uiKind`, 'groundDecal UI kind must be operation or delivery');
+  }
+  if (!isRecord(value.size)) {
+    add(`${path}.size`, 'groundDecal.size must be an object');
+  } else {
+    for (const key of ['width', 'depth']) {
+      if (typeof value.size[key] !== 'number' || !Number.isFinite(value.size[key]) || value.size[key] <= 0) {
+        add(`${path}.size.${key}`, 'groundDecal size must be a positive finite number');
+      }
+    }
+  }
+  if (value.aspectSourceLayerId != null && !nonEmptyString(value.aspectSourceLayerId)) {
+    add(`${path}.aspectSourceLayerId`, 'aspectSourceLayerId must be non-empty when present');
+  }
+  if (value.lockAspectToBorder != null && typeof value.lockAspectToBorder !== 'boolean') {
+    add(`${path}.lockAspectToBorder`, 'lockAspectToBorder must be boolean when present');
+  }
+  validateGroundDecalUiMask(value.mask, `${path}.mask`, add);
+  validateGroundDecalUiRendering(value.rendering, `${path}.rendering`, add);
+  if (!Array.isArray(value.layers)) {
+    add(`${path}.layers`, 'groundDecal UI layers must be an array');
+    return;
+  }
+  value.layers.forEach((layer: unknown, index: number) => validateGroundDecalUiLayer(layer, `${path}.layers[${index}]`, add));
+  validateGroundDecalUiLayerIds(value.layers, `${path}.layers`, add);
+  if (value.uiKind === 'delivery') {
+    validateDeliveryGroundDecalUiPairs(value.layers, `${path}.layers`, add);
+  }
+}
+
+function validateGroundDecalUiMask(value: unknown, path: string, add: (path: string, message: string) => void): void {
+  if (value == null) return;
+  if (!isRecord(value)) {
+    add(path, 'groundDecal UI mask must be an object');
+    return;
+  }
+  if (value.enabled != null && typeof value.enabled !== 'boolean') add(`${path}.enabled`, 'mask.enabled must be boolean');
+  if (value.source != null && value.source !== 'roundedRect' && value.source !== 'borderAlpha' && value.source !== 'texture') {
+    add(`${path}.source`, 'mask.source must be roundedRect, borderAlpha, or texture');
+  }
+  if (value.textureId != null && !nonEmptyString(value.textureId)) add(`${path}.textureId`, 'mask.textureId must be non-empty when present');
+  for (const key of ['cornerRadius', 'padding']) {
+    if (value[key] != null && (typeof value[key] !== 'number' || !Number.isFinite(value[key]) || value[key] < 0)) {
+      add(`${path}.${key}`, `${key} must be a non-negative finite number`);
+    }
+  }
+}
+
+function validateGroundDecalUiRendering(value: unknown, path: string, add: (path: string, message: string) => void): void {
+  if (value == null) return;
+  if (!isRecord(value)) {
+    add(path, 'groundDecal UI rendering must be an object');
+    return;
+  }
+  for (const key of ['textureWidth', 'textureHeight']) {
+    if (value[key] != null && (!Number.isInteger(value[key]) || value[key] <= 0)) {
+      add(`${path}.${key}`, `${key} must be a positive integer`);
+    }
+  }
+  for (const key of ['alphaIndex', 'diffuseTextureLevel', 'emissiveTextureLevel']) {
+    if (value[key] != null && (typeof value[key] !== 'number' || !Number.isFinite(value[key]))) {
+      add(`${path}.${key}`, `${key} must be a finite number`);
+    }
+  }
+}
+
+function validateGroundDecalUiLayer(value: unknown, path: string, add: (path: string, message: string) => void): void {
+  if (!isRecord(value)) {
+    add(path, 'groundDecal UI layer must be an object');
+    return;
+  }
+  if (!nonEmptyString(value.id)) add(`${path}.id`, 'layer.id must be non-empty');
+  if (!['base', 'border', 'mainLogo', 'subLogo', 'amount', 'progressFill'].includes(String(value.role))) {
+    add(`${path}.role`, 'layer.role is invalid');
+  }
+  if (value.enabled != null && typeof value.enabled !== 'boolean') add(`${path}.enabled`, 'layer.enabled must be boolean');
+  if (typeof value.zOrder !== 'number' || !Number.isFinite(value.zOrder)) add(`${path}.zOrder`, 'layer.zOrder must be a finite number');
+  if (value.opacity != null && (typeof value.opacity !== 'number' || !Number.isFinite(value.opacity))) add(`${path}.opacity`, 'layer.opacity must be finite');
+  validateGroundDecalUiRect(value.rect, `${path}.rect`, add);
+  if (value.kind === 'texture') {
+    if (!nonEmptyString(value.textureId)) add(`${path}.textureId`, 'texture layer textureId must be non-empty');
+    validateGroundDecalUiColor(value.tint, `${path}.tint`, add);
+  } else if (value.kind === 'color') {
+    validateGroundDecalUiColor(value.color, `${path}.color`, add);
+  } else if (value.kind === 'progress') {
+    if (typeof value.value !== 'number' || !Number.isFinite(value.value) || value.value < 0 || value.value > 1) {
+      add(`${path}.value`, 'progress value must be between 0 and 1');
+    }
+    if (value.direction != null && !['leftToRight', 'rightToLeft', 'bottomToTop', 'topToBottom'].includes(String(value.direction))) {
+      add(`${path}.direction`, 'progress direction is invalid');
+    }
+    validateGroundDecalUiColor(value.color, `${path}.color`, add);
+  } else if (value.kind === 'text') {
+    validateGroundDecalUiText(value.text, `${path}.text`, add);
+  } else {
+    add(`${path}.kind`, 'layer.kind must be texture, color, progress, or text');
+  }
+}
+
+function validateGroundDecalUiLayerIds(layers: unknown[], path: string, add: (path: string, message: string) => void): void {
+  const seen = new Map<string, number>();
+  layers.forEach((layer, index) => {
+    if (!isRecord(layer) || !nonEmptyString(layer.id)) return;
+    const previousIndex = seen.get(layer.id);
+    if (previousIndex != null) {
+      add(`${path}[${index}].id`, `layer.id must be unique; duplicate of layers[${previousIndex}]`);
+      return;
+    }
+    seen.set(layer.id, index);
+  });
+}
+
+function validateDeliveryGroundDecalUiPairs(layers: unknown[], path: string, add: (path: string, message: string) => void): void {
+  const records = layers.filter(isRecord);
+  const subLogoLayers = records.filter(layer => layer.role === 'subLogo');
+  const amountLayers = records.filter(layer => layer.role === 'amount');
+  if (subLogoLayers.length < 1 || amountLayers.length < 1) {
+    add(path, 'delivery groundDecal UI requires at least one subLogo + amount pair');
+  }
+  if (subLogoLayers.length > 2 || amountLayers.length > 2) {
+    add(path, 'delivery groundDecal UI supports at most two subLogo + amount pairs');
+  }
+  if (subLogoLayers.length !== amountLayers.length) {
+    add(path, 'delivery groundDecal UI subLogo and amount layers must be paired');
+  }
+
+  validateDeliveryGroundDecalUiPairSlot(records, path, add, {
+    index: 1,
+    subLogoId: 'subLogo',
+    amountId: 'amount',
+    required: true,
+  });
+  validateDeliveryGroundDecalUiPairSlot(records, path, add, {
+    index: 2,
+    subLogoId: 'subLogo2',
+    amountId: 'amount2',
+    required: false,
+  });
+
+  for (const layer of subLogoLayers) {
+    if (layer.id !== 'subLogo' && layer.id !== 'subLogo2') {
+      add(`${path}.${String(layer.id)}`, 'delivery subLogo layer id must be subLogo or subLogo2');
+    }
+  }
+  for (const layer of amountLayers) {
+    if (layer.id !== 'amount' && layer.id !== 'amount2') {
+      add(`${path}.${String(layer.id)}`, 'delivery amount layer id must be amount or amount2');
+    }
+  }
+}
+
+function validateDeliveryGroundDecalUiPairSlot(
+  layers: Record<string, any>[],
+  path: string,
+  add: (path: string, message: string) => void,
+  slot: { index: 1 | 2; subLogoId: string; amountId: string; required: boolean },
+): void {
+  const subLogoLayer = layers.find(layer => layer.id === slot.subLogoId);
+  const amountLayer = layers.find(layer => layer.id === slot.amountId);
+  if (slot.required && (!subLogoLayer || !amountLayer)) {
+    add(path, `delivery groundDecal UI requires pair ${slot.index}`);
+  }
+  if (!!subLogoLayer !== !!amountLayer) {
+    add(path, `delivery groundDecal UI pair ${slot.index} must contain both subLogo and amount`);
+  }
+  if (subLogoLayer) {
+    if (subLogoLayer.role !== 'subLogo') add(`${path}.${slot.subLogoId}.role`, `pair ${slot.index} subLogo role must be subLogo`);
+    if (subLogoLayer.kind !== 'texture') add(`${path}.${slot.subLogoId}.kind`, `pair ${slot.index} subLogo must be a texture layer`);
+  }
+  if (amountLayer) {
+    if (amountLayer.role !== 'amount') add(`${path}.${slot.amountId}.role`, `pair ${slot.index} amount role must be amount`);
+    if (amountLayer.kind !== 'text') add(`${path}.${slot.amountId}.kind`, `pair ${slot.index} amount must be a text layer`);
+  }
+}
+
+function validateGroundDecalUiRect(value: unknown, path: string, add: (path: string, message: string) => void): void {
+  if (!isRecord(value)) {
+    add(path, 'layer.rect must be an object');
+    return;
+  }
+  for (const key of ['x', 'z', 'width', 'depth']) {
+    if (typeof value[key] !== 'number' || !Number.isFinite(value[key])) add(`${path}.${key}`, `rect.${key} must be a finite number`);
+  }
+  for (const key of ['width', 'depth']) {
+    if (typeof value[key] === 'number' && value[key] <= 0) add(`${path}.${key}`, `rect.${key} must be positive`);
+  }
+}
+
+function validateGroundDecalUiText(value: unknown, path: string, add: (path: string, message: string) => void): void {
+  if (!isRecord(value)) {
+    add(path, 'text layer text must be an object');
+    return;
+  }
+  if (typeof value.value !== 'string') add(`${path}.value`, 'text.value must be a string');
+  if (value.fontFamily != null && typeof value.fontFamily !== 'string') add(`${path}.fontFamily`, 'fontFamily must be a string');
+  if (value.fontSize != null && (typeof value.fontSize !== 'number' || !Number.isFinite(value.fontSize) || value.fontSize <= 0)) {
+    add(`${path}.fontSize`, 'fontSize must be a positive finite number');
+  }
+  if (value.fontWeight != null && typeof value.fontWeight !== 'string') add(`${path}.fontWeight`, 'fontWeight must be a string');
+  validateGroundDecalUiColor(value.color, `${path}.color`, add);
+  validateGroundDecalUiColor(value.strokeColor, `${path}.strokeColor`, add);
+  if (value.strokeWidth != null && (typeof value.strokeWidth !== 'number' || !Number.isFinite(value.strokeWidth) || value.strokeWidth < 0)) {
+    add(`${path}.strokeWidth`, 'strokeWidth must be a non-negative finite number');
+  }
+}
+
+function validateGroundDecalUiColor(value: unknown, path: string, add: (path: string, message: string) => void): void {
+  if (value == null) return;
+  if (!isRecord(value)) {
+    add(path, 'color must be an object');
+    return;
+  }
+  for (const key of ['r', 'g', 'b']) {
+    if (typeof value[key] !== 'number' || !Number.isFinite(value[key])) add(`${path}.${key}`, `color.${key} must be finite`);
+  }
+  if (value.a != null && (typeof value.a !== 'number' || !Number.isFinite(value.a))) add(`${path}.a`, 'color.a must be finite');
 }
 
 function validateNodeRendering(value: unknown, path: string, add: (path: string, message: string) => void): void {

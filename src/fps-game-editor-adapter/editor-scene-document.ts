@@ -16,6 +16,7 @@ import {
   cloneEditorSceneDocument as clonePlayableEditorSceneDocument,
   findEditorSceneModelRenderer as findPlayableEditorSceneModelRenderer,
   findEditorSceneTransform as findPlayableEditorSceneTransform,
+  isEditorSceneTrsTransformComponent,
   readEditorSceneNodeKind as readPlayableEditorSceneNodeKind,
   type EditorSceneAsset as PlayableEditorSceneAsset,
   type EditorSceneAssetLibraryItem as PlayableEditorSceneAssetLibraryItem,
@@ -26,24 +27,32 @@ import {
   type EditorSceneDocument as PlayableEditorSceneDocument,
   type EditorSceneGameObject as PlayableEditorSceneGameObject,
   type EditorSceneModelRendererComponent as PlayableEditorSceneModelRendererComponent,
+  type EditorScenePrefabDefinition,
   type EditorScenePrimitiveRenderer as PlayableEditorScenePrimitiveRenderer,
-  type EditorSceneTransformTrsComponent as PlayableEditorSceneTransformTrsComponent,
+  type EditorSceneTransformComponent as PlayableEditorSceneTransformComponent,
   type EditorSceneVec3 as PlayableEditorSceneVec3,
   type AuthoringSourceRef,
+  type SpatialMarkerGraph,
+  type SpatialMarkerJsonObject,
+  type SpatialMarkerLocalFrame,
+  type SpatialMarkerTargetRef,
 } from '@fps-games/editor/playable-sdk';
+
+export { isEditorSceneTrsTransformComponent };
 
 export type { EditorSceneCameraInspectorLanguage };
 
-export type EditorSceneVec3 = PlayableEditorSceneVec3;
+export interface EditorSceneVec3 extends PlayableEditorSceneVec3 {}
 
 export interface EditorSceneAsset extends PlayableEditorSceneAsset<
   SceneAssetDefaults,
   AssetExternalRef,
   SceneAssetMaterialMode
 > {
-  type: 'glb' | 'texture' | 'prefab';
+  type: 'glb' | 'prefab' | 'texture';
   materialMode?: SceneAssetMaterialMode;
   defaults?: SceneAssetDefaults;
+  prefab?: EditorScenePrefabDefinition;
   external?: AssetExternalRef;
 }
 
@@ -52,20 +61,64 @@ export interface EditorSceneAssetLibraryItem extends PlayableEditorSceneAssetLib
   AssetExternalRef,
   SceneAssetMaterialMode
 > {
-  type: 'glb' | 'texture' | 'prefab';
-  kind: 'model' | 'texture' | 'prefab';
+  type: 'glb' | 'prefab' | 'texture';
+  kind: 'model' | 'prefab' | 'texture';
   materialMode?: SceneAssetMaterialMode;
   defaults?: SceneAssetDefaults;
+  prefab?: EditorScenePrefabDefinition;
   external?: AssetExternalRef;
   origin: 'project';
 }
 
-export type EditorSceneTransformComponent = PlayableEditorSceneTransformTrsComponent;
+export type EditorSceneTransformComponent = PlayableEditorSceneTransformComponent;
 
 export type EditorSceneModelRendererComponent = PlayableEditorSceneModelRendererComponent;
 
 export interface EditorScenePrimitiveRenderer extends PlayableEditorScenePrimitiveRenderer<ScenePrimitiveShape> {
   shape: ScenePrimitiveShape;
+}
+
+export interface EditorSceneMarkerBoxGeometry {
+  kind: 'box';
+}
+
+export interface EditorSceneMarkerPointGeometry {
+  kind: 'point';
+  coordinateSpace?: 'world' | 'local';
+  position?: EditorSceneVec3;
+  offset?: EditorSceneVec3;
+  target?: SpatialMarkerTargetRef;
+}
+
+export interface EditorSceneMarkerObjectBoundsGeometry {
+  kind: 'object-bounds';
+  target: SpatialMarkerTargetRef;
+}
+
+export interface EditorSceneMarkerPolyhedronGeometry {
+  kind: 'polyhedron';
+  coordinateSpace?: 'world';
+  vertices: EditorSceneVec3[];
+  faces?: number[][];
+}
+
+export type EditorSceneMarkerGeometry =
+  | EditorSceneMarkerBoxGeometry
+  | EditorSceneMarkerPointGeometry
+  | EditorSceneMarkerObjectBoundsGeometry
+  | EditorSceneMarkerPolyhedronGeometry;
+
+export interface EditorSceneMarkerConfig {
+  schemaVersion: 1;
+  type: string;
+  kind?: string;
+  tags?: string[];
+  note?: string;
+  color?: ColorRGB;
+  target?: SpatialMarkerTargetRef;
+  semanticFrame?: SpatialMarkerLocalFrame;
+  geometry: EditorSceneMarkerGeometry;
+  metadata?: SpatialMarkerJsonObject;
 }
 
 export type EditorSceneLightInspectorLanguage = 'zh' | 'en';
@@ -101,6 +154,7 @@ export interface EditorSceneGameObject extends PlayableEditorSceneGameObject<Sce
   camera?: EditorSceneCameraRig;
   light?: EditorSceneLight;
   primitive?: EditorScenePrimitiveRenderer;
+  marker?: EditorSceneMarkerConfig;
   groundDecal?: SceneTransformNode['groundDecal'];
   overrides?: SceneNodeVisualOverrides;
   components: EditorSceneComponent[];
@@ -118,6 +172,7 @@ export interface EditorSceneDocument extends PlayableEditorSceneDocument<
   assets: EditorSceneAsset[];
   scene: {
     gameObjects: EditorSceneGameObject[];
+    markerGraph?: SpatialMarkerGraph;
     materialAssets?: SceneMaterialAssetConfig[];
   };
 }
@@ -135,8 +190,7 @@ export function cloneEditorSceneDocument(document: EditorSceneDocument): EditorS
 export function findEditorSceneTransform(
   gameObject: EditorSceneGameObject,
 ): EditorSceneTransformComponent | null {
-  const transform = findPlayableEditorSceneTransform(gameObject);
-  return transform && isEditorSceneTransformComponent(transform) ? transform : null;
+  return findPlayableEditorSceneTransform(gameObject) as EditorSceneTransformComponent | null;
 }
 
 export function findEditorSceneModelRenderer(
@@ -169,22 +223,18 @@ export function patchEditorSceneGameObjectTransform(
         return {
           ...gameObject,
           components: gameObject.components.map((component) => {
-            if (!isEditorSceneTransformComponent(component)) return component;
+            if (component.type !== 'Transform') return component;
+            const transformComponent = component as EditorSceneTransformComponent;
+            if (!isEditorSceneTrsTransformComponent(transformComponent)) return component;
             return {
-              ...component,
-              position: patch.position ?? component.position,
-              rotation: patch.rotation ?? component.rotation,
-              scale: patch.scale ?? component.scale,
+              ...transformComponent,
+              position: patch.position ?? transformComponent.position,
+              rotation: patch.rotation ?? transformComponent.rotation,
+              scale: patch.scale ?? transformComponent.scale,
             };
           }),
         };
       }),
     },
   };
-}
-
-function isEditorSceneTransformComponent(
-  component: PlayableEditorSceneComponent,
-): component is EditorSceneTransformComponent {
-  return component.type === 'Transform' && 'position' in component && 'rotation' in component;
 }
