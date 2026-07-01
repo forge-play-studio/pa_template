@@ -2,6 +2,8 @@
 
 `pa_template` 是 `fps-game-editor` 的真实 starter / integration baseline。新 playable ad 项目预期从这个模板出发，所以 editor contract、transform、hierarchy、asset、save、compiler 行为应优先在这里验证，再考虑历史 fixture。
 
+资产系统职责现在以 `@fps-games/editor/playable-sdk` 为权威：hash / guid / assetId / manifest / generated catalog / metadata extraction / authoring asset endpoint / base scene compiler 都由 editor SDK 提供。`pa_template` 只保留路径配置、URL 映射、Vite host 装配、runtime wrapper 和 project companion config。不要在本仓库重新实现 registry 或 compiler 核心算法，也不要手写 generated catalog、manifest 或 runtime `scene.json` 来导入资产；需要改标准规则时先改 `fps-game-editor/packages/editor-playable-sdk`。
+
 开发 `fps-game-editor` 源码时，优先使用 editor 仓库下的专用 `pa_template` git worktree：
 
 ```text

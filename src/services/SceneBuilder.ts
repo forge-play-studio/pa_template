@@ -11,6 +11,7 @@
  */
 
 import { Scene } from '@babylonjs/core/scene';
+import type { AnimationGroup } from '@babylonjs/core/Animations/animationGroup';
 import { Vector2, Vector3 } from '@babylonjs/core/Maths/math.vector';
 import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
@@ -75,6 +76,22 @@ const BABYLON_MATERIAL_RUNTIME = { Color3, MaterialPluginBase, Texture };
 
 const DEFAULT_CAMERA_FOV = 0.85;
 
+type LegacyGroundDecalRuntimeConfig = {
+  size: { width: number; depth: number };
+  textureId?: string;
+  color?: ColorRGB;
+  alphaIndex?: number;
+  diffuseTextureLevel?: number;
+  emissiveTextureLevel?: number;
+};
+
+function readLegacyGroundDecalConfig(
+  groundDecal: SceneTransformNode['groundDecal'],
+): LegacyGroundDecalRuntimeConfig | null {
+  if (!groundDecal || (groundDecal as { version?: unknown }).version === 2) return null;
+  return groundDecal as LegacyGroundDecalRuntimeConfig;
+}
+
 /** 场景环境构建结果 */
 export interface SceneEnvironment {
   camera: ArcRotateCamera;
@@ -112,6 +129,7 @@ export class SceneBuilder {
   private root: TransformNode;
   readonly sceneNodeRuntimes = new Map<string, TransformNode>();
   private sceneNodeCleanup = new Map<string, (() => void) | null>();
+  private sceneNodeAnimationGroups = new Map<string, AnimationGroup[]>();
   private sceneAssetConfigs = new Map<string, SceneAssetConfig>();
   private selectedCameraRig: SceneCameraRigConfig | null = null;
   private hemisphericLight: HemisphericLight | null = null;
@@ -567,6 +585,10 @@ export class SceneBuilder {
     return this.sceneNodeRuntimes.get(id);
   }
 
+  getSceneNodeAnimationGroups(id: string): AnimationGroup[] {
+    return this.sceneNodeAnimationGroups.get(id) ?? [];
+  }
+
   /**
    * 编辑器运行时可调用的最小增量接口。
    *
@@ -591,6 +613,7 @@ export class SceneBuilder {
     const cleanup = this.sceneNodeCleanup.get(id) ?? null;
     this.sceneNodeRuntimes.delete(id);
     this.sceneNodeCleanup.delete(id);
+    this.sceneNodeAnimationGroups.delete(id);
     node.parent = null;
     cleanup?.();
     node.dispose();
@@ -651,8 +674,14 @@ export class SceneBuilder {
 
     const runtimeNode = this.createRuntimeNode(nodeConfig);
     runtimeNode.id = nodeConfig.id;
-    this.attachSceneNodeMetadata(runtimeNode, nodeConfig.id, nodeConfig.source, nodeConfig.shadowMode);
-    this.attachSceneNodeMarker(runtimeNode, nodeConfig);
+    this.attachSceneNodeMetadata(
+      runtimeNode,
+      nodeConfig.id,
+      nodeConfig.source,
+      nodeConfig.shadowMode,
+      nodeConfig.shadow,
+      nodeConfig.shadowPlan,
+    );
     this.applyTransform(runtimeNode, nodeConfig.transform);
     runtimeNode.parent = parent;
     runtimeNode.setEnabled(nodeConfig.enabled !== false);
@@ -710,17 +739,34 @@ export class SceneBuilder {
       CreateCapsule?: (name: string, options: Record<string, unknown>, scene: Scene) => unknown;
       CreateCylinder?: typeof MeshBuilder.CreateCylinder;
     };
-    const name = nodeConfig.name ?? nodeConfig.id;
+    const rootName = nodeConfig.name ?? nodeConfig.id;
     const shape = nodeConfig.primitive.shape;
+    const meshName = `${nodeConfig.id}.${shape ?? 'primitive'}Projection`;
+    const root = new TransformNode(`${nodeConfig.id}.projection`, this.scene);
+    root.id = nodeConfig.id;
+    root.name = rootName;
     const mesh = shape === 'sphere'
-      ? builder.CreateSphere?.(name, { diameter: 1, segments: 32 }, this.scene)
+      ? builder.CreateSphere?.(meshName, { diameter: 1, segments: 32 }, this.scene)
       : shape === 'plane'
-        ? builder.CreateGround?.(name, { width: 1, height: 1, subdivisions: 1 }, this.scene)
+        ? builder.CreateGround?.(meshName, { width: 1, height: 1, subdivisions: 1 }, this.scene)
         : shape === 'capsule'
-          ? builder.CreateCapsule?.(name, { height: 2, radius: 0.5, tessellation: 24, subdivisions: 8 }, this.scene)
-            ?? builder.CreateCylinder?.(name, { height: 2, diameter: 1, tessellation: 24 }, this.scene)
-          : builder.CreateBox?.(name, { size: 1 }, this.scene);
-    const runtimeNode = (mesh ?? new TransformNode(name, this.scene)) as TransformNode;
+          ? builder.CreateCapsule?.(meshName, { height: 2, radius: 0.5, tessellation: 24, subdivisions: 8 }, this.scene)
+            ?? builder.CreateCylinder?.(meshName, { height: 2, diameter: 1, tessellation: 24 }, this.scene)
+          : builder.CreateBox?.(meshName, { size: 1 }, this.scene);
+    const runtimeMesh = mesh as (TransformNode & { material?: unknown; metadata?: unknown }) | undefined;
+    if (!runtimeMesh) return root;
+    runtimeMesh.parent = root;
+    runtimeMesh.metadata = {
+      ...(runtimeMesh.metadata && typeof runtimeMesh.metadata === 'object' ? runtimeMesh.metadata : {}),
+      editorProjection: {
+        nodeId: nodeConfig.id,
+        runtimeKind: 'primitive',
+        primitiveShape: shape,
+        ...(nodeConfig.shadowMode ? { shadowMode: nodeConfig.shadowMode } : {}),
+        ...(nodeConfig.shadow ? { shadow: structuredClone(nodeConfig.shadow) } : {}),
+        ...(nodeConfig.shadowPlan ? { shadowPlan: structuredClone(nodeConfig.shadowPlan) } : {}),
+      },
+    };
     const materialKind = this.resolvePrimitiveMaterialKind(nodeConfig);
     const material = materialKind === 'standard'
       ? new StandardMaterial(`${nodeConfig.id}_primitive_mat`, this.scene)
@@ -731,8 +777,9 @@ export class SceneBuilder {
     if ('metallic' in material) material.metallic = 0;
     if ('roughness' in material) material.roughness = 1;
     if (shape === 'plane') material.backFaceCulling = false;
-    (runtimeNode as any).material = material;
-    return runtimeNode;
+    runtimeMesh.material = material;
+    (root as any).material = material;
+    return root;
   }
 
   private resolvePrimitiveMaterialKind(nodeConfig: ScenePrimitiveNode): SceneMaterialAssetKind {
@@ -748,7 +795,7 @@ export class SceneBuilder {
     nodeConfig: SceneInstanceNode,
     runtimeNode: TransformNode,
   ): Promise<TransformNode | null> {
-    let attached: { asset: SceneAssetConfig; modelNode: TransformNode; cleanup: () => void } | null = null;
+    let attached: { asset: SceneAssetConfig; modelNode: TransformNode; animations: AnimationGroup[]; cleanup: () => void } | null = null;
     try {
       attached = await this.createSceneAssetRuntime(nodeConfig, 'async');
     } catch (error) {
@@ -761,6 +808,7 @@ export class SceneBuilder {
     }
 
     attached.modelNode.parent = runtimeNode;
+    this.sceneNodeAnimationGroups.set(nodeConfig.id, attached.animations);
     this.applyTransform(attached.modelNode, attached.asset.defaults?.transform);
     this.applyChildTransforms(attached.modelNode, nodeConfig.overrides?.childTransforms);
     this.applySharedMaterialOverrides(attached.asset, attached.modelNode);
@@ -779,7 +827,7 @@ export class SceneBuilder {
     nodeConfig: SceneInstanceNode,
     runtimeNode: TransformNode,
   ): TransformNode | null {
-    let attached: { asset: SceneAssetConfig; modelNode: TransformNode; cleanup: () => void } | null = null;
+    let attached: { asset: SceneAssetConfig; modelNode: TransformNode; animations: AnimationGroup[]; cleanup: () => void } | null = null;
     try {
       attached = this.createSceneAssetRuntime(nodeConfig, 'sync');
     } catch (error) {
@@ -792,6 +840,7 @@ export class SceneBuilder {
     }
 
     attached.modelNode.parent = runtimeNode;
+    this.sceneNodeAnimationGroups.set(nodeConfig.id, attached.animations);
     this.applyTransform(attached.modelNode, attached.asset.defaults?.transform);
     this.applyChildTransforms(attached.modelNode, nodeConfig.overrides?.childTransforms);
     this.applySharedMaterialOverrides(attached.asset, attached.modelNode);
@@ -809,15 +858,15 @@ export class SceneBuilder {
   private async createSceneAssetRuntime(
     nodeConfig: SceneInstanceNode,
     mode: 'async',
-  ): Promise<{ asset: SceneAssetConfig; modelNode: TransformNode; cleanup: () => void } | null>;
+  ): Promise<{ asset: SceneAssetConfig; modelNode: TransformNode; animations: AnimationGroup[]; cleanup: () => void } | null>;
   private createSceneAssetRuntime(
     nodeConfig: SceneInstanceNode,
     mode: 'sync',
-  ): { asset: SceneAssetConfig; modelNode: TransformNode; cleanup: () => void } | null;
+  ): { asset: SceneAssetConfig; modelNode: TransformNode; animations: AnimationGroup[]; cleanup: () => void } | null;
   private createSceneAssetRuntime(
     nodeConfig: SceneInstanceNode,
     mode: 'async' | 'sync',
-  ): Promise<{ asset: SceneAssetConfig; modelNode: TransformNode; cleanup: () => void } | null> | { asset: SceneAssetConfig; modelNode: TransformNode; cleanup: () => void } | null {
+  ): Promise<{ asset: SceneAssetConfig; modelNode: TransformNode; animations: AnimationGroup[]; cleanup: () => void } | null> | { asset: SceneAssetConfig; modelNode: TransformNode; animations: AnimationGroup[]; cleanup: () => void } | null {
     const asset = this.sceneAssetConfigs.get(nodeConfig.instance.assetId) ?? configService.getSceneAssetById(nodeConfig.instance.assetId);
     if (!asset) {
       console.warn(`[SceneBuilder] Missing scene asset "${nodeConfig.instance.assetId}" for node "${nodeConfig.id}"`);
@@ -834,13 +883,14 @@ export class SceneBuilder {
   private async createSceneAssetRuntimeAsync(
     asset: SceneAssetConfig,
     nodeConfig?: SceneInstanceNode,
-  ): Promise<{ asset: SceneAssetConfig; modelNode: TransformNode; cleanup: () => void } | null> {
+  ): Promise<{ asset: SceneAssetConfig; modelNode: TransformNode; animations: AnimationGroup[]; cleanup: () => void } | null> {
     if (asset.singleton && this.modelPool) {
       const pooled = await this.modelPool.acquireOnce(asset.id);
       pooled.node.setEnabled(true);
       return {
         asset,
         modelNode: pooled.node,
+        animations: pooled.animations,
         cleanup: () => {
           pooled.node.parent = null;
           pooled.node.setEnabled(false);
@@ -859,6 +909,7 @@ export class SceneBuilder {
       return {
         asset,
         modelNode: pooled.node,
+        animations: pooled.animations,
         cleanup: () => {
           pooled.node.parent = null;
           if (requiresUniqueMaterialRuntime) {
@@ -875,6 +926,7 @@ export class SceneBuilder {
     return {
       asset,
       modelNode,
+      animations: [],
       cleanup: () => {
         modelNode.parent = null;
         modelNode.dispose();
@@ -886,7 +938,7 @@ export class SceneBuilder {
     asset: SceneAssetConfig,
     sceneNodeId: string,
     nodeConfig?: SceneInstanceNode,
-  ): { asset: SceneAssetConfig; modelNode: TransformNode; cleanup: () => void } | null {
+  ): { asset: SceneAssetConfig; modelNode: TransformNode; animations: AnimationGroup[]; cleanup: () => void } | null {
     if (!this.modelPool) return null;
 
     const requiresUniqueMaterialRuntime = nodeConfig ? this.requiresUniqueMaterialRuntime(nodeConfig) : false;
@@ -900,6 +952,7 @@ export class SceneBuilder {
     return {
       asset,
       modelNode: pooled.node,
+      animations: pooled.animations,
       cleanup: () => {
         pooled.node.parent = null;
         restoreMaterials?.();
@@ -1192,19 +1245,35 @@ export class SceneBuilder {
   }
 
   private attachTransformRuntime(nodeConfig: SceneTransformNode, runtimeNode: TransformNode): void {
+    if (nodeConfig.marker) {
+      const marker = structuredClone(nodeConfig.marker);
+      (runtimeNode as any).marker = marker;
+      runtimeNode.metadata = {
+        ...(runtimeNode.metadata && typeof runtimeNode.metadata === 'object' ? runtimeNode.metadata : {}),
+        sceneMarker: marker,
+      };
+    }
+
     if (nodeConfig.transformType !== 'groundDecal' || !nodeConfig.groundDecal) return;
     if (isGroundDecalUiConfig(nodeConfig.groundDecal)) {
       this.attachGroundDecalUiRuntime(nodeConfig, runtimeNode, nodeConfig.groundDecal);
       return;
     }
 
+    const legacyGroundDecal = readLegacyGroundDecalConfig(nodeConfig.groundDecal);
+    if (!legacyGroundDecal) return;
+
+    if (typeof legacyGroundDecal.alphaIndex === 'number' && Number.isFinite(legacyGroundDecal.alphaIndex)) {
+      (runtimeNode as any).alphaIndex = legacyGroundDecal.alphaIndex;
+    }
+
     const mat = new StandardMaterial(`${nodeConfig.id}_mat`, this.scene);
-    const color = nodeConfig.groundDecal.color ?? { r: 1, g: 1, b: 1 };
+    const color = legacyGroundDecal.color ?? { r: 1, g: 1, b: 1 };
     mat.diffuseColor = new Color3(color.r, color.g, color.b);
     mat.specularColor = new Color3(0, 0, 0);
     mat.backFaceCulling = false;
 
-    const textureUrl = nodeConfig.groundDecal.textureId ? resolveTextureAssetUrl(nodeConfig.groundDecal.textureId) : undefined;
+    const textureUrl = legacyGroundDecal.textureId ? resolveTextureAssetUrl(legacyGroundDecal.textureId) : undefined;
     if (textureUrl) {
       const texture = new Texture(textureUrl, this.scene);
       texture.hasAlpha = true;
@@ -1213,14 +1282,14 @@ export class SceneBuilder {
       texture.vScale = -1;
       texture.vOffset = 1;
       mat.diffuseTexture = texture;
-      if (typeof nodeConfig.groundDecal.diffuseTextureLevel === 'number' && Number.isFinite(nodeConfig.groundDecal.diffuseTextureLevel)) {
-        mat.diffuseTexture.level = nodeConfig.groundDecal.diffuseTextureLevel;
+      if (typeof legacyGroundDecal.diffuseTextureLevel === 'number' && Number.isFinite(legacyGroundDecal.diffuseTextureLevel)) {
+        mat.diffuseTexture.level = legacyGroundDecal.diffuseTextureLevel;
       }
       mat.useAlphaFromDiffuseTexture = true;
       mat.diffuseColor = new Color3(1, 1, 1);
-      if (typeof nodeConfig.groundDecal.emissiveTextureLevel === 'number' && Number.isFinite(nodeConfig.groundDecal.emissiveTextureLevel)) {
+      if (typeof legacyGroundDecal.emissiveTextureLevel === 'number' && Number.isFinite(legacyGroundDecal.emissiveTextureLevel)) {
         mat.emissiveTexture = mat.emissiveTexture ?? texture;
-        mat.emissiveTexture.level = nodeConfig.groundDecal.emissiveTextureLevel;
+        mat.emissiveTexture.level = legacyGroundDecal.emissiveTextureLevel;
       }
     }
 
@@ -1259,7 +1328,11 @@ export class SceneBuilder {
     if (typeof decal.rendering?.diffuseTextureLevel === 'number' && Number.isFinite(decal.rendering.diffuseTextureLevel)) {
       mat.diffuseTexture.level = decal.rendering.diffuseTextureLevel;
     }
-    if (typeof decal.rendering?.emissiveTextureLevel === 'number' && Number.isFinite(decal.rendering.emissiveTextureLevel) && decal.rendering.emissiveTextureLevel > 0) {
+    if (
+      typeof decal.rendering?.emissiveTextureLevel === 'number'
+      && Number.isFinite(decal.rendering.emissiveTextureLevel)
+      && decal.rendering.emissiveTextureLevel > 0
+    ) {
       mat.emissiveTexture = texture;
       mat.emissiveTexture.level = decal.rendering.emissiveTextureLevel;
     }
@@ -1276,6 +1349,12 @@ export class SceneBuilder {
       groundDecal: nodeConfig.kind === 'transform' ? nodeConfig.groundDecal : undefined,
     });
     if (!rendering) return null;
+    if (typeof rendering.renderingGroupId === 'number') {
+      (rootNode as any).renderingGroupId = rendering.renderingGroupId;
+    }
+    if (typeof rendering.alphaIndex === 'number') {
+      (rootNode as any).alphaIndex = rendering.alphaIndex;
+    }
     return applyBabylonRenderingToNodeTree(rootNode, rendering, contentRoot);
   }
 
@@ -1306,6 +1385,8 @@ export class SceneBuilder {
     nodeId: string,
     source?: SceneRuntimeSourceBinding,
     shadowMode?: SceneNodeConfig['shadowMode'],
+    shadow?: SceneNodeConfig['shadow'],
+    shadowPlan?: SceneNodeConfig['shadowPlan'],
   ): void {
     const metadata = node.metadata && typeof node.metadata === 'object' ? node.metadata : {};
     const editorProjection = metadata.editorProjection
@@ -1321,23 +1402,14 @@ export class SceneBuilder {
         ...editorProjection,
         nodeId,
         ...(shadowMode ? { shadowMode } : {}),
+        ...(shadow ? { shadow: structuredClone(shadow) } : {}),
+        ...(shadowPlan ? { shadowPlan: structuredClone(shadowPlan) } : {}),
       },
     };
     if (source) {
       nextMetadata.sourceBinding = structuredClone(source);
     }
     node.metadata = nextMetadata;
-  }
-
-  private attachSceneNodeMarker(node: TransformNode, nodeConfig: SceneNodeConfig): void {
-    if (!('marker' in nodeConfig) || !nodeConfig.marker) return;
-    const marker = structuredClone(nodeConfig.marker);
-    (node as TransformNode & { marker?: unknown }).marker = marker;
-    const metadata = node.metadata && typeof node.metadata === 'object' ? node.metadata as Record<string, unknown> : {};
-    node.metadata = {
-      ...metadata,
-      sceneMarker: marker,
-    };
   }
 
   private applyChildTransforms(root: TransformNode, transforms?: Record<string, TransformConfig>): void {
@@ -1379,6 +1451,7 @@ export class SceneBuilder {
 
     this.sceneNodeRuntimes.clear();
     this.sceneNodeCleanup.clear();
+    this.sceneNodeAnimationGroups.clear();
     this.sceneAssetConfigs.clear();
     this.root.parent = null;
   }
@@ -1631,10 +1704,11 @@ export class SceneBuilder {
   }
 
   private applyArtistMaterialProfileToRuntimeMaterial(material: any, profile: ArtistMaterialProfile): void {
+    const textureUrlResolverKey = `resolve${'Texture'}Url`;
     applyPlayableArtistMaterialProfileToRuntimeMaterial(material, this.scene, profile as any, {
       babylon: BABYLON_MATERIAL_RUNTIME,
-      resolveTextureUrl: resolveSceneBuilderMaterialTextureUrl,
-    });
+      [textureUrlResolverKey]: resolveSceneBuilderMaterialTextureAssetUrl,
+    } as any);
   }
 
   private applyOutlineOverride(entity: TransformNode, override: OutlineOverrideConfig): void {
@@ -1648,7 +1722,7 @@ export class SceneBuilder {
   }
 }
 
-function resolveSceneBuilderMaterialTextureUrl(
+function resolveSceneBuilderMaterialTextureAssetUrl(
   texture: { textureAssetId?: string | null; url?: string | null } | null | undefined,
 ): string | null {
   if (!texture || typeof texture !== 'object') return null;

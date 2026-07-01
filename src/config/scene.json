@@ -8,10 +8,10 @@
     "generatedFrom": {
       "sourceId": "scene.main",
       "sourceType": "scene",
-      "revision": 53,
-      "compilerId": "pa_template.editor-scene.compiler",
+      "revision": 60,
+      "compilerId": "@fps-games/editor.playable-sdk.scene-compiler",
       "compilerVersion": "1",
-      "compiledAt": "2026-06-30T03:20:33.661Z"
+      "compiledAt": "2026-07-01T02:36:20.990Z"
     }
   },
   "gameplay": {
@@ -33,134 +33,1071 @@
     "rootId": "root",
     "assets": [
       {
-        "id": "asset_bf50e45f742244bd96f47946981c37a0",
+        "id": "asset_699aee4da2b84a3eb07f4496872ad249",
         "type": "glb",
-        "guid": "bf50e45f-7422-44bd-96f4-7946981c37a0",
-        "displayName": "Axe and Bear - Fence Prop",
+        "guid": "699aee4d-a2b8-4a3e-b07f-4496872ad249",
+        "displayName": "阴影测试-主角",
         "category": "Model",
-        "external": {
-          "platformAssetId": "axe_and_bear:fence_prop_model",
-          "assetPath": "src/assets/models/fence-prop-model.glb"
-        },
+        "materialMode": "shared",
         "metadata": {
-          "originalFileName": "fence-prop-model.glb",
-          "relativePath": "../imported/asset_bf50e45f742244bd96f47946981c37a0.glb",
-          "codeKey": "axe_and_bear_fence_prop_model",
-          "contentHash": "sha256:e4a2b2083ecad594b344af2a88c8eb456844dd530ff87af28712e3d3aeea11f7",
-          "byteSize": 62120
-        }
-      },
-      {
-        "id": "asset_ff8c83040af443fe8381477634be9254",
-        "type": "glb",
-        "guid": "ff8c8304-0af4-43fe-8381-477634be9254",
-        "displayName": "Lumber Order - 松树",
-        "category": "Model",
-        "external": {
-          "platformAssetId": "lumber_order:lumber_order_pine_tree",
-          "assetPath": "src/assets/卡通低多边形常绿松树_SongShu.glb"
-        },
-        "metadata": {
-          "originalFileName": "lumber_order_pine_tree.glb",
-          "relativePath": "../imported/asset_ff8c83040af443fe8381477634be9254.glb",
-          "codeKey": "lumber_order_pine_tree",
-          "contentHash": "sha256:6dfe76a8c7c615a27d907d9cf635fcd726414d0c2cdcdd4ab3feccd6c2845d8f",
-          "byteSize": 67536
-        }
-      },
-      {
-        "id": "asset_606796e877654f96b4d3c3cf3745757a",
-        "type": "glb",
-        "guid": "606796e8-7765-4f96-b4d3-c3cf3745757a",
-        "displayName": "Lumber Order - 木板",
-        "category": "Model",
-        "external": {
-          "platformAssetId": "lumber_order:lumber_order_plank",
-          "assetPath": "src/assets/木板.glb"
-        },
-        "metadata": {
-          "originalFileName": "lumber_order_plank.glb",
-          "relativePath": "../imported/asset_606796e877654f96b4d3c3cf3745757a.glb",
-          "codeKey": "lumber_order_plank",
-          "contentHash": "sha256:bc1ed52cdc2b476516c05642b950c5d6aa1861f50741124a6a3438be0668d433",
-          "byteSize": 61072
-        }
-      },
-      {
-        "id": "asset_da31d334bdcb443a9e9f125d500d66fb",
-        "type": "glb",
-        "guid": "da31d334-bdcb-443a-9e9f-125d500d66fb",
-        "displayName": "Lumber Order - 原木",
-        "category": "Model",
-        "external": {
-          "platformAssetId": "lumber_order:lumber_order_log",
-          "assetPath": "src/assets/原木.glb"
-        },
-        "metadata": {
-          "originalFileName": "lumber_order_log.glb",
-          "relativePath": "../imported/asset_da31d334bdcb443a9e9f125d500d66fb.glb",
-          "codeKey": "lumber_order_log",
-          "contentHash": "sha256:0908be3a42e2c183a57649d5f309dcca5464c4f3fc2b871aae14f5a7f6761cbc",
-          "byteSize": 62744
-        }
-      },
-      {
-        "id": "asset_d940f34a66374c40abba0a46372028ab",
-        "type": "glb",
-        "guid": "d940f34a-6637-4c40-abba-0a46372028ab",
-        "displayName": "Lumber Order - Dark Log",
-        "category": "Model",
-        "external": {
-          "platformAssetId": "lumber_order:dark_log_model",
-          "assetPath": "src/assets/深色原木.glb"
-        },
-        "metadata": {
-          "originalFileName": "深色原木.glb",
-          "relativePath": "../imported/asset_d940f34a66374c40abba0a46372028ab.glb",
-          "codeKey": "lumber_order_dark_log_model",
-          "contentHash": "sha256:e30a872c89a615f8f72a9f43fb2ef93b050a3358134ca93ff5219be8b6f9aaf9",
-          "byteSize": 56592
-        }
-      },
-      {
-        "id": "asset_1791b38eb27c45bbabc8b986605e4de5",
-        "type": "glb",
-        "guid": "1791b38e-b27c-45bb-abc8-b986605e4de5",
-        "displayName": "Lumber Order - Conveyor Model",
-        "category": "Model",
-        "external": {
-          "platformAssetId": "lumber_order:conveyor_model",
-          "assetPath": "src/assets/传送带.glb"
-        },
-        "metadata": {
-          "originalFileName": "传送带.glb",
-          "relativePath": "../imported/asset_1791b38eb27c45bbabc8b986605e4de5.glb",
-          "codeKey": "lumber_order_conveyor_model",
-          "contentHash": "sha256:060c597299f547c89d750667c90db7f4f2cab11f3903d87c729336c57fd18a82",
-          "byteSize": 55312
-        }
-      },
-      {
-        "id": "asset_9330ffd627bb403eaca81058b0651132",
-        "type": "glb",
-        "guid": "9330ffd6-27bb-403e-aca8-1058b0651132",
-        "displayName": "Axe and Bear - Tower Building",
-        "category": "Model",
-        "external": {
-          "platformAssetId": "axe_and_bear:tower_building_model",
-          "assetPath": "src/assets/models/tower-building-model.glb"
-        },
-        "metadata": {
-          "originalFileName": "tower-building-model.glb",
-          "relativePath": "../imported/asset_9330ffd627bb403eaca81058b0651132.glb",
-          "codeKey": "axe_and_bear_tower_building_model",
-          "contentHash": "sha256:a44a6396b8c600eacf4199fbb015c37760530fa3becc861cc24426f760791e3e",
-          "byteSize": 38312,
+          "originalFileName": "主角.glb",
+          "relativePath": "../imported/asset_699aee4da2b84a3eb07f4496872ad249.glb",
+          "codeKey": "shadow_fixture_player",
+          "contentHash": "sha256:fdba0d9ad4c3074c1e32088fbdfeddce119243be116bda92603f9797e77a0bf2",
+          "byteSize": 900140,
+          "category": "shadow-fixture/character",
+          "shadowFixture": true,
+          "sourceProject": "lumber-truck",
+          "sourceFileName": "主角.glb",
           "materialSlots": [
             {
-              "slotId": "slot_3d5cd656",
-              "ownerNodePath": "电厂主体",
-              "label": "电厂主体",
+              "slotId": "slot_26caed25",
+              "ownerNodePath": "maozinan_DZY_Skin",
+              "label": "maozinan_DZY_Skin",
+              "nodeIndex": 2,
+              "meshIndex": 0,
+              "sourceMaterialIndex": 0,
+              "sourceMaterialIndices": [
+                0,
+                1
+              ],
+              "materialName": "新建材质",
+              "materialNames": [
+                "新建材质",
+                "02 - Default"
+              ],
+              "sourceMaterialProfiles": [
+                {
+                  "sourceMaterialIndex": 0,
+                  "materialName": "新建材质",
+                  "profile": {
+                    "metallic": 0,
+                    "roughness": 0.5
+                  },
+                  "textureHints": [
+                    {
+                      "profilePath": "baseColor.texture",
+                      "textureIndex": 0,
+                      "imageIndex": 0,
+                      "bufferView": 5,
+                      "mimeType": "image/jpeg",
+                      "reason": "embedded-texture"
+                    }
+                  ]
+                },
+                {
+                  "sourceMaterialIndex": 1,
+                  "materialName": "02 - Default",
+                  "profile": {
+                    "baseColor": {
+                      "color": {
+                        "r": 0.214041144,
+                        "g": 0.214041144,
+                        "b": 0.214041144
+                      },
+                      "brightness": 1,
+                      "saturation": 1,
+                      "contrast": 1,
+                      "hue": 0
+                    },
+                    "metallic": 0,
+                    "roughness": 0.5
+                  }
+                }
+              ]
+            },
+            {
+              "slotId": "slot_53300b02",
+              "ownerNodePath": "root/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 Spine1/Bip001 Neck/Bip001 R Clavicle/Bip001 R UpperArm/Bip001 R Forearm/Bip001 R Hand/wuqiguadiandummy/wuqiguadianbox",
+              "label": "wuqiguadianbox",
+              "nodeIndex": 39,
+              "meshIndex": 1,
+              "sourceMaterialIndex": 2,
+              "sourceMaterialIndices": [
+                2
+              ],
+              "materialName": "Default-Material",
+              "materialNames": [
+                "Default-Material"
+              ],
+              "sourceMaterialProfiles": [
+                {
+                  "sourceMaterialIndex": 2,
+                  "materialName": "Default-Material",
+                  "profile": {
+                    "metallic": 0,
+                    "roughness": 0.5
+                  }
+                }
+              ]
+            }
+          ],
+          "assetAnalysis": {
+            "kind": "gltf",
+            "format": "glb",
+            "summary": "40 nodes, 2 meshes, 3 primitives, 3 materials",
+            "complexity": "low",
+            "sceneCount": 1,
+            "nodeCount": 40,
+            "meshCount": 2,
+            "primitiveCount": 3,
+            "materialCount": 3,
+            "textureCount": 1,
+            "imageCount": 1,
+            "animationCount": 7,
+            "skinCount": 1,
+            "meshes": [
+              {
+                "meshIndex": 0,
+                "name": "maozinan_DZY_Skin",
+                "primitiveCount": 2,
+                "materialIndices": [
+                  0,
+                  1
+                ],
+                "materialNames": [
+                  "新建材质",
+                  "02 - Default"
+                ]
+              },
+              {
+                "meshIndex": 1,
+                "name": "wuqiguadianbox",
+                "primitiveCount": 1,
+                "materialIndices": [
+                  2
+                ],
+                "materialNames": [
+                  "Default-Material"
+                ]
+              }
+            ],
+            "materials": [
+              {
+                "sourceMaterialIndex": 0,
+                "materialName": "新建材质",
+                "metallicFactor": 0,
+                "roughnessFactor": 0.5,
+                "alphaMode": "opaque",
+                "textureSlots": [
+                  {
+                    "slot": "baseColor",
+                    "textureIndex": 0
+                  }
+                ]
+              },
+              {
+                "sourceMaterialIndex": 1,
+                "materialName": "02 - Default",
+                "baseColorFactor": [
+                  0.214041144,
+                  0.214041144,
+                  0.214041144,
+                  1
+                ],
+                "metallicFactor": 0,
+                "roughnessFactor": 0.5,
+                "alphaMode": "opaque"
+              },
+              {
+                "sourceMaterialIndex": 2,
+                "materialName": "Default-Material",
+                "metallicFactor": 0,
+                "roughnessFactor": 0.5,
+                "alphaMode": "opaque"
+              }
+            ],
+            "diagnostics": [
+              {
+                "severity": "info",
+                "source": "asset",
+                "code": "asset.analysis.riggedOrAnimated",
+                "message": "GLTF asset contains animation or skin data.",
+                "details": {
+                  "animationCount": 7,
+                  "skinCount": 1
+                }
+              }
+            ]
+          },
+          "animationRole": "random-move-idle-run",
+          "preferredAnimations": {
+            "idle": "idle",
+            "move": "run"
+          }
+        }
+      },
+      {
+        "id": "asset_ade25007e0964563b197b21c2759c027",
+        "type": "glb",
+        "guid": "ade25007-e096-4563-b197-b21c2759c027",
+        "displayName": "阴影测试-工人",
+        "category": "Model",
+        "materialMode": "shared",
+        "metadata": {
+          "originalFileName": "工人.glb",
+          "relativePath": "../imported/asset_ade25007e0964563b197b21c2759c027.glb",
+          "codeKey": "shadow_fixture_worker",
+          "contentHash": "sha256:fee128df48f93449e778e6688aa195277f84864564cb063fe8803b9f4d022a82",
+          "byteSize": 131700,
+          "category": "shadow-fixture/character",
+          "shadowFixture": true,
+          "sourceProject": "lumber-truck",
+          "sourceFileName": "工人.glb",
+          "materialSlots": [
+            {
+              "slotId": "slot_74e9cbf9",
+              "ownerNodePath": "gongren_Rig:Geometry/gongren_Rig:fbx_city_npc_worker_male03",
+              "label": "gongren_Rig:fbx_city_npc_worker_male03",
+              "nodeIndex": 2,
+              "meshIndex": 0,
+              "sourceMaterialIndex": 0,
+              "sourceMaterialIndices": [
+                0
+              ],
+              "materialName": "lambert2",
+              "materialNames": [
+                "lambert2"
+              ],
+              "sourceMaterialProfiles": [
+                {
+                  "sourceMaterialIndex": 0,
+                  "materialName": "lambert2",
+                  "profile": {
+                    "metallic": 0,
+                    "roughness": 0.4500536322593689
+                  },
+                  "textureHints": [
+                    {
+                      "profilePath": "baseColor.texture",
+                      "textureIndex": 0,
+                      "reason": "missing-image-uri"
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "assetAnalysis": {
+            "kind": "gltf",
+            "format": "glb",
+            "summary": "62 nodes, 1 meshes, 1 primitives, 1 materials",
+            "complexity": "low",
+            "sceneCount": 1,
+            "nodeCount": 62,
+            "meshCount": 1,
+            "primitiveCount": 1,
+            "materialCount": 1,
+            "textureCount": 1,
+            "imageCount": 1,
+            "animationCount": 3,
+            "skinCount": 1,
+            "meshes": [
+              {
+                "meshIndex": 0,
+                "name": "gongren_Rig:fbx_city_npc_worker_male03",
+                "primitiveCount": 1,
+                "materialIndices": [
+                  0
+                ],
+                "materialNames": [
+                  "lambert2"
+                ]
+              }
+            ],
+            "materials": [
+              {
+                "sourceMaterialIndex": 0,
+                "materialName": "lambert2",
+                "metallicFactor": 0,
+                "roughnessFactor": 0.4500536322593689,
+                "alphaMode": "opaque",
+                "textureSlots": [
+                  {
+                    "slot": "baseColor",
+                    "textureIndex": 0
+                  }
+                ]
+              }
+            ],
+            "diagnostics": [
+              {
+                "severity": "info",
+                "source": "asset",
+                "code": "asset.analysis.riggedOrAnimated",
+                "message": "GLTF asset contains animation or skin data.",
+                "details": {
+                  "animationCount": 3,
+                  "skinCount": 1
+                }
+              }
+            ]
+          },
+          "animationRole": "idle-run-loop",
+          "preferredAnimations": {
+            "idle": "待机",
+            "move": "跑",
+            "drive": "驾驶"
+          }
+        }
+      },
+      {
+        "id": "asset_4b2358ee5d9441cd8cae8b389bb98c46",
+        "type": "glb",
+        "guid": "4b2358ee-5d94-41cd-8cae-8b389bb98c46",
+        "displayName": "阴影测试-小蓝卡车",
+        "category": "Model",
+        "materialMode": "shared",
+        "metadata": {
+          "originalFileName": "小蓝卡车.glb",
+          "relativePath": "../imported/asset_4b2358ee5d9441cd8cae8b389bb98c46.glb",
+          "codeKey": "shadow_fixture_truck",
+          "contentHash": "sha256:18c222d04afb57061d0ab55ce62ee3b5245c90b1bf70a27c0b70d2123b137c9b",
+          "byteSize": 407284,
+          "category": "shadow-fixture/vehicle",
+          "shadowFixture": true,
+          "sourceProject": "lumber-order-260525",
+          "sourceFileName": "小蓝卡车.glb",
+          "materialSlots": [
+            {
+              "slotId": "slot_91c449a4",
+              "ownerNodePath": "ST_kache_Rig:Geometry/ST_kache_Rig:polySurface102",
+              "label": "ST_kache_Rig:polySurface102",
+              "nodeIndex": 6,
+              "meshIndex": 4,
+              "sourceMaterialIndex": 0,
+              "sourceMaterialIndices": [
+                0
+              ],
+              "materialName": "ST_kache_Rig:lambert21",
+              "materialNames": [
+                "ST_kache_Rig:lambert21"
+              ],
+              "sourceMaterialProfiles": [
+                {
+                  "sourceMaterialIndex": 0,
+                  "materialName": "ST_kache_Rig:lambert21",
+                  "profile": {
+                    "metallic": 0,
+                    "roughness": 0.165830582,
+                    "emission": {
+                      "color": {
+                        "r": 0.8,
+                        "g": 0.8,
+                        "b": 0.8
+                      },
+                      "intensity": 1
+                    }
+                  },
+                  "textureHints": [
+                    {
+                      "profilePath": "baseColor.texture",
+                      "textureIndex": 0,
+                      "imageIndex": 0,
+                      "bufferView": 6,
+                      "mimeType": "image/jpeg",
+                      "reason": "embedded-texture"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "slotId": "slot_47f2cfb8",
+              "ownerNodePath": "ST_kache_Rig:Geometry/ST_kache_Rig:polySurface108",
+              "label": "ST_kache_Rig:polySurface108",
+              "nodeIndex": 3,
+              "meshIndex": 1,
+              "sourceMaterialIndex": 0,
+              "sourceMaterialIndices": [
+                0
+              ],
+              "materialName": "ST_kache_Rig:lambert21",
+              "materialNames": [
+                "ST_kache_Rig:lambert21"
+              ],
+              "sourceMaterialProfiles": [
+                {
+                  "sourceMaterialIndex": 0,
+                  "materialName": "ST_kache_Rig:lambert21",
+                  "profile": {
+                    "metallic": 0,
+                    "roughness": 0.165830582,
+                    "emission": {
+                      "color": {
+                        "r": 0.8,
+                        "g": 0.8,
+                        "b": 0.8
+                      },
+                      "intensity": 1
+                    }
+                  },
+                  "textureHints": [
+                    {
+                      "profilePath": "baseColor.texture",
+                      "textureIndex": 0,
+                      "imageIndex": 0,
+                      "bufferView": 6,
+                      "mimeType": "image/jpeg",
+                      "reason": "embedded-texture"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "slotId": "slot_5278c34c",
+              "ownerNodePath": "ST_kache_Rig:Geometry/ST_kache_Rig:polySurface119",
+              "label": "ST_kache_Rig:polySurface119",
+              "nodeIndex": 2,
+              "meshIndex": 0,
+              "sourceMaterialIndex": 0,
+              "sourceMaterialIndices": [
+                0
+              ],
+              "materialName": "ST_kache_Rig:lambert21",
+              "materialNames": [
+                "ST_kache_Rig:lambert21"
+              ],
+              "sourceMaterialProfiles": [
+                {
+                  "sourceMaterialIndex": 0,
+                  "materialName": "ST_kache_Rig:lambert21",
+                  "profile": {
+                    "metallic": 0,
+                    "roughness": 0.165830582,
+                    "emission": {
+                      "color": {
+                        "r": 0.8,
+                        "g": 0.8,
+                        "b": 0.8
+                      },
+                      "intensity": 1
+                    }
+                  },
+                  "textureHints": [
+                    {
+                      "profilePath": "baseColor.texture",
+                      "textureIndex": 0,
+                      "imageIndex": 0,
+                      "bufferView": 6,
+                      "mimeType": "image/jpeg",
+                      "reason": "embedded-texture"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "slotId": "slot_a58a01f0",
+              "ownerNodePath": "ST_kache_Rig:Geometry/ST_kache_Rig:polySurface96",
+              "label": "ST_kache_Rig:polySurface96",
+              "nodeIndex": 4,
+              "meshIndex": 2,
+              "sourceMaterialIndex": 0,
+              "sourceMaterialIndices": [
+                0
+              ],
+              "materialName": "ST_kache_Rig:lambert21",
+              "materialNames": [
+                "ST_kache_Rig:lambert21"
+              ],
+              "sourceMaterialProfiles": [
+                {
+                  "sourceMaterialIndex": 0,
+                  "materialName": "ST_kache_Rig:lambert21",
+                  "profile": {
+                    "metallic": 0,
+                    "roughness": 0.165830582,
+                    "emission": {
+                      "color": {
+                        "r": 0.8,
+                        "g": 0.8,
+                        "b": 0.8
+                      },
+                      "intensity": 1
+                    }
+                  },
+                  "textureHints": [
+                    {
+                      "profilePath": "baseColor.texture",
+                      "textureIndex": 0,
+                      "imageIndex": 0,
+                      "bufferView": 6,
+                      "mimeType": "image/jpeg",
+                      "reason": "embedded-texture"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "slotId": "slot_ab17af44",
+              "ownerNodePath": "ST_kache_Rig:Geometry/ST_kache_Rig:polySurface99",
+              "label": "ST_kache_Rig:polySurface99",
+              "nodeIndex": 5,
+              "meshIndex": 3,
+              "sourceMaterialIndex": 0,
+              "sourceMaterialIndices": [
+                0
+              ],
+              "materialName": "ST_kache_Rig:lambert21",
+              "materialNames": [
+                "ST_kache_Rig:lambert21"
+              ],
+              "sourceMaterialProfiles": [
+                {
+                  "sourceMaterialIndex": 0,
+                  "materialName": "ST_kache_Rig:lambert21",
+                  "profile": {
+                    "metallic": 0,
+                    "roughness": 0.165830582,
+                    "emission": {
+                      "color": {
+                        "r": 0.8,
+                        "g": 0.8,
+                        "b": 0.8
+                      },
+                      "intensity": 1
+                    }
+                  },
+                  "textureHints": [
+                    {
+                      "profilePath": "baseColor.texture",
+                      "textureIndex": 0,
+                      "imageIndex": 0,
+                      "bufferView": 6,
+                      "mimeType": "image/jpeg",
+                      "reason": "embedded-texture"
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "assetAnalysis": {
+            "kind": "gltf",
+            "format": "glb",
+            "summary": "14 nodes, 5 meshes, 5 primitives, 1 materials",
+            "complexity": "low",
+            "sceneCount": 1,
+            "nodeCount": 14,
+            "meshCount": 5,
+            "primitiveCount": 5,
+            "materialCount": 1,
+            "textureCount": 1,
+            "imageCount": 1,
+            "animationCount": 1,
+            "skinCount": 5,
+            "meshes": [
+              {
+                "meshIndex": 0,
+                "name": "ST_kache_Rig:polySurface119",
+                "primitiveCount": 1,
+                "materialIndices": [
+                  0
+                ],
+                "materialNames": [
+                  "ST_kache_Rig:lambert21"
+                ]
+              },
+              {
+                "meshIndex": 1,
+                "name": "ST_kache_Rig:polySurface108",
+                "primitiveCount": 1,
+                "materialIndices": [
+                  0
+                ],
+                "materialNames": [
+                  "ST_kache_Rig:lambert21"
+                ]
+              },
+              {
+                "meshIndex": 2,
+                "name": "ST_kache_Rig:polySurface96",
+                "primitiveCount": 1,
+                "materialIndices": [
+                  0
+                ],
+                "materialNames": [
+                  "ST_kache_Rig:lambert21"
+                ]
+              },
+              {
+                "meshIndex": 3,
+                "name": "ST_kache_Rig:polySurface99",
+                "primitiveCount": 1,
+                "materialIndices": [
+                  0
+                ],
+                "materialNames": [
+                  "ST_kache_Rig:lambert21"
+                ]
+              },
+              {
+                "meshIndex": 4,
+                "name": "ST_kache_Rig:polySurface102",
+                "primitiveCount": 1,
+                "materialIndices": [
+                  0
+                ],
+                "materialNames": [
+                  "ST_kache_Rig:lambert21"
+                ]
+              }
+            ],
+            "materials": [
+              {
+                "sourceMaterialIndex": 0,
+                "materialName": "ST_kache_Rig:lambert21",
+                "metallicFactor": 0,
+                "roughnessFactor": 0.165830582,
+                "alphaMode": "opaque",
+                "textureSlots": [
+                  {
+                    "slot": "baseColor",
+                    "textureIndex": 0
+                  }
+                ]
+              }
+            ],
+            "diagnostics": [
+              {
+                "severity": "info",
+                "source": "asset",
+                "code": "asset.analysis.riggedOrAnimated",
+                "message": "GLTF asset contains animation or skin data.",
+                "details": {
+                  "animationCount": 1,
+                  "skinCount": 5
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "asset_edc2f992438c4450afc1c6354ec21500",
+        "type": "glb",
+        "guid": "edc2f992-438c-4450-afc1-c6354ec21500",
+        "displayName": "阴影测试-松树",
+        "category": "Model",
+        "materialMode": "shared",
+        "metadata": {
+          "originalFileName": "松树.glb",
+          "relativePath": "../imported/asset_edc2f992438c4450afc1c6354ec21500.glb",
+          "codeKey": "shadow_fixture_pine_tree",
+          "contentHash": "sha256:30f4359bf67f78a1279b154228326c6c8dfe0b6da5478734f24ac466a4e44706",
+          "byteSize": 26812,
+          "category": "shadow-fixture/vegetation",
+          "shadowFixture": true,
+          "sourceProject": "lumber-order-260525",
+          "sourceFileName": "松树.glb",
+          "materialSlots": [
+            {
+              "slotId": "slot_1463c7d6",
+              "ownerNodePath": "树",
+              "label": "树",
+              "nodeIndex": 0,
+              "meshIndex": 0,
+              "sourceMaterialIndex": 0,
+              "sourceMaterialIndices": [
+                0
+              ],
+              "materialName": "Material #104",
+              "materialNames": [
+                "Material #104"
+              ],
+              "sourceMaterialProfiles": [
+                {
+                  "sourceMaterialIndex": 0,
+                  "materialName": "Material #104",
+                  "profile": {
+                    "metallic": 0,
+                    "roughness": 0.5527864098548889
+                  },
+                  "textureHints": [
+                    {
+                      "profilePath": "baseColor.texture",
+                      "textureIndex": 0,
+                      "imageIndex": 0,
+                      "bufferView": 0,
+                      "mimeType": "image/jpeg",
+                      "reason": "embedded-texture"
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "assetAnalysis": {
+            "kind": "gltf",
+            "format": "glb",
+            "summary": "1 nodes, 1 meshes, 1 primitives, 1 materials",
+            "complexity": "low",
+            "sceneCount": 1,
+            "nodeCount": 1,
+            "meshCount": 1,
+            "primitiveCount": 1,
+            "materialCount": 1,
+            "textureCount": 1,
+            "imageCount": 1,
+            "animationCount": 0,
+            "skinCount": 0,
+            "meshes": [
+              {
+                "meshIndex": 0,
+                "name": "Mesh",
+                "primitiveCount": 1,
+                "materialIndices": [
+                  0
+                ],
+                "materialNames": [
+                  "Material #104"
+                ]
+              }
+            ],
+            "materials": [
+              {
+                "sourceMaterialIndex": 0,
+                "materialName": "Material #104",
+                "metallicFactor": 0,
+                "roughnessFactor": 0.5527864098548889,
+                "alphaMode": "opaque",
+                "textureSlots": [
+                  {
+                    "slot": "baseColor",
+                    "textureIndex": 0
+                  }
+                ]
+              }
+            ],
+            "diagnostics": []
+          }
+        }
+      },
+      {
+        "id": "asset_af82a4f117d84ff58bedb41aa11bad5c",
+        "type": "glb",
+        "guid": "af82a4f1-17d8-4ff5-8bed-b41aa11bad5c",
+        "displayName": "阴影测试-阔叶灌木",
+        "category": "Model",
+        "materialMode": "shared",
+        "metadata": {
+          "originalFileName": "阔叶灌木.glb",
+          "relativePath": "../imported/asset_af82a4f117d84ff58bedb41aa11bad5c.glb",
+          "codeKey": "shadow_fixture_bush",
+          "contentHash": "sha256:e7b11c136363d947fe3d20a343e637a9d8071913cfaa546794445ef59278e5a4",
+          "byteSize": 63492,
+          "category": "shadow-fixture/vegetation",
+          "shadowFixture": true,
+          "sourceProject": "lumber-order-260525",
+          "sourceFileName": "阔叶灌木.glb",
+          "materialSlots": [
+            {
+              "slotId": "slot_a3b38496",
+              "ownerNodePath": "SM_SSD_S_M_huacaoo49",
+              "label": "SM_SSD_S_M_huacaoo49",
+              "nodeIndex": 0,
+              "meshIndex": 0,
+              "sourceMaterialIndex": 0,
+              "sourceMaterialIndices": [
+                0
+              ],
+              "materialName": "SSD_S_M_Cao_C3_Mat",
+              "materialNames": [
+                "SSD_S_M_Cao_C3_Mat"
+              ],
+              "sourceMaterialProfiles": [
+                {
+                  "sourceMaterialIndex": 0,
+                  "materialName": "SSD_S_M_Cao_C3_Mat",
+                  "profile": {
+                    "metallic": 1,
+                    "roughness": 0.5527864098548889
+                  },
+                  "textureHints": [
+                    {
+                      "profilePath": "baseColor.texture",
+                      "textureIndex": 0,
+                      "imageIndex": 0,
+                      "bufferView": 5,
+                      "mimeType": "image/png",
+                      "reason": "embedded-texture"
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "assetAnalysis": {
+            "kind": "gltf",
+            "format": "glb",
+            "summary": "1 nodes, 1 meshes, 1 primitives, 1 materials",
+            "complexity": "low",
+            "sceneCount": 1,
+            "nodeCount": 1,
+            "meshCount": 1,
+            "primitiveCount": 1,
+            "materialCount": 1,
+            "textureCount": 1,
+            "imageCount": 1,
+            "animationCount": 0,
+            "skinCount": 0,
+            "meshes": [
+              {
+                "meshIndex": 0,
+                "name": "SM_SSD_S_M_huacaoo49",
+                "primitiveCount": 1,
+                "materialIndices": [
+                  0
+                ],
+                "materialNames": [
+                  "SSD_S_M_Cao_C3_Mat"
+                ]
+              }
+            ],
+            "materials": [
+              {
+                "sourceMaterialIndex": 0,
+                "materialName": "SSD_S_M_Cao_C3_Mat",
+                "metallicFactor": 1,
+                "roughnessFactor": 0.5527864098548889,
+                "alphaMode": "opaque",
+                "textureSlots": [
+                  {
+                    "slot": "baseColor",
+                    "textureIndex": 0
+                  }
+                ]
+              }
+            ],
+            "diagnostics": []
+          }
+        }
+      },
+      {
+        "id": "asset_2286fa2ec19e45df8b1b188717c7c4e9",
+        "type": "glb",
+        "guid": "2286fa2e-c19e-45df-8b1b-188717c7c4e9",
+        "displayName": "阴影测试-岩石组",
+        "category": "Model",
+        "materialMode": "shared",
+        "metadata": {
+          "originalFileName": "岩石组.glb",
+          "relativePath": "../imported/asset_2286fa2ec19e45df8b1b188717c7c4e9.glb",
+          "codeKey": "shadow_fixture_rocks",
+          "contentHash": "sha256:4a1c7748c1b2a495f4466098b9f0b04dcc566c41d92340e1adb5cf949227fd28",
+          "byteSize": 83836,
+          "category": "shadow-fixture/rock",
+          "shadowFixture": true,
+          "sourceProject": "lumber-order-260525",
+          "sourceFileName": "岩石组.glb",
+          "materialSlots": [
+            {
+              "slotId": "slot_0a33f1e4",
+              "ownerNodePath": "yanshi_02",
+              "label": "yanshi_02",
+              "nodeIndex": 0,
+              "meshIndex": 0,
+              "sourceMaterialIndex": 0,
+              "sourceMaterialIndices": [
+                0
+              ],
+              "materialName": "standardSurface2",
+              "materialNames": [
+                "standardSurface2"
+              ],
+              "sourceMaterialProfiles": [
+                {
+                  "sourceMaterialIndex": 0,
+                  "materialName": "standardSurface2",
+                  "profile": {
+                    "metallic": 0,
+                    "roughness": 0.5527864098548889
+                  },
+                  "textureHints": [
+                    {
+                      "profilePath": "baseColor.texture",
+                      "textureIndex": 0,
+                      "imageIndex": 0,
+                      "bufferView": 4,
+                      "mimeType": "image/jpeg",
+                      "reason": "embedded-texture"
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "assetAnalysis": {
+            "kind": "gltf",
+            "format": "glb",
+            "summary": "1 nodes, 1 meshes, 1 primitives, 1 materials",
+            "complexity": "low",
+            "sceneCount": 1,
+            "nodeCount": 1,
+            "meshCount": 1,
+            "primitiveCount": 1,
+            "materialCount": 1,
+            "textureCount": 1,
+            "imageCount": 1,
+            "animationCount": 0,
+            "skinCount": 0,
+            "meshes": [
+              {
+                "meshIndex": 0,
+                "name": "Mesh",
+                "primitiveCount": 1,
+                "materialIndices": [
+                  0
+                ],
+                "materialNames": [
+                  "standardSurface2"
+                ]
+              }
+            ],
+            "materials": [
+              {
+                "sourceMaterialIndex": 0,
+                "materialName": "standardSurface2",
+                "metallicFactor": 0,
+                "roughnessFactor": 0.5527864098548889,
+                "alphaMode": "opaque",
+                "textureSlots": [
+                  {
+                    "slot": "baseColor",
+                    "textureIndex": 0
+                  }
+                ]
+              }
+            ],
+            "diagnostics": []
+          }
+        }
+      },
+      {
+        "id": "asset_e726be04042849088cf73e4f2f92c00f",
+        "type": "glb",
+        "guid": "e726be04-0428-4908-8cf7-3e4f2f92c00f",
+        "displayName": "阴影测试-栅栏",
+        "category": "Model",
+        "materialMode": "shared",
+        "metadata": {
+          "originalFileName": "栅栏.glb",
+          "relativePath": "../imported/asset_e726be04042849088cf73e4f2f92c00f.glb",
+          "codeKey": "shadow_fixture_fence",
+          "contentHash": "sha256:012de8a27bf4da988ede9bc7b82937fd261cd2fc139d54394035c3e20e351a6e",
+          "byteSize": 45728,
+          "category": "shadow-fixture/prop",
+          "shadowFixture": true,
+          "sourceProject": "lumber-order-260525",
+          "sourceFileName": "栅栏.glb",
+          "materialSlots": [
+            {
+              "slotId": "slot_134be123",
+              "ownerNodePath": "ZHALAN__5_",
+              "label": "ZHALAN__5_",
+              "nodeIndex": 0,
+              "meshIndex": 0,
+              "sourceMaterialIndex": 0,
+              "sourceMaterialIndices": [
+                0
+              ],
+              "materialName": "ZHALAN_Mat",
+              "materialNames": [
+                "ZHALAN_Mat"
+              ],
+              "sourceMaterialProfiles": [
+                {
+                  "sourceMaterialIndex": 0,
+                  "materialName": "ZHALAN_Mat",
+                  "profile": {
+                    "metallic": 1,
+                    "roughness": 0.5527864098548889
+                  },
+                  "textureHints": [
+                    {
+                      "profilePath": "baseColor.texture",
+                      "textureIndex": 0,
+                      "imageIndex": 0,
+                      "bufferView": 5,
+                      "mimeType": "image/jpeg",
+                      "reason": "embedded-texture"
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "assetAnalysis": {
+            "kind": "gltf",
+            "format": "glb",
+            "summary": "1 nodes, 1 meshes, 1 primitives, 1 materials",
+            "complexity": "low",
+            "sceneCount": 1,
+            "nodeCount": 1,
+            "meshCount": 1,
+            "primitiveCount": 1,
+            "materialCount": 1,
+            "textureCount": 1,
+            "imageCount": 1,
+            "animationCount": 0,
+            "skinCount": 0,
+            "meshes": [
+              {
+                "meshIndex": 0,
+                "name": "ZHALAN__5_",
+                "primitiveCount": 1,
+                "materialIndices": [
+                  0
+                ],
+                "materialNames": [
+                  "ZHALAN_Mat"
+                ]
+              }
+            ],
+            "materials": [
+              {
+                "sourceMaterialIndex": 0,
+                "materialName": "ZHALAN_Mat",
+                "metallicFactor": 1,
+                "roughnessFactor": 0.5527864098548889,
+                "alphaMode": "opaque",
+                "textureSlots": [
+                  {
+                    "slot": "baseColor",
+                    "textureIndex": 0
+                  }
+                ]
+              }
+            ],
+            "diagnostics": []
+          }
+        }
+      },
+      {
+        "id": "asset_52549a6dc9a34a5da036b7e771a907b3",
+        "type": "glb",
+        "guid": "52549a6d-c9a3-4a5d-a036-b7e771a907b3",
+        "displayName": "阴影测试-成捆木材",
+        "category": "Model",
+        "materialMode": "shared",
+        "metadata": {
+          "originalFileName": "成捆木材.glb",
+          "relativePath": "../imported/asset_52549a6dc9a34a5da036b7e771a907b3.glb",
+          "codeKey": "shadow_fixture_log_bundle",
+          "contentHash": "sha256:f63fb3420fcb65edf2d79962a3f2953aef80f57da5b1b0126b4beb3a3bc2eeb6",
+          "byteSize": 1164808,
+          "category": "shadow-fixture/prop",
+          "shadowFixture": true,
+          "sourceProject": "lumber-order-260525",
+          "sourceFileName": "成捆木材.glb",
+          "materialSlots": [
+            {
+              "slotId": "slot_fa0049a6",
+              "ownerNodePath": "node_0",
+              "label": "asset_20fda03a2e3c410da8df4741b_eae9a5__1781600584273_upload__1_",
               "nodeIndex": 0,
               "meshIndex": 0,
               "sourceMaterialIndex": 0,
@@ -168,46 +1105,974 @@
                 0,
                 1
               ],
-              "materialName": "电厂主体",
+              "materialName": "MI_Pipe_Stacks_01a_asset_20fda0_4_741b2eae9a5__1780739654514_upload_asset_20fda03a2e3c410da8df4741b_eae9a5__1781600584273_upload__1_",
               "materialNames": [
-                "电厂主体",
-                "电厂框架"
-              ]
-            },
-            {
-              "slotId": "slot_42ea83aa",
-              "ownerNodePath": "闪电",
-              "label": "闪电",
-              "nodeIndex": 1,
-              "meshIndex": 1,
-              "sourceMaterialIndex": 2,
-              "sourceMaterialIndices": [
-                2
+                "MI_Pipe_Stacks_01a_asset_20fda0_4_741b2eae9a5__1780739654514_upload_asset_20fda03a2e3c410da8df4741b_eae9a5__1781600584273_upload__1_",
+                "lambert2_SM_木材-单根_单根木材_asset_20_4_741b2eae9a5__1780739654514_upload_asset_20fda03a2e3c410da8df4741b_eae9a5__1781600584273_upload__1_"
               ],
-              "materialName": "电厂闪电",
+              "sourceMaterialProfiles": [
+                {
+                  "sourceMaterialIndex": 0,
+                  "materialName": "MI_Pipe_Stacks_01a_asset_20fda0_4_741b2eae9a5__1780739654514_upload_asset_20fda03a2e3c410da8df4741b_eae9a5__1781600584273_upload__1_",
+                  "profile": {
+                    "metallic": 0,
+                    "roughness": 0.498039246
+                  },
+                  "textureHints": [
+                    {
+                      "profilePath": "baseColor.texture",
+                      "textureIndex": 0,
+                      "imageIndex": 0,
+                      "bufferView": 14,
+                      "mimeType": "image/png",
+                      "reason": "embedded-texture"
+                    }
+                  ]
+                },
+                {
+                  "sourceMaterialIndex": 1,
+                  "materialName": "lambert2_SM_木材-单根_单根木材_asset_20_4_741b2eae9a5__1780739654514_upload_asset_20fda03a2e3c410da8df4741b_eae9a5__1781600584273_upload__1_",
+                  "profile": {
+                    "baseColor": {
+                      "color": {
+                        "r": 0.796875,
+                        "g": 0.796875,
+                        "b": 0.796875
+                      },
+                      "brightness": 1,
+                      "saturation": 1,
+                      "contrast": 1,
+                      "hue": 0
+                    },
+                    "metallic": 0,
+                    "roughness": 1
+                  },
+                  "textureHints": [
+                    {
+                      "profilePath": "baseColor.texture",
+                      "textureIndex": 1,
+                      "imageIndex": 1,
+                      "bufferView": 15,
+                      "mimeType": "image/png",
+                      "reason": "embedded-texture"
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "assetAnalysis": {
+            "kind": "gltf",
+            "format": "glb",
+            "summary": "1 nodes, 1 meshes, 2 primitives, 2 materials",
+            "complexity": "low",
+            "sceneCount": 1,
+            "nodeCount": 1,
+            "meshCount": 1,
+            "primitiveCount": 2,
+            "materialCount": 2,
+            "textureCount": 2,
+            "imageCount": 2,
+            "animationCount": 0,
+            "skinCount": 0,
+            "meshes": [
+              {
+                "meshIndex": 0,
+                "name": "asset_20fda03a2e3c410da8df4741b_eae9a5__1781600584273_upload__1_",
+                "primitiveCount": 2,
+                "materialIndices": [
+                  0,
+                  1
+                ],
+                "materialNames": [
+                  "MI_Pipe_Stacks_01a_asset_20fda0_4_741b2eae9a5__1780739654514_upload_asset_20fda03a2e3c410da8df4741b_eae9a5__1781600584273_upload__1_",
+                  "lambert2_SM_木材-单根_单根木材_asset_20_4_741b2eae9a5__1780739654514_upload_asset_20fda03a2e3c410da8df4741b_eae9a5__1781600584273_upload__1_"
+                ]
+              }
+            ],
+            "materials": [
+              {
+                "sourceMaterialIndex": 0,
+                "materialName": "MI_Pipe_Stacks_01a_asset_20fda0_4_741b2eae9a5__1780739654514_upload_asset_20fda03a2e3c410da8df4741b_eae9a5__1781600584273_upload__1_",
+                "metallicFactor": 0,
+                "roughnessFactor": 0.498039246,
+                "alphaMode": "opaque",
+                "textureSlots": [
+                  {
+                    "slot": "baseColor",
+                    "textureIndex": 0,
+                    "texCoord": 1
+                  }
+                ]
+              },
+              {
+                "sourceMaterialIndex": 1,
+                "materialName": "lambert2_SM_木材-单根_单根木材_asset_20_4_741b2eae9a5__1780739654514_upload_asset_20fda03a2e3c410da8df4741b_eae9a5__1781600584273_upload__1_",
+                "baseColorFactor": [
+                  0.796875,
+                  0.796875,
+                  0.796875,
+                  1
+                ],
+                "metallicFactor": 0,
+                "roughnessFactor": 1,
+                "alphaMode": "opaque",
+                "textureSlots": [
+                  {
+                    "slot": "baseColor",
+                    "textureIndex": 1,
+                    "texCoord": 1
+                  }
+                ]
+              }
+            ],
+            "diagnostics": []
+          }
+        }
+      },
+      {
+        "id": "asset_759b595e81934517ba0251b16bd31061",
+        "type": "glb",
+        "guid": "759b595e-8193-4517-ba02-51b16bd31061",
+        "displayName": "阴影测试-箱子",
+        "category": "Model",
+        "materialMode": "shared",
+        "metadata": {
+          "originalFileName": "木材订单单个箱子.glb",
+          "relativePath": "../imported/asset_759b595e81934517ba0251b16bd31061.glb",
+          "codeKey": "shadow_fixture_crate",
+          "contentHash": "sha256:77faad71692365dc47c8753a322d0bf5560a009c77d3eaa7eec1cdcb9cad6d6d",
+          "byteSize": 26932,
+          "category": "shadow-fixture/prop",
+          "shadowFixture": true,
+          "sourceProject": "lumber-order-260525",
+          "sourceFileName": "木材订单单个箱子.glb",
+          "materialSlots": [
+            {
+              "slotId": "slot_8656a283",
+              "ownerNodePath": "xiangzi",
+              "label": "xiangzi",
+              "nodeIndex": 0,
+              "meshIndex": 0,
+              "sourceMaterialIndex": 0,
+              "sourceMaterialIndices": [
+                0
+              ],
+              "materialName": "xiangzi01_Mat_卡通风格手绘木质板箱组_xiangzi01-_xiangzi",
               "materialNames": [
-                "电厂闪电"
+                "xiangzi01_Mat_卡通风格手绘木质板箱组_xiangzi01-_xiangzi"
+              ],
+              "sourceMaterialProfiles": [
+                {
+                  "sourceMaterialIndex": 0,
+                  "materialName": "xiangzi01_Mat_卡通风格手绘木质板箱组_xiangzi01-_xiangzi",
+                  "profile": {
+                    "baseColor": {
+                      "color": {
+                        "r": 1,
+                        "g": 1,
+                        "b": 0.845049024
+                      },
+                      "brightness": 1,
+                      "saturation": 1,
+                      "contrast": 1,
+                      "hue": 0
+                    },
+                    "metallic": 1,
+                    "roughness": 1
+                  },
+                  "textureHints": [
+                    {
+                      "profilePath": "baseColor.texture",
+                      "textureIndex": 0,
+                      "imageIndex": 0,
+                      "bufferView": 5,
+                      "mimeType": "image/png",
+                      "reason": "embedded-texture"
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "assetAnalysis": {
+            "kind": "gltf",
+            "format": "glb",
+            "summary": "1 nodes, 1 meshes, 1 primitives, 1 materials",
+            "complexity": "low",
+            "sceneCount": 1,
+            "nodeCount": 1,
+            "meshCount": 1,
+            "primitiveCount": 1,
+            "materialCount": 1,
+            "textureCount": 1,
+            "imageCount": 1,
+            "animationCount": 0,
+            "skinCount": 0,
+            "meshes": [
+              {
+                "meshIndex": 0,
+                "name": "xiangzi",
+                "primitiveCount": 1,
+                "materialIndices": [
+                  0
+                ],
+                "materialNames": [
+                  "xiangzi01_Mat_卡通风格手绘木质板箱组_xiangzi01-_xiangzi"
+                ]
+              }
+            ],
+            "materials": [
+              {
+                "sourceMaterialIndex": 0,
+                "materialName": "xiangzi01_Mat_卡通风格手绘木质板箱组_xiangzi01-_xiangzi",
+                "baseColorFactor": [
+                  1,
+                  1,
+                  0.845049024,
+                  1
+                ],
+                "metallicFactor": 1,
+                "roughnessFactor": 1,
+                "alphaMode": "opaque",
+                "textureSlots": [
+                  {
+                    "slot": "baseColor",
+                    "textureIndex": 0
+                  }
+                ]
+              }
+            ],
+            "diagnostics": []
+          }
+        }
+      },
+      {
+        "id": "asset_7612f54e381044e4b035ea6a988bfb89",
+        "type": "glb",
+        "guid": "7612f54e-3810-44e4-b035-ea6a988bfb89",
+        "displayName": "阴影测试-木桶",
+        "category": "Model",
+        "materialMode": "shared",
+        "metadata": {
+          "originalFileName": "木质酒桶.glb",
+          "relativePath": "../imported/asset_7612f54e381044e4b035ea6a988bfb89.glb",
+          "codeKey": "shadow_fixture_barrel",
+          "contentHash": "sha256:04b676dcf8950abc56770b52b0431e891440734cbd40ae236b00f26ed4647814",
+          "byteSize": 734348,
+          "category": "shadow-fixture/prop",
+          "shadowFixture": true,
+          "sourceProject": "lumber-order-260525",
+          "sourceFileName": "木质酒桶.glb",
+          "materialSlots": [
+            {
+              "slotId": "slot_f3f14d2b",
+              "ownerNodePath": "SM_mutong",
+              "label": "SM_mutong",
+              "nodeIndex": 0,
+              "meshIndex": 0,
+              "sourceMaterialIndex": 0,
+              "sourceMaterialIndices": [
+                0
+              ],
+              "materialName": "T_Mat",
+              "materialNames": [
+                "T_Mat"
+              ],
+              "sourceMaterialProfiles": [
+                {
+                  "sourceMaterialIndex": 0,
+                  "materialName": "T_Mat",
+                  "profile": {
+                    "metallic": 1,
+                    "roughness": 0.5527864098548889
+                  },
+                  "textureHints": [
+                    {
+                      "profilePath": "baseColor.texture",
+                      "textureIndex": 0,
+                      "imageIndex": 0,
+                      "bufferView": 5,
+                      "mimeType": "image/png",
+                      "reason": "embedded-texture"
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "assetAnalysis": {
+            "kind": "gltf",
+            "format": "glb",
+            "summary": "1 nodes, 1 meshes, 1 primitives, 1 materials",
+            "complexity": "low",
+            "sceneCount": 1,
+            "nodeCount": 1,
+            "meshCount": 1,
+            "primitiveCount": 1,
+            "materialCount": 1,
+            "textureCount": 1,
+            "imageCount": 1,
+            "animationCount": 0,
+            "skinCount": 0,
+            "meshes": [
+              {
+                "meshIndex": 0,
+                "name": "SM_mutong",
+                "primitiveCount": 1,
+                "materialIndices": [
+                  0
+                ],
+                "materialNames": [
+                  "T_Mat"
+                ]
+              }
+            ],
+            "materials": [
+              {
+                "sourceMaterialIndex": 0,
+                "materialName": "T_Mat",
+                "metallicFactor": 1,
+                "roughnessFactor": 0.5527864098548889,
+                "alphaMode": "opaque",
+                "textureSlots": [
+                  {
+                    "slot": "baseColor",
+                    "textureIndex": 0
+                  }
+                ]
+              }
+            ],
+            "diagnostics": []
+          }
+        }
+      },
+      {
+        "id": "asset_97121f40170c40d1aaf63b8c2cf0bf24",
+        "type": "glb",
+        "guid": "97121f40-170c-40d1-aaf6-3b8c2cf0bf24",
+        "displayName": "阴影测试-鸡",
+        "category": "Model",
+        "materialMode": "shared",
+        "metadata": {
+          "originalFileName": "鸡.glb",
+          "relativePath": "../imported/asset_97121f40170c40d1aaf63b8c2cf0bf24.glb",
+          "codeKey": "shadow_fixture_chicken",
+          "contentHash": "sha256:db72ad930562c7efaafaf3b2d9183003eaf0280be3c8b2cfa12cc589a024398d",
+          "byteSize": 54424,
+          "category": "shadow-fixture/animal",
+          "shadowFixture": true,
+          "sourceProject": "lumber-order-260525",
+          "sourceFileName": "鸡.glb",
+          "materialSlots": [
+            {
+              "slotId": "slot_db1ccc4e",
+              "ownerNodePath": "Geometry/ji2",
+              "label": "ji2",
+              "nodeIndex": 2,
+              "meshIndex": 0,
+              "sourceMaterialIndex": 0,
+              "sourceMaterialIndices": [
+                0
+              ],
+              "materialName": "Mat_ji",
+              "materialNames": [
+                "Mat_ji"
+              ],
+              "sourceMaterialProfiles": [
+                {
+                  "sourceMaterialIndex": 0,
+                  "materialName": "Mat_ji",
+                  "profile": {
+                    "baseColor": {
+                      "color": {
+                        "r": 0.6470588445663452,
+                        "g": 0.6470588445663452,
+                        "b": 0.6470588445663452
+                      },
+                      "brightness": 1,
+                      "saturation": 1,
+                      "contrast": 1,
+                      "hue": 0
+                    },
+                    "metallic": 0,
+                    "roughness": 1
+                  },
+                  "textureHints": [
+                    {
+                      "profilePath": "baseColor.texture",
+                      "textureIndex": 0,
+                      "reason": "missing-image-uri"
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "assetAnalysis": {
+            "kind": "gltf",
+            "format": "glb",
+            "summary": "16 nodes, 1 meshes, 1 primitives, 1 materials",
+            "complexity": "low",
+            "sceneCount": 1,
+            "nodeCount": 16,
+            "meshCount": 1,
+            "primitiveCount": 1,
+            "materialCount": 1,
+            "textureCount": 1,
+            "imageCount": 1,
+            "animationCount": 1,
+            "skinCount": 1,
+            "meshes": [
+              {
+                "meshIndex": 0,
+                "name": "ji2",
+                "primitiveCount": 1,
+                "materialIndices": [
+                  0
+                ],
+                "materialNames": [
+                  "Mat_ji"
+                ]
+              }
+            ],
+            "materials": [
+              {
+                "sourceMaterialIndex": 0,
+                "materialName": "Mat_ji",
+                "baseColorFactor": [
+                  0.6470588445663452,
+                  0.6470588445663452,
+                  0.6470588445663452,
+                  1
+                ],
+                "metallicFactor": 0,
+                "roughnessFactor": 1,
+                "alphaMode": "opaque",
+                "textureSlots": [
+                  {
+                    "slot": "baseColor",
+                    "textureIndex": 0
+                  }
+                ]
+              }
+            ],
+            "diagnostics": [
+              {
+                "severity": "info",
+                "source": "asset",
+                "code": "asset.analysis.riggedOrAnimated",
+                "message": "GLTF asset contains animation or skin data.",
+                "details": {
+                  "animationCount": 1,
+                  "skinCount": 1
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "asset_26e79030d245465885b6e4349c9d81d9",
+        "type": "glb",
+        "guid": "26e79030-d245-4658-85b6-e4349c9d81d9",
+        "displayName": "阴影测试-干草卷",
+        "category": "Model",
+        "materialMode": "shared",
+        "metadata": {
+          "originalFileName": "干草卷.glb",
+          "relativePath": "../imported/asset_26e79030d245465885b6e4349c9d81d9.glb",
+          "codeKey": "shadow_fixture_hay_bale",
+          "contentHash": "sha256:46e70ecdca481383f963f1d4f6f2029b55adde803338a5a3339d3f49de07be22",
+          "byteSize": 31820,
+          "category": "shadow-fixture/prop",
+          "shadowFixture": true,
+          "sourceProject": "lumber-order-260525",
+          "sourceFileName": "干草卷.glb",
+          "materialSlots": [
+            {
+              "slotId": "slot_c6401e21",
+              "ownerNodePath": "SM_maiduo",
+              "label": "SM_maiduo",
+              "nodeIndex": 0,
+              "meshIndex": 0,
+              "sourceMaterialIndex": 0,
+              "sourceMaterialIndices": [
+                0
+              ],
+              "materialName": "麦垛-_Mat",
+              "materialNames": [
+                "麦垛-_Mat"
+              ],
+              "sourceMaterialProfiles": [
+                {
+                  "sourceMaterialIndex": 0,
+                  "materialName": "麦垛-_Mat",
+                  "profile": {
+                    "metallic": 1,
+                    "roughness": 0.5527864098548889
+                  },
+                  "textureHints": [
+                    {
+                      "profilePath": "baseColor.texture",
+                      "textureIndex": 0,
+                      "imageIndex": 0,
+                      "bufferView": 5,
+                      "mimeType": "image/jpeg",
+                      "reason": "embedded-texture"
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "assetAnalysis": {
+            "kind": "gltf",
+            "format": "glb",
+            "summary": "1 nodes, 1 meshes, 1 primitives, 1 materials",
+            "complexity": "low",
+            "sceneCount": 1,
+            "nodeCount": 1,
+            "meshCount": 1,
+            "primitiveCount": 1,
+            "materialCount": 1,
+            "textureCount": 1,
+            "imageCount": 1,
+            "animationCount": 0,
+            "skinCount": 0,
+            "meshes": [
+              {
+                "meshIndex": 0,
+                "name": "SM_maiduo",
+                "primitiveCount": 1,
+                "materialIndices": [
+                  0
+                ],
+                "materialNames": [
+                  "麦垛-_Mat"
+                ]
+              }
+            ],
+            "materials": [
+              {
+                "sourceMaterialIndex": 0,
+                "materialName": "麦垛-_Mat",
+                "metallicFactor": 1,
+                "roughnessFactor": 0.5527864098548889,
+                "alphaMode": "opaque",
+                "textureSlots": [
+                  {
+                    "slot": "baseColor",
+                    "textureIndex": 0
+                  }
+                ]
+              }
+            ],
+            "diagnostics": []
+          }
+        }
+      },
+      {
+        "id": "asset_094bc5a89357455bb002b6b6a67e9295",
+        "type": "glb",
+        "guid": "094bc5a8-9357-455b-b002-b6b6a67e9295",
+        "displayName": "阴影测试-收银台",
+        "category": "Model",
+        "materialMode": "shared",
+        "metadata": {
+          "originalFileName": "木材订单收银台单个.glb",
+          "relativePath": "../imported/asset_094bc5a89357455bb002b6b6a67e9295.glb",
+          "codeKey": "shadow_fixture_counter",
+          "contentHash": "sha256:c839de72bc0766a27beeb829df673a48e11c4fd92ad37e36e2c62dbad7dcd67f",
+          "byteSize": 41140,
+          "category": "shadow-fixture/large-prop",
+          "shadowFixture": true,
+          "sourceProject": "lumber-order-260525",
+          "sourceFileName": "木材订单收银台单个.glb",
+          "materialSlots": [
+            {
+              "slotId": "slot_5cd8df33",
+              "ownerNodePath": "收银桌子",
+              "label": "收银桌子",
+              "nodeIndex": 0,
+              "meshIndex": 0,
+              "sourceMaterialIndex": 0,
+              "sourceMaterialIndices": [
+                0
+              ],
+              "materialName": "收银桌子aa_Mat",
+              "materialNames": [
+                "收银桌子aa_Mat"
+              ],
+              "sourceMaterialProfiles": [
+                {
+                  "sourceMaterialIndex": 0,
+                  "materialName": "收银桌子aa_Mat",
+                  "profile": {
+                    "metallic": 0,
+                    "roughness": 0.5
+                  },
+                  "textureHints": [
+                    {
+                      "profilePath": "baseColor.texture",
+                      "textureIndex": 0,
+                      "imageIndex": 0,
+                      "bufferView": 5,
+                      "mimeType": "image/png",
+                      "reason": "embedded-texture"
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "assetAnalysis": {
+            "kind": "gltf",
+            "format": "glb",
+            "summary": "1 nodes, 1 meshes, 1 primitives, 1 materials",
+            "complexity": "low",
+            "sceneCount": 1,
+            "nodeCount": 1,
+            "meshCount": 1,
+            "primitiveCount": 1,
+            "materialCount": 1,
+            "textureCount": 1,
+            "imageCount": 1,
+            "animationCount": 0,
+            "skinCount": 0,
+            "meshes": [
+              {
+                "meshIndex": 0,
+                "name": "收银桌子",
+                "primitiveCount": 1,
+                "materialIndices": [
+                  0
+                ],
+                "materialNames": [
+                  "收银桌子aa_Mat"
+                ]
+              }
+            ],
+            "materials": [
+              {
+                "sourceMaterialIndex": 0,
+                "materialName": "收银桌子aa_Mat",
+                "metallicFactor": 0,
+                "roughnessFactor": 0.5,
+                "alphaMode": "opaque",
+                "textureSlots": [
+                  {
+                    "slot": "baseColor",
+                    "textureIndex": 0
+                  }
+                ]
+              }
+            ],
+            "diagnostics": []
+          }
+        }
+      },
+      {
+        "id": "asset_07e860eb2bf04e6f9a81e0832cddc014",
+        "type": "glb",
+        "guid": "07e860eb-2bf0-4e6f-9a81-e0832cddc014",
+        "displayName": "阴影接收测试-地板块",
+        "category": "Model",
+        "materialMode": "shared",
+        "metadata": {
+          "originalFileName": "SM_diban.glb",
+          "relativePath": "../imported/asset_07e860eb2bf04e6f9a81e0832cddc014.glb",
+          "codeKey": "shadow_receiver_test_floor_tile",
+          "contentHash": "sha256:df91002113be5565813d8a3d9b1da0024b3477de5353ea62d7a4130e96feb282",
+          "byteSize": 10304,
+          "category": "shadow-receiver-test/ground",
+          "shadowReceiverFixture": true,
+          "sourceProject": "lumber-truck",
+          "sourceFileName": "SM_diban.glb",
+          "testPurpose": "small-floor-receiver",
+          "assetAnalysis": {
+            "kind": "gltf",
+            "format": "glb",
+            "summary": "1 nodes, 1 meshes, 1 primitives, 1 materials",
+            "complexity": "low",
+            "sceneCount": 1,
+            "nodeCount": 1,
+            "meshCount": 1,
+            "primitiveCount": 1,
+            "materialCount": 1,
+            "textureCount": 1,
+            "imageCount": 1,
+            "animationCount": 0,
+            "skinCount": 0,
+            "meshes": [
+              {
+                "meshIndex": 0,
+                "name": "SM_diban",
+                "primitiveCount": 1,
+                "materialIndices": [
+                  0
+                ],
+                "materialNames": [
+                  "diban_Mat"
+                ]
+              }
+            ],
+            "materials": [
+              {
+                "sourceMaterialIndex": 0,
+                "materialName": "diban_Mat",
+                "metallicFactor": 1,
+                "roughnessFactor": 0.5527864098548889,
+                "alphaMode": "opaque",
+                "textureSlots": [
+                  {
+                    "slot": "baseColor",
+                    "textureIndex": 0
+                  }
+                ]
+              }
+            ],
+            "diagnostics": []
+          },
+          "materialSlots": [
+            {
+              "slotId": "slot_2e82b283",
+              "ownerNodePath": "SM_diban",
+              "label": "SM_diban",
+              "nodeIndex": 0,
+              "meshIndex": 0,
+              "sourceMaterialIndex": 0,
+              "sourceMaterialIndices": [
+                0
+              ],
+              "materialName": "diban_Mat",
+              "materialNames": [
+                "diban_Mat"
+              ],
+              "sourceMaterialProfiles": [
+                {
+                  "sourceMaterialIndex": 0,
+                  "materialName": "diban_Mat",
+                  "profile": {
+                    "metallic": 1,
+                    "roughness": 0.5527864098548889
+                  },
+                  "textureHints": [
+                    {
+                      "profilePath": "baseColor.texture",
+                      "textureIndex": 0,
+                      "imageIndex": 0,
+                      "bufferView": 0,
+                      "mimeType": "image/jpeg",
+                      "reason": "embedded-texture"
+                    }
+                  ]
+                }
               ]
             }
           ]
         }
       },
       {
-        "id": "asset_de16bd66ee3443589e89778bae314202",
+        "id": "asset_96ed807ee58f4928bcfcc44004a44ef3",
         "type": "glb",
-        "guid": "de16bd66-ee34-4358-9e89-778bae314202",
-        "displayName": "Axe and Bear - SM 房子推车",
+        "guid": "96ed807e-e58f-4928-bcfc-c44004a44ef3",
+        "displayName": "阴影接收测试-抬高木台",
         "category": "Model",
-        "external": {
-          "platformAssetId": "axe_and_bear:house_cart_model",
-          "assetPath": "src/assets/SM_房子推车.glb"
-        },
+        "materialMode": "shared",
         "metadata": {
-          "originalFileName": "SM_房子推车.glb",
-          "relativePath": "../imported/asset_de16bd66ee3443589e89778bae314202.glb",
-          "codeKey": "axe_and_bear_house_cart_model",
-          "contentHash": "sha256:2e6495192bfd35705c06420a1df2f27647dbd1722ee39f6aeeb92024d22c5989",
-          "byteSize": 841372
+          "originalFileName": "低多边形木色展示地台_TaiZi.glb",
+          "relativePath": "../imported/asset_96ed807ee58f4928bcfcc44004a44ef3.glb",
+          "codeKey": "shadow_receiver_test_raised_platform",
+          "contentHash": "sha256:be8d94efce498914096e8e9ea0cac038e95e64c5e7a1ebd209bda4d2044971e4",
+          "byteSize": 84424,
+          "category": "shadow-receiver-test/platform",
+          "shadowReceiverFixture": true,
+          "sourceProject": "lumber-truck",
+          "sourceFileName": "低多边形木色展示地台_TaiZi.glb",
+          "testPurpose": "raised-platform-receiver",
+          "assetAnalysis": {
+            "kind": "gltf",
+            "format": "glb",
+            "summary": "1 nodes, 1 meshes, 1 primitives, 1 materials",
+            "complexity": "low",
+            "sceneCount": 1,
+            "nodeCount": 1,
+            "meshCount": 1,
+            "primitiveCount": 1,
+            "materialCount": 1,
+            "textureCount": 1,
+            "imageCount": 1,
+            "animationCount": 0,
+            "skinCount": 0,
+            "meshes": [
+              {
+                "meshIndex": 0,
+                "name": "Mesh",
+                "primitiveCount": 1,
+                "materialIndices": [
+                  0
+                ],
+                "materialNames": [
+                  "lambert2"
+                ]
+              }
+            ],
+            "materials": [
+              {
+                "sourceMaterialIndex": 0,
+                "materialName": "lambert2",
+                "metallicFactor": 0,
+                "roughnessFactor": 0.5527864098548889,
+                "alphaMode": "opaque",
+                "textureSlots": [
+                  {
+                    "slot": "baseColor",
+                    "textureIndex": 0
+                  }
+                ]
+              }
+            ],
+            "diagnostics": []
+          },
+          "materialSlots": [
+            {
+              "slotId": "slot_924b32f0",
+              "ownerNodePath": "ZHUOZI",
+              "label": "ZHUOZI",
+              "nodeIndex": 0,
+              "meshIndex": 0,
+              "sourceMaterialIndex": 0,
+              "sourceMaterialIndices": [
+                0
+              ],
+              "materialName": "lambert2",
+              "materialNames": [
+                "lambert2"
+              ],
+              "sourceMaterialProfiles": [
+                {
+                  "sourceMaterialIndex": 0,
+                  "materialName": "lambert2",
+                  "profile": {
+                    "metallic": 0,
+                    "roughness": 0.5527864098548889
+                  },
+                  "textureHints": [
+                    {
+                      "profilePath": "baseColor.texture",
+                      "textureIndex": 0,
+                      "imageIndex": 0,
+                      "bufferView": 4,
+                      "mimeType": "image/jpeg",
+                      "reason": "embedded-texture"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "asset_c52042a3dd6544d59408c015320ebc75",
+        "type": "glb",
+        "guid": "c52042a3-dd65-44d5-9408-c015320ebc75",
+        "displayName": "阴影接收测试-真实地面",
+        "category": "Model",
+        "materialMode": "shared",
+        "metadata": {
+          "originalFileName": "SSD_Ground.glb",
+          "relativePath": "../imported/asset_c52042a3dd6544d59408c015320ebc75.glb",
+          "codeKey": "shadow_receiver_test_ssd_ground",
+          "contentHash": "sha256:5de2e98e448467420cdd3d85c159fc14811d0032ed0fe773d7ff816da0f76362",
+          "byteSize": 196900,
+          "category": "shadow-receiver-test/ground",
+          "shadowReceiverFixture": true,
+          "sourceProject": "lumber-truck",
+          "sourceFileName": "SSD_Ground.glb",
+          "testPurpose": "model-ground-receiver",
+          "assetAnalysis": {
+            "kind": "gltf",
+            "format": "glb",
+            "summary": "1 nodes, 1 meshes, 1 primitives, 1 materials",
+            "complexity": "low",
+            "sceneCount": 1,
+            "nodeCount": 1,
+            "meshCount": 1,
+            "primitiveCount": 1,
+            "materialCount": 1,
+            "textureCount": 1,
+            "imageCount": 1,
+            "animationCount": 0,
+            "skinCount": 0,
+            "meshes": [
+              {
+                "meshIndex": 0,
+                "name": "Mesh",
+                "primitiveCount": 1,
+                "materialIndices": [
+                  0
+                ],
+                "materialNames": [
+                  "standardSurface2"
+                ]
+              }
+            ],
+            "materials": [
+              {
+                "sourceMaterialIndex": 0,
+                "materialName": "standardSurface2",
+                "metallicFactor": 0,
+                "roughnessFactor": 0.5527864098548889,
+                "alphaMode": "opaque",
+                "textureSlots": [
+                  {
+                    "slot": "baseColor",
+                    "textureIndex": 0
+                  }
+                ]
+              }
+            ],
+            "diagnostics": []
+          },
+          "materialSlots": [
+            {
+              "slotId": "slot_7cdede92",
+              "ownerNodePath": "pPlane1",
+              "label": "pPlane1",
+              "nodeIndex": 0,
+              "meshIndex": 0,
+              "sourceMaterialIndex": 0,
+              "sourceMaterialIndices": [
+                0
+              ],
+              "materialName": "standardSurface2",
+              "materialNames": [
+                "standardSurface2"
+              ],
+              "sourceMaterialProfiles": [
+                {
+                  "sourceMaterialIndex": 0,
+                  "materialName": "standardSurface2",
+                  "profile": {
+                    "metallic": 0,
+                    "roughness": 0.5527864098548889
+                  },
+                  "textureHints": [
+                    {
+                      "profilePath": "baseColor.texture",
+                      "textureIndex": 0,
+                      "imageIndex": 0,
+                      "bufferView": 4,
+                      "mimeType": "image/jpeg",
+                      "reason": "embedded-texture"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
         }
       }
     ],
@@ -219,7 +2084,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 53,
+          "revision": 60,
           "objectGuid": "go_2406b122-d63b-4971-bf66-7d78a8776543",
           "objectId": "main_camera",
           "component": "Transform"
@@ -247,8 +2112,8 @@
           "projection": "orthographic",
           "alpha": 0.7854,
           "beta": 0.7854,
-          "radius": 27,
-          "orthoSize": 5,
+          "radius": 32,
+          "orthoSize": 12,
           "fov": 0.85,
           "targetOffset": {
             "x": 0,
@@ -275,7 +2140,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 53,
+          "revision": 60,
           "objectGuid": "go_environment_light_default",
           "objectId": "environment_light",
           "component": "Transform"
@@ -321,7 +2186,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 53,
+          "revision": 60,
           "objectGuid": "go_7017d029-9d69-4381-91ac-75093053caa9",
           "objectId": "sun_light",
           "component": "Transform"
@@ -331,6 +2196,142 @@
             "x": 0,
             "y": 4,
             "z": 0
+          },
+          "rotation": {
+            "x": 0.9,
+            "y": -0.7,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.9999999999999999,
+            "y": 1,
+            "z": 0.9999999999999999
+          }
+        },
+        "kind": "transform",
+        "transformType": "light",
+        "light": {
+          "type": "directional",
+          "intensity": 2,
+          "direction": {
+            "x": 0.475434,
+            "y": -0.783327,
+            "z": -0.400452
+          },
+          "diffuseColor": {
+            "r": 1,
+            "g": 0.9490196078431372,
+            "b": 0.8470588235294118
+          }
+        }
+      },
+      {
+        "id": "plane",
+        "name": "Shadow Receiver Plane",
+        "parentId": "root",
+        "shadow": {
+          "receive": "none",
+          "cast": "none",
+          "mode": "none"
+        },
+        "shadowPlan": {
+          "casterId": "plane",
+          "receiverIds": [],
+          "backend": "none",
+          "mode": "none",
+          "quality": "medium",
+          "params": {
+            "opacity": 0.42,
+            "softness": 0.4,
+            "bias": 0.001,
+            "normalBias": 0.01,
+            "maxDistance": 48,
+            "resolution": 1024,
+            "cascadeCount": 2,
+            "bakeSamples": 24,
+            "blurKernel": 4
+          },
+          "diagnostics": []
+        },
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 60,
+          "objectGuid": "go_20efbb4a-c323-4ea3-911c-23c72827d7b9",
+          "objectId": "plane",
+          "component": "PrimitiveRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 24,
+            "y": 24,
+            "z": 24
+          }
+        },
+        "kind": "primitive",
+        "primitive": {
+          "shape": "plane"
+        }
+      },
+      {
+        "id": "cube",
+        "name": "Cube",
+        "parentId": "root",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "receive": "none",
+          "params": {
+            "opacity": 0.65,
+            "softness": 0.28
+          }
+        },
+        "shadowPlan": {
+          "casterId": "cube",
+          "receiverIds": [
+            "asset_3"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.65,
+            "softness": 0.28,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 60,
+          "objectGuid": "go_ac4a2824-3625-468c-aeee-d7c75dedc814",
+          "objectId": "cube",
+          "component": "PrimitiveRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 4.5,
+            "y": 1.45,
+            "z": -3.2
           },
           "rotation": {
             "x": 0,
@@ -343,118 +2344,50 @@
             "z": 1
           }
         },
-        "kind": "transform",
-        "transformType": "light",
-        "light": {
-          "type": "directional",
-          "intensity": 2,
-          "direction": {
-            "x": 0.35944184840597154,
-            "y": -0.8290376503546882,
-            "z": -0.42836681933697457
-          },
-          "diffuseColor": {
-            "r": 1,
-            "g": 0.9490196078431372,
-            "b": 0.8470588235294118
-          }
-        }
-      },
-      {
-        "id": "plane",
-        "name": "Plane",
-        "parentId": "root",
-        "source": {
-          "sourceId": "scene.main",
-          "sourceType": "scene",
-          "revision": 53,
-          "objectGuid": "go_20efbb4a-c323-4ea3-911c-23c72827d7b9",
-          "objectId": "plane",
-          "component": "PrimitiveRenderer"
-        },
-        "transform": {
-          "position": {
-            "x": -3.078279733657837,
-            "y": 7.105427357601002e-15,
-            "z": 0.0016481704078614712
-          },
-          "rotation": {
-            "z": 0,
-            "x": 0,
-            "y": 0
-          },
-          "scale": {
-            "x": 20,
-            "y": 20,
-            "z": 20
-          }
-        },
-        "kind": "primitive",
-        "primitive": {
-          "shape": "plane"
-        },
-        "overrides": {
-          "materialBinding": {
-            "materialAssetId": "mat_plane_default_pbr_material"
-          }
-        }
-      },
-      {
-        "id": "cube",
-        "name": "Cube",
-        "parentId": "root",
-        "source": {
-          "sourceId": "scene.main",
-          "sourceType": "scene",
-          "revision": 53,
-          "objectGuid": "go_ac4a2824-3625-468c-aeee-d7c75dedc814",
-          "objectId": "cube",
-          "component": "PrimitiveRenderer"
-        },
-        "transform": {
-          "position": {
-            "x": 5.044337272644043,
-            "y": 0.5,
-            "z": 2.5112922191619873
-          },
-          "rotation": {
-            "z": 0,
-            "x": 0,
-            "y": 0
-          },
-          "scale": {
-            "x": 1,
-            "y": 1,
-            "z": 1
-          }
-        },
         "kind": "primitive",
         "primitive": {
           "shape": "cube"
-        },
-        "overrides": {
-          "outline": {
-            "renderOutline": true,
-            "outlineWidth": 0.02,
-            "outlineColor": {
-              "r": 0.03,
-              "g": 0.03,
-              "b": 0.03
-            }
-          },
-          "materialBinding": {
-            "materialAssetId": "mat_cube_default_pbr_material"
-          }
         }
       },
       {
         "id": "sphere",
         "name": "Sphere",
         "parentId": "root",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25
+          }
+        },
+        "shadowPlan": {
+          "casterId": "sphere",
+          "receiverIds": [
+            "asset_3"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 53,
+          "revision": 60,
           "objectGuid": "go_cc80f1b1-57b9-4373-baba-eed140d90c8f",
           "objectId": "sphere",
           "component": "PrimitiveRenderer"
@@ -479,27 +2412,47 @@
         "kind": "primitive",
         "primitive": {
           "shape": "sphere"
-        },
-        "overrides": {
-          "outline": {
-            "renderOutline": true,
-            "outlineWidth": 0.03,
-            "outlineColor": {
-              "r": 0.03,
-              "g": 0.03,
-              "b": 0.03
-            }
-          }
         }
       },
       {
         "id": "capsule",
         "name": "Capsule",
         "parentId": "root",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25
+          }
+        },
+        "shadowPlan": {
+          "casterId": "capsule",
+          "receiverIds": [
+            "asset_3"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 53,
+          "revision": 60,
           "objectGuid": "go_68778bee-9b2d-44bb-9a37-cfa42efa2846",
           "objectId": "capsule",
           "component": "PrimitiveRenderer"
@@ -524,133 +2477,19 @@
         "kind": "primitive",
         "primitive": {
           "shape": "capsule"
-        },
-        "overrides": {
-          "outline": {
-            "renderOutline": true,
-            "outlineWidth": 0.02,
-            "outlineColor": {
-              "r": 0.03,
-              "g": 0.03,
-              "b": 0.03
-            }
-          },
-          "materialBinding": {
-            "materialAssetId": "mat_capsule_default_pbr_material"
-          }
         }
       },
       {
-        "id": "empty",
-        "name": "Empty",
+        "id": "shadow_fixture_group",
+        "name": "Shadow Fixture Models",
         "parentId": "root",
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 53,
-          "objectGuid": "go_cfaa94ff-8ca2-482b-a24a-748f236b5e8f",
-          "objectId": "empty",
-          "component": "Transform"
-        },
-        "transform": {
-          "position": {
-            "x": -16.5338134765625,
-            "y": -5.595524044110789e-14,
-            "z": 8.06381893157959
-          },
-          "rotation": {
-            "z": 0,
-            "x": 0,
-            "y": 0.4232755576800937
-          },
-          "scale": {
-            "x": 1.2028483549489821,
-            "y": 1,
-            "z": 1.0000000078423898
-          }
-        },
-        "kind": "transform",
-        "transformType": "plain"
-      },
-      {
-        "id": "cube_2",
-        "name": "Cube",
-        "parentId": "empty",
-        "source": {
-          "sourceId": "scene.main",
-          "sourceType": "scene",
-          "revision": 53,
-          "objectGuid": "go_6878ee87-145f-40b5-9eaf-4cc2a57f30db",
-          "objectId": "cube_2",
-          "component": "PrimitiveRenderer"
-        },
-        "transform": {
-          "position": {
-            "x": -5.346068740943325,
-            "y": -3.552713678800501e-15,
-            "z": 1.8662583929262868
-          },
-          "rotation": {
-            "z": 0,
-            "x": 0,
-            "y": 2.7755575615628914e-17
-          },
-          "scale": {
-            "x": 1,
-            "y": 1,
-            "z": 1
-          }
-        },
-        "kind": "primitive",
-        "primitive": {
-          "shape": "cube"
-        }
-      },
-      {
-        "id": "cube_2_copy_copy",
-        "name": "Cube Copy Copy",
-        "parentId": "empty",
-        "source": {
-          "sourceId": "scene.main",
-          "sourceType": "scene",
-          "revision": 53,
-          "objectGuid": "go_74e1d56f-eb43-41ea-9c58-598ab57ebf8e",
-          "objectId": "cube_2_copy_copy",
-          "component": "PrimitiveRenderer"
-        },
-        "transform": {
-          "position": {
-            "x": 1.9153807163238525,
-            "y": -0.12947770953178495,
-            "z": -5.474441289901733
-          },
-          "rotation": {
-            "z": 0,
-            "x": 0,
-            "y": 0
-          },
-          "scale": {
-            "x": 1,
-            "y": 1,
-            "z": 1
-          }
-        },
-        "kind": "primitive",
-        "primitive": {
-          "shape": "cube"
-        }
-      },
-      {
-        "id": "cube_2_copy",
-        "name": "Cube Copy",
-        "parentId": "empty",
-        "source": {
-          "sourceId": "scene.main",
-          "sourceType": "scene",
-          "revision": 53,
-          "objectGuid": "go_21cffc23-b664-4c23-892c-f0ad201c135f",
-          "objectId": "cube_2_copy",
-          "component": "PrimitiveRenderer"
+          "revision": 60,
+          "objectGuid": "go_shadow_fixture_group",
+          "objectId": "shadow_fixture_group",
+          "component": "GameObject"
         },
         "transform": {
           "position": {
@@ -669,1107 +2508,970 @@
             "z": 1
           }
         },
-        "kind": "primitive",
-        "primitive": {
-          "shape": "cube"
-        }
+        "kind": "group"
       },
       {
-        "id": "cube_2_copy_2",
-        "name": "Cube Copy",
-        "parentId": "empty",
+        "id": "shadow_fixture_player",
+        "name": "阴影测试-主角",
+        "parentId": "shadow_fixture_group",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "receive": "none"
+        },
+        "shadowPlan": {
+          "casterId": "shadow_fixture_player",
+          "receiverIds": [
+            "asset_3"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.5,
+            "softness": 0.58,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 53,
-          "objectGuid": "go_d5ccad9e-0ab6-494e-ba38-ea3fcc57ef12",
-          "objectId": "cube_2_copy_2",
-          "component": "PrimitiveRenderer"
-        },
-        "transform": {
-          "position": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          },
-          "rotation": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          },
-          "scale": {
-            "x": 1,
-            "y": 1,
-            "z": 1
-          }
-        },
-        "kind": "primitive",
-        "primitive": {
-          "shape": "cube"
-        }
-      },
-      {
-        "id": "cube_2_copy_3",
-        "name": "Cube Copy",
-        "parentId": "empty",
-        "source": {
-          "sourceId": "scene.main",
-          "sourceType": "scene",
-          "revision": 53,
-          "objectGuid": "go_b2723960-87d5-4bfc-85dd-61b04847fa63",
-          "objectId": "cube_2_copy_3",
-          "component": "PrimitiveRenderer"
-        },
-        "transform": {
-          "position": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          },
-          "rotation": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          },
-          "scale": {
-            "x": 1,
-            "y": 1,
-            "z": 1
-          }
-        },
-        "kind": "primitive",
-        "primitive": {
-          "shape": "cube"
-        }
-      },
-      {
-        "id": "cube_2_copy_4",
-        "name": "Cube Copy",
-        "parentId": "empty",
-        "source": {
-          "sourceId": "scene.main",
-          "sourceType": "scene",
-          "revision": 53,
-          "objectGuid": "go_59efe6d6-4b0e-4af9-9856-680e918cac51",
-          "objectId": "cube_2_copy_4",
-          "component": "PrimitiveRenderer"
-        },
-        "transform": {
-          "position": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          },
-          "rotation": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          },
-          "scale": {
-            "x": 1,
-            "y": 1,
-            "z": 1
-          }
-        },
-        "kind": "primitive",
-        "primitive": {
-          "shape": "cube"
-        }
-      },
-      {
-        "id": "cube_2_copy_5",
-        "name": "Cube Copy",
-        "parentId": "empty",
-        "source": {
-          "sourceId": "scene.main",
-          "sourceType": "scene",
-          "revision": 53,
-          "objectGuid": "go_128f5be2-5e14-4ef1-9836-a36c73e6081b",
-          "objectId": "cube_2_copy_5",
-          "component": "PrimitiveRenderer"
-        },
-        "transform": {
-          "position": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          },
-          "rotation": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          },
-          "scale": {
-            "x": 1,
-            "y": 1,
-            "z": 1
-          }
-        },
-        "kind": "primitive",
-        "primitive": {
-          "shape": "cube"
-        }
-      },
-      {
-        "id": "cube_2_copy_6",
-        "name": "Cube Copy",
-        "parentId": "empty",
-        "source": {
-          "sourceId": "scene.main",
-          "sourceType": "scene",
-          "revision": 53,
-          "objectGuid": "go_85b91a2b-39f4-4396-b171-d658b1b1fdfb",
-          "objectId": "cube_2_copy_6",
-          "component": "PrimitiveRenderer"
-        },
-        "transform": {
-          "position": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          },
-          "rotation": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          },
-          "scale": {
-            "x": 1,
-            "y": 1,
-            "z": 1
-          }
-        },
-        "kind": "primitive",
-        "primitive": {
-          "shape": "cube"
-        }
-      },
-      {
-        "id": "cube_2_copy_7",
-        "name": "Cube Copy",
-        "parentId": "empty",
-        "source": {
-          "sourceId": "scene.main",
-          "sourceType": "scene",
-          "revision": 53,
-          "objectGuid": "go_49b2e186-ae84-49e3-8c61-0fbf3fb03c6c",
-          "objectId": "cube_2_copy_7",
-          "component": "PrimitiveRenderer"
-        },
-        "transform": {
-          "position": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          },
-          "rotation": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          },
-          "scale": {
-            "x": 1,
-            "y": 1,
-            "z": 1
-          }
-        },
-        "kind": "primitive",
-        "primitive": {
-          "shape": "cube"
-        }
-      },
-      {
-        "id": "cube_2_copy_8",
-        "name": "Cube Copy",
-        "parentId": "empty",
-        "source": {
-          "sourceId": "scene.main",
-          "sourceType": "scene",
-          "revision": 53,
-          "objectGuid": "go_1b4c2594-f66a-42bb-a69a-c5d49a90293e",
-          "objectId": "cube_2_copy_8",
-          "component": "PrimitiveRenderer"
-        },
-        "transform": {
-          "position": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          },
-          "rotation": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          },
-          "scale": {
-            "x": 1,
-            "y": 1,
-            "z": 1
-          }
-        },
-        "kind": "primitive",
-        "primitive": {
-          "shape": "cube"
-        }
-      },
-      {
-        "id": "cube_2_copy_9",
-        "name": "Cube Copy",
-        "parentId": "empty",
-        "source": {
-          "sourceId": "scene.main",
-          "sourceType": "scene",
-          "revision": 53,
-          "objectGuid": "go_0b484a77-a0a7-4636-95d5-320ef6bd01a8",
-          "objectId": "cube_2_copy_9",
-          "component": "PrimitiveRenderer"
-        },
-        "transform": {
-          "position": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          },
-          "rotation": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          },
-          "scale": {
-            "x": 1,
-            "y": 1,
-            "z": 1
-          }
-        },
-        "kind": "primitive",
-        "primitive": {
-          "shape": "cube"
-        }
-      },
-      {
-        "id": "cube_2_copy_10",
-        "name": "Cube Copy",
-        "parentId": "empty",
-        "source": {
-          "sourceId": "scene.main",
-          "sourceType": "scene",
-          "revision": 53,
-          "objectGuid": "go_43c8ca9c-1d4c-4885-a452-53be8f5efa7f",
-          "objectId": "cube_2_copy_10",
-          "component": "PrimitiveRenderer"
-        },
-        "transform": {
-          "position": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          },
-          "rotation": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          },
-          "scale": {
-            "x": 1,
-            "y": 1,
-            "z": 1
-          }
-        },
-        "kind": "primitive",
-        "primitive": {
-          "shape": "cube"
-        }
-      },
-      {
-        "id": "empty_copy",
-        "name": "Empty Copy",
-        "parentId": "root",
-        "source": {
-          "sourceId": "scene.main",
-          "sourceType": "scene",
-          "revision": 53,
-          "objectGuid": "go_3417a114-eb94-425c-9490-b6acf8948620",
-          "objectId": "empty_copy",
-          "component": "Transform"
-        },
-        "transform": {
-          "position": {
-            "x": -0.9948525428771973,
-            "y": -0.12947770953178406,
-            "z": -3.882814407348633
-          },
-          "rotation": {
-            "z": 0,
-            "x": 0,
-            "y": 0
-          },
-          "scale": {
-            "x": 1,
-            "y": 1,
-            "z": 1
-          }
-        },
-        "kind": "transform",
-        "transformType": "plain"
-      },
-      {
-        "id": "cube_2_copy_11",
-        "name": "Cube Copy",
-        "parentId": "empty_copy",
-        "source": {
-          "sourceId": "scene.main",
-          "sourceType": "scene",
-          "revision": 53,
-          "objectGuid": "go_95344ac7-7743-4593-ab7a-b5f449037a03",
-          "objectId": "cube_2_copy_11",
-          "component": "PrimitiveRenderer"
-        },
-        "transform": {
-          "position": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          },
-          "rotation": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          },
-          "scale": {
-            "x": 1,
-            "y": 1,
-            "z": 1
-          }
-        },
-        "kind": "primitive",
-        "primitive": {
-          "shape": "cube"
-        }
-      },
-      {
-        "id": "cube_2_copy_2_copy",
-        "name": "Cube Copy Copy",
-        "parentId": "empty_copy",
-        "source": {
-          "sourceId": "scene.main",
-          "sourceType": "scene",
-          "revision": 53,
-          "objectGuid": "go_e1ff2466-8601-4b30-a7f5-cae15010e4a5",
-          "objectId": "cube_2_copy_2_copy",
-          "component": "PrimitiveRenderer"
-        },
-        "transform": {
-          "position": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          },
-          "rotation": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          },
-          "scale": {
-            "x": 1,
-            "y": 1,
-            "z": 1
-          }
-        },
-        "kind": "primitive",
-        "primitive": {
-          "shape": "cube"
-        }
-      },
-      {
-        "id": "cube_2_copy_3_copy",
-        "name": "Cube Copy Copy",
-        "parentId": "empty_copy",
-        "source": {
-          "sourceId": "scene.main",
-          "sourceType": "scene",
-          "revision": 53,
-          "objectGuid": "go_888d3ae5-0fee-4c61-b6d5-894954707840",
-          "objectId": "cube_2_copy_3_copy",
-          "component": "PrimitiveRenderer"
-        },
-        "transform": {
-          "position": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          },
-          "rotation": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          },
-          "scale": {
-            "x": 1,
-            "y": 1,
-            "z": 1
-          }
-        },
-        "kind": "primitive",
-        "primitive": {
-          "shape": "cube"
-        }
-      },
-      {
-        "id": "cube_2_copy_4_copy",
-        "name": "Cube Copy Copy",
-        "parentId": "empty_copy",
-        "source": {
-          "sourceId": "scene.main",
-          "sourceType": "scene",
-          "revision": 53,
-          "objectGuid": "go_e9e164c4-8adb-492f-8ffc-daebd36e1ac3",
-          "objectId": "cube_2_copy_4_copy",
-          "component": "PrimitiveRenderer"
-        },
-        "transform": {
-          "position": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          },
-          "rotation": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          },
-          "scale": {
-            "x": 1,
-            "y": 1,
-            "z": 1
-          }
-        },
-        "kind": "primitive",
-        "primitive": {
-          "shape": "cube"
-        }
-      },
-      {
-        "id": "cube_2_copy_5_copy",
-        "name": "Cube Copy Copy",
-        "parentId": "empty_copy",
-        "source": {
-          "sourceId": "scene.main",
-          "sourceType": "scene",
-          "revision": 53,
-          "objectGuid": "go_adc9c95b-5d79-470b-880c-dd45e419e971",
-          "objectId": "cube_2_copy_5_copy",
-          "component": "PrimitiveRenderer"
-        },
-        "transform": {
-          "position": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          },
-          "rotation": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          },
-          "scale": {
-            "x": 1,
-            "y": 1,
-            "z": 1
-          }
-        },
-        "kind": "primitive",
-        "primitive": {
-          "shape": "cube"
-        }
-      },
-      {
-        "id": "cube_2_copy_6_copy",
-        "name": "Cube Copy Copy",
-        "parentId": "empty_copy",
-        "source": {
-          "sourceId": "scene.main",
-          "sourceType": "scene",
-          "revision": 53,
-          "objectGuid": "go_f1716e18-5648-4872-a3d0-f2a956dd4a09",
-          "objectId": "cube_2_copy_6_copy",
-          "component": "PrimitiveRenderer"
-        },
-        "transform": {
-          "position": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          },
-          "rotation": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          },
-          "scale": {
-            "x": 1,
-            "y": 1,
-            "z": 1
-          }
-        },
-        "kind": "primitive",
-        "primitive": {
-          "shape": "cube"
-        }
-      },
-      {
-        "id": "cube_2_copy_7_copy",
-        "name": "Cube Copy Copy",
-        "parentId": "empty_copy",
-        "source": {
-          "sourceId": "scene.main",
-          "sourceType": "scene",
-          "revision": 53,
-          "objectGuid": "go_a2e40862-e54f-485f-95dc-b19545500895",
-          "objectId": "cube_2_copy_7_copy",
-          "component": "PrimitiveRenderer"
-        },
-        "transform": {
-          "position": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          },
-          "rotation": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          },
-          "scale": {
-            "x": 1,
-            "y": 1,
-            "z": 1
-          }
-        },
-        "kind": "primitive",
-        "primitive": {
-          "shape": "cube"
-        }
-      },
-      {
-        "id": "cube_2_copy_8_copy",
-        "name": "Cube Copy Copy",
-        "parentId": "empty_copy",
-        "source": {
-          "sourceId": "scene.main",
-          "sourceType": "scene",
-          "revision": 53,
-          "objectGuid": "go_292f34fe-b5d4-4876-a83a-c558da75126f",
-          "objectId": "cube_2_copy_8_copy",
-          "component": "PrimitiveRenderer"
-        },
-        "transform": {
-          "position": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          },
-          "rotation": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          },
-          "scale": {
-            "x": 1,
-            "y": 1,
-            "z": 1
-          }
-        },
-        "kind": "primitive",
-        "primitive": {
-          "shape": "cube"
-        }
-      },
-      {
-        "id": "cube_2_copy_9_copy",
-        "name": "Cube Copy Copy",
-        "parentId": "empty_copy",
-        "source": {
-          "sourceId": "scene.main",
-          "sourceType": "scene",
-          "revision": 53,
-          "objectGuid": "go_f1a93353-e6e1-4603-becf-bcd95e61aaa9",
-          "objectId": "cube_2_copy_9_copy",
-          "component": "PrimitiveRenderer"
-        },
-        "transform": {
-          "position": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          },
-          "rotation": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          },
-          "scale": {
-            "x": 1,
-            "y": 1,
-            "z": 1
-          }
-        },
-        "kind": "primitive",
-        "primitive": {
-          "shape": "cube"
-        }
-      },
-      {
-        "id": "cube_2_copy_10_copy",
-        "name": "Cube Copy Copy",
-        "parentId": "empty_copy",
-        "source": {
-          "sourceId": "scene.main",
-          "sourceType": "scene",
-          "revision": 53,
-          "objectGuid": "go_ccfb94dc-e506-4560-92e9-2e10c79df75f",
-          "objectId": "cube_2_copy_10_copy",
-          "component": "PrimitiveRenderer"
-        },
-        "transform": {
-          "position": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          },
-          "rotation": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          },
-          "scale": {
-            "x": 1,
-            "y": 1,
-            "z": 1
-          }
-        },
-        "kind": "primitive",
-        "primitive": {
-          "shape": "cube"
-        }
-      },
-      {
-        "id": "axe_and_bear_fence_prop",
-        "name": "Axe and Bear - Fence Prop",
-        "parentId": "root",
-        "source": {
-          "sourceId": "scene.main",
-          "sourceType": "scene",
-          "revision": 53,
-          "objectGuid": "go_6edd28b4-f389-4685-ae16-6feb855b15ed",
-          "objectId": "axe_and_bear_fence_prop",
+          "revision": 60,
+          "objectGuid": "go_shadow_fixture_player",
+          "objectId": "shadow_fixture_player",
           "component": "ModelRenderer"
         },
         "transform": {
           "position": {
-            "x": 3.5999999046325684,
-            "y": 0.8350777626037598,
-            "z": 1.7999999523162842
+            "x": -8,
+            "y": 0.01,
+            "z": -6
           },
           "rotation": {
-            "z": 0,
             "x": 0,
-            "y": 0
+            "y": 0.35,
+            "z": 0
           },
           "scale": {
-            "x": 1,
-            "y": 1,
-            "z": 1
+            "x": 0.7,
+            "y": 0.7,
+            "z": 0.7
           }
         },
         "kind": "instance",
         "instance": {
-          "assetId": "asset_bf50e45f742244bd96f47946981c37a0"
-        }
-      },
-      {
-        "id": "lumber_order",
-        "name": "Lumber Order - 松树",
-        "parentId": "root",
-        "source": {
-          "sourceId": "scene.main",
-          "sourceType": "scene",
-          "revision": 53,
-          "objectGuid": "go_6697756a-c434-4b5e-b5c6-e81d8b9e5d26",
-          "objectId": "lumber_order",
-          "component": "ModelRenderer"
-        },
-        "transform": {
-          "position": {
-            "x": -1.8,
-            "y": 0,
-            "z": 10.8
-          },
-          "rotation": {
-            "z": 0,
-            "x": 0,
-            "y": 0
-          },
-          "scale": {
-            "x": 1,
-            "y": 1,
-            "z": 1
-          }
-        },
-        "kind": "instance",
-        "instance": {
-          "assetId": "asset_ff8c83040af443fe8381477634be9254"
-        },
-        "overrides": {
-          "outline": {
-            "strategy": "babylon-default",
-            "renderOutline": true,
-            "outlineWidth": 0.04,
-            "outlineColor": {
-              "r": 0.03,
-              "g": 0.03,
-              "b": 0.03
-            }
-          }
-        }
-      },
-      {
-        "id": "lumber_order_2",
-        "name": "Lumber Order - 木板",
-        "parentId": "root",
-        "source": {
-          "sourceId": "scene.main",
-          "sourceType": "scene",
-          "revision": 53,
-          "objectGuid": "go_ccb4f13b-5147-457d-b4bd-d20b403d6d26",
-          "objectId": "lumber_order_2",
-          "component": "ModelRenderer"
-        },
-        "transform": {
-          "position": {
-            "x": 0,
-            "y": 0,
-            "z": 10.8
-          },
-          "rotation": {
-            "z": 0,
-            "x": 0,
-            "y": 0
-          },
-          "scale": {
-            "x": 1,
-            "y": 1,
-            "z": 1
-          }
-        },
-        "kind": "instance",
-        "instance": {
-          "assetId": "asset_606796e877654f96b4d3c3cf3745757a"
-        }
-      },
-      {
-        "id": "lumber_order_3",
-        "name": "Lumber Order - 原木",
-        "parentId": "root",
-        "source": {
-          "sourceId": "scene.main",
-          "sourceType": "scene",
-          "revision": 53,
-          "objectGuid": "go_fc8d5d2f-297d-47ce-8dde-b759d7161bd2",
-          "objectId": "lumber_order_3",
-          "component": "ModelRenderer"
-        },
-        "transform": {
-          "position": {
-            "x": 1.8000000000000003,
-            "y": 0,
-            "z": 10.8
-          },
-          "rotation": {
-            "z": 0,
-            "x": 0,
-            "y": 0
-          },
-          "scale": {
-            "x": 1,
-            "y": 1,
-            "z": 1
-          }
-        },
-        "kind": "instance",
-        "instance": {
-          "assetId": "asset_da31d334bdcb443a9e9f125d500d66fb"
-        }
-      },
-      {
-        "id": "lumber_order_dark_log",
-        "name": "Lumber Order - Dark Log",
-        "parentId": "root",
-        "source": {
-          "sourceId": "scene.main",
-          "sourceType": "scene",
-          "revision": 53,
-          "objectGuid": "go_13c16726-5499-4156-ae36-2e51cacdf5f0",
-          "objectId": "lumber_order_dark_log",
-          "component": "ModelRenderer"
-        },
-        "transform": {
-          "position": {
-            "x": 3.6,
-            "y": 0,
-            "z": 10.8
-          },
-          "rotation": {
-            "z": 0,
-            "x": 0,
-            "y": 0
-          },
-          "scale": {
-            "x": 1,
-            "y": 1,
-            "z": 1
-          }
-        },
-        "kind": "instance",
-        "instance": {
-          "assetId": "asset_d940f34a66374c40abba0a46372028ab"
-        }
-      },
-      {
-        "id": "lumber_order_conveyor_model",
-        "name": "Lumber Order - Conveyor Model",
-        "parentId": "root",
-        "source": {
-          "sourceId": "scene.main",
-          "sourceType": "scene",
-          "revision": 53,
-          "objectGuid": "go_608ad34e-9255-4a19-a1c4-6fc9b6e29118",
-          "objectId": "lumber_order_conveyor_model",
-          "component": "ModelRenderer"
-        },
-        "transform": {
-          "position": {
-            "x": -3.6,
-            "y": 0,
-            "z": 12.600000000000001
-          },
-          "rotation": {
-            "z": 0,
-            "x": 0,
-            "y": 0
-          },
-          "scale": {
-            "x": 1,
-            "y": 1,
-            "z": 1
-          }
-        },
-        "kind": "instance",
-        "instance": {
-          "assetId": "asset_1791b38eb27c45bbabc8b986605e4de5"
-        }
-      },
-      {
-        "id": "axe_and_bear_tower_building",
-        "name": "Axe and Bear - Tower Building",
-        "parentId": "root",
-        "source": {
-          "sourceId": "scene.main",
-          "sourceType": "scene",
-          "revision": 53,
-          "objectGuid": "go_0900c087-f4a9-4b07-9ddc-a8f60d647022",
-          "objectId": "axe_and_bear_tower_building",
-          "component": "ModelRenderer"
-        },
-        "transform": {
-          "position": {
-            "x": -23.68146324157715,
-            "y": 0.3543615937232971,
-            "z": 0.580686092376709
-          },
-          "rotation": {
-            "z": 0,
-            "x": 0,
-            "y": 0
-          },
-          "scale": {
-            "x": 1,
-            "y": 1,
-            "z": 1
-          }
-        },
-        "kind": "instance",
-        "instance": {
-          "assetId": "asset_9330ffd627bb403eaca81058b0651132"
+          "assetId": "asset_699aee4da2b84a3eb07f4496872ad249"
         },
         "overrides": {
           "materialSlotBindings": {
-            "slot_3d5cd656": {
-              "materialAssetId": "mat_a854601cca554ea5b29d9d6e98b98412"
+            "slot_26caed25": {
+              "materialAssetId": "mat_cd94c2cdcc94413aab94bfa7ca94be14"
             },
-            "slot_42ea83aa": {
-              "materialAssetId": "mat_77358ffa7835418da5358cd476358e67"
+            "slot_53300b02": {
+              "materialAssetId": "mat_6fc78e976ec74d04a1c791bd70c7902a"
             }
           }
         }
       },
       {
-        "id": "axe_and_bear_sm",
-        "name": "Axe and Bear - SM 房子推车",
-        "parentId": "root",
-        "source": {
-          "sourceId": "scene.main",
-          "sourceType": "scene",
-          "revision": 53,
-          "objectGuid": "go_ec74ca4a-2878-4628-9825-a61a5b4cf147",
-          "objectId": "axe_and_bear_sm",
-          "component": "ModelRenderer"
-        },
-        "transform": {
-          "position": {
-            "x": 3.5478007793426514,
-            "y": 5.1514348342607263e-14,
-            "z": -9.937690734863281
-          },
-          "rotation": {
-            "z": 0.30335533401923614,
-            "x": -1.2675299071261248,
-            "y": -0.8125469146852283
-          },
-          "scale": {
-            "x": 1.3614519408965957,
-            "y": 1.3264327542500223,
-            "z": 1.2226189977880335
+        "id": "shadow_fixture_worker",
+        "name": "阴影测试-工人",
+        "parentId": "shadow_fixture_group",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25
           }
         },
-        "kind": "instance",
-        "instance": {
-          "assetId": "asset_de16bd66ee3443589e89778bae314202"
-        }
-      },
-      {
-        "id": "axe_and_bear_tower_building_copy",
-        "name": "Axe and Bear - Tower Building Copy",
-        "parentId": "root",
+        "shadowPlan": {
+          "casterId": "shadow_fixture_worker",
+          "receiverIds": [
+            "asset_3"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 53,
-          "objectGuid": "go_fdbf39ff-cf04-4b96-87f5-3124b94879ce",
-          "objectId": "axe_and_bear_tower_building_copy",
+          "revision": 60,
+          "objectGuid": "go_shadow_fixture_worker",
+          "objectId": "shadow_fixture_worker",
           "component": "ModelRenderer"
         },
         "transform": {
           "position": {
-            "x": -14.332818984985352,
-            "y": 0.3543615937232971,
-            "z": -11.163789749145508
+            "x": -4,
+            "y": 0,
+            "z": -6
           },
           "rotation": {
-            "z": 0,
             "x": 0,
-            "y": 0
+            "y": -0.35,
+            "z": 0
           },
           "scale": {
-            "x": 1,
-            "y": 1,
-            "z": 1
+            "x": 1.1,
+            "y": 1.1,
+            "z": 1.1
           }
         },
         "kind": "instance",
         "instance": {
-          "assetId": "asset_9330ffd627bb403eaca81058b0651132"
+          "assetId": "asset_ade25007e0964563b197b21c2759c027"
         },
         "overrides": {
           "materialSlotBindings": {
-            "slot_3d5cd656": {
-              "materialAssetId": "mat_784f416f774f4fdcaa4f4495794f4302"
-            },
-            "slot_42ea83aa": {
-              "materialAssetId": "mat_77358ffa7835418da5358cd476358e67"
+            "slot_74e9cbf9": {
+              "materialAssetId": "mat_e6871821e587468ea48714fbe3871368"
             }
           }
         }
       },
       {
-        "id": "marker",
-        "name": "Marker",
-        "parentId": "root",
+        "id": "shadow_fixture_truck",
+        "name": "阴影测试-小蓝卡车",
+        "parentId": "shadow_fixture_group",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25
+          }
+        },
+        "shadowPlan": {
+          "casterId": "shadow_fixture_truck",
+          "receiverIds": [
+            "asset_3"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 53,
-          "objectGuid": "go_4a5526de-48ce-44a2-ad02-23b7c1febf70",
-          "objectId": "marker",
-          "component": "Transform"
+          "revision": 60,
+          "objectGuid": "go_shadow_fixture_truck",
+          "objectId": "shadow_fixture_truck",
+          "component": "ModelRenderer"
         },
         "transform": {
           "position": {
+            "x": 0.3,
+            "y": 0,
+            "z": -6
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0.55,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.75,
+            "y": 0.75,
+            "z": 0.75
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_4b2358ee5d9441cd8cae8b389bb98c46"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_91c449a4": {
+              "materialAssetId": "mat_fee306e8ffe3487ba0e30a0e01e30ba1"
+            },
+            "slot_47f2cfb8": {
+              "materialAssetId": "mat_fee306e8ffe3487ba0e30a0e01e30ba1"
+            },
+            "slot_5278c34c": {
+              "materialAssetId": "mat_fee306e8ffe3487ba0e30a0e01e30ba1"
+            },
+            "slot_a58a01f0": {
+              "materialAssetId": "mat_fee306e8ffe3487ba0e30a0e01e30ba1"
+            },
+            "slot_ab17af44": {
+              "materialAssetId": "mat_fee306e8ffe3487ba0e30a0e01e30ba1"
+            }
+          }
+        }
+      },
+      {
+        "id": "shadow_fixture_pine_tree",
+        "name": "阴影测试-松树",
+        "parentId": "shadow_fixture_group",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "receive": "none"
+        },
+        "shadowPlan": {
+          "casterId": "shadow_fixture_pine_tree",
+          "receiverIds": [
+            "asset_3"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.5,
+            "softness": 0.58,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 60,
+          "objectGuid": "go_shadow_fixture_pine_tree",
+          "objectId": "shadow_fixture_pine_tree",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 5.4,
+            "y": 0,
+            "z": -6
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
             "x": 2,
-            "y": 0.5,
-            "z": 0
-          },
-          "rotation": {
-            "x": 0,
-            "y": 0.027415631890326912,
-            "z": 0
-          },
-          "scale": {
-            "x": 4,
-            "y": 1,
-            "z": 4
+            "y": 2,
+            "z": 2
           }
         },
-        "kind": "transform",
-        "marker": {
-          "schemaVersion": 1,
-          "type": "collection-area",
-          "kind": "region",
-          "semanticFrame": {
-            "origin": {
-              "x": 0,
-              "y": 0.25,
-              "z": 0
-            },
-            "right": {
-              "x": 1,
-              "y": 0,
-              "z": 0
-            },
-            "up": {
-              "x": 0,
-              "y": 1,
-              "z": 0
-            },
-            "forward": {
-              "x": 0,
-              "y": 0,
-              "z": 1
-            },
-            "label": "Marker"
-          },
-          "geometry": {
-            "kind": "box"
-          },
-          "label": "Marker"
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_edc2f992438c4450afc1c6354ec21500"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_1463c7d6": {
+              "materialAssetId": "mat_0cd17a040dd14b97aed17d2a0fd17ebd"
+            }
+          }
         }
       },
       {
-        "id": "marker-2",
-        "name": "Marker",
+        "id": "shadow_fixture_bush",
+        "name": "阴影测试-阔叶灌木",
+        "parentId": "shadow_fixture_group",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25
+          }
+        },
+        "shadowPlan": {
+          "casterId": "shadow_fixture_bush",
+          "receiverIds": [
+            "asset_3"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 60,
+          "objectGuid": "go_shadow_fixture_bush",
+          "objectId": "shadow_fixture_bush",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": -8,
+            "y": 0,
+            "z": -1.5
+          },
+          "rotation": {
+            "x": 0,
+            "y": -0.25,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.8,
+            "y": 0.8,
+            "z": 0.8
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_af82a4f117d84ff58bedb41aa11bad5c"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_a3b38496": {
+              "materialAssetId": "mat_43f0690444f04a97a5f06c2a46f06dbd"
+            }
+          }
+        }
+      },
+      {
+        "id": "shadow_fixture_rocks",
+        "name": "阴影测试-岩石组",
+        "parentId": "shadow_fixture_group",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25
+          }
+        },
+        "shadowPlan": {
+          "casterId": "shadow_fixture_rocks",
+          "receiverIds": [
+            "asset_3"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 60,
+          "objectGuid": "go_shadow_fixture_rocks",
+          "objectId": "shadow_fixture_rocks",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": -4,
+            "y": 0.09,
+            "z": -1.5
+          },
+          "rotation": {
+            "x": 0,
+            "y": -0.6,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_2286fa2ec19e45df8b1b188717c7c4e9"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_0a33f1e4": {
+              "materialAssetId": "mat_7ac6a4c67bc64659a8c6a1a079c6a333"
+            }
+          }
+        }
+      },
+      {
+        "id": "shadow_fixture_fence",
+        "name": "阴影测试-栅栏",
+        "parentId": "shadow_fixture_group",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25
+          }
+        },
+        "shadowPlan": {
+          "casterId": "shadow_fixture_fence",
+          "receiverIds": [
+            "asset_3"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 60,
+          "objectGuid": "go_shadow_fixture_fence",
+          "objectId": "shadow_fixture_fence",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 0.5,
+            "y": 0.06,
+            "z": -1.6
+          },
+          "rotation": {
+            "x": 0,
+            "y": 1.5707963267948966,
+            "z": 0
+          },
+          "scale": {
+            "x": 1.2,
+            "y": 1.2,
+            "z": 1.2
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_e726be04042849088cf73e4f2f92c00f"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_134be123": {
+              "materialAssetId": "mat_9cf2c5419bf243aeaaf2c21b99f2c088"
+            }
+          }
+        }
+      },
+      {
+        "id": "shadow_fixture_log_bundle",
+        "name": "阴影测试-成捆木材",
+        "parentId": "shadow_fixture_group",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25
+          }
+        },
+        "shadowPlan": {
+          "casterId": "shadow_fixture_log_bundle",
+          "receiverIds": [
+            "asset_3"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 60,
+          "objectGuid": "go_shadow_fixture_log_bundle",
+          "objectId": "shadow_fixture_log_bundle",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 4.8,
+            "y": 0.36,
+            "z": -1.5
+          },
+          "rotation": {
+            "x": 0,
+            "y": 1.5707963267948966,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.7,
+            "y": 0.7,
+            "z": 0.7
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_52549a6dc9a34a5da036b7e771a907b3"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_fa0049a6": {
+              "materialAssetId": "mat_e42b5114e52b42a7a62b543ae72b55cd"
+            }
+          }
+        }
+      },
+      {
+        "id": "shadow_fixture_crate",
+        "name": "阴影测试-箱子",
+        "parentId": "shadow_fixture_group",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25
+          }
+        },
+        "shadowPlan": {
+          "casterId": "shadow_fixture_crate",
+          "receiverIds": [
+            "asset_3"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 60,
+          "objectGuid": "go_shadow_fixture_crate",
+          "objectId": "shadow_fixture_crate",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": -8,
+            "y": 0.75,
+            "z": 3
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0.2,
+            "z": 0
+          },
+          "scale": {
+            "x": 3,
+            "y": 3,
+            "z": 3
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_759b595e81934517ba0251b16bd31061"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_8656a283": {
+              "materialAssetId": "mat_af644f91ae644dfead644c6bac644ad8"
+            }
+          }
+        }
+      },
+      {
+        "id": "shadow_fixture_barrel",
+        "name": "阴影测试-木桶",
+        "parentId": "shadow_fixture_group",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25
+          }
+        },
+        "shadowPlan": {
+          "casterId": "shadow_fixture_barrel",
+          "receiverIds": [
+            "asset_3"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 60,
+          "objectGuid": "go_shadow_fixture_barrel",
+          "objectId": "shadow_fixture_barrel",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": -4.4,
+            "y": 0,
+            "z": 3.2
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 2.2,
+            "y": 2.2,
+            "z": 2.2
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_7612f54e381044e4b035ea6a988bfb89"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_f3f14d2b": {
+              "materialAssetId": "mat_5af6dde959f64c56a8f6dac357f6d930"
+            }
+          }
+        }
+      },
+      {
+        "id": "shadow_fixture_chicken",
+        "name": "阴影测试-鸡",
+        "parentId": "shadow_fixture_group",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25
+          }
+        },
+        "shadowPlan": {
+          "casterId": "shadow_fixture_chicken",
+          "receiverIds": [
+            "asset_3"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 60,
+          "objectGuid": "go_shadow_fixture_chicken",
+          "objectId": "shadow_fixture_chicken",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": -0.8,
+            "y": 0.44,
+            "z": 3
+          },
+          "rotation": {
+            "x": 0,
+            "y": -0.8,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.45,
+            "y": 0.45,
+            "z": 0.45
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_97121f40170c40d1aaf63b8c2cf0bf24"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_db1ccc4e": {
+              "materialAssetId": "mat_0f3404b210344645ad34018c0e34031f"
+            }
+          }
+        }
+      },
+      {
+        "id": "shadow_fixture_hay_bale",
+        "name": "阴影测试-干草卷",
+        "parentId": "shadow_fixture_group",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25
+          }
+        },
+        "shadowPlan": {
+          "casterId": "shadow_fixture_hay_bale",
+          "receiverIds": [
+            "asset_3"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 60,
+          "objectGuid": "go_shadow_fixture_hay_bale",
+          "objectId": "shadow_fixture_hay_bale",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 2.4,
+            "y": 0,
+            "z": 3
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0.4,
+            "z": 0
+          },
+          "scale": {
+            "x": 1.4,
+            "y": 1.4,
+            "z": 1.4
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_26e79030d245465885b6e4349c9d81d9"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_c6401e21": {
+              "materialAssetId": "mat_d133a063d0334ed0a333a389d233a1f6"
+            }
+          }
+        }
+      },
+      {
+        "id": "shadow_fixture_counter",
+        "name": "阴影测试-收银台",
+        "parentId": "shadow_fixture_group",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25
+          }
+        },
+        "shadowPlan": {
+          "casterId": "shadow_fixture_counter",
+          "receiverIds": [
+            "asset_3"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 60,
+          "objectGuid": "go_shadow_fixture_counter",
+          "objectId": "shadow_fixture_counter",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 6.2,
+            "y": 0,
+            "z": 3.2
+          },
+          "rotation": {
+            "x": 0,
+            "y": -0.45,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.48,
+            "y": 0.48,
+            "z": 0.48
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_094bc5a89357455bb002b6b6a67e9295"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_5cd8df33": {
+              "materialAssetId": "mat_8f0c05718e0c43dead0c024b8c0c00b8"
+            }
+          }
+        }
+      },
+      {
+        "id": "asset",
+        "name": "接收测试-地板块",
         "parentId": "root",
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 53,
-          "objectGuid": "go_67a9e19f-c714-44ff-b5da-ec51692c98a1",
-          "objectId": "marker-2",
-          "component": "Transform"
+          "revision": 60,
+          "objectGuid": "go_8c25b316-6074-41ae-a1f2-49f3709453ec",
+          "objectId": "asset",
+          "component": "ModelRenderer"
         },
         "transform": {
           "position": {
-            "x": -3.4419445991516113,
-            "y": 0.5,
-            "z": -1.4533823728561401
+            "x": -3.8,
+            "y": 0.04,
+            "z": -3.2
           },
           "rotation": {
             "x": 0,
@@ -1777,62 +3479,57 @@
             "z": 0
           },
           "scale": {
-            "x": 0.5,
-            "y": 0.5,
-            "z": 0.5
+            "x": 2.5,
+            "y": 1,
+            "z": 2.5
           }
         },
-        "kind": "transform",
-        "marker": {
-          "schemaVersion": 1,
-          "type": "",
-          "kind": "point",
-          "semanticFrame": {
-            "origin": {
-              "x": -3.4419445991516113,
-              "y": 0.5,
-              "z": -1.4533823728561401
-            },
-            "right": {
-              "x": 1,
-              "y": 0,
-              "z": 0
-            },
-            "up": {
-              "x": 0,
-              "y": 1,
-              "z": 0
-            },
-            "forward": {
-              "x": 0,
-              "y": 0,
-              "z": 1
-            },
-            "label": "Marker 2"
-          },
-          "geometry": {
-            "kind": "point",
-            "coordinateSpace": "world"
-          },
-          "label": "Marker"
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_07e860eb2bf04e6f9a81e0832cddc014"
         }
       },
       {
-        "id": "marker-3",
-        "name": "Marker 2",
+        "id": "asset_2",
+        "name": "接收测试-真实地面",
+        "parentId": "root",
+        "shadow": {
+          "cast": "none",
+          "receive": "none",
+          "mode": "none"
+        },
+        "shadowPlan": {
+          "casterId": "asset_2",
+          "receiverIds": [],
+          "backend": "none",
+          "mode": "none",
+          "quality": "medium",
+          "params": {
+            "opacity": 0.42,
+            "softness": 0.4,
+            "bias": 0.001,
+            "normalBias": 0.01,
+            "maxDistance": 48,
+            "resolution": 1024,
+            "cascadeCount": 2,
+            "bakeSamples": 24,
+            "blurKernel": 4
+          },
+          "diagnostics": []
+        },
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 53,
-          "objectGuid": "go_23a288a0-3c51-49c7-a047-dfab0c5994d5",
-          "objectId": "marker-3",
-          "component": "Transform"
+          "revision": 60,
+          "objectGuid": "go_1ecaee91-9738-4914-8fc2-5f2b69cc018a",
+          "objectId": "asset_2",
+          "component": "ModelRenderer"
         },
         "transform": {
           "position": {
-            "x": 0,
-            "y": 0.25,
-            "z": 0
+            "x": 1.5,
+            "y": 0.08,
+            "z": -3.2
           },
           "rotation": {
             "x": 0,
@@ -1840,21 +3537,72 @@
             "z": 0
           },
           "scale": {
-            "x": 0.5,
-            "y": 0.5,
-            "z": 0.5
+            "x": 1.5,
+            "y": 1,
+            "z": 1.5
           }
         },
-        "kind": "transform",
-        "marker": {
-          "schemaVersion": 1,
-          "type": "",
-          "kind": "point",
-          "geometry": {
-            "kind": "point",
-            "coordinateSpace": "world"
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_c52042a3dd6544d59408c015320ebc75"
+        }
+      },
+      {
+        "id": "asset_3",
+        "name": "接收测试-抬高木台",
+        "parentId": "root",
+        "shadow": {
+          "cast": "none",
+          "receive": "enabled",
+          "mode": "none"
+        },
+        "shadowPlan": {
+          "casterId": "asset_3",
+          "receiverIds": [],
+          "backend": "none",
+          "mode": "none",
+          "quality": "medium",
+          "params": {
+            "opacity": 0.42,
+            "softness": 0.4,
+            "bias": 0.001,
+            "normalBias": 0.01,
+            "maxDistance": 48,
+            "resolution": 1024,
+            "cascadeCount": 2,
+            "bakeSamples": 24,
+            "blurKernel": 4
           },
-          "label": "Marker 2"
+          "diagnostics": []
+        },
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 60,
+          "objectGuid": "go_cd724b70-f492-4014-ac1d-e51ef61cfc0d",
+          "objectId": "asset_3",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 4.5,
+            "y": 0.42,
+            "z": -3.2
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0.25000000000000006,
+            "z": 0
+          },
+          "scale": {
+            "x": 1.2,
+            "y": 1.2,
+            "z": 1.2
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_96ed807ee58f4928bcfcc44004a44ef3"
         }
       }
     ],
@@ -1932,453 +3680,17 @@
         }
       },
       {
-        "id": "mat_lumber_order_fresh_wood",
-        "name": "Lumber Order - Fresh Wood",
-        "profile": {
-          "baseColor": {
-            "color": {
-              "r": 0.9607843137254902,
-              "g": 0.47058823529411764,
-              "b": 0.0392156862745098
-            },
-            "brightness": 1,
-            "saturation": 1.08,
-            "contrast": 1,
-            "texture": {
-              "url": "/src/assets/imported/textures/texture_79af58d28dfe40bba5cd2422a40a4635.png?v=1780033863251.6653"
-            }
-          },
-          "metallic": 0,
-          "roughness": 0.82,
-          "emission": {
-            "intensity": 0
-          }
-        }
-      },
-      {
-        "id": "mat_lumber_order_dark_plank",
-        "name": "Lumber Order - Dark Plank",
-        "profile": {
-          "baseColor": {
-            "color": {
-              "r": 0.36,
-              "g": 0.21,
-              "b": 0.11
-            },
-            "brightness": 0.92,
-            "saturation": 1.15,
-            "contrast": 1.1
-          },
-          "metallic": 0,
-          "roughness": 0.88,
-          "emission": {
-            "intensity": 0
-          }
-        }
-      },
-      {
-        "id": "mat_lumber_order_upgrade_glow",
-        "name": "Lumber Order - Upgrade Glow",
-        "profile": {
-          "baseColor": {
-            "color": {
-              "r": 0.95,
-              "g": 0.78,
-              "b": 0.22
-            },
-            "brightness": 1.1,
-            "saturation": 1.2,
-            "contrast": 1.05,
-            "texture": {
-              "url": "/src/assets/imported/textures/texture_4c92ba888f9e43a9b68ac55de347e43b.png?v=1780025963008.571"
-            }
-          },
-          "metallic": 0,
-          "roughness": 0.45,
-          "emission": {
-            "color": {
-              "r": 1,
-              "g": 0.74,
-              "b": 0.22
-            },
-            "intensity": 0.35
-          }
-        }
-      },
-      {
-        "id": "mat_axe_and_bear_weapon_wood",
-        "name": "Axe and Bear - Weapon Wood",
-        "profile": {
-          "baseColor": {
-            "color": {
-              "r": 0.72,
-              "g": 0.46,
-              "b": 0.23
-            },
-            "brightness": 1,
-            "saturation": 1.05,
-            "contrast": 1.08,
-            "texture": {
-              "url": "/src/assets/imported/textures/texture_97ce653a39fe4fd1be45ba61acd7aa39.png"
-            }
-          },
-          "metallic": 0,
-          "roughness": 0.72,
-          "emission": {
-            "intensity": 0
-          }
-        }
-      },
-      {
-        "id": "mat_axe_and_bear_fence_wood",
-        "name": "Axe and Bear - Fence Wood",
-        "profile": {
-          "baseColor": {
-            "color": {
-              "r": 0.5,
-              "g": 0.32,
-              "b": 0.18
-            },
-            "brightness": 0.95,
-            "saturation": 1.1,
-            "contrast": 1.12,
-            "texture": {
-              "url": "/src/assets/imported/textures/texture_2b5cefbad1ab4f858427650fbab48c91.png"
-            }
-          },
-          "metallic": 0,
-          "roughness": 0.86,
-          "emission": {
-            "intensity": 0
-          }
-        }
-      },
-      {
-        "id": "mat_axe_and_bear_ground_moss",
-        "name": "Axe and Bear - Ground Moss",
-        "profile": {
-          "baseColor": {
-            "color": {
-              "r": 0.36,
-              "g": 0.6,
-              "b": 0.32
-            },
-            "brightness": 0.9,
-            "saturation": 1.15,
-            "contrast": 1,
-            "texture": {
-              "url": "/src/assets/imported/textures/texture_d77b8872bf7f4f2ab2e3ae1035c0d76b.jpg"
-            }
-          },
-          "metallic": 0,
-          "roughness": 0.95,
-          "emission": {
-            "intensity": 0
-          }
-        }
-      },
-      {
-        "id": "mat_axe_and_bear_foot_glow",
-        "name": "Axe and Bear - Foot Glow",
-        "profile": {
-          "baseColor": {
-            "color": {
-              "r": 0.12,
-              "g": 0.26,
-              "b": 0.16
-            },
-            "brightness": 1,
-            "saturation": 1.25,
-            "contrast": 1.05,
-            "texture": {
-              "url": "/src/assets/imported/textures/texture_03caa4754ebb4725a4f77470214d0bc7.png"
-            }
-          },
-          "metallic": 0,
-          "roughness": 0.38,
-          "emission": {
-            "color": {
-              "r": 0.25,
-              "g": 1,
-              "b": 0.55
-            },
-            "intensity": 0.75,
-            "maskTexture": {
-              "url": "/src/assets/imported/textures/texture_b2badd5637c34786b0031178c8034523.png"
-            }
-          }
-        }
-      },
-      {
-        "id": "mat_lumber_order_yellow_ground",
-        "name": "Lumber Order - Yellow Ground",
-        "profile": {
-          "baseColor": {
-            "color": {
-              "r": 0.8823529411764706,
-              "g": 0.796078431372549,
-              "b": 0.5372549019607843
-            },
-            "brightness": 1.05,
-            "saturation": 1.08,
-            "contrast": 1,
-            "texture": {
-              "url": "/src/assets/imported/textures/texture_b2badd5637c34786b0031178c8034523.png?v=1780033862192.892"
-            }
-          },
-          "metallic": 0,
-          "roughness": 0.58,
-          "emission": {
-            "color": {
-              "r": 1,
-              "g": 0.78,
-              "b": 0.22
-            },
-            "intensity": 0.18,
-            "maskTexture": {
-              "url": "/src/assets/imported/textures/texture_79af58d28dfe40bba5cd2422a40a4635.png"
-            }
-          }
-        }
-      },
-      {
-        "id": "mat_capsule_default_pbr_material",
-        "name": "Capsule - Default PBR Material",
-        "materialKind": "pbr",
-        "profile": {
-          "baseColor": {
-            "color": {
-              "r": 0.43529411764705883,
-              "g": 1,
-              "b": 0.058823529411764705
-            },
-            "brightness": 5,
-            "saturation": 1,
-            "contrast": 1,
-            "hue": 0
-          },
-          "metallic": 0,
-          "roughness": 1,
-          "emission": {
-            "color": {
-              "r": 0,
-              "g": 0,
-              "b": 0
-            },
-            "intensity": 0
-          }
-        }
-      },
-      {
-        "id": "mat_plane_default_pbr_material",
-        "name": "Plane - Default PBR Material",
-        "materialKind": "pbr",
-        "profile": {
-          "baseColor": {
-            "color": {
-              "r": 1,
-              "g": 1,
-              "b": 1
-            },
-            "brightness": 10,
-            "saturation": 1,
-            "contrast": 10,
-            "hue": 0
-          },
-          "metallic": 0,
-          "roughness": 1,
-          "emission": {
-            "color": {
-              "r": 0,
-              "g": 0,
-              "b": 0
-            },
-            "intensity": 2
-          }
-        }
-      },
-      {
-        "id": "mat_cube_default_pbr_material",
-        "name": "Cube - Default PBR Material",
-        "materialKind": "pbr",
-        "profile": {
-          "baseColor": {
-            "color": {
-              "r": 1,
-              "g": 1,
-              "b": 1
-            },
-            "brightness": 10,
-            "saturation": 10,
-            "contrast": 19,
-            "hue": 0
-          },
-          "metallic": 0,
-          "roughness": 1,
-          "emission": {
-            "color": {
-              "r": 0.2,
-              "g": 0.9,
-              "b": 1
-            },
-            "intensity": 12
-          }
-        }
-      },
-      {
-        "id": "mat_19685bc41a684d57ab685eea1c68607d",
-        "guid": "19685bc4-1a68-4d57-ab68-5eea1c68607d",
-        "name": "电厂主体",
+        "id": "mat_e6871821e587468ea48714fbe3871368",
+        "guid": "e6871821-e587-468e-a487-14fbe3871368",
+        "name": "lambert2",
         "materialKind": "pbr",
         "origin": {
           "type": "imported",
-          "sourceAssetGuid": "9330ffd6-27bb-403e-aca8-1058b0651132",
-          "sourceAssetId": "asset_9330ffd627bb403eaca81058b0651132",
-          "sourceSlotId": "slot_3d5cd656",
+          "sourceAssetGuid": "ade25007-e096-4563-b197-b21c2759c027",
+          "sourceAssetId": "asset_ade25007e0964563b197b21c2759c027",
+          "sourceSlotId": "slot_74e9cbf9",
           "sourceMaterialIndex": 0,
-          "sourceMaterialName": "电厂主体"
-        },
-        "profile": {
-          "baseColor": {
-            "color": {
-              "r": 0.6823529411764706,
-              "g": 0.2784313725490196,
-              "b": 0.2784313725490196
-            },
-            "brightness": 1,
-            "saturation": 1,
-            "contrast": 1,
-            "hue": 0
-          },
-          "metallic": 0,
-          "roughness": 1,
-          "emission": {
-            "color": {
-              "r": 0,
-              "g": 0,
-              "b": 0
-            },
-            "intensity": 0
-          }
-        }
-      },
-      {
-        "id": "mat_784f416f774f4fdcaa4f4495794f4302",
-        "guid": "784f416f-774f-4fdc-aa4f-4495794f4302",
-        "name": "电厂框架",
-        "materialKind": "pbr",
-        "origin": {
-          "type": "imported",
-          "sourceAssetGuid": "9330ffd6-27bb-403e-aca8-1058b0651132",
-          "sourceAssetId": "asset_9330ffd627bb403eaca81058b0651132",
-          "sourceSlotId": "slot_3d5cd656",
-          "sourceMaterialIndex": 1,
-          "sourceMaterialName": "电厂框架"
-        },
-        "profile": {
-          "baseColor": {
-            "color": {
-              "r": 0.9764705882352941,
-              "g": 0.20392156862745098,
-              "b": 0.20392156862745098
-            },
-            "brightness": 1,
-            "saturation": 1,
-            "contrast": 1,
-            "hue": 0
-          },
-          "metallic": 0,
-          "roughness": 1,
-          "emission": {
-            "color": {
-              "r": 0,
-              "g": 0,
-              "b": 0
-            },
-            "intensity": 0
-          }
-        }
-      },
-      {
-        "id": "mat_77358ffa7835418da5358cd476358e67",
-        "guid": "77358ffa-7835-418d-a535-8cd476358e67",
-        "name": "电厂闪电",
-        "materialKind": "pbr",
-        "origin": {
-          "type": "imported",
-          "sourceAssetGuid": "9330ffd6-27bb-403e-aca8-1058b0651132",
-          "sourceAssetId": "asset_9330ffd627bb403eaca81058b0651132",
-          "sourceSlotId": "slot_42ea83aa",
-          "sourceMaterialIndex": 2,
-          "sourceMaterialName": "电厂闪电"
-        },
-        "profile": {
-          "baseColor": {
-            "color": {
-              "r": 0,
-              "g": 0.3333333333333333,
-              "b": 1
-            },
-            "brightness": 1,
-            "saturation": 1,
-            "contrast": 1,
-            "hue": 0
-          },
-          "metallic": 0,
-          "roughness": 1,
-          "emission": {
-            "color": {
-              "r": 0,
-              "g": 0,
-              "b": 0
-            },
-            "intensity": 0
-          }
-        }
-      },
-      {
-        "id": "mat_2bde5e541ec44277b9e818148ff58d1f",
-        "guid": "2bde5e54-1ec4-4277-b9e8-18148ff58d1f",
-        "name": "测试材质",
-        "materialKind": "pbr",
-        "origin": {
-          "type": "created"
-        },
-        "profile": {
-          "baseColor": {
-            "color": {
-              "r": 1,
-              "g": 0.9176470588235294,
-              "b": 0.0196078431372549
-            },
-            "brightness": 1,
-            "saturation": 1,
-            "contrast": 1,
-            "hue": 0,
-            "texture": {
-              "textureAssetId": "texture_03caa4754ebb4725a4f77470214d0bc7"
-            }
-          },
-          "metallic": 0,
-          "roughness": 1,
-          "emission": {
-            "color": {
-              "r": 0,
-              "g": 0,
-              "b": 0
-            },
-            "intensity": 0
-          }
-        }
-      },
-      {
-        "id": "mat_b6250ff36a854533b495b920831d5d86",
-        "guid": "b6250ff3-6a85-4533-b495-b920831d5d86",
-        "name": "Axe and Bear - Tower Building - Default PBR Material",
-        "materialKind": "pbr",
-        "origin": {
-          "type": "duplicated",
-          "sourceMaterialAssetId": "mat_default_pbr"
+          "sourceMaterialName": "lambert2"
         },
         "profile": {
           "lightingModel": "lit",
@@ -2394,7 +3706,7 @@
             "hue": 0
           },
           "metallic": 0,
-          "roughness": 1,
+          "roughness": 0.4500536322593689,
           "emission": {
             "color": {
               "r": 0,
@@ -2403,43 +3715,259 @@
             },
             "intensity": 0
           },
-          "normal": {
-            "texture": {
-              "textureAssetId": "texture_b2badd5637c34786b0031178c8034523"
-            }
-          },
-          "metallicRoughness": {
-            "texture": {
-              "textureAssetId": "texture_d77b8872bf7f4f2ab2e3ae1035c0d76b"
-            }
-          },
-          "occlusion": {
-            "texture": {
-              "textureAssetId": "texture_97ce653a39fe4fd1be45ba61acd7aa39"
-            }
-          },
           "alpha": {
-            "texture": {
-              "textureAssetId": "texture_d58d713bf12d451095d55c604e79afd3"
-            }
+            "mode": "opaque"
           }
         }
       },
       {
-        "id": "mat_a854601cca554ea5b29d9d6e98b98412",
-        "guid": "a854601c-ca55-4ea5-b29d-9d6e98b98412",
-        "name": "Axe and Bear - Tower Building - 电厂框架",
+        "id": "mat_fee306e8ffe3487ba0e30a0e01e30ba1",
+        "guid": "fee306e8-ffe3-487b-a0e3-0a0e01e30ba1",
+        "name": "ST_kache_Rig:lambert21",
         "materialKind": "pbr",
         "origin": {
-          "type": "duplicated",
-          "sourceMaterialAssetId": "mat_784f416f774f4fdcaa4f4495794f4302"
+          "type": "imported",
+          "sourceAssetGuid": "4b2358ee-5d94-41cd-8cae-8b389bb98c46",
+          "sourceAssetId": "asset_4b2358ee5d9441cd8cae8b389bb98c46",
+          "sourceSlotId": "slot_91c449a4",
+          "sourceMaterialIndex": 0,
+          "sourceMaterialName": "ST_kache_Rig:lambert21"
         },
         "profile": {
+          "lightingModel": "lit",
           "baseColor": {
             "color": {
-              "r": 0.8823529411764706,
-              "g": 0.7764705882352941,
-              "b": 0.7764705882352941
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 0.165830582,
+          "emission": {
+            "color": {
+              "r": 0.8,
+              "g": 0.8,
+              "b": 0.8
+            },
+            "intensity": 1
+          }
+        }
+      },
+      {
+        "id": "mat_0cd17a040dd14b97aed17d2a0fd17ebd",
+        "guid": "0cd17a04-0dd1-4b97-aed1-7d2a0fd17ebd",
+        "name": "Material #104",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "edc2f992-438c-4450-afc1-c6354ec21500",
+          "sourceAssetId": "asset_edc2f992438c4450afc1c6354ec21500",
+          "sourceSlotId": "slot_1463c7d6",
+          "sourceMaterialIndex": 0,
+          "sourceMaterialName": "Material #104"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 0.5527864098548889,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_43f0690444f04a97a5f06c2a46f06dbd",
+        "guid": "43f06904-44f0-4a97-a5f0-6c2a46f06dbd",
+        "name": "SSD_S_M_Cao_C3_Mat",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "af82a4f1-17d8-4ff5-8bed-b41aa11bad5c",
+          "sourceAssetId": "asset_af82a4f117d84ff58bedb41aa11bad5c",
+          "sourceSlotId": "slot_a3b38496",
+          "sourceMaterialIndex": 0,
+          "sourceMaterialName": "SSD_S_M_Cao_C3_Mat"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 1,
+          "roughness": 0.5527864098548889,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_7ac6a4c67bc64659a8c6a1a079c6a333",
+        "guid": "7ac6a4c6-7bc6-4659-a8c6-a1a079c6a333",
+        "name": "standardSurface2",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "2286fa2e-c19e-45df-8b1b-188717c7c4e9",
+          "sourceAssetId": "asset_2286fa2ec19e45df8b1b188717c7c4e9",
+          "sourceSlotId": "slot_0a33f1e4",
+          "sourceMaterialIndex": 0,
+          "sourceMaterialName": "standardSurface2"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 0.5527864098548889,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_9cf2c5419bf243aeaaf2c21b99f2c088",
+        "guid": "9cf2c541-9bf2-43ae-aaf2-c21b99f2c088",
+        "name": "ZHALAN_Mat",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "e726be04-0428-4908-8cf7-3e4f2f92c00f",
+          "sourceAssetId": "asset_e726be04042849088cf73e4f2f92c00f",
+          "sourceSlotId": "slot_134be123",
+          "sourceMaterialIndex": 0,
+          "sourceMaterialName": "ZHALAN_Mat"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 1,
+          "roughness": 0.5527864098548889,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_e42b5114e52b42a7a62b543ae72b55cd",
+        "guid": "e42b5114-e52b-42a7-a62b-543ae72b55cd",
+        "name": "MI_Pipe_Stacks_01a_asset_20fda0_4_741b2eae9a5__1780739654514_upload_asset_20fda03a2e3c410da8df4741b_eae9a5__1781600584273_upload__1_",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "52549a6d-c9a3-4a5d-a036-b7e771a907b3",
+          "sourceAssetId": "asset_52549a6dc9a34a5da036b7e771a907b3",
+          "sourceSlotId": "slot_fa0049a6",
+          "sourceMaterialIndex": 0,
+          "sourceMaterialName": "MI_Pipe_Stacks_01a_asset_20fda0_4_741b2eae9a5__1780739654514_upload_asset_20fda03a2e3c410da8df4741b_eae9a5__1781600584273_upload__1_"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 0.498039246,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_431236bf4212452ca51239e544123852",
+        "guid": "431236bf-4212-452c-a512-39e544123852",
+        "name": "lambert2_SM_木材-单根_单根木材_asset_20_4_741b2eae9a5__1780739654514_upload_asset_20fda03a2e3c410da8df4741b_eae9a5__1781600584273_upload__1_",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "52549a6d-c9a3-4a5d-a036-b7e771a907b3",
+          "sourceAssetId": "asset_52549a6dc9a34a5da036b7e771a907b3",
+          "sourceSlotId": "slot_fa0049a6",
+          "sourceMaterialIndex": 1,
+          "sourceMaterialName": "lambert2_SM_木材-单根_单根木材_asset_20_4_741b2eae9a5__1780739654514_upload_asset_20fda03a2e3c410da8df4741b_eae9a5__1781600584273_upload__1_"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 0.796875,
+              "g": 0.796875,
+              "b": 0.796875
             },
             "brightness": 1,
             "saturation": 1,
@@ -2457,12 +3985,316 @@
             "intensity": 0
           }
         }
+      },
+      {
+        "id": "mat_af644f91ae644dfead644c6bac644ad8",
+        "guid": "af644f91-ae64-4dfe-ad64-4c6bac644ad8",
+        "name": "xiangzi01_Mat_卡通风格手绘木质板箱组_xiangzi01-_xiangzi",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "759b595e-8193-4517-ba02-51b16bd31061",
+          "sourceAssetId": "asset_759b595e81934517ba0251b16bd31061",
+          "sourceSlotId": "slot_8656a283",
+          "sourceMaterialIndex": 0,
+          "sourceMaterialName": "xiangzi01_Mat_卡通风格手绘木质板箱组_xiangzi01-_xiangzi"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 0.845049024
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 1,
+          "roughness": 1,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_5af6dde959f64c56a8f6dac357f6d930",
+        "guid": "5af6dde9-59f6-4c56-a8f6-dac357f6d930",
+        "name": "T_Mat",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "7612f54e-3810-44e4-b035-ea6a988bfb89",
+          "sourceAssetId": "asset_7612f54e381044e4b035ea6a988bfb89",
+          "sourceSlotId": "slot_f3f14d2b",
+          "sourceMaterialIndex": 0,
+          "sourceMaterialName": "T_Mat"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 1,
+          "roughness": 0.5527864098548889,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_0f3404b210344645ad34018c0e34031f",
+        "guid": "0f3404b2-1034-4645-ad34-018c0e34031f",
+        "name": "Mat_ji",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "97121f40-170c-40d1-aaf6-3b8c2cf0bf24",
+          "sourceAssetId": "asset_97121f40170c40d1aaf63b8c2cf0bf24",
+          "sourceSlotId": "slot_db1ccc4e",
+          "sourceMaterialIndex": 0,
+          "sourceMaterialName": "Mat_ji"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 0.6470588445663452,
+              "g": 0.6470588445663452,
+              "b": 0.6470588445663452
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 1,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_d133a063d0334ed0a333a389d233a1f6",
+        "guid": "d133a063-d033-4ed0-a333-a389d233a1f6",
+        "name": "麦垛-_Mat",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "26e79030-d245-4658-85b6-e4349c9d81d9",
+          "sourceAssetId": "asset_26e79030d245465885b6e4349c9d81d9",
+          "sourceSlotId": "slot_c6401e21",
+          "sourceMaterialIndex": 0,
+          "sourceMaterialName": "麦垛-_Mat"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 1,
+          "roughness": 0.5527864098548889,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_8f0c05718e0c43dead0c024b8c0c00b8",
+        "guid": "8f0c0571-8e0c-43de-ad0c-024b8c0c00b8",
+        "name": "收银桌子aa_Mat",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "094bc5a8-9357-455b-b002-b6b6a67e9295",
+          "sourceAssetId": "asset_094bc5a89357455bb002b6b6a67e9295",
+          "sourceSlotId": "slot_5cd8df33",
+          "sourceMaterialIndex": 0,
+          "sourceMaterialName": "收银桌子aa_Mat"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 0.5,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_cd94c2cdcc94413aab94bfa7ca94be14",
+        "guid": "cd94c2cd-cc94-413a-ab94-bfa7ca94be14",
+        "name": "ren_C_Mat",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "699aee4d-a2b8-4a3e-b07f-4496872ad249",
+          "sourceAssetId": "asset_699aee4da2b84a3eb07f4496872ad249",
+          "sourceSlotId": "slot_7bdc2eef",
+          "sourceMaterialIndex": 0,
+          "sourceMaterialName": "ren_C_Mat"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 0.5,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_ceae7442cfae45d5acae711ccdae72af",
+        "guid": "ceae7442-cfae-45d5-acae-711ccdae72af",
+        "name": "maozi_C_Mat",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "699aee4d-a2b8-4a3e-b07f-4496872ad249",
+          "sourceAssetId": "asset_699aee4da2b84a3eb07f4496872ad249",
+          "sourceSlotId": "slot_7bdc2eef",
+          "sourceMaterialIndex": 1,
+          "sourceMaterialName": "maozi_C_Mat"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 0.5,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_6fc78e976ec74d04a1c791bd70c7902a",
+        "guid": "6fc78e97-6ec7-4d04-a1c7-91bd70c7902a",
+        "name": "Default-Material",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "699aee4d-a2b8-4a3e-b07f-4496872ad249",
+          "sourceAssetId": "asset_699aee4da2b84a3eb07f4496872ad249",
+          "sourceSlotId": "slot_53300b02",
+          "sourceMaterialIndex": 2,
+          "sourceMaterialName": "Default-Material"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 0.5,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
       }
     ],
     "materials": [],
     "textures": []
   },
   "render": {},
-  "version": 51,
-  "updatedAt": "2026-06-30T03:20:33.662Z"
+  "version": 57,
+  "updatedAt": "2026-07-01T02:36:20.995Z"
 }

@@ -26,6 +26,9 @@ for (const key of ['core', 'facade', 'adapter', 'placement', 'usage']) {
 
 assert.match(source.core, /\bprojectAssetId:\s*assetArgs\.assetId\b/, 'registration payload must use projectAssetId');
 assert.match(source.core, /\bconst assetId = createAssetId\(kind, guid\);/, 'asset manager identity must derive assetId from guid');
+assert.match(source.core, /createPlayableEditorAssetId/, 'asset manager identity must delegate assetId derivation to the SDK');
+assert.match(source.core, /normalizePlayableEditorAssetKind/, 'asset manager kind normalization must delegate to the SDK');
+assert.doesNotMatch(source.core, /function createFallbackGuid|Math\.random/, 'asset manager must not own GUID fallback generation');
 assert.match(source.core, /Project asset id "[^"]+" does not match guid/, 'asset manager must reject non-canonical requested project assetId');
 assert.match(source.core, /Requested guid "[^"]+" does not match existing asset guid/, 'asset manager must reject requested guid conflicts with reusable assets');
 assert.doesNotMatch(source.core, /existing\?\.id\s*\?\?\s*requestedAssetId|requestedAssetId\s*\?\?\s*createAssetId/, 'requested assetId must not override guid-derived assetId');
@@ -39,7 +42,8 @@ assert.match(source.adapter, /const registered = inferredAssetPath[\s\S]*await e
 assert.match(source.adapter, /assetId:\s*canonical\.assetId/, 'asset import must place canonical project assetId');
 assert.doesNotMatch(source.adapter, /void executeTransportPlan/, 'asset import must not fire-and-forget registry registration');
 
-assert.match(source.localBridge, /readOptionalString\(payload\.platformAssetId\)[\s\S]*readOptionalString\(payload\.assetId\)/, 'local bridge must interpret payload.assetId as raw platform id');
+assert.match(source.localBridge, /\breadPlayablePlatformRawAssetId\(payload\)/, 'local bridge must use SDK platform asset id reader');
+assert.match(source.localBridge, /\bregisterPlayablePlatformAssetWithSdk\b/, 'local bridge must use SDK asset registration workflow');
 assert.match(source.localBridge, /readOptionalString\(payload\.projectAssetId\)/, 'local bridge must distinguish optional projectAssetId');
 assert.doesNotMatch(source.localBridge, /readPlatformAssetSourceId|findRegistered(Model|Texture)(SourceId|AssetId)ForPlatformAsset|sanitizePlatformAssetId/, 'local bridge must not use filename/sourceId platform helpers');
 

@@ -7,6 +7,11 @@
  * - 具体游戏可在不破坏目录结构的前提下逐步扩展
  */
 
+import type {
+  EditorShadowResolvedPlan,
+  EditorShadowSettings,
+} from '@fps-games/editor/playable-sdk';
+
 // ============================================================
 // 基础类型
 // ============================================================
@@ -197,6 +202,8 @@ export interface SceneNodeBase {
   parentId?: string;
   enabled?: boolean;
   shadowMode?: SceneNodeShadowMode;
+  shadow?: EditorShadowSettings;
+  shadowPlan?: EditorShadowResolvedPlan;
   rendering?: SceneNodeRenderingConfig;
   transform?: TransformConfig;
   source?: SceneRuntimeSourceBinding;

@@ -4,6 +4,13 @@ import type {
   SceneAssetConfig,
   SceneAssetMaterialMode,
 } from '../../../config';
+import {
+  createPlayableEditorAssetGuid,
+  createPlayableEditorAssetId,
+  guidToPlayableEditorAssetStableToken,
+  normalizePlayableEditorAssetKind,
+  stripKnownPlayableEditorAssetExtension,
+} from '@fps-games/editor/playable-sdk';
 
 export type ManagedAssetKind = 'model' | 'texture' | 'image' | 'sound';
 
@@ -139,43 +146,19 @@ export class AssetManagerError extends Error {
 }
 
 export function createAssetGuid(): string {
-  return globalThis.crypto?.randomUUID?.() ?? createFallbackGuid();
+  return createPlayableEditorAssetGuid();
 }
 
 export function guidToStableToken(guid: string): string {
-  return guid.trim().toLowerCase().replace(/-/g, '');
+  return guidToPlayableEditorAssetStableToken(guid);
 }
 
 export function createAssetId(kind: ManagedAssetKind, guid: string): string {
-  const prefix = kind === 'model'
-    ? 'asset'
-    : kind === 'texture'
-      ? 'texture'
-      : kind === 'sound'
-        ? 'sound'
-        : 'image';
-  return `${prefix}_${guidToStableToken(guid)}`;
+  return createPlayableEditorAssetId(kind, guid);
 }
 
 export function sanitizeAssetName(value: unknown): string {
-  return String(value ?? '')
-    .trim()
-    .replace(/\.[a-z0-9]+$/i, '')
-    .trim();
-}
-
-function createFallbackGuid(): string {
-  const bytes = new Uint8Array(16);
-  globalThis.crypto?.getRandomValues?.(bytes);
-  if (bytes.every((byte) => byte === 0)) {
-    for (let index = 0; index < bytes.length; index += 1) {
-      bytes[index] = Math.floor(Math.random() * 256);
-    }
-  }
-  bytes[6] = (bytes[6] & 0x0f) | 0x40;
-  bytes[8] = (bytes[8] & 0x3f) | 0x80;
-  const hex = [...bytes].map((byte) => byte.toString(16).padStart(2, '0')).join('');
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+  return stripKnownPlayableEditorAssetExtension(value).trim();
 }
 
 function readOptionalString(value: unknown): string | undefined {
@@ -183,16 +166,7 @@ function readOptionalString(value: unknown): string | undefined {
 }
 
 function normalizeAssetKind(value: unknown, fallbackPath?: string): ManagedAssetKind {
-  const raw = String(value ?? '').trim().toLowerCase();
-  if (raw === 'glb' || raw === 'gltf' || raw === 'model') return 'model';
-  if (raw === 'texture' || raw === 'groundtexture' || raw === 'ground-texture') return 'texture';
-  if (raw === 'image' || raw === 'img' || raw === 'ui') return 'image';
-  if (raw === 'sound' || raw === 'audio') return 'sound';
-  const path = String(fallbackPath ?? '').toLowerCase();
-  if (/\.(glb|gltf)$/.test(path)) return 'model';
-  if (/\.(mp3|wav|ogg|m4a)$/.test(path)) return 'sound';
-  if (/\.(png|jpe?g|webp)$/.test(path)) return 'texture';
-  return 'model';
+  return normalizePlayableEditorAssetKind(value, fallbackPath) ?? 'model';
 }
 
 function normalizeExternalRef(input: AssetIdentityInput): AssetExternalRef | undefined {

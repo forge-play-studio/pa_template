@@ -3,7 +3,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { AssetRegistryError, createAssetId, registerAsset, unregisterAsset, loadManifest, toImportName } from './asset-registry/core.mjs';
+import { AssetRegistryError, createAssetId, registerAsset, unregisterAsset, loadManifest } from './asset-registry/core.mjs';
 import { projectAssetCatalogConfig } from './asset-registry/project-asset-catalog-config.mjs';
 
 const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'asset-catalog-check-'));
@@ -16,6 +16,8 @@ const sourceModel = path.join(cwd, '中文模型.glb');
 const explicitProjectModel = path.join(cwd, '显式项目资产.glb');
 const invalidProjectModel = path.join(cwd, '错误项目资产.glb');
 const sourceTexture = path.join(cwd, '地贴.png');
+const projectLocalModel = path.join(assetsDir, '项目内模型.glb');
+const quotedProjectModel = path.join(assetsDir, "it's.glb");
 const preservedModel = path.join(assetsDir, '静态模型.glb');
 const slotMetadataModel = path.join(cwd, 'slot-metadata.gltf');
 const embeddedTextureSlotMetadataModel = path.join(cwd, 'embedded-texture-slot-metadata.gltf');
@@ -115,6 +117,8 @@ await fs.writeFile(emptySlotMetadataModel, JSON.stringify({
   materials: [],
 }));
 await fs.mkdir(assetsDir, { recursive: true });
+await fs.writeFile(projectLocalModel, 'project-local-glb-bytes');
+await fs.writeFile(quotedProjectModel, 'quoted-project-glb-bytes');
 await fs.writeFile(preservedModel, 'preserved-glb-bytes');
 await fs.writeFile(codeFile, 'export const untouched = true;\n');
 
@@ -144,22 +148,6 @@ const config = {
     const targetPath = path.resolve(generatedDir, relativePath);
     const relativeToAssets = path.relative(assetsDir, targetPath).split(path.sep).join('/');
     return `/assets/${relativeToAssets}`;
-  },
-  generateRegistry(manifest) {
-    const imports = manifest
-      .map((entry) => `import ${toImportName(entry.assetId)} from '${entry.relativePath}?url';`)
-      .join('\n');
-    const entries = manifest
-      .map((entry) => `  ${JSON.stringify(entry.assetId)}: { guid: ${JSON.stringify(entry.guid)}, assetId: ${JSON.stringify(entry.assetId)}, kind: ${JSON.stringify(entry.kind)}, displayName: ${JSON.stringify(entry.displayName)}, url: ${toImportName(entry.assetId)}, relativePath: ${JSON.stringify(entry.relativePath)} },`)
-      .join('\n');
-    return [
-      imports,
-      'export const GENERATED_ASSET_CATALOG = {',
-      entries,
-      '} as const;',
-      'export const GENERATED_ASSET_URL_MAP = Object.fromEntries(Object.entries(GENERATED_ASSET_CATALOG).map(([assetId, entry]) => [assetId, entry.url]));',
-      '',
-    ].join('\n');
   },
 };
 
@@ -211,6 +199,34 @@ await fs.writeFile(texturePayload, JSON.stringify({
   assetType: 'texture',
 }));
 const texture = await registerAsset(config, { payload: texturePayload });
+const projectLocalGuid = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';
+const projectLocalAssetId = createAssetId('model', projectLocalGuid);
+const projectLocalPayload = path.join(cwd, 'project-local-payload.json');
+await fs.writeFile(projectLocalPayload, JSON.stringify({
+  sourcePath: projectLocalModel,
+  assetPath: projectLocalModel,
+  assetName: '项目内模型.glb',
+  displayName: '项目内模型',
+  assetType: 'model',
+  guid: projectLocalGuid,
+  projectAssetId: projectLocalAssetId,
+  platformAssetId: 'raw_project_local_model',
+}));
+const projectLocal = await registerAsset(config, { payload: projectLocalPayload });
+const quotedProjectGuid = '99999999-aaaa-4bbb-8ccc-dddddddddddd';
+const quotedProjectAssetId = createAssetId('model', quotedProjectGuid);
+const quotedProjectPayload = path.join(cwd, 'quoted-project-payload.json');
+await fs.writeFile(quotedProjectPayload, JSON.stringify({
+  sourcePath: quotedProjectModel,
+  assetPath: quotedProjectModel,
+  assetName: "it's.glb",
+  displayName: "it's",
+  assetType: 'model',
+  guid: quotedProjectGuid,
+  projectAssetId: quotedProjectAssetId,
+  platformAssetId: 'raw_quoted_project_model',
+}));
+const quotedProject = await registerAsset(config, { payload: quotedProjectPayload });
 const preservedGuid = '22222222-3333-4444-8555-666666666666';
 const preservedAssetId = 'asset_22222222333344448555666666666666';
 const preservedHash = `sha256:${crypto.createHash('sha256').update(await fs.readFile(preservedModel)).digest('hex')}`;
@@ -238,19 +254,38 @@ await fs.writeFile(preservedPayload, JSON.stringify({
 const preserved = await registerAsset(config, { payload: preservedPayload });
 const manifest = await loadManifest(config);
 const generated = await fs.readFile(config.registryPath, 'utf8');
+const manifestByAssetId = new Map(manifest.map((entry) => [entry.assetId, entry]));
 
-assert.equal(manifest.length, 4);
+assert.equal(manifest.length, 6);
 assert.equal(model.kind, 'model');
 assert.equal(texture.kind, 'texture');
 assert.equal(explicitProject.assetId, explicitProjectAssetId);
 assert.equal(explicitProject.external.platformAssetId, 'raw_model_explicit');
+assert.equal(projectLocal.assetId, projectLocalAssetId);
+assert.equal(projectLocal.external.platformAssetId, 'raw_project_local_model');
+assert.equal(projectLocal.assetUrl, '/assets/项目内模型.glb');
+assert.equal(projectLocal.targetPath, projectLocalModel);
+assert.equal(quotedProject.assetId, quotedProjectAssetId);
+assert.equal(quotedProject.assetUrl, "/assets/it's.glb");
+assert.equal(quotedProject.targetPath, quotedProjectModel);
 assert.equal(preserved.assetId, preservedAssetId);
 assert.equal(preserved.assetUrl, '/assets/静态模型.glb');
 assert.equal(preserved.targetPath, preservedModel);
 assert.match(model.assetId, /^asset_[a-f0-9]{32}$/);
 assert.notEqual(model.assetId, 'raw_model_1');
 assert.equal(model.external.platformAssetId, 'raw_model_1');
+assert.equal(model.targetPath, path.join(importedDir, `${model.assetId}.glb`));
+assert.equal(await fileExists(model.targetPath), true);
+assert.equal(manifestByAssetId.get(model.assetId)?.relativePath, `../imported/${model.assetId}.glb`);
 assert.match(texture.assetId, /^texture_[a-f0-9]{32}$/);
+assert.equal(texture.targetPath, path.join(importedDir, 'textures', `${texture.assetId}.png`));
+assert.equal(await fileExists(texture.targetPath), true);
+assert.equal(manifestByAssetId.get(texture.assetId)?.relativePath, `../imported/textures/${texture.assetId}.png`);
+assert.equal(manifestByAssetId.get(projectLocalAssetId)?.relativePath, '../项目内模型.glb');
+assert.equal(manifestByAssetId.get(quotedProjectAssetId)?.relativePath, "../it's.glb");
+assert.ok(generated.includes('from "../it\'s.glb?url";'));
+assert.equal(await fileExists(path.join(importedDir, `${projectLocalAssetId}.glb`)), false);
+assert.equal(await fs.readFile(projectLocalModel, 'utf8'), 'project-local-glb-bytes');
 assert.equal(manifest.some((entry) => Object.hasOwn(entry, 'sourceId')), false);
 assert.match(generated, /GENERATED_ASSET_CATALOG/);
 assert.doesNotMatch(generated, /sourceId/);
@@ -327,9 +362,7 @@ assert.deepEqual(slotMetadata.materialSlots, [{
   ownerNodePath: 'Body',
   label: 'Body',
   nodeIndex: 1,
-  nodeIndexPath: [0, 1],
   meshIndex: 0,
-  primitiveIndex: 0,
   sourceMaterialIndex: 0,
   sourceMaterialIndices: [0, 1],
   materialName: 'Paint',
@@ -412,14 +445,6 @@ assert.deepEqual(
   [[0, 0, 0], [1, 1, 1]],
 );
 assert.deepEqual(
-  duplicateSlotMetadata.materialSlots.map(slot => slot.nodeIndexPath),
-  [[0], [1]],
-);
-assert.deepEqual(
-  duplicateSlotMetadata.materialSlots.map(slot => slot.primitiveIndex),
-  [0, 0],
-);
-assert.deepEqual(
   duplicateSlotMetadata.materialSlots.map(slot => slot.sourceMaterialIndices),
   [[0], [1]],
 );
@@ -470,7 +495,20 @@ const clearedSlotMetadata = await projectAssetCatalogConfig.resolveAssetMetadata
   },
   payloadMetadata: {},
 });
-assert.equal(clearedSlotMetadata, null);
+assert.ok(clearedSlotMetadata);
+assert.equal(clearedSlotMetadata.materialSlots, undefined);
+assert.equal(clearedSlotMetadata.assetAnalysis?.kind, 'gltf');
+assert.equal(clearedSlotMetadata.assetAnalysis?.nodeCount, 1);
+assert.equal(clearedSlotMetadata.assetAnalysis?.meshCount, 0);
 
 await fs.rm(tempRoot, { recursive: true, force: true });
 console.log('asset catalog generator check passed');
+
+async function fileExists(filePath) {
+  try {
+    await fs.access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}

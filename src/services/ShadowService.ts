@@ -24,6 +24,8 @@ import {
   type StaticProjectedShadowArtifactOptions,
   type StaticProjectedShadowArtifactSystem,
   type StaticProjectedShadowOptions,
+  type EditorShadowResolvedPlan,
+  type EditorShadowSettings,
 } from '@fps-games/editor/playable-sdk';
 import {
   createBlobShadowOptionsFromRenderingProfile,
@@ -127,11 +129,12 @@ interface RuntimeBlobShadowSystem {
 
 type RuntimeStaticProjectedShadowArtifactSystem = Pick<
   StaticProjectedShadowArtifactSystem,
-  'initialize' | 'setArtifact' | 'setOptions' | 'dispose'
+  'initialize' | 'setArtifact' | 'setOptions' | 'refreshBindings' | 'dispose'
 >;
 
 type SceneShadowMode = 'none' | 'blob' | 'static' | 'planar' | 'dynamic';
 type ShadowServiceMode = 'none' | 'blob' | 'static' | 'legacy' | 'planar' | 'mixed';
+const SHADOW_DEBUG_STORAGE_KEY = 'fps.shadow.debug';
 
 // ============================================================
 // ShadowService 类
@@ -177,6 +180,14 @@ export class ShadowService {
    * 初始化阴影系统
    */
   initialize(): void {
+    this.logShadowDebug('service.initialize.start', {
+      configEnabled: this.config.enabled,
+      defaultMode: this.config.defaultMode,
+      blobEnabled: this.config.blob.enabled,
+      staticProjectedEnabled: this.config.staticProjected.enabled,
+      planarEnabled: this.isPlanarEnabled(),
+      meshCount: this.scene.meshes.length,
+    });
     if (this.config.blob.enabled) this.initializeBlobShadows();
     if (this.config.staticProjected.enabled) this.initializeStaticProjectedShadows();
     if (this.isPlanarEnabled()) this.initializePlanarShadows();
@@ -186,6 +197,11 @@ export class ShadowService {
     this.mode = this.resolveServiceMode();
     this.applyShadowMeshes();
     this.attachNewMeshObserver();
+    this.logShadowDebug('service.initialize.complete', {
+      mode: this.mode,
+      shadowsEnabled: this.scene.shadowsEnabled,
+      shadowGenerator: this.describeShadowGenerator(),
+    });
   }
 
   private initializeLegacyShadows(): void {
@@ -257,6 +273,12 @@ export class ShadowService {
     this.light.orthoTop = this.config.shadowOrtho.top;
     this.light.orthoBottom = this.config.shadowOrtho.bottom;
 
+    this.logShadowDebug('service.legacyGenerator.ready', {
+      useCsm: this.shadowGenerator instanceof CascadedShadowGenerator,
+      settings,
+      light: this.describeDirectionalLight(),
+      generator: this.describeShadowGenerator(),
+    });
   }
 
   /**
@@ -271,7 +293,13 @@ export class ShadowService {
     this.staticProjectedShadowArtifactSystem?.setArtifact(
       configService.getStaticShadowArtifact() as StaticProjectedShadowArtifact | null,
     );
+    this.staticProjectedShadowArtifactSystem?.refreshBindings();
     this.planarShadowSystem?.refresh();
+    this.logShadowDebug('service.refreshShadowMeshes', {
+      mode: this.mode,
+      meshCount: this.scene.meshes.length,
+      shadowGenerator: this.describeShadowGenerator(),
+    });
   }
 
   /**
@@ -375,17 +403,40 @@ export class ShadowService {
     this.removeMeshFromShadowSystems(mesh);
     if (this.isGeneratedShadowExcluded(mesh)) {
       mesh.receiveShadows = false;
+      this.logShadowDebug('service.mesh.excluded', this.describeMeshShadowDecision(mesh, {
+        mode: 'none',
+        receiveShadows: false,
+        dynamicReady: false,
+      }));
       return;
     }
 
-    const receiveShadows = this.isShadowReceiver(mesh.name);
-    mesh.receiveShadows = receiveShadows && !!this.shadowGenerator;
+    const mode = this.resolveMeshShadowMode(mesh);
+    const canRenderCaster = this.canRenderShadowCaster(mesh, mode);
+    const dynamicReady = mode === 'dynamic'
+      ? canRenderCaster && this.ensureDynamicShadowGenerator()
+      : !!this.shadowGenerator;
+    const receiveShadows = this.isShadowReceiver(mesh);
+    mesh.receiveShadows = receiveShadows && dynamicReady;
+    this.logShadowDebug('service.mesh.apply', this.describeMeshShadowDecision(mesh, {
+      mode,
+      receiveShadows,
+      dynamicReady,
+    }));
     if (this.planarShadowSystem) {
       if (receiveShadows) this.planarShadowSystem.addReceiver(mesh);
       else this.planarShadowSystem.removeReceiver(mesh);
     }
 
-    const mode = this.resolveMeshShadowMode(mesh);
+    if (!canRenderCaster) {
+      this.logShadowDebug('service.caster.skippedNoReceiver', this.describeMeshShadowDecision(mesh, {
+        mode,
+        receiveShadows,
+        dynamicReady,
+      }));
+      return;
+    }
+
     if (mode === 'blob') {
       this.blobShadowSystem?.addCaster(mesh);
       return;
@@ -398,7 +449,9 @@ export class ShadowService {
       return;
     }
     if (mode === 'dynamic' && this.shadowGenerator) {
+      this.applyDynamicShadowGeneratorPlan(mesh);
       this.shadowGenerator.addShadowCaster(mesh, true);
+      this.refreshDynamicShadowReceivers();
     }
   }
 
@@ -412,8 +465,48 @@ export class ShadowService {
   /**
    * 检查网格是否为阴影接收者
    */
-  private isShadowReceiver(name: string): boolean {
-    return this.isNameMatched(name, this.shadowReceivers);
+  private isShadowReceiver(mesh: AbstractMesh): boolean {
+    const receive = this.readMeshShadowReceive(mesh);
+    if (receive === 'none') return false;
+    if (receive === 'enabled' || receive === 'auto') return true;
+    const nodeIds = this.readMeshProjectionNodeIds(mesh);
+    if (nodeIds.length > 0 && this.scene.meshes.some(candidate => {
+      const plan = this.readMeshShadowPlan(candidate);
+      if (!plan || plan.backend === 'none') return false;
+      return nodeIds.some(nodeId => plan.receiverIds.includes(nodeId));
+    })) {
+      return true;
+    }
+    return this.isNameMatched(mesh.name, this.shadowReceivers);
+  }
+
+  private canRenderShadowCaster(mesh: AbstractMesh, mode: SceneShadowMode): boolean {
+    if (mode !== 'blob' && mode !== 'planar' && mode !== 'dynamic') return true;
+    const plan = this.readMeshShadowPlan(mesh);
+    const hasReceiver = plan
+      ? this.hasRenderableReceiverForPlan(plan)
+      : this.hasAnyRenderableReceiver();
+    return hasReceiver;
+  }
+
+  private hasRenderableReceiverForPlan(plan: EditorShadowResolvedPlan): boolean {
+    if (plan.backend === 'none' || plan.mode === 'none') return false;
+    if (plan.receiverIds.length === 0) return false;
+    const receiverIds = new Set(plan.receiverIds);
+    return this.scene.meshes.some(candidate => {
+      if (!this.isRuntimeReceiverCandidate(candidate)) return false;
+      return this.readMeshProjectionNodeIds(candidate).some(nodeId => receiverIds.has(nodeId));
+    });
+  }
+
+  private hasAnyRenderableReceiver(): boolean {
+    return this.scene.meshes.some(candidate => this.isRuntimeReceiverCandidate(candidate));
+  }
+
+  private isRuntimeReceiverCandidate(mesh: AbstractMesh): boolean {
+    if (typeof mesh.isDisposed === 'function' && mesh.isDisposed()) return false;
+    if (this.isGeneratedShadowExcluded(mesh)) return false;
+    return this.isShadowReceiver(mesh);
   }
 
   /**
@@ -448,9 +541,166 @@ export class ShadowService {
   }
 
   private resolveMeshShadowMode(mesh: AbstractMesh): SceneShadowMode {
+    const plan = this.readMeshShadowPlan(mesh);
+    if (plan) return this.resolveShadowModeFromPlan(plan);
     const mode = this.readMeshShadowMode(mesh);
     if (!mode || mode === 'default') return this.config.defaultMode ?? 'none';
     return mode;
+  }
+
+  private resolveShadowModeFromPlan(plan: EditorShadowResolvedPlan): SceneShadowMode {
+    if (plan.backend === 'none' || plan.mode === 'none') return 'none';
+    if (plan.mode === 'projected' || plan.backend === 'projected') return 'planar';
+    if (plan.mode === 'dynamic' || plan.backend === 'dynamic-map') return 'dynamic';
+    if (plan.mode === 'static' || plan.backend === 'static-baked') return 'static';
+    if (plan.mode === 'blob' || plan.backend === 'blob') return 'blob';
+    return 'none';
+  }
+
+  private ensureDynamicShadowGenerator(): boolean {
+    if (this.shadowGenerator) return true;
+    this.initializeLegacyShadows();
+    this.mode = this.resolveServiceMode();
+    if (!this.shadowGenerator) {
+      this.logShadowDebug('service.dynamicGenerator.unavailable', {
+        mode: this.mode,
+        shadowsEnabled: this.scene.shadowsEnabled,
+      });
+      return false;
+    }
+    this.refreshDynamicShadowReceivers();
+    this.logShadowDebug('service.dynamicGenerator.ready', {
+      mode: this.mode,
+      light: this.describeDirectionalLight(),
+      generator: this.describeShadowGenerator(),
+    });
+    return true;
+  }
+
+  private refreshDynamicShadowReceivers(): void {
+    if (!this.shadowGenerator) return;
+    for (const mesh of this.scene.meshes) {
+      if (typeof mesh.isDisposed === 'function' && mesh.isDisposed()) continue;
+      if (this.isGeneratedShadowExcluded(mesh)) continue;
+      mesh.receiveShadows = this.isShadowReceiver(mesh);
+    }
+  }
+
+  private applyDynamicShadowGeneratorPlan(mesh: AbstractMesh): void {
+    if (!this.shadowGenerator) return;
+    const plan = this.readMeshShadowPlan(mesh);
+    const params = plan?.params;
+    this.configureDynamicShadowGeneratorFilter();
+    if (params) {
+      if (typeof this.shadowGenerator.setDarkness === 'function') {
+        this.shadowGenerator.setDarkness(this.clamp01(1 - params.opacity));
+      }
+      this.shadowGenerator.bias = params.bias;
+      this.shadowGenerator.normalBias = params.normalBias;
+      if (Number.isFinite(params.blurKernel)) {
+        this.shadowGenerator.blurKernel = params.blurKernel;
+      }
+    }
+    this.logShadowDebug('service.dynamicPlan.apply', {
+      mesh: this.describeMesh(mesh),
+      plan: this.describeResolvedPlan(plan),
+      generator: this.describeShadowGenerator(),
+    });
+  }
+
+  private configureDynamicShadowGeneratorFilter(): void {
+    if (!this.shadowGenerator) return;
+    this.shadowGenerator.useBlurExponentialShadowMap = false;
+    this.shadowGenerator.useKernelBlur = false;
+    this.shadowGenerator.usePercentageCloserFiltering = true;
+    this.shadowGenerator.filteringQuality = ShadowGenerator.QUALITY_HIGH;
+  }
+
+  private clamp01(value: number): number {
+    if (!Number.isFinite(value)) return 0;
+    return Math.min(1, Math.max(0, value));
+  }
+
+  private describeMeshShadowDecision(mesh: AbstractMesh, decision: {
+    mode: SceneShadowMode;
+    receiveShadows: boolean;
+    dynamicReady: boolean;
+  }): Record<string, unknown> {
+    return {
+      mesh: this.describeMesh(mesh),
+      decision,
+      plan: this.describeResolvedPlan(this.readMeshShadowPlan(mesh)),
+      shadowMode: this.readMeshShadowMode(mesh),
+      receive: this.readMeshShadowReceive(mesh),
+    };
+  }
+
+  private describeMesh(mesh: AbstractMesh): Record<string, unknown> {
+    const projection = this.readEditorProjectionMetadata(mesh);
+    return {
+      name: mesh.name,
+      id: mesh.id,
+      nodeId: projection?.nodeId,
+      rootNodeId: projection?.rootNodeId,
+      enabled: typeof mesh.isEnabled === 'function' ? mesh.isEnabled() : true,
+      visible: mesh.isVisible,
+      receiveShadows: mesh.receiveShadows,
+    };
+  }
+
+  private describeResolvedPlan(plan: EditorShadowResolvedPlan | null): Record<string, unknown> | null {
+    if (!plan) return null;
+    return {
+      casterId: plan.casterId,
+      receiverIds: plan.receiverIds,
+      lightId: plan.lightId,
+      backend: plan.backend,
+      mode: plan.mode,
+      quality: plan.quality,
+      params: plan.params,
+      stale: plan.stale,
+      diagnostics: plan.diagnostics,
+    };
+  }
+
+  private describeDirectionalLight(): Record<string, unknown> {
+    return {
+      name: this.light.name,
+      id: this.light.id,
+      enabled: typeof this.light.isEnabled === 'function' ? this.light.isEnabled() : true,
+      intensity: this.light.intensity,
+      position: describeShadowVec3(this.light.position),
+      direction: describeShadowVec3(this.light.direction),
+      orthoLeft: this.light.orthoLeft,
+      orthoRight: this.light.orthoRight,
+      orthoTop: this.light.orthoTop,
+      orthoBottom: this.light.orthoBottom,
+      shadowMinZ: this.light.shadowMinZ,
+      shadowMaxZ: this.light.shadowMaxZ,
+    };
+  }
+
+  private describeShadowGenerator(): Record<string, unknown> | null {
+    if (!this.shadowGenerator) return null;
+    return {
+      className: this.shadowGenerator.getClassName?.(),
+      mapSize: this.shadowGenerator.getShadowMap?.()?.getSize?.(),
+      darkness: this.shadowGenerator.getDarkness?.(),
+      bias: this.shadowGenerator.bias,
+      normalBias: this.shadowGenerator.normalBias,
+      useBlurExponentialShadowMap: this.shadowGenerator.useBlurExponentialShadowMap,
+      blurKernel: this.shadowGenerator.blurKernel,
+      renderList: (this.shadowGenerator.getShadowMap?.()?.renderList ?? []).map(mesh => this.describeMesh(mesh)),
+    };
+  }
+
+  private logShadowDebug(event: string, details: Record<string, unknown>): void {
+    if (!isShadowDebugLoggingEnabled()) return;
+    try {
+      console.info('[fps-shadow-debug]', event, `json=${stringifyShadowDebugDetails(details)}`, details);
+    } catch {
+      // Debug logging must never affect gameplay/runtime rendering.
+    }
   }
 
   private readMeshShadowMode(mesh: AbstractMesh): SceneShadowMode | 'default' | null {
@@ -459,8 +709,88 @@ export class ShadowService {
       if (mode === 'default' || mode === 'none' || mode === 'blob' || mode === 'static' || mode === 'planar' || mode === 'dynamic') {
         return mode;
       }
+      const shadowMode = this.readMeshShadowSettingsFromProjection(node)?.mode;
+      if (shadowMode === 'none' || shadowMode === 'blob' || shadowMode === 'static' || shadowMode === 'dynamic') return shadowMode;
+      if (shadowMode === 'projected') return 'planar';
     }
     return null;
+  }
+
+  private readMeshShadowReceive(mesh: AbstractMesh): EditorShadowSettings['receive'] | null {
+    for (const node of this.walkNodeAndParents(mesh)) {
+      const receive = this.readMeshShadowSettingsFromProjection(node)?.receive;
+      if (receive === 'enabled' || receive === 'auto' || receive === 'none') return receive;
+    }
+    return null;
+  }
+
+  private readMeshShadowSettingsFromProjection(node: unknown): EditorShadowSettings | null {
+    const shadow = this.readObject(this.readEditorProjectionMetadata(node)?.shadow);
+    if (!shadow) return null;
+    const settings: EditorShadowSettings = {};
+    if (shadow.cast === 'inherit' || shadow.cast === 'none' || shadow.cast === 'enabled' || shadow.cast === 'auto') {
+      settings.cast = shadow.cast;
+    }
+    if (shadow.receive === 'inherit' || shadow.receive === 'none' || shadow.receive === 'enabled' || shadow.receive === 'auto') {
+      settings.receive = shadow.receive;
+    }
+    if (
+      shadow.mode === 'inherit'
+      || shadow.mode === 'none'
+      || shadow.mode === 'dynamic'
+      || shadow.mode === 'static'
+      || shadow.mode === 'blob'
+      || shadow.mode === 'projected'
+      || shadow.mode === 'auto'
+    ) {
+      settings.mode = shadow.mode;
+    }
+    return Object.keys(settings).length > 0 ? settings : null;
+  }
+
+  private readMeshShadowPlan(mesh: AbstractMesh): EditorShadowResolvedPlan | null {
+    for (const node of this.walkNodeAndParents(mesh)) {
+      const plan = this.readShadowPlan(this.readEditorProjectionMetadata(node)?.shadowPlan);
+      if (plan) return plan;
+    }
+    return null;
+  }
+
+  private readShadowPlan(value: unknown): EditorShadowResolvedPlan | null {
+    const plan = this.readObject(value);
+    if (!plan) return null;
+    if (typeof plan.casterId !== 'string') return null;
+    if (!Array.isArray(plan.receiverIds) || !plan.receiverIds.every(entry => typeof entry === 'string')) return null;
+    if (
+      plan.backend !== 'none'
+      && plan.backend !== 'dynamic-map'
+      && plan.backend !== 'static-baked'
+      && plan.backend !== 'blob'
+      && plan.backend !== 'projected'
+    ) return null;
+    if (
+      plan.mode !== 'none'
+      && plan.mode !== 'dynamic'
+      && plan.mode !== 'static'
+      && plan.mode !== 'blob'
+      && plan.mode !== 'projected'
+    ) return null;
+    if (plan.quality !== 'low' && plan.quality !== 'medium' && plan.quality !== 'high' && plan.quality !== 'ultra') return null;
+    if (!this.readObject(plan.params)) return null;
+    if (!Array.isArray(plan.diagnostics)) return null;
+    return plan as unknown as EditorShadowResolvedPlan;
+  }
+
+  private readMeshProjectionNodeIds(mesh: AbstractMesh): string[] {
+    const ids: string[] = [];
+    for (const node of this.walkNodeAndParents(mesh)) {
+      const projection = this.readEditorProjectionMetadata(node);
+      const nodeId = projection?.nodeId;
+      const rootNodeId = projection?.rootNodeId;
+      if (typeof nodeId === 'string' && !ids.includes(nodeId)) ids.push(nodeId);
+      if (typeof rootNodeId === 'string' && !ids.includes(rootNodeId)) ids.push(rootNodeId);
+    }
+    return ids;
   }
 
   private walkNodeAndParents(mesh: AbstractMesh): unknown[] {
@@ -613,5 +943,47 @@ export class ShadowService {
       this.planarShadowSystem = null;
     }
 
+  }
+}
+
+function describeShadowVec3(value: unknown): { x: number; y: number; z: number } | null {
+  const vec = value as { x?: unknown; y?: unknown; z?: unknown } | null | undefined;
+  return typeof vec?.x === 'number'
+    && typeof vec.y === 'number'
+    && typeof vec.z === 'number'
+    && Number.isFinite(vec.x)
+    && Number.isFinite(vec.y)
+    && Number.isFinite(vec.z)
+    ? { x: vec.x, y: vec.y, z: vec.z }
+    : null;
+}
+
+function stringifyShadowDebugDetails(details: Record<string, unknown>): string {
+  try {
+    return JSON.stringify(details);
+  } catch {
+    return '{"error":"shadowDebugDetailsNotSerializable"}';
+  }
+}
+
+function isShadowDebugLoggingEnabled(): boolean {
+  const global = globalThis as {
+    __FPS_SHADOW_DEBUG__?: unknown;
+    localStorage?: { getItem?: (key: string) => string | null };
+    location?: { search?: string };
+    process?: { env?: Record<string, string | undefined> };
+  };
+  if (global.__FPS_SHADOW_DEBUG__ === true) return true;
+  const env = global.process?.env?.FPS_SHADOW_DEBUG;
+  if (env === '1' || env === 'true') return true;
+  try {
+    const search = global.location?.search ?? '';
+    if (/(?:[?&])fpsShadowDebug(?:=1|=true|&|$)/.test(search)) return true;
+  } catch {}
+  try {
+    const stored = global.localStorage?.getItem?.(SHADOW_DEBUG_STORAGE_KEY);
+    return stored === '1' || stored === 'true';
+  } catch {
+    return false;
   }
 }

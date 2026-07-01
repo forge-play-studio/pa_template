@@ -5,6 +5,7 @@ import { pathToFileURL } from 'node:url';
 import {
   createAssetGuid,
   createAssetId,
+  generateAssetCatalogModule,
   normalizeCodeKey,
   normalizeDisplayName,
   stripKnownAssetExtension,
@@ -162,7 +163,7 @@ const scene = await readJson(scenePath);
 const editorScene = await readJson(editorScenePath);
 const migratedScene = migrateSceneConfig(scene, legacy, manifestCatalog);
 const migratedEditorScene = migrateEditorScene(editorScene, legacy);
-const registryContent = projectAssetCatalogConfig.generateRegistry(manifestCatalog);
+const registryContent = generateAssetCatalogModule(manifestCatalog);
 const summary = {
   dryRun,
   catalogEntries: manifestCatalog.length,

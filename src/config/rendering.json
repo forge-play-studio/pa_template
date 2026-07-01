@@ -141,7 +141,7 @@
     }
   },
   "shadows": {
-    "defaultMode": "static",
+    "defaultMode": "none",
     "enabled": false,
     "useCsm": false,
     "useBlobShadow": true,

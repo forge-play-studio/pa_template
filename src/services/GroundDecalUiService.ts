@@ -11,10 +11,12 @@ import type {
   GroundDecalUiTextureLayer,
 } from '../config';
 
+const ASSET_ID_MAP = ASSET_IDS as Record<string, string | undefined>;
+
 const TEXTURE_IDS = {
-  borderWhite: ASSET_IDS.ground_decal_border_reference,
-  conveyor: ASSET_IDS.ground_decal_conveyor_reference,
-  moneyLarge: ASSET_IDS.ground_decal_money_reference,
+  borderWhite: ASSET_ID_MAP.ground_decal_border_reference ?? '',
+  conveyor: ASSET_ID_MAP.ground_decal_conveyor_reference ?? '',
+  moneyLarge: ASSET_ID_MAP.ground_decal_money_reference ?? '',
 } as const;
 
 const BASE_COLOR: GroundDecalUiColor = { r: 0.08, g: 0.08, b: 0.08, a: 0.56 };

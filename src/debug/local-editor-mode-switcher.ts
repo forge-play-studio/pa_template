@@ -9,7 +9,10 @@ import {
   createEditorSceneRuntimePreviewImportPlan,
   createEditorSceneRuntimePreviewMissingAssetUrlDiagnostic,
   createEditorSceneRuntimePreviewNode,
+  createEditorSceneRuntimePreviewNodes,
   createEditorScenePrefabAgentSummary,
+  EDITOR_SCENE_STATIC_SHADOW_BAKE_ACTION_PATH,
+  createEditorSceneSerializedMultiTransformPatch as createPlayableEditorSceneSerializedMultiTransformPatch,
   createEditorSceneTransformBatchPatch as createPlayableEditorSceneTransformBatchPatch,
   createEditorSceneTransformPatch as createPlayableEditorSceneTransformPatch,
   normalizePlayableForgePlayCommandName,
@@ -34,6 +37,8 @@ import {
   type PlayableLocalEditorHostCompatibilityReport,
   type PlayableLocalEditorHostBridgeContext,
   type PlayableLocalEditorHarnessApi,
+  type PlayableLocalEditorMultiPropertyCapabilityInput,
+  type PlayableLocalEditorMultiPropertyPatchInput,
   type PlayableLocalEditorPropertyPatchInput,
   type PlayableLocalEditorTransformBatchPatchInput,
   type PlayableLocalEditorTransformInspectorPreviewInput,
@@ -51,7 +56,6 @@ import {
 } from '@fps-games/editor/playable-sdk';
 import baseSceneConfig from '../config/scene.json';
 import type {
-  GroundDecalUiConfig,
   SceneConfig,
 } from '../config/types';
 import type { EditorSceneDocument } from '../fps-game-editor-adapter/editor-scene-document';
@@ -65,18 +69,21 @@ import { enrichEditorSceneDocumentAssets } from '../fps-game-editor-adapter/edit
 import {
   createEditorSceneCreateGroupPatch,
   createEditorSceneCreatePrimitivePatch,
-  createEditorSceneBrowserAssetItems,
   createEditorSceneDeleteSubtreePatch,
   createEditorSceneDuplicateSelectionPatch,
   createEditorSceneGroupSelectionPatch,
-  createEditorSceneGroundDecalUiPatch,
   createEditorSceneHierarchyMovePatch,
-  createEditorSceneMarkerGraphPatch,
-  canCreateEditorSceneSerializedMultiPropertyPatch,
-  createEditorSceneSerializedMultiPropertyPatch,
   createEditorSceneInspectorPropertyPatch,
+  createEditorSceneMarkerGraphPatch,
   createEditorScenePlacedAssetPatch,
   createEditorSceneAssetActionPatch,
+  createEditorSceneBrowserAssetItems as createEditorSceneDocumentBrowserAssetItems,
+  getEditorScenePrefabStageDescriptor,
+  getEditorScenePrefabStageProjectionNodes,
+  getEditorScenePrefabStageProjectionNodeIdForNode,
+  getEditorScenePrefabStageStructure,
+  getEditorScenePrefabStageInspectorObject,
+  resolveEditorScenePrefabStagePreviewTarget,
   createEditorSceneRenamePatch,
   createEditorSceneReparentPatch,
   DEFAULT_EDITOR_SCENE_CAMERA,
@@ -88,10 +95,6 @@ import {
   getEditorSceneMarkerTypeCatalog,
   getEditorSceneRelationTypeCatalog,
   getEditorSceneRuntimeInspectorSections,
-  getEditorScenePrefabStageDescriptor,
-  getEditorScenePrefabStageInspectorObject,
-  getEditorScenePrefabStageProjectionNodes,
-  getEditorScenePrefabStageStructure,
   getEditorSceneSerializedObject,
   getEditorSceneSerializedMultiObject,
   normalizeEditorSceneHierarchyDocument,
@@ -116,10 +119,19 @@ import {
   hasEditorRenderingDraftChanges,
   resetEditorRenderingDraft,
 } from '../fps-game-editor-adapter/editor-rendering-profile';
-import { createGroundDecalUiDynamicTexture, isGroundDecalUiConfig } from '../services/GroundDecalUiService';
 import * as editorAssets from '../assets';
 
 type BabylonModule = Record<string, any>;
+
+type EditorSceneAgentJsonValue =
+  | null
+  | string
+  | number
+  | boolean
+  | EditorSceneAgentJsonValue[]
+  | { [key: string]: EditorSceneAgentJsonValue };
+
+type EditorSceneAgentJsonObject = { [key: string]: EditorSceneAgentJsonValue };
 
 type ProjectGameRestartContext = {
   reason?: string;
@@ -129,6 +141,14 @@ type ProjectGameRestartWindow = Window & {
   __restartProjectGame?: (context?: ProjectGameRestartContext) => Promise<void> | void;
   __localEditorProjectionImportStats?: EditorProjectionImportStats;
 };
+
+type EditorPrimitiveProjectionShape = 'cube' | 'sphere' | 'plane' | 'capsule';
+type EditorPrimitiveProjectionMaterialKind = 'pbr' | 'standard';
+
+interface EditorPrimitiveProjectionInstancingEntry {
+  shape: EditorPrimitiveProjectionShape;
+  materialKind: EditorPrimitiveProjectionMaterialKind;
+}
 
 interface EditorProjectionImportStats {
   importModelCalls: number;
@@ -190,6 +210,8 @@ const editorProjectionImportStats: EditorProjectionImportStats = {
 type EditorSceneRuntimePreviewImportPlan = NonNullable<ReturnType<typeof createEditorSceneRuntimePreviewImportPlan>>;
 
 const editorProjectionImportPlanCache = new WeakMap<object, EditorSceneRuntimePreviewImportPlan>();
+const editorPrimitiveProjectionInstancingByNodeId = new Map<string, EditorPrimitiveProjectionInstancingEntry>();
+const editorPrimitiveProjectionSourceMeshes = new WeakMap<object, Map<string, any>>();
 
 const editorProjectionModelImporter = createBabylonAssetContainerProjectionImporter({
   loadContainer: async (context) => {
@@ -211,10 +233,11 @@ const editorProjectionModelImporter = createBabylonAssetContainerProjectionImpor
   resolveCacheKey: (context) => {
     const importPlan = resolveCachedEditorProjectionImportPlan(context);
     const assetId = readEditorSceneRuntimePreviewAssetId(context.asset) ?? '';
-    const sourceId = typeof context.asset.sourceId === 'string' ? context.asset.sourceId : '';
+    const assetRecord = context.asset as Record<string, unknown>;
+    const assetGuid = typeof assetRecord.guid === 'string' ? assetRecord.guid : '';
     return importPlan && importPlan.kind !== 'groundDecal'
-      ? `pa-template:model:${assetId}:${sourceId}:${importPlan.url}`
-      : `pa-template:model:${assetId}:${sourceId}`;
+      ? `pa-template:model:${assetId}:${assetGuid}:${importPlan.url}`
+      : `pa-template:model:${assetId}:${assetGuid}`;
   },
   onEvent: handleEditorProjectionImportEvent,
 });
@@ -274,14 +297,20 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
         const gameObject = document.scene.gameObjects.find((entry) => entry.id === id);
         return gameObject ? createProjectionNode(document, gameObject) : null;
       },
-      createPatchFromAsset: (assetItem, input) => ({
-        label: `Add ${assetItem.displayName}`,
-        patch: {
-          kind: 'game-object.create-from-asset',
-          assetItem,
-          ...(input?.placement ? { placement: input.placement as any } : {}),
-        },
-      }),
+      createPatchFromAsset: (assetItem, input) => {
+        const assetName = typeof input?.name === 'string' && input.name.trim()
+          ? input.name.trim()
+          : undefined;
+        return {
+          label: `Add ${assetName ?? assetItem.displayName}`,
+          patch: {
+            kind: 'game-object.create-from-asset',
+            assetItem,
+            ...(assetName ? { name: assetName } : {}),
+            ...(input?.placement ? { placement: input.placement as any } : {}),
+          },
+        };
+      },
       createSerializedPropertyPatch: createEditorSceneSerializedPropertyPatch,
     },
     capabilities: {
@@ -311,16 +340,16 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
       assetBrowser: {
         getBrowserAssetItems: createEditorSceneBrowserAssetItems,
       },
+      agentContext: {
+        describeSceneObject: input => describeEditorSceneAgentObject(input.document, input.objectId),
+        describeSceneObjectSet: input => describeEditorSceneAgentObjectSet(input.document, input.objectIds),
+        describeRegionBinding: input => describeEditorSceneAgentRegionBinding(input.document, input.objectIds),
+      },
       markerGraph: {
         getMarkerGraph: getEditorSceneMarkerGraph,
         getMarkerTypeCatalog: getEditorSceneMarkerTypeCatalog,
         getRelationTypeCatalog: getEditorSceneRelationTypeCatalog,
         createMarkerGraphPatch: createEditorSceneMarkerGraphPatch,
-      },
-      agentContext: {
-        describeSceneObject: input => describeEditorSceneAgentObject(input.document, input.objectId),
-        describeSceneObjectSet: input => describeEditorSceneAgentObjectSet(input.document, input.objectIds),
-        describeRegionBinding: input => describeEditorSceneAgentRegionBinding(input.document, input.objectIds),
       },
       assetActions: {
         createAssetActionPatch: input => createEditorSceneAssetActionPatch(input as unknown as Parameters<typeof createEditorSceneAssetActionPatch>[0]),
@@ -329,6 +358,14 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
           const beforeIds = new Set(beforeDocument.scene.gameObjects.map((gameObject) => gameObject.id));
           return afterDocument.scene.gameObjects.find((gameObject) => !beforeIds.has(gameObject.id))?.id ?? null;
         },
+      },
+      prefabStage: {
+        getPrefabStageDescriptor: getEditorScenePrefabStageDescriptor,
+        getPrefabStageProjectionNodes: getEditorScenePrefabStageProjectionNodes,
+        getPrefabStageStructure: getEditorScenePrefabStageStructure,
+        getPrefabStageInspectorObject: getEditorScenePrefabStageInspectorObject,
+        resolvePrefabStagePreviewTarget: resolveEditorScenePrefabStagePreviewTarget,
+        getPrefabStageProjectionNodeId: getEditorScenePrefabStageProjectionNodeIdForNode,
       },
       transformCommands: {
         canCreateSerializedMultiPropertyPatch: canCreateEditorSceneSerializedMultiPropertyPatch,
@@ -350,44 +387,9 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
         createSceneGraphMovePatch: createEditorSceneHierarchyMovePatch,
         createSceneGraphGroupSelectionPatch: createEditorSceneGroupSelectionPatch,
       },
-      hierarchyActions: {
-        contextActions: [
-          {
-            id: 'ground-decal-ui.create-operation',
-            label: '添加操作类地贴 UI',
-            placement: 'after-create',
-            run: context => createEditorSceneGroundDecalUiPatch(context.document, 'operation') as any,
-          },
-          {
-            id: 'ground-decal-ui.create-delivery',
-            label: '添加交付类地贴 UI',
-            placement: 'after-create',
-            run: context => createEditorSceneGroundDecalUiPatch(context.document, 'delivery') as any,
-          },
-        ],
-      },
       worldPreview: {
         getSceneCameraPreviewRig: createSceneCameraPreviewRig,
         getWorldAppearance: editorLightingPreviewAdapter.getWorldAppearance as (document: EditorSceneDocument) => unknown | null,
-      },
-      prefabStage: {
-        getPrefabStageDescriptor: (document, input) => getEditorScenePrefabStageDescriptor(document, input),
-        getPrefabStageProjectionNodes: (document, descriptor) => (
-          getEditorScenePrefabStageProjectionNodes(document, descriptor) as unknown as PlayableBabylonProjectionNode[]
-        ),
-        getPrefabStageStructure: (document, descriptor, context) => (
-          getEditorScenePrefabStageStructure(
-            document,
-            descriptor as Parameters<typeof getEditorScenePrefabStageStructure>[1],
-            context as Parameters<typeof getEditorScenePrefabStageStructure>[2],
-          )
-        ),
-        getPrefabStageInspectorObject: (document, descriptor, selectedItemId, context) => (
-          getEditorScenePrefabStageInspectorObject(document, descriptor as Parameters<typeof getEditorScenePrefabStageInspectorObject>[1], selectedItemId, {
-            ...context,
-            textureAssets: createEditorSceneInspectorTextureAssets(currentEditorAssetLibrary),
-          } as Parameters<typeof getEditorScenePrefabStageInspectorObject>[3])
-        ),
       },
       rendering: editorRenderingCapability,
     },
@@ -405,6 +407,7 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
         const restartProjectGame = (window as ProjectGameRestartWindow).__restartProjectGame;
         if (typeof restartProjectGame === 'function') {
           await restartProjectGame(context);
+          scheduleEditorHostCleanupAfterRunGame();
           return;
         }
         options.onBeforeReload?.();
@@ -412,13 +415,16 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
       },
     },
     worldAdapter: {
-      disposeWorld: options.disposeGameWorld,
+      disposeWorld: async () => {
+        await runBeforeEnterEditor();
+        await options.disposeGameWorld();
+      },
       getCanvas() {
         const canvas = document.getElementById('renderCanvas');
         if (!(canvas instanceof HTMLCanvasElement)) return null;
         return canvas;
       },
-      loadPreviewEngine: () => import('@babylonjs/core') as Promise<BabylonModule>,
+      loadPreviewEngine: async () => createEditorPreviewBabylonModule(await import('@babylonjs/core') as BabylonModule),
       createPreviewEngine(babylon, canvas) {
         return new babylon.Engine(canvas, true, {
           preserveDrawingBuffer: true,
@@ -431,7 +437,7 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
       resolveAssetId: asset => asset.assetId,
       toBrowserAssetItem(asset) {
         return {
-          id: asset.kind === 'prefab' ? `prefab:${asset.assetId}` : asset.assetId,
+          id: asset.assetId,
           guid: asset.guid,
           assetId: asset.assetId,
           kind: asset.kind,
@@ -441,15 +447,6 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
           origin: asset.origin,
           dedupeKey: asset.dedupeKey,
           placeable: asset.placeable,
-          prefab: asset.prefab
-            ? {
-                id: asset.assetId,
-                name: asset.displayName,
-                sourceAssetId: asset.prefab.sourceAssetId,
-                sourceAssetGuid: asset.prefab.sourceAssetGuid,
-                defaults: structuredClone(asset.prefab.defaults ?? {}),
-              }
-            : undefined,
           preview: createEditorSceneLibraryAssetPreview(asset),
           disabled: asset.placeable === false,
         };
@@ -491,6 +488,26 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
   });
   setLocalEditorAssetBridgeActive(true);
 
+  let disposed = false;
+  let cleanupAfterRunGameScheduled = false;
+
+  const disposeEditorHost = (disposeOptions: { preserveAssetBridgeActive?: boolean } = {}): void => {
+    if (disposed) return;
+    disposed = true;
+    disposeLegacyAssetBypass();
+    if (!disposeOptions.preserveAssetBridgeActive) setLocalEditorAssetBridgeActive(false);
+    host.dispose();
+    if (editorHost === host) editorHost = null;
+  };
+
+  const scheduleEditorHostCleanupAfterRunGame = (): void => {
+    if (cleanupAfterRunGameScheduled) return;
+    cleanupAfterRunGameScheduled = true;
+    window.setTimeout(() => {
+      disposeEditorHost({ preserveAssetBridgeActive: true });
+    }, 0);
+  };
+
   return {
     async enterEditor() {
       await runBeforeEnterEditor();
@@ -501,9 +518,7 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
       detachedForEditor = true;
     },
     dispose() {
-      disposeLegacyAssetBypass();
-      setLocalEditorAssetBridgeActive(false);
-      host.dispose();
+      disposeEditorHost();
     },
   };
 }
@@ -516,6 +531,124 @@ function createEditorGrid(BABYLON: BabylonModule, scene: any, camera?: any) {
     name: 'pa-template-editor-grid',
     halfLineCount: 96,
   });
+}
+
+function createEditorPreviewBabylonModule(BABYLON: BabylonModule): BabylonModule {
+  const MeshBuilder = BABYLON.MeshBuilder;
+  if (!MeshBuilder) return BABYLON;
+  return {
+    ...BABYLON,
+    MeshBuilder: {
+      ...MeshBuilder,
+      CreateBox: createEditorPrimitiveProjectionBuilder(BABYLON, 'cube', MeshBuilder.CreateBox),
+      CreateSphere: createEditorPrimitiveProjectionBuilder(BABYLON, 'sphere', MeshBuilder.CreateSphere),
+      CreateGround: createEditorPrimitiveProjectionBuilder(BABYLON, 'plane', MeshBuilder.CreateGround),
+      CreateCapsule: createEditorPrimitiveProjectionBuilder(BABYLON, 'capsule', MeshBuilder.CreateCapsule),
+    },
+  };
+}
+
+function createEditorPrimitiveProjectionBuilder(
+  BABYLON: BabylonModule,
+  shape: EditorPrimitiveProjectionShape,
+  originalBuilder: unknown,
+) {
+  if (typeof originalBuilder !== 'function') return originalBuilder;
+  const buildPrimitiveMesh = originalBuilder as (name: string, options: Record<string, unknown>, scene: unknown) => any;
+  return (name: string, options: Record<string, unknown>, scene: unknown) => {
+    const request = readEditorPrimitiveProjectionMeshRequest(name);
+    if (!request || request.shape !== shape) {
+      return buildPrimitiveMesh(name, options, scene);
+    }
+    const instancing = editorPrimitiveProjectionInstancingByNodeId.get(request.nodeId);
+    if (!instancing || instancing.shape !== shape) {
+      return buildPrimitiveMesh(name, options, scene);
+    }
+    const source = getOrCreateEditorPrimitiveProjectionSourceMesh({
+      BABYLON,
+      scene,
+      shape,
+      materialKind: instancing.materialKind,
+      options,
+      originalBuilder: buildPrimitiveMesh,
+    });
+    const instance = typeof source?.createInstance === 'function'
+      ? source.createInstance(name)
+      : null;
+    if (!instance) return buildPrimitiveMesh(name, options, scene);
+    configureEditorPrimitiveProjectionInstance(instance, source);
+    return instance;
+  };
+}
+
+function getOrCreateEditorPrimitiveProjectionSourceMesh(input: {
+  BABYLON: BabylonModule;
+  scene: unknown;
+  shape: EditorPrimitiveProjectionShape;
+  materialKind: EditorPrimitiveProjectionMaterialKind;
+  options: Record<string, unknown>;
+  originalBuilder: (name: string, options: Record<string, unknown>, scene: unknown) => any;
+}): any | null {
+  if (!input.scene || typeof input.scene !== 'object') return null;
+  let sceneCache = editorPrimitiveProjectionSourceMeshes.get(input.scene);
+  if (!sceneCache) {
+    sceneCache = new Map();
+    editorPrimitiveProjectionSourceMeshes.set(input.scene, sceneCache);
+  }
+  const cacheKey = `${input.shape}:${input.materialKind}`;
+  const cached = sceneCache.get(cacheKey);
+  if (cached && !cached.isDisposed?.()) return cached;
+  const sourceName = `__pa_template_editor_primitive_source_${cacheKey.replace(/[^a-z0-9_-]/gi, '_')}`;
+  const source = input.originalBuilder(sourceName, input.options, input.scene);
+  if (!source) return null;
+  source.isVisible = false;
+  source.isPickable = false;
+  source.metadata = {
+    ...(source.metadata && typeof source.metadata === 'object' ? source.metadata : {}),
+    editorProjection: {
+      helper: 'primitiveSource',
+      primitiveShape: input.shape,
+      materialKind: input.materialKind,
+    },
+  };
+  sceneCache.set(cacheKey, source);
+  return source;
+}
+
+function configureEditorPrimitiveProjectionInstance(instance: any, source: any): void {
+  try {
+    Object.defineProperty(instance, 'material', {
+      configurable: true,
+      enumerable: true,
+      get() {
+        return source.material ?? null;
+      },
+      set(value: unknown) {
+        if (!value) return;
+        if (!source.material) {
+          source.material = value;
+          return;
+        }
+        if (value !== source.material && typeof (value as { dispose?: unknown }).dispose === 'function') {
+          (value as { dispose: () => void }).dispose();
+        }
+      },
+    });
+  } catch {}
+}
+
+function readEditorPrimitiveProjectionMeshRequest(name: string): { nodeId: string; shape: EditorPrimitiveProjectionShape } | null {
+  for (const shape of ['cube', 'sphere', 'plane', 'capsule'] as const) {
+    const suffix = `.${shape}Projection`;
+    if (!name.endsWith(suffix)) continue;
+    const nodeId = name.slice(0, -suffix.length);
+    return nodeId ? { nodeId, shape } : null;
+  }
+  return null;
+}
+
+function createEditorSceneBrowserAssetItems(editorScene: EditorSceneDocument) {
+  return createEditorSceneDocumentBrowserAssetItems(editorScene);
 }
 
 function logPlayableLocalEditorHostCompatibilityReport(
@@ -551,72 +684,24 @@ function createEditorSceneLibraryAssetPreview(asset: EditorSceneAssetLibraryItem
 function createEditorSceneInspectorTextureAssets(
   assets: readonly EditorSceneAssetLibraryItem[],
 ): EditorSceneInspectorTextureAsset[] {
-  const textureAssets: EditorSceneInspectorTextureAsset[] = [];
-  const seenAssetIds = new Set<string>();
-
-  for (const asset of assets) {
-    if (asset.kind !== 'texture') continue;
-    const textureAsset = createInspectorTextureAssetFromLibraryItem(asset);
-    if (!textureAsset || seenAssetIds.has(textureAsset.id)) continue;
-    seenAssetIds.add(textureAsset.id);
-    textureAssets.push(textureAsset);
-  }
-
-  for (const entry of editorAssets.getAssetCatalogEntries({ kind: 'texture' })) {
-    const textureAsset = createInspectorTextureAssetFromCatalogEntry(entry);
-    if (!textureAsset || seenAssetIds.has(textureAsset.id)) continue;
-    seenAssetIds.add(textureAsset.id);
-    textureAssets.push(textureAsset);
-  }
-
-  return textureAssets;
-}
-
-function createInspectorTextureAssetFromLibraryItem(
-  asset: EditorSceneAssetLibraryItem,
-): EditorSceneInspectorTextureAsset | null {
-  const url = resolveEditorSceneRuntimePreviewAssetUrl(editorAssets, asset, 'texture');
-  if (!url) return null;
-  const environmentTexture = isEnvironmentTextureAsset(asset, url);
-  return createInspectorTextureAsset({
-    id: asset.assetId,
-    label: asset.displayName || asset.assetId,
-    url,
-    environmentTexture,
-  });
-}
-
-function createInspectorTextureAssetFromCatalogEntry(
-  entry: editorAssets.AssetCatalogEntry,
-): EditorSceneInspectorTextureAsset | null {
-  const url = editorAssets.resolveTextureAssetUrl(entry.assetId) ?? entry.url;
-  if (!url) return null;
-  const environmentTexture = isEnvironmentTextureCatalogEntry(entry, url);
-  return createInspectorTextureAsset({
-    id: entry.assetId,
-    label: entry.displayName || entry.assetId,
-    url,
-    environmentTexture,
-  });
-}
-
-function createInspectorTextureAsset(input: {
-  id: string;
-  label: string;
-  url: string;
-  environmentTexture: boolean;
-}): EditorSceneInspectorTextureAsset {
-  return {
-    id: input.id,
-    label: input.label,
-    url: input.url,
-    meta: input.environmentTexture ? `${input.id} · IBL` : input.id,
-    usage: input.environmentTexture ? 'environment' : 'material',
-    capabilities: {
-      materialTexture: !input.environmentTexture,
-      environmentTexture: input.environmentTexture,
-    },
-  };
+  return assets
+    .filter(asset => asset.kind === 'texture')
+    .flatMap((asset) => {
+      const url = resolveEditorSceneRuntimePreviewAssetUrl(editorAssets, asset, 'texture');
+      if (!url) return [];
+      const environmentTexture = isEnvironmentTextureAsset(asset, url);
+      return [{
+        id: asset.assetId,
+        label: asset.displayName || asset.assetId,
+        url,
+        meta: environmentTexture ? `${asset.assetId} · IBL` : asset.assetId,
+        usage: environmentTexture ? 'environment' : 'material',
+        capabilities: {
+          materialTexture: !environmentTexture,
+          environmentTexture,
+        },
+      }];
+    });
 }
 
 function resolveEditorSceneTextureRefUrl(
@@ -653,28 +738,11 @@ function isEnvironmentTextureAsset(asset: EditorSceneAssetLibraryItem, resolvedU
   return candidates.some(value => /\.(env|hdr|dds|ktx|ktx2)(?:[?#].*)?$/i.test(value));
 }
 
-function isEnvironmentTextureCatalogEntry(entry: editorAssets.AssetCatalogEntry, resolvedUrl: string): boolean {
-  const metadata = entry.metadata && typeof entry.metadata === 'object' && !Array.isArray(entry.metadata)
-    ? entry.metadata
-    : {};
-  if (metadata.textureUsage === 'environment' || metadata.usage === 'environment') return true;
-  const capabilities = metadata.capabilities && typeof metadata.capabilities === 'object' && !Array.isArray(metadata.capabilities)
-    ? metadata.capabilities as Record<string, unknown>
-    : null;
-  if (capabilities?.environmentTexture === true) return true;
-  if (capabilities?.environmentTexture === false) return false;
-  const candidates = [
-    resolvedUrl,
-    entry.displayName,
-    entry.assetId,
-    entry.relativePath,
-    entry.originalFileName ?? '',
-  ];
-  return candidates.some(value => /\.(env|hdr|dds|ktx|ktx2)(?:[?#].*)?$/i.test(value));
-}
-
 function createProjectionNodes(editorScene: EditorSceneDocument): PlayableBabylonProjectionNode[] {
-  return editorScene.scene.gameObjects.map(gameObject => createProjectionNode(editorScene, gameObject));
+  const nodes = createEditorSceneRuntimePreviewNodes(editorScene) as unknown as PlayableBabylonProjectionNode[];
+  editorPrimitiveProjectionInstancingByNodeId.clear();
+  for (const node of nodes) rememberEditorPrimitiveProjectionInstancing(node);
+  return nodes;
 }
 
 function createProjectionNode(
@@ -682,18 +750,32 @@ function createProjectionNode(
   gameObject: EditorSceneGameObject,
 ): PlayableBabylonProjectionNode {
   const node = createEditorSceneRuntimePreviewNode(editorScene, gameObject) as unknown as PlayableBabylonProjectionNode;
-  if (isGroundDecalUiConfig(gameObject.groundDecal)) {
-    node.asset = {
-      id: `ground-decal-ui:${gameObject.id}`,
-      metadata: {
-        assetId: `ground-decal-ui:${gameObject.id}`,
-        type: 'texture',
-        groundDecalUi: structuredClone(gameObject.groundDecal),
-      },
-    };
-    node.primitive = null;
-  }
+  rememberEditorPrimitiveProjectionInstancing(node);
   return node;
+}
+
+function rememberEditorPrimitiveProjectionInstancing(node: PlayableBabylonProjectionNode): void {
+  const shape = readEditorPrimitiveProjectionShape(node.primitive?.shape);
+  if (!shape || hasEditorPrimitiveProjectionMaterialOverride(node)) {
+    editorPrimitiveProjectionInstancingByNodeId.delete(node.id);
+    return;
+  }
+  editorPrimitiveProjectionInstancingByNodeId.set(node.id, {
+    shape,
+    materialKind: node.artistMaterialKind === 'standard' ? 'standard' : 'pbr',
+  });
+}
+
+function readEditorPrimitiveProjectionShape(value: unknown): EditorPrimitiveProjectionShape | null {
+  return value === 'cube' || value === 'sphere' || value === 'plane' || value === 'capsule' ? value : null;
+}
+
+function hasEditorPrimitiveProjectionMaterialOverride(node: PlayableBabylonProjectionNode): boolean {
+  return hasObjectEntries(node.artistMaterialProfile) || hasObjectEntries(node.artistMaterialSlotProfiles);
+}
+
+function hasObjectEntries(value: unknown): boolean {
+  return !!value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length > 0;
 }
 
 function createSceneCameraPreviewRig(
@@ -707,8 +789,6 @@ async function importEditorProjectionModel(
 ): Promise<PlayableBabylonProjectionImportResult | null> {
   editorProjectionImportStats.importModelCalls += 1;
   publishEditorProjectionImportStats();
-  const groundDecalUi = readPreviewGroundDecalUiConfig(context.asset);
-  if (groundDecalUi) return createGroundDecalUiProjectionResult(context, groundDecalUi);
   const assetId = readEditorSceneRuntimePreviewAssetId(context.asset);
   if (!assetId) {
     editorProjectionImportStats.fallbackCount += 1;
@@ -726,16 +806,6 @@ async function importEditorProjectionModel(
   if (importPlan.kind === 'groundDecal') return createGroundDecalProjectionResult(context, importPlan.decal);
 
   return await editorProjectionModelImporter(context) ?? null;
-}
-
-function readPreviewGroundDecalUiConfig(asset: unknown): GroundDecalUiConfig | null {
-  const metadata = asset && typeof asset === 'object' && !Array.isArray(asset)
-    ? (asset as { metadata?: unknown }).metadata
-    : null;
-  const groundDecalUi = metadata && typeof metadata === 'object' && !Array.isArray(metadata)
-    ? (metadata as { groundDecalUi?: unknown }).groundDecalUi
-    : null;
-  return isGroundDecalUiConfig(groundDecalUi) ? groundDecalUi : null;
 }
 
 function warnProjectionAssetUrlMissing(asset: unknown, kind: 'model' | 'texture'): void {
@@ -808,45 +878,64 @@ async function createGroundDecalProjectionResult(
   return { meshes: [mesh], transformNodes: [], animationGroups: [] };
 }
 
-async function createGroundDecalUiProjectionResult(
-  context: PlayableBabylonProjectionImportContext,
-  decal: GroundDecalUiConfig,
-): Promise<PlayableBabylonProjectionImportResult> {
-  const [{ MeshBuilder }, { StandardMaterial }, { Color3 }] = await Promise.all([
-    import('@babylonjs/core/Meshes/meshBuilder'),
-    import('@babylonjs/core/Materials/standardMaterial'),
-    import('@babylonjs/core/Maths/math.color'),
-  ]);
-  const mesh = MeshBuilder.CreateGround(`${context.node.id}.groundDecalUiProjection`, {
-    width: decal.size.width,
-    height: decal.size.depth,
-  }, context.scene);
-  mesh.isPickable = false;
-  mesh.receiveShadows = false;
-  mesh.alphaIndex = decal.rendering?.alphaIndex ?? 100;
-  const mat = new StandardMaterial(`${context.node.id}.groundDecalUiProjectionMaterial`, context.scene);
-  const { texture } = createGroundDecalUiDynamicTexture(`${context.node.id}.groundDecalUiProjectionTexture`, context.scene as any, decal);
-  mat.diffuseTexture = texture;
-  mat.useAlphaFromDiffuseTexture = true;
-  mat.diffuseColor = new Color3(1, 1, 1);
-  mat.emissiveColor = new Color3(1, 1, 1);
-  mat.specularColor = new Color3(0, 0, 0);
-  mat.backFaceCulling = false;
-  mat.disableLighting = true;
-  mesh.material = mat;
-  return { meshes: [mesh], transformNodes: [], animationGroups: [] };
-}
-
 function createEditorSceneSerializedPropertyPatch(
   input: PlayableLocalEditorPropertyPatchInput<EditorSceneDocument>,
 ): { patch: EditorSceneDocumentPatch; label: string; changedId: string; changedIds: string[]; reprojectIds?: string[] } | null {
   return createEditorSceneInspectorPropertyPatch(input);
 }
 
+function canCreateEditorSceneSerializedMultiPropertyPatch(
+  input: PlayableLocalEditorMultiPropertyCapabilityInput<EditorSceneDocument>,
+): boolean {
+  return input.path.startsWith('transform.')
+    || isEditorSceneSerializedMultiFieldPath(input.path)
+    || input.path === EDITOR_SCENE_STATIC_SHADOW_BAKE_ACTION_PATH;
+}
+
+function createEditorSceneSerializedMultiPropertyPatch(
+  input: PlayableLocalEditorMultiPropertyPatchInput<EditorSceneDocument>,
+): { patch: EditorSceneDocumentPatch; label: string; changedIds: string[]; reprojectIds?: string[] } | null {
+  if (input.targetIds.some((targetId) => !createEditorSceneInspectorPropertyPatch({
+    document: input.document,
+    targetId,
+    path: input.path,
+    value: input.value,
+  }))) return null;
+  if (isEditorSceneSerializedMultiFieldPath(input.path)) {
+    return {
+      label: `Patch ${input.targetIds.length} GameObjects ${input.path}`,
+      patch: {
+        kind: 'game-object.field-batch',
+        fields: input.targetIds.map((targetId) => ({
+          targetId,
+          path: input.path,
+          value: input.value,
+        })),
+      },
+      changedIds: input.targetIds,
+      ...(isEditorSceneShadowProjectionPath(input.path) ? { reprojectIds: input.targetIds } : {}),
+    };
+  }
+  const result = createPlayableEditorSceneSerializedMultiTransformPatch(input);
+  if (!result) return null;
+  return {
+    ...result,
+    patch: result.patch as EditorSceneDocumentPatch,
+  };
+}
+
+function isEditorSceneSerializedMultiFieldPath(path: string): boolean {
+  return isEditorSceneShadowProjectionPath(path) || path === 'metadata.shadowInspectorLanguage';
+}
+
+function isEditorSceneShadowProjectionPath(path: string): boolean {
+  return path === 'shadowMode' || path.startsWith('shadow.');
+}
+
 function createEditorSceneTransformPatch(
   input: PlayableLocalEditorTransformPatchInput<EditorSceneDocument>,
 ): { patch: EditorSceneDocumentPatch; label: string; changedId: string; changedIds: string[] } | null {
-  const result = createPlayableEditorSceneTransformPatch(normalizeGroundDecalUiTransformInput(input) as any);
+  const result = createPlayableEditorSceneTransformPatch(input as any);
   if (!result) return null;
   return {
     ...result,
@@ -857,64 +946,18 @@ function createEditorSceneTransformPatch(
 function createEditorSceneTransformInspectorPreview(
   input: PlayableLocalEditorTransformInspectorPreviewInput<EditorSceneDocument>,
 ) {
-  const transform = toEditorSceneLocalTransformFromWorld(input.document, input.targetId, input.transform);
-  return transform ? normalizeGroundDecalUiTransform(input.document, input.targetId, transform) : transform;
+  return toEditorSceneLocalTransformFromWorld(input.document, input.targetId, input.transform);
 }
 
 function createEditorSceneTransformBatchPatch(
   input: PlayableLocalEditorTransformBatchPatchInput<EditorSceneDocument>,
 ): { patch: EditorSceneDocumentPatch; label: string; changedIds: string[] } | null {
-  const result = createPlayableEditorSceneTransformBatchPatch({
-    ...input,
-    targets: (input.targets as any[]).map(target => ({
-      ...target,
-      after: normalizeGroundDecalUiTransform(input.document, target.id, target.after, target.before),
-    })),
-  } as any);
+  const result = createPlayableEditorSceneTransformBatchPatch(input as any);
   if (!result) return null;
   return {
     ...result,
     patch: result.patch as EditorSceneDocumentPatch,
   };
-}
-
-function normalizeGroundDecalUiTransformInput(
-  input: PlayableLocalEditorTransformPatchInput<EditorSceneDocument>,
-): PlayableLocalEditorTransformPatchInput<EditorSceneDocument> {
-  return {
-    ...input,
-    after: normalizeGroundDecalUiTransform(input.document, input.targetId, input.after, input.before),
-  };
-}
-
-function normalizeGroundDecalUiTransform(
-  document: EditorSceneDocument,
-  targetId: string,
-  transform: any,
-  before?: any,
-): any {
-  if (!isGroundDecalUiGameObject(document, targetId) || !transform?.scale) return transform;
-  const uniform = resolveUniformGroundDecalUiScale(transform.scale, before?.scale);
-  return {
-    ...transform,
-    scale: { x: uniform, y: uniform, z: uniform },
-  };
-}
-
-function resolveUniformGroundDecalUiScale(scale: { x?: number; y?: number; z?: number }, before?: { x?: number; y?: number; z?: number }): number {
-  const candidates = [
-    { value: scale.x, delta: Math.abs((scale.x ?? 1) - (before?.x ?? 1)) },
-    { value: scale.y, delta: Math.abs((scale.y ?? 1) - (before?.y ?? 1)) },
-    { value: scale.z, delta: Math.abs((scale.z ?? 1) - (before?.z ?? 1)) },
-  ].filter(candidate => typeof candidate.value === 'number' && Number.isFinite(candidate.value));
-  if (candidates.length === 0) return 1;
-  candidates.sort((left, right) => right.delta - left.delta);
-  return Math.max(0.001, Math.abs(candidates[0]!.value as number));
-}
-
-function isGroundDecalUiGameObject(document: EditorSceneDocument, targetId: string): boolean {
-  const gameObject = document.scene.gameObjects.find(candidate => candidate.id === targetId);
-  return isGroundDecalUiConfig(gameObject?.groundDecal);
 }
 
 const LOCAL_EDITOR_ASSET_BRIDGE_ACTIVE_FLAG = '__projectLocalEditorAssetBridgeActive';
@@ -1287,73 +1330,51 @@ export function describeEditorSceneAgentObject(
   if (!gameObject) return null;
   const nodeKind = readEditorSceneNodeKind(gameObject);
   const asset = findEditorSceneAgentAsset(editorScene, gameObject);
-  const prefab = createPaTemplatePrefabAgentSummary(editorScene, gameObject.id);
   const label = gameObject.name || gameObject.id;
+  const prefabSummary = createEditorScenePrefabAgentSummary(editorScene as any, gameObject.id);
+  const bindingCandidates = [
+    {
+      kind: 'scene-node',
+      id: gameObject.id,
+      label,
+      path: `scene.gameObjects.${gameObject.id}`,
+    },
+    ...(asset ? [{
+      kind: 'scene-asset',
+      id: asset.id,
+      label: asset.displayName || asset.id,
+      path: `assets.${asset.id}`,
+    }] : []),
+    ...(prefabSummary ? createEditorSceneAgentPrefabBindingCandidates(prefabSummary) : []),
+  ];
   return {
-    domainKind: prefab ? 'pa-template:prefab-instance' : `pa-template:${nodeKind}`,
-    domainRole: prefab ? 'prefab-instance' : resolveEditorSceneAgentGameplayRole(gameObject),
+    domainKind: prefabSummary ? 'pa-template:prefab-instance' : `pa-template:${nodeKind}`,
+    domainRole: prefabSummary ? 'prefab-instance' : resolveEditorSceneAgentGameplayRole(gameObject),
     functionLabel: label,
-    functionDescription: prefab
-      ? `${label} is a prefab instance of ${prefab.prefabDisplayName || prefab.prefabId} using source asset ${prefab.sourceAssetDisplayName || prefab.sourceAssetId || 'unknown'}.`
+    functionDescription: prefabSummary
+      ? `${label} is a prefab instance from ${prefabSummary.prefabDisplayName ?? prefabSummary.prefabId}.`
       : asset
-      ? `${label} is a ${nodeKind} scene node using asset ${asset.displayName || asset.id}.`
-      : `${label} is a ${nodeKind} scene node in the editable scene document.`,
+        ? `${label} is a ${nodeKind} scene node using asset ${asset.displayName || asset.id}.`
+        : `${label} is a ${nodeKind} scene node in the editable scene document.`,
     domainHints: [
-      prefab
-        ? 'Interpret this as a prefab instance. Prefer editing reusable defaults through prefab override paths when the user asks to change the template.'
+      prefabSummary
+        ? 'Interpret this as a prefab instance. Prefer editing prefab defaults for shared shadow/material behavior before overriding this instance.'
         : `Interpret this as a ${nodeKind} node from pa_template's scene graph.`,
       ...(asset ? [`Asset reference: ${asset.displayName || asset.id}.`] : []),
-      ...(prefab ? [
-        `Prefab definition: ${prefab.prefabDisplayName || prefab.prefabId}.`,
-        `Prefab relation status: ${prefab.status}.`,
-      ] : []),
+      ...(prefabSummary?.sourceAssetId ? [`Prefab source asset: ${prefabSummary.sourceAssetDisplayName ?? prefabSummary.sourceAssetId}.`] : []),
     ],
-    bindingCandidates: [
-      {
-        kind: 'scene-node',
-        id: gameObject.id,
-        label,
-        path: `scene.gameObjects.${gameObject.id}`,
-      },
-      ...(prefab ? [{
-        kind: 'prefab-definition',
-        id: prefab.prefabId,
-        label: prefab.prefabDisplayName || prefab.prefabId,
-        path: `assets.${prefab.prefabId}`,
-      }, ...(prefab.sourceAssetId ? [{
-        kind: 'prefab-source-asset',
-        id: prefab.sourceAssetId,
-        label: prefab.sourceAssetDisplayName || prefab.sourceAssetId,
-        path: `assets.${prefab.sourceAssetId}`,
-      }] : []), ...prefab.materialTargets.map(target => ({
-        kind: 'prefab-material-override-target',
-        id: target.slotId || target.ownerNodePath || target.bindingPath,
-        label: target.label,
-        path: `assets.${prefab.prefabId}.${target.bindingPath}`,
-      }))] : []),
-      ...(asset ? [{
-        kind: 'scene-asset',
-        id: asset.id,
-        label: asset.displayName || asset.id,
-        path: `assets.${asset.id}`,
-      }] : []),
-    ],
+    bindingCandidates,
     sourceRefs: [
       {
         kind: 'scene-document',
         path: 'scene.gameObjects',
         label,
       },
-      ...(prefab ? [{
-        kind: 'scene-document',
-        path: `assets.${prefab.prefabId}.prefab`,
-        label: prefab.prefabDisplayName || prefab.prefabId,
-      }] : []),
     ],
     metadata: {
       nodeKind,
-      ...(prefab ? { prefab: toEditorSceneAgentJsonValue(prefab) } : {}),
       ...(asset ? { assetId: asset.id, assetDisplayName: asset.displayName || asset.id } : {}),
+      ...(prefabSummary ? { prefab: toEditorSceneAgentJsonObject(prefabSummary) } : {}),
     },
   };
 }
@@ -1366,8 +1387,8 @@ export function describeEditorSceneAgentObjectSet(
   if (gameObjects.length === 0) return null;
   const nodeKinds = [...new Set(gameObjects.map(readEditorSceneNodeKind))];
   const prefabSummaries = gameObjects
-    .map(gameObject => createPaTemplatePrefabAgentSummary(editorScene, gameObject.id))
-    .filter((prefab): prefab is NonNullable<ReturnType<typeof createEditorScenePrefabAgentSummary>> => !!prefab);
+    .map(gameObject => createEditorScenePrefabAgentSummary(editorScene as any, gameObject.id))
+    .filter((summary): summary is NonNullable<typeof summary> => !!summary);
   return {
     domainKind: 'pa-template:scene-object-set',
     domainRole: 'selection',
@@ -1376,9 +1397,6 @@ export function describeEditorSceneAgentObjectSet(
     domainHints: [
       'Consider these nodes together before proposing scene edits or gameplay bindings.',
       `Selected node kinds: ${nodeKinds.join(', ')}.`,
-      ...(prefabSummaries.length > 0
-        ? [`Selected prefab instances: ${prefabSummaries.map(prefab => prefab.prefabDisplayName || prefab.prefabId).join(', ')}.`]
-        : []),
     ],
     relationshipHints: [{
       type: 'selection',
@@ -1394,20 +1412,36 @@ export function describeEditorSceneAgentObjectSet(
     metadata: {
       objectCount: gameObjects.length,
       nodeKinds,
-      ...(prefabSummaries.length > 0 ? { prefabs: toEditorSceneAgentJsonValue(prefabSummaries) } : {}),
+      ...(prefabSummaries.length > 0 ? { prefabs: prefabSummaries.map(toEditorSceneAgentJsonObject) } : {}),
     },
   };
 }
 
-function toEditorSceneAgentJsonValue(value: unknown): any {
-  return value;
+function toEditorSceneAgentJsonObject<T extends object>(value: T): EditorSceneAgentJsonObject {
+  return structuredClone(value) as unknown as EditorSceneAgentJsonObject;
 }
 
-function createPaTemplatePrefabAgentSummary(
-  editorScene: EditorSceneDocument,
-  objectId: string,
-): ReturnType<typeof createEditorScenePrefabAgentSummary> {
-  return createEditorScenePrefabAgentSummary(editorScene as never, objectId);
+function createEditorSceneAgentPrefabBindingCandidates(prefabSummary: NonNullable<ReturnType<typeof createEditorScenePrefabAgentSummary>>) {
+  return [
+    {
+      kind: 'prefab-definition',
+      id: prefabSummary.prefabId,
+      label: prefabSummary.prefabDisplayName ?? prefabSummary.prefabId,
+      path: `assets.${prefabSummary.prefabId}`,
+    },
+    ...(prefabSummary.sourceAssetId ? [{
+      kind: 'prefab-source-asset',
+      id: prefabSummary.sourceAssetId,
+      label: prefabSummary.sourceAssetDisplayName ?? prefabSummary.sourceAssetId,
+      path: `assets.${prefabSummary.sourceAssetId}`,
+    }] : []),
+    ...prefabSummary.materialTargets.map(target => ({
+      kind: 'prefab-material-override-target',
+      id: target.slotId ?? target.ownerNodePath ?? target.bindingPath,
+      label: target.label,
+      path: `assets.${prefabSummary.prefabId}.${target.bindingPath}`,
+    })),
+  ];
 }
 
 function describeEditorSceneAgentRegionBinding(
