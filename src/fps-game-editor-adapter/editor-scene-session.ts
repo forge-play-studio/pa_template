@@ -21,6 +21,8 @@ import {
   type SerializedObject,
   type SerializedPropertyPatch,
   type PlayableLocalEditorMarkerGraphCommand,
+  type PlayableLocalEditorMultiPropertyCapabilityInput,
+  type PlayableLocalEditorMultiPropertyPatchInput,
   combineEditorTransforms,
   createIdentityEditorTransform,
   getTopLevelSceneGraphNodeIds,
@@ -7566,6 +7568,74 @@ export function applyEditorSceneSerializedPropertyPatch(
     patch,
     validateField: validateEditorSceneSerializedPropertyField,
   });
+}
+
+export function canCreateEditorSceneSerializedMultiPropertyPatch(
+  input: PlayableLocalEditorMultiPropertyCapabilityInput<EditorSceneDocument>,
+): boolean {
+  return getEditorSceneSerializedMultiPropertyPatchTargets({
+    document: input.document,
+    targetIds: input.targetIds,
+    activeId: input.activeId,
+    path: input.path,
+    value: getEditorSceneSerializedMultiPropertyProbeValue(input.path),
+  }).length > 0;
+}
+
+export function createEditorSceneSerializedMultiPropertyPatch(
+  input: PlayableLocalEditorMultiPropertyPatchInput<EditorSceneDocument>,
+): { patch: EditorSceneDocumentPatch; label: string; changedIds: string[]; reprojectIds?: string[] } | null {
+  if (!isEditorSceneSerializedMultiFieldPath(input.path)) return null;
+  const targetIds = getEditorSceneSerializedMultiPropertyPatchTargets(input);
+  if (targetIds.length === 0) return null;
+  return {
+    label: `Patch ${targetIds.length} GameObjects ${input.path}`,
+    patch: {
+      kind: 'game-object.field-batch',
+      fields: targetIds.map((targetId) => ({
+        targetId,
+        path: input.path,
+        value: input.value,
+      })),
+    },
+    changedIds: targetIds,
+    ...(isEditorSceneShadowProjectionPath(input.path) ? { reprojectIds: targetIds } : {}),
+  };
+}
+
+function getEditorSceneSerializedMultiPropertyPatchTargets(
+  input: Pick<PlayableLocalEditorMultiPropertyPatchInput<EditorSceneDocument>, 'document' | 'targetIds' | 'activeId' | 'path' | 'value'>,
+): string[] {
+  if (!isEditorSceneSerializedMultiFieldPath(input.path)) return [];
+  return input.targetIds.filter((targetId) => {
+    if (isEditorSceneShadowProjectionPath(input.path)) {
+      const gameObject = findEditorSceneGameObject(input.document, targetId);
+      if (!gameObject || isEditorSceneCameraGameObject(gameObject) || isEditorSceneLightGameObject(gameObject)) return false;
+    }
+    return !!createEditorSceneInspectorPropertyPatch({
+      document: input.document,
+      targetId,
+      path: input.path,
+      value: input.value,
+    });
+  });
+}
+
+function getEditorSceneSerializedMultiPropertyProbeValue(path: string): unknown {
+  if (path === 'enabled') return false;
+  if (path === 'shadow.cast' || path === 'shadow.receive') return 'none';
+  if (path === 'shadow.mode') return 'none';
+  if (path === 'shadow.quality') return 'medium';
+  if (path === 'metadata.shadowInspectorLanguage') return 'en';
+  return undefined;
+}
+
+function isEditorSceneSerializedMultiFieldPath(path: string): boolean {
+  return isEditorSceneShadowProjectionPath(path) || path === 'enabled' || path === 'metadata.shadowInspectorLanguage';
+}
+
+function isEditorSceneShadowProjectionPath(path: string): boolean {
+  return path === 'shadowMode' || path.startsWith('shadow.');
 }
 
 export function addAssetLibraryItemToEditorSceneDocument(
