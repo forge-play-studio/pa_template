@@ -5099,7 +5099,7 @@ function createGroundDecalLayoutInspectorLayer(layer: GroundDecalUiLayer, index:
 }
 
 function isProjectEditableGroundDecalLayer(layer: GroundDecalUiLayer): boolean {
-  return layer.role !== 'border';
+  return layer.role !== 'base' && layer.role !== 'border';
 }
 
 function createGroundDecalLayerLabel(layer: GroundDecalUiLayer): string {
@@ -6827,7 +6827,7 @@ function normalizeGroundDecalLayoutPatchValue(value: unknown): GroundDecalLayout
 function normalizeGroundDecalLayoutLayerPatch(value: unknown, index: number): GroundDecalLayoutLayerPatch | null {
   const source = readEditorSceneRecord(value);
   if (!source) return null;
-  if (source.role === 'border' || source.id === 'border') return null;
+  if (source.role === 'base' || source.role === 'border' || source.id === 'base' || source.id === 'border') return null;
   const id = readEditorSceneString(source.id) ?? `layer_${index}`;
   const rect = normalizeGroundDecalLayoutRect(source.rect);
   return rect ? { id, rect } : null;
