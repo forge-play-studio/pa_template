@@ -5070,13 +5070,14 @@ function createGroundDecalInspectorProperties(
 }
 
 function createGroundDecalLayoutInspectorValue(decal: GroundDecalUiConfig): Record<string, unknown> {
+  const projectEditableLayers = decal.layers.filter(isProjectEditableGroundDecalLayer);
   return {
     textureSize: {
       width: decal.rendering?.textureWidth ?? 512,
       height: decal.rendering?.textureHeight ?? 512,
     },
     mask: decal.mask,
-    layers: decal.layers.map((layer, index) => createGroundDecalLayoutInspectorLayer(layer, index)),
+    layers: projectEditableLayers.map((layer, index) => createGroundDecalLayoutInspectorLayer(layer, index)),
   };
 }
 
@@ -5092,9 +5093,13 @@ function createGroundDecalLayoutInspectorLayer(layer: GroundDecalUiLayer, index:
     editable: true,
     zOrder: layer.zOrder,
     ...(typeof layer.opacity === 'number' ? { opacity: layer.opacity } : {}),
-    ...(layer.role === 'border' || layer.role === 'mainLogo' || layer.role === 'subLogo' ? { scaleMode: 'uniform' } : {}),
+    ...(layer.role === 'mainLogo' || layer.role === 'subLogo' ? { scaleMode: 'uniform' } : {}),
     preview: createGroundDecalLayerPreview(layer),
   };
+}
+
+function isProjectEditableGroundDecalLayer(layer: GroundDecalUiLayer): boolean {
+  return layer.role !== 'border';
 }
 
 function createGroundDecalLayerLabel(layer: GroundDecalUiLayer): string {
@@ -6822,6 +6827,7 @@ function normalizeGroundDecalLayoutPatchValue(value: unknown): GroundDecalLayout
 function normalizeGroundDecalLayoutLayerPatch(value: unknown, index: number): GroundDecalLayoutLayerPatch | null {
   const source = readEditorSceneRecord(value);
   if (!source) return null;
+  if (source.role === 'border' || source.id === 'border') return null;
   const id = readEditorSceneString(source.id) ?? `layer_${index}`;
   const rect = normalizeGroundDecalLayoutRect(source.rect);
   return rect ? { id, rect } : null;
@@ -6878,6 +6884,7 @@ function patchEditorSceneGroundDecalLayoutGameObject(
     groundDecal: {
       ...decal,
       layers: decal.layers.map((layer, index) => {
+        if (!isProjectEditableGroundDecalLayer(layer)) return layer;
         const patch = patchById.get(layer.id) ?? patches[index];
         return patch ? { ...layer, rect: patch.rect } : layer;
       }),
