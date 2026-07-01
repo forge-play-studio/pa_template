@@ -197,6 +197,19 @@ import {
   isEditorSceneTrsTransformComponent,
   readEditorSceneNodeKind,
 } from './editor-scene-document';
+import {
+  createEditorSceneMarkerGraphPatch,
+  createEditorSceneMarkerTargetUpdateCommand,
+  createEditorSceneMarkerTypeUpdateCommand,
+  getEditorSceneMarkerGraph,
+  getEditorSceneMarkerTypeCatalog,
+  getEditorSceneRelationTypeCatalog,
+  isEditorSceneMarkerGameObject,
+  migrateEditorSceneMarkerGraphMarkersToGameObjects,
+  reduceEditorSceneMarkerGraphPatch,
+  resolveEditorSceneMarkerKind,
+  syncEditorSceneMarkerGraphDocument,
+} from './editor-scene-marker-graph';
 import { resolveSceneNodeFieldSchema } from './scene-node-field-schema';
 import {
   DEFAULT_DIRECTIONAL_LIGHT_DIRECTION,
@@ -211,6 +224,16 @@ import {
   normalizeDirectionalLightAngleValue,
 } from './editor-lighting-utils';
 import { getActiveRenderingProfile } from '../rendering/editor-rendering-profile-store';
+
+export {
+  createEditorSceneMarkerGraphPatch,
+  getEditorSceneMarkerGraph,
+  getEditorSceneMarkerTypeCatalog,
+  getEditorSceneRelationTypeCatalog,
+  migrateEditorSceneMarkerGraphMarkersToGameObjects,
+  resolveEditorSceneMarkerKind,
+  syncEditorSceneMarkerGraphDocument,
+};
 
 type EditorTransformSnapshot = EditorTransformTrsSnapshot;
 
@@ -1188,9 +1211,11 @@ export function reduceEditorSceneDocument(
   document: EditorSceneDocument,
   command: DocumentCommand<EditorSceneDocument, EditorSceneDocumentPatch>,
 ): EditorSceneDocument {
-  return ensureEditorSceneGameObjectGuids(
-    normalizeEditorSceneRootTransformDocument(
-      reduceEditorSceneDocumentUnchecked(document, command),
+  return syncEditorSceneMarkerGraphDocument(
+    ensureEditorSceneGameObjectGuids(
+      normalizeEditorSceneRootTransformDocument(
+        reduceEditorSceneDocumentUnchecked(document, command),
+      ),
     ),
   );
 }
@@ -1285,6 +1310,9 @@ function reduceEditorSceneDocumentUnchecked(
     }
     if (command.patch.kind === 'game-object.rendering-alpha-index-migration') {
       return patchEditorSceneRenderingAlphaIndexMigration(document, command.patch);
+    }
+    if (command.patch.kind === 'scene.marker-graph') {
+      return reduceEditorSceneMarkerGraphPatch(document, command.patch.command);
     }
   }
   return reducePlayableEditorSceneDocumentMutation(
@@ -1432,7 +1460,7 @@ export function ensureEditorSceneEnvironmentDefaults(document: EditorSceneDocume
   gameObjects = importedMaterialDefaults.gameObjects;
   changed = changed || importedMaterialDefaults.changed;
 
-  return changed
+  const nextDocument = changed
     ? {
         ...documentWithGuids,
         scene: {
@@ -1442,6 +1470,7 @@ export function ensureEditorSceneEnvironmentDefaults(document: EditorSceneDocume
         },
       }
     : documentWithGuids;
+  return syncEditorSceneMarkerGraphDocument(nextDocument);
 }
 
 export function repairEditorSceneMaterialAssetsFromSceneConfig(
@@ -1861,8 +1890,16 @@ export function getEditorSceneHierarchyItems(document: EditorSceneDocument): Sce
   const gameObjectsById = new Map(document.scene.gameObjects.map(gameObject => [gameObject.id, gameObject]));
   const result: SceneGraphTreeItem[] = [];
   for (const item of items) {
-    result.push(item);
     const gameObject = gameObjectsById.get(item.id);
+    const nextItem = gameObject && isEditorSceneMarkerGameObject(gameObject)
+      ? {
+          ...item,
+          role: 'marker' as const,
+          icon: 'view-overlay',
+          canHaveChildren: false,
+        }
+      : item;
+    result.push(nextItem);
     if (!gameObject || readEditorSceneNodeKind(gameObject) === 'primitive') continue;
     const slots = collectEditorSceneChildMaterialSlots(document, gameObject);
     for (const [slotIndex, slot] of slots.entries()) {
@@ -2142,7 +2179,8 @@ export function getEditorSceneInspectorObject(
     selection: {
       targetIds: [gameObject.id],
       activeId: gameObject.id,
-      targetKind: readEditorSceneNodeKind(gameObject),
+      targetKind: isEditorSceneMarkerGameObject(gameObject) ? 'marker' : readEditorSceneNodeKind(gameObject),
+      ...(isEditorSceneMarkerGameObject(gameObject) ? { capabilities: ['markerGraph'] } : {}),
       document,
     },
     sections: createEditorSceneInspectorSections(document, gameObject, context),
@@ -2402,7 +2440,7 @@ export function getEditorScenePrefabStageInspectorObject(
     ? createEditorScenePrefabMaterialOverrideInspectorSection(document, prefabAsset, materialOverrideTarget, context)
     : null;
   const sourceStructureSection = selectedItem
-    ? createEditorScenePrefabSourceStructureInspectorSection(document, descriptor, selectedItem, context)
+    ? createEditorScenePrefabSourceStructureInspectorSection(document, selectedItem, context)
     : null;
   return {
     targetIds: [prefabAsset.id],
@@ -2758,7 +2796,6 @@ function createPrefabStageEditableProperty(input: {
 
 function createEditorScenePrefabSourceStructureInspectorSection(
   document: EditorSceneDocument,
-  descriptor: { assetId: string; sourceAssetId?: string },
   selectedItem: EditorScenePrefabStageStructureItem,
   context: EditorScenePrefabStageContext,
 ): InspectorSection<EditorSceneDocument> | null {
@@ -3017,8 +3054,36 @@ export function createEditorSceneInspectorPropertyPatch(
   }
   if (assetMeshTarget && !isEditorSceneAssetMeshWritablePath(path)) return null;
   if (isEditorSceneRootTransformPath(targetId, path)) return null;
+  if (path === 'marker.target.objectId' && isEditorSceneMarkerGameObject(gameObject) && typeof value === 'string') {
+    const command = createEditorSceneMarkerTargetUpdateCommand(input.document, targetId, value);
+    if (!command) return null;
+    return {
+      label: `Patch ${targetId} marker.target`,
+      patch: {
+        kind: 'scene.marker-graph',
+        command,
+      },
+      changedId: targetId,
+      changedIds: [targetId],
+      reprojectIds: [targetId],
+    };
+  }
   if (!validateEditorSceneInspectorValue(input.document, gameObject, path, value).ok) return null;
   if (isBlockedEditorSceneSystemFieldPatch(input.document, targetId, path, value)) return null;
+  if (path === 'marker.type' && isEditorSceneMarkerGameObject(gameObject) && typeof value === 'string') {
+    const command = createEditorSceneMarkerTypeUpdateCommand(input.document, targetId, value);
+    if (!command) return null;
+    return {
+      label: `Patch ${targetId} marker.type`,
+      patch: {
+        kind: 'scene.marker-graph',
+        command,
+      },
+      changedId: targetId,
+      changedIds: [targetId],
+      reprojectIds: [targetId],
+    };
+  }
   if (isDirectionalLightAnglePath(path) && typeof value === 'number' && Number.isFinite(value)) {
     return {
       label: `Patch ${targetId} ${path}`,
@@ -4727,14 +4792,26 @@ function createEditorSceneInspectorSections(
       collapsedByDefault: false,
       properties: createLightInspectorProperties(nodeKind, gameObject, light),
     });
-    if (light.type === 'directional') {
+  if (light.type === 'directional') {
       const shadowSummarySection = createDirectionalLightShadowSummaryInspectorSection(light, lightText);
       if (shadowSummarySection) sections.push(shadowSummarySection);
     }
   }
+  if (nodeKind === 'transform' && isEditorSceneMarkerGameObject(gameObject)) {
+    sections.push(createMarkerInspectorSection(document, gameObject, nodeKind));
+  }
   const prefabInstanceSection = createPrefabInstanceInspectorSection(document, gameObject);
   if (prefabInstanceSection) sections.push(prefabInstanceSection);
-  if (nodeKind === 'instance' || nodeKind === 'primitive' || (nodeKind === 'transform' && !isEditorSceneCameraGameObject(gameObject) && !isEditorSceneLightGameObject(gameObject))) {
+  if (
+    nodeKind === 'instance'
+    || nodeKind === 'primitive'
+    || (
+      nodeKind === 'transform'
+      && !isEditorSceneCameraGameObject(gameObject)
+      && !isEditorSceneLightGameObject(gameObject)
+      && !isEditorSceneMarkerGameObject(gameObject)
+    )
+  ) {
     sections.push(...createArtistMaterialInspectorSections(document, gameObject, nodeKind, context));
     const outlineEffect = gameObject.overrides?.outline ? 'active' : 'default';
     const outlineDisabledReason = outlineEffect === 'default' ? OUTLINE_DEFAULT_DISABLED_REASON : undefined;
@@ -5486,6 +5563,185 @@ function createEditorSceneAssetMeshInspectorSections(
       properties,
     },
   ];
+}
+
+function createMarkerInspectorSection(
+  document: EditorSceneDocument,
+  gameObject: EditorSceneGameObject & { marker: NonNullable<EditorSceneGameObject['marker']> },
+  nodeKind: SceneNodeConfig['kind'],
+): InspectorSection<EditorSceneDocument> {
+  const marker = gameObject.marker;
+  const markerKind = resolveEditorSceneMarkerKind(document, marker.type, marker.kind);
+  const markerTypeOptions = createMarkerTypeInspectorOptions(document, marker.type);
+  const markerTarget = readMarkerTargetRefForInspector(marker);
+  const markerTargetObjectId = markerTarget?.kind === 'scene-object' ? markerTarget.id : '';
+  const markerTargetOptions = createMarkerTargetInspectorOptions(document, gameObject.id, markerTargetObjectId);
+  const properties: InspectorProperty<EditorSceneDocument>[] = [
+    createDocumentInspectorProperty(document, nodeKind, {
+      path: 'marker.type',
+      label: '标记类型',
+      valueType: 'enum',
+      control: markerTypeOptions.length > 0 ? 'enum' : 'string',
+      value: marker.type,
+      options: markerTypeOptions.length > 0 ? markerTypeOptions : undefined,
+      commitMode: 'change',
+      order: 0,
+    }),
+    createReadonlyInspectorProperty('marker.kind', '空间类别', formatMarkerKindLabel(markerKind), 1),
+    createDocumentInspectorProperty(document, nodeKind, {
+      path: 'marker.tags',
+      label: '标签',
+      valueType: 'string',
+      control: 'string',
+      value: marker.tags?.join(', ') ?? '',
+      commitMode: 'blur',
+      placeholder: '标签, 另一个标签',
+      order: 2,
+    }),
+    createDocumentInspectorProperty(document, nodeKind, {
+      path: 'marker.color',
+      label: '颜色',
+      valueType: 'color',
+      control: 'color',
+      value: marker.color ?? { r: 0.1, g: 0.85, b: 1 },
+      commitMode: 'immediate',
+      order: 3,
+    }),
+    createDocumentInspectorProperty(document, nodeKind, {
+      path: 'marker.note',
+      label: '备注',
+      valueType: 'string',
+      control: 'string',
+      value: marker.note ?? '',
+      commitMode: 'blur',
+      placeholder: '可选标记备注',
+      order: 4,
+    }),
+    createReadonlyInspectorProperty('marker.geometry.kind', '几何', formatMarkerGeometryKindLabel(marker.geometry.kind), 5),
+    createDocumentInspectorProperty(document, nodeKind, {
+      path: 'marker.target.objectId',
+      label: '绑定对象',
+      valueType: 'enum',
+      control: 'enum',
+      value: markerTargetObjectId,
+      options: markerTargetOptions,
+      commitMode: 'change',
+      order: 6,
+    }),
+    createReadonlyInspectorProperty(
+      'marker.target.status',
+      '绑定状态',
+      formatMarkerTargetStatusLabel(document, markerTarget),
+      7,
+    ),
+  ];
+  return {
+    id: 'marker',
+    title: '标记',
+    order: 35,
+    placement: 'body',
+    persistence: 'document',
+    summary: getMarkerTypeInspectorSummary(document, marker.type),
+    collapsedByDefault: false,
+    properties,
+  };
+}
+
+function createMarkerTypeInspectorOptions(
+  document: EditorSceneDocument,
+  currentType: string,
+): Array<{ label: string; value: string }> {
+  const options = [
+    { label: '未选择', value: '' },
+    ...getEditorSceneMarkerTypeCatalog(document).map(definition => ({
+      label: formatMarkerTypeLabel(definition.type, definition.label || definition.type),
+      value: definition.type,
+    })),
+  ];
+  if (currentType && !options.some(option => option.value === currentType)) {
+    options.push({ label: formatMarkerTypeLabel(currentType, currentType), value: currentType });
+  }
+  return options;
+}
+
+function createMarkerTargetInspectorOptions(
+  document: EditorSceneDocument,
+  markerId: string,
+  currentObjectId: string,
+): Array<{ label: string; value: string }> {
+  const options = [
+    { label: '未绑定', value: '' },
+    ...document.scene.gameObjects
+      .filter(gameObject => gameObject.id !== markerId && !isEditorSceneMarkerGameObject(gameObject))
+      .map(gameObject => ({
+        label: gameObject.name || gameObject.id,
+        value: gameObject.id,
+      })),
+  ];
+  if (currentObjectId && !options.some(option => option.value === currentObjectId)) {
+    options.push({ label: `缺失: ${currentObjectId}`, value: currentObjectId });
+  }
+  return options;
+}
+
+function getMarkerTypeInspectorSummary(
+  document: EditorSceneDocument,
+  currentType: string,
+): string {
+  if (!currentType.trim()) return '未选择';
+  const definition = getEditorSceneMarkerTypeCatalog(document).find(candidate => candidate.type === currentType);
+  return formatMarkerTypeLabel(currentType, definition?.label || currentType);
+}
+
+function formatMarkerTypeLabel(type: string, fallback: string): string {
+  switch (type) {
+    case 'collection-area': return '采集区域';
+    case 'trade-zone': return '交易区';
+    case 'entrance': return '入口';
+    case 'exit': return '出口';
+    case 'effect-socket': return '特效挂点';
+    default: return fallback;
+  }
+}
+
+function formatMarkerKindLabel(kind: string): string {
+  switch (kind) {
+    case 'region': return '区域';
+    case 'point': return '点';
+    case 'anchor': return '锚点';
+    case 'object': return '对象绑定';
+    default: return kind;
+  }
+}
+
+function formatMarkerGeometryKindLabel(kind: string): string {
+  switch (kind) {
+    case 'box': return '盒体';
+    case 'point': return '点';
+    case 'object-bounds': return '对象包围盒';
+    case 'polyhedron': return '多面体';
+    default: return kind;
+  }
+}
+
+function readMarkerTargetRefForInspector(
+  marker: NonNullable<EditorSceneGameObject['marker']>,
+): { kind: string; id: string; label?: string } | null {
+  if (marker.target) return structuredClone(marker.target);
+  if (marker.geometry.kind === 'point' && marker.geometry.target) return structuredClone(marker.geometry.target);
+  if (marker.geometry.kind === 'object-bounds') return structuredClone(marker.geometry.target);
+  return null;
+}
+
+function formatMarkerTargetStatusLabel(
+  document: EditorSceneDocument,
+  target: { kind: string; id: string } | null,
+): string {
+  if (!target) return '未绑定';
+  if (target.kind !== 'scene-object') return `不支持目标: ${target.kind}`;
+  return document.scene.gameObjects.some(gameObject => gameObject.id === target.id)
+    ? '正常'
+    : '目标缺失';
 }
 
 function createArtistMaterialBindingSummary(
@@ -6355,6 +6611,15 @@ function validateProjectEditorSceneInspectorField(input: {
       ? { ok: true, value: input.value }
       : { ok: false, message: `Invalid value for scene node field: ${input.path}.` };
   }
+  if (input.path === 'marker.target.objectId') {
+    if (typeof input.value !== 'string') return { ok: false, message: 'Marker target must be a scene object id.' };
+    const objectId = input.value.trim();
+    if (!objectId) return { ok: true, value: '' };
+    const target = input.document?.scene.gameObjects.find(gameObject => gameObject.id === objectId) ?? null;
+    return target && !isEditorSceneMarkerGameObject(target)
+      ? { ok: true, value: objectId }
+      : { ok: false, message: `Marker target object not found: ${objectId}.` };
+  }
   return null;
 }
 
@@ -6419,6 +6684,19 @@ function normalizeEditorSceneInspectorValue(path: string, value: unknown): unkno
   if (isDirectionalLightAnglePath(path)) {
     return normalizeDirectionalLightAngleValue(path, value);
   }
+  if (path === 'marker.type' && typeof value === 'string') {
+    return value.trim();
+  }
+  if (path === 'marker.target.objectId' && typeof value === 'string') {
+    return value.trim();
+  }
+  if (path === 'marker.tags') {
+    return normalizeMarkerTagsInspectorValue(value);
+  }
+  if (path === 'marker.note' && typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed ? trimmed : null;
+  }
   if (
     (
       path === 'overrides.materialBinding.materialAssetId'
@@ -6437,6 +6715,18 @@ function normalizeEditorSceneInspectorValue(path: string, value: unknown): unkno
     return trimmed ? trimmed : null;
   }
   return normalizePlayableEditorSceneFieldInspectorValue(path, value);
+}
+
+function normalizeMarkerTagsInspectorValue(value: unknown): string[] | null {
+  const tags = Array.isArray(value)
+    ? value
+    : typeof value === 'string'
+      ? value.split(',')
+      : [];
+  const normalized = tags
+    .map(tag => typeof tag === 'string' ? tag.trim() : '')
+    .filter((tag, index, all) => tag.length > 0 && all.indexOf(tag) === index);
+  return normalized.length > 0 ? normalized : null;
 }
 
 const EDITOR_SCENE_FIELD_MUTATION_OPTIONS: PlayableEditorSceneFieldMutationOptions<EditorSceneDocument, EditorSceneGameObject> = {

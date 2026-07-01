@@ -9,6 +9,7 @@ import type {
 import type {
   SceneConfig,
 } from '../config';
+import { syncEditorSceneMarkerGraphDocument } from './editor-scene-session';
 
 export const EDITOR_SCENE_COMPILER_ID = PLAYABLE_EDITOR_SCENE_COMPILER_ID;
 export const EDITOR_SCENE_COMPILER_VERSION = PLAYABLE_EDITOR_SCENE_COMPILER_VERSION;
@@ -28,5 +29,8 @@ export function compileEditorSceneDocumentToSceneConfig(
   editorDocument: EditorSceneDocument,
   baseSceneConfig: SceneConfig,
 ): CompileEditorSceneResult {
-  return compileSdkEditorSceneDocumentToSceneConfig(editorDocument, baseSceneConfig);
+  return compileSdkEditorSceneDocumentToSceneConfig(
+    syncEditorSceneMarkerGraphDocument(editorDocument),
+    baseSceneConfig,
+  );
 }

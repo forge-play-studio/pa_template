@@ -30,6 +30,7 @@ import { AssetLoader } from './AssetLoader';
 import { ModelPool } from './ModelPool';
 import { RenderingService } from './RenderingService';
 import { ShadowService } from './ShadowService';
+import { createGroundDecalUiDynamicTexture, isGroundDecalUiConfig } from './GroundDecalUiService';
 import { applyMaterialDebugAdjustments } from '../utils/materialDebugAdjust';
 
 import renderingConfig from '../config/rendering.json';
@@ -37,6 +38,7 @@ import {
   configService,
   type ArtistMaterialProfile,
   type ColorRGB,
+  type GroundDecalUiConfig,
   type MaterialOverrideConfig,
   type OutlineOverrideConfig,
   type SceneAssetConfig,
@@ -60,10 +62,14 @@ import {
   applyArtistMaterialProfileToRuntimeMaterial as applyPlayableArtistMaterialProfileToRuntimeMaterial,
   applyPlayableBabylonOutlineOverrideToRuntimeNode,
   applyMaterialValueToRuntimeMaterial,
+  createMaterialSlotOwnerPathMatchKey,
+  isMaterialSlotOwnerPathMatch,
+  normalizeMaterialSlotOwnerPath,
   resolveEditorSceneGameObjectRendering,
   resolveEditorSceneArtistMaterialBinding,
   resolveMaterialRuntimeKind,
   resolveMaterialOwnerNode,
+  resolveMaterialSlotOwnerNodes,
 } from '@fps-games/editor/playable-sdk';
 
 const BABYLON_MATERIAL_RUNTIME = { Color3, MaterialPluginBase, Texture };
@@ -100,6 +106,20 @@ export interface SceneRuntimeLightState<TLightConfig extends SceneHemisphericLig
   enabled: boolean;
   source?: SceneRuntimeSourceBinding;
 }
+
+type SceneBuilderMaterialSlotSourceDescriptor = {
+  slotId?: string;
+  ownerNodePath: string;
+  label?: string;
+  nodeIndex?: number;
+  nodeIndexPath?: number[];
+  meshIndex?: number;
+  primitiveIndex?: number;
+  sourceMaterialIndex?: number;
+  sourceMaterialIndices?: number[];
+  materialName?: string;
+  materialNames?: string[];
+};
 
 export class SceneBuilder {
   private scene: Scene;
@@ -758,6 +778,7 @@ export class SceneBuilder {
     if ('roughness' in material) material.roughness = 1;
     if (shape === 'plane') material.backFaceCulling = false;
     runtimeMesh.material = material;
+    (root as any).material = material;
     return root;
   }
 
@@ -1224,7 +1245,21 @@ export class SceneBuilder {
   }
 
   private attachTransformRuntime(nodeConfig: SceneTransformNode, runtimeNode: TransformNode): void {
+    if (nodeConfig.marker) {
+      const marker = structuredClone(nodeConfig.marker);
+      (runtimeNode as any).marker = marker;
+      runtimeNode.metadata = {
+        ...(runtimeNode.metadata && typeof runtimeNode.metadata === 'object' ? runtimeNode.metadata : {}),
+        sceneMarker: marker,
+      };
+    }
+
     if (nodeConfig.transformType !== 'groundDecal' || !nodeConfig.groundDecal) return;
+    if (isGroundDecalUiConfig(nodeConfig.groundDecal)) {
+      this.attachGroundDecalUiRuntime(nodeConfig, runtimeNode, nodeConfig.groundDecal);
+      return;
+    }
+
     const legacyGroundDecal = readLegacyGroundDecalConfig(nodeConfig.groundDecal);
     if (!legacyGroundDecal) return;
 
@@ -1261,6 +1296,49 @@ export class SceneBuilder {
     (runtimeNode as any).material = mat;
   }
 
+  private attachGroundDecalUiRuntime(
+    nodeConfig: SceneTransformNode,
+    runtimeNode: TransformNode,
+    decal: GroundDecalUiConfig,
+  ): void {
+    const mesh = runtimeNode as any;
+    mesh.isPickable = false;
+    mesh.receiveShadows = false;
+    mesh.alphaIndex = decal.rendering?.alphaIndex ?? 100;
+    mesh.metadata = {
+      ...(mesh.metadata ?? {}),
+      disableBlobShadow: true,
+      disableStaticProjectedShadow: true,
+      disablePlanarShadow: true,
+      groundDecalUi: {
+        nodeId: nodeConfig.id,
+        uiKind: decal.uiKind,
+      },
+    };
+
+    const mat = new StandardMaterial(`${nodeConfig.id}_ground_decal_ui_mat`, this.scene);
+    const { texture } = createGroundDecalUiDynamicTexture(`${nodeConfig.id}_ground_decal_ui_texture`, this.scene, decal);
+    mat.diffuseTexture = texture;
+    mat.useAlphaFromDiffuseTexture = true;
+    mat.diffuseColor = new Color3(1, 1, 1);
+    mat.emissiveColor = new Color3(1, 1, 1);
+    mat.specularColor = new Color3(0, 0, 0);
+    mat.backFaceCulling = false;
+    mat.disableLighting = true;
+    if (typeof decal.rendering?.diffuseTextureLevel === 'number' && Number.isFinite(decal.rendering.diffuseTextureLevel)) {
+      mat.diffuseTexture.level = decal.rendering.diffuseTextureLevel;
+    }
+    if (
+      typeof decal.rendering?.emissiveTextureLevel === 'number'
+      && Number.isFinite(decal.rendering.emissiveTextureLevel)
+      && decal.rendering.emissiveTextureLevel > 0
+    ) {
+      mat.emissiveTexture = texture;
+      mat.emissiveTexture.level = decal.rendering.emissiveTextureLevel;
+    }
+    mesh.material = mat;
+  }
+
   private applySceneNodeRendering(
     nodeConfig: SceneInstanceNode | SceneTransformNode | ScenePrimitiveNode,
     rootNode: TransformNode,
@@ -1271,6 +1349,12 @@ export class SceneBuilder {
       groundDecal: nodeConfig.kind === 'transform' ? nodeConfig.groundDecal : undefined,
     });
     if (!rendering) return null;
+    if (typeof rendering.renderingGroupId === 'number') {
+      (rootNode as any).renderingGroupId = rendering.renderingGroupId;
+    }
+    if (typeof rendering.alphaIndex === 'number') {
+      (rootNode as any).alphaIndex = rendering.alphaIndex;
+    }
     return applyBabylonRenderingToNodeTree(rootNode, rendering, contentRoot);
   }
 
@@ -1422,16 +1506,27 @@ export class SceneBuilder {
       this.applyMaterialBinding(rootNode, '', overrides.materialBinding, nodeConfig.id, asset);
     }
 
-    const materialSlotOwnerPaths = new Set<string>();
+    const materialSlotDescriptors: SceneBuilderMaterialSlotSourceDescriptor[] = [];
     for (const [slotId, materialBinding] of Object.entries(overrides.materialSlotBindings ?? {})) {
-      const ownerNodePath = this.resolveSceneAssetMaterialSlotOwnerPath(asset, slotId);
-      if (!ownerNodePath) continue;
-      this.applyMaterialBinding(rootNode, ownerNodePath, materialBinding, nodeConfig.id, asset);
-      materialSlotOwnerPaths.add(normalizeMaterialSlotOwnerNodePath(ownerNodePath));
+      const materialSlot = this.resolveSceneAssetMaterialSlot(asset, slotId);
+      if (!materialSlot) {
+        this.logMaterialSlotOwnerResolutionFailure(rootNode, {
+          sceneNodeId: nodeConfig.id,
+          asset,
+          slotId,
+          ownerNodePath: '',
+          materialAssetId: readSceneNodeMaterialBindingAssetId(materialBinding),
+          projectionNodeId: nodeConfig.id,
+          reason: 'slot-descriptor-not-found',
+        });
+        continue;
+      }
+      this.applyMaterialSlotBinding(rootNode, materialSlot, materialBinding, nodeConfig.id, asset);
+      materialSlotDescriptors.push(materialSlot);
     }
 
     for (const [ownerNodePath, materialBinding] of Object.entries(overrides.childMaterialBindings ?? {})) {
-      if (materialSlotOwnerPaths.has(normalizeMaterialSlotOwnerNodePath(ownerNodePath))) continue;
+      if (isMaterialOwnerPathEqualToSlotDescriptor(ownerNodePath, materialSlotDescriptors, nodeConfig.id)) continue;
       this.applyMaterialBinding(rootNode, ownerNodePath, materialBinding, nodeConfig.id, asset);
     }
 
@@ -1440,7 +1535,7 @@ export class SceneBuilder {
     }
 
     for (const [ownerNodePath, materialOverride] of Object.entries(overrides.childMaterials ?? {})) {
-      if (isMaterialOwnerPathCoveredBySlots(ownerNodePath, materialSlotOwnerPaths)) continue;
+      if (isMaterialOwnerPathCoveredBySlotDescriptors(ownerNodePath, materialSlotDescriptors, nodeConfig.id)) continue;
       this.applyMaterialOverride(rootNode, ownerNodePath, materialOverride, nodeConfig.id, asset);
     }
 
@@ -1494,6 +1589,31 @@ export class SceneBuilder {
     }
   }
 
+  private applyMaterialSlotBinding(
+    rootNode: TransformNode,
+    materialSlot: SceneBuilderMaterialSlotSourceDescriptor,
+    binding: SceneNodeMaterialBindingConfig,
+    sceneNodeId: string,
+    asset?: SceneAssetConfig,
+  ): void {
+    const ownerNodes = this.resolveMaterialSlotBindingOwnerNodes(rootNode, materialSlot, {
+      sceneNodeId,
+      asset,
+      materialAssetId: readSceneNodeMaterialBindingAssetId(binding),
+    });
+    if (ownerNodes.length === 0) return;
+
+    const { profile } = resolveEditorSceneArtistMaterialBinding(this.getMaterialAssetCatalog(), binding);
+    if (Object.keys(profile).length === 0) return;
+
+    for (const ownerNode of ownerNodes) {
+      if (asset && this.shouldShareAssetMaterials(asset)) {
+        this.detachOverrideMaterial(ownerNode, sceneNodeId, materialSlot.ownerNodePath);
+      }
+      this.applyArtistMaterialProfileToRuntimeMaterial(ownerNode.material, profile);
+    }
+  }
+
   private getMaterialAssetCatalog(): { scene: { materialAssets: NonNullable<ReturnType<typeof configService.getSceneDocument>['scene']>['materialAssets'] } } {
     return {
       scene: {
@@ -1502,22 +1622,47 @@ export class SceneBuilder {
     };
   }
 
-  private resolveSceneAssetMaterialSlotOwnerPath(asset: SceneAssetConfig | undefined, slotId: string): string | null {
+  private resolveSceneAssetMaterialSlot(
+    asset: SceneAssetConfig | undefined,
+    slotId: string,
+  ): SceneBuilderMaterialSlotSourceDescriptor | null {
     const normalizedSlotId = typeof slotId === 'string' ? slotId.trim() : '';
     if (!asset || !normalizedSlotId) return null;
     const materialSlots = Array.isArray(asset.metadata?.materialSlots) ? asset.metadata.materialSlots : [];
     for (const materialSlot of materialSlots) {
-      if (!materialSlot || typeof materialSlot !== 'object' || Array.isArray(materialSlot)) continue;
-      const record = materialSlot as Record<string, unknown>;
+      if (!isRecord(materialSlot)) continue;
+      const record = materialSlot;
       if (typeof record.slotId !== 'string' || record.slotId.trim() !== normalizedSlotId) continue;
-      const ownerNodePath = typeof record.ownerNodePath === 'string'
-        ? record.ownerNodePath.trim()
-        : typeof record.path === 'string'
-          ? record.path.trim()
-          : '';
-      return ownerNodePath || null;
+      return readOptionalSceneBuilderMaterialSlotSourceDescriptor(record, normalizedSlotId);
     }
     return null;
+  }
+
+  private resolveMaterialSlotBindingOwnerNodes(
+    rootNode: TransformNode,
+    materialSlot: SceneBuilderMaterialSlotSourceDescriptor,
+    context: {
+      sceneNodeId: string;
+      asset?: SceneAssetConfig;
+      materialAssetId: string | null;
+    },
+  ): any[] {
+    const ownerNodes = resolveMaterialSlotOwnerNodes(rootNode, materialSlot, {
+      projectionNodeId: context.sceneNodeId,
+    })
+      .filter((ownerNode: any) => !!ownerNode?.material);
+    if (ownerNodes.length > 0) return ownerNodes;
+
+    this.logMaterialSlotOwnerResolutionFailure(rootNode, {
+      sceneNodeId: context.sceneNodeId,
+      asset: context.asset,
+      slotId: materialSlot.slotId ?? '',
+      ownerNodePath: materialSlot.ownerNodePath,
+      materialAssetId: context.materialAssetId,
+      projectionNodeId: context.sceneNodeId,
+      reason: 'owner-node-not-found',
+    });
+    return [];
   }
 
   private resolveMaterialOverrideOwnerNodes(rootNode: TransformNode, ownerNodePath: string): any[] {
@@ -1528,6 +1673,34 @@ export class SceneBuilder {
       ? (ownerNode as any).getChildMeshes(false)
       : [];
     return childMeshes.filter((mesh: any) => !!mesh?.material);
+  }
+
+  private logMaterialSlotOwnerResolutionFailure(
+    rootNode: TransformNode,
+    diagnostic: {
+      sceneNodeId: string;
+      asset?: SceneAssetConfig;
+      slotId: string;
+      ownerNodePath: string;
+      materialAssetId: string | null;
+      projectionNodeId: string;
+      reason: string;
+    },
+  ): void {
+    if (!shouldLogSceneBuilderMaterialDiagnostics()) return;
+    const resolveContext = { projectionNodeId: diagnostic.projectionNodeId };
+    const normalizedOwnerPath = normalizeMaterialSlotOwnerPath(diagnostic.ownerNodePath, resolveContext);
+    console.warn('[SceneBuilder] Material slot owner node not found', {
+      reason: diagnostic.reason,
+      nodeId: diagnostic.sceneNodeId,
+      assetId: diagnostic.asset?.id ?? null,
+      slotId: diagnostic.slotId || null,
+      ownerNodePath: diagnostic.ownerNodePath || null,
+      normalizedOwnerPath,
+      matchKey: createMaterialSlotOwnerPathMatchKey(diagnostic.ownerNodePath, resolveContext),
+      candidateMeshNames: collectMaterialOwnerCandidateNames(rootNode),
+      materialAssetId: diagnostic.materialAssetId,
+    });
   }
 
   private applyArtistMaterialProfileToRuntimeMaterial(material: any, profile: ArtistMaterialProfile): void {
@@ -1563,21 +1736,128 @@ function readFiniteNumber(value: unknown, fallback: number): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 }
 
-function normalizeMaterialSlotOwnerNodePath(ownerNodePath: string): string {
-  return String(ownerNodePath ?? '').split('/').filter(Boolean).join('/');
+function readSceneBuilderMaterialSlotSourceDescriptor(
+  record: Record<string, unknown>,
+  slotId: string,
+  ownerNodePath: string,
+): SceneBuilderMaterialSlotSourceDescriptor {
+  return {
+    slotId,
+    ownerNodePath,
+    ...readOptionalStringProperty(record, 'label'),
+    ...readOptionalIntegerProperty(record, 'nodeIndex'),
+    ...readOptionalIntegerArrayProperty(record, 'nodeIndexPath'),
+    ...readOptionalIntegerProperty(record, 'meshIndex'),
+    ...readOptionalIntegerProperty(record, 'primitiveIndex'),
+    ...readOptionalIntegerProperty(record, 'sourceMaterialIndex'),
+    ...readOptionalIntegerArrayProperty(record, 'sourceMaterialIndices'),
+    ...readOptionalStringProperty(record, 'materialName'),
+    ...readOptionalStringArrayProperty(record, 'materialNames'),
+  };
 }
 
-function isMaterialOwnerPathCoveredBySlots(
+function isMaterialOwnerPathEqualToSlotDescriptor(
   ownerNodePath: string,
-  materialSlotOwnerPaths: ReadonlySet<string>,
+  materialSlots: readonly SceneBuilderMaterialSlotSourceDescriptor[],
+  projectionNodeId: string,
 ): boolean {
-  const normalizedOwnerNodePath = normalizeMaterialSlotOwnerNodePath(ownerNodePath);
-  if (!normalizedOwnerNodePath) return false;
-  for (const slotOwnerPath of materialSlotOwnerPaths) {
-    if (normalizedOwnerNodePath === slotOwnerPath) return true;
-    if (normalizedOwnerNodePath.startsWith(`${slotOwnerPath}/`)) return true;
-  }
-  return false;
+  const resolveContext = { projectionNodeId };
+  const ownerKey = createMaterialSlotOwnerPathMatchKey(ownerNodePath, resolveContext);
+  if (!ownerKey) return false;
+  return materialSlots.some(slot => createMaterialSlotOwnerPathMatchKey(slot.ownerNodePath, resolveContext) === ownerKey);
+}
+
+function isMaterialOwnerPathCoveredBySlotDescriptors(
+  ownerNodePath: string,
+  materialSlots: readonly SceneBuilderMaterialSlotSourceDescriptor[],
+  projectionNodeId: string,
+): boolean {
+  const resolveContext = { projectionNodeId };
+  return materialSlots.some(slot => isMaterialSlotOwnerPathMatch(ownerNodePath, slot.ownerNodePath, resolveContext));
+}
+
+function readSceneNodeMaterialBindingAssetId(binding: SceneNodeMaterialBindingConfig | undefined): string | null {
+  const materialAssetId = typeof binding?.materialAssetId === 'string' ? binding.materialAssetId.trim() : '';
+  return materialAssetId || null;
+}
+
+function collectMaterialOwnerCandidateNames(rootNode: TransformNode): string[] {
+  const candidates = typeof (rootNode as any).getChildMeshes === 'function'
+    ? (rootNode as any).getChildMeshes(false)
+    : [];
+  return candidates
+    .map((node: any) => readRuntimeNodeDisplayName(node))
+    .filter((name: string | null): name is string => !!name)
+    .slice(0, 80);
+}
+
+function readRuntimeNodeDisplayName(node: any): string | null {
+  const name = typeof node?.name === 'string' ? node.name.trim() : '';
+  const id = typeof node?.id === 'string' ? node.id.trim() : '';
+  if (name && id && name !== id) return `${name} (${id})`;
+  return name || id || null;
+}
+
+function shouldLogSceneBuilderMaterialDiagnostics(): boolean {
+  const meta = import.meta as unknown as { env?: { DEV?: boolean; PROD?: boolean; MODE?: string } };
+  if (meta.env?.DEV === true) return true;
+  if (meta.env?.PROD === true) return false;
+  if (meta.env?.MODE === 'production') return false;
+  return true;
+}
+
+function readOptionalStringProperty(
+  record: Record<string, unknown>,
+  key: string,
+): Record<string, string> {
+  const value = typeof record[key] === 'string' ? record[key].trim() : '';
+  return value ? { [key]: value } : {};
+}
+
+function readOptionalStringArrayProperty(
+  record: Record<string, unknown>,
+  key: string,
+): Record<string, string[]> {
+  const values = Array.isArray(record[key])
+    ? record[key].map(value => (typeof value === 'string' ? value.trim() : '')).filter(Boolean)
+    : [];
+  return values.length > 0 ? { [key]: values } : {};
+}
+
+function readOptionalIntegerProperty(
+  record: Record<string, unknown>,
+  key: string,
+): Record<string, number> {
+  const value = record[key];
+  return Number.isInteger(value) ? { [key]: value as number } : {};
+}
+
+function readOptionalIntegerArrayProperty(
+  record: Record<string, unknown>,
+  key: string,
+): Record<string, number[]> {
+  const values = Array.isArray(record[key])
+    ? record[key].filter((value): value is number => Number.isInteger(value))
+    : [];
+  return values.length > 0 ? { [key]: values } : {};
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+
+function readOptionalSceneBuilderMaterialSlotSourceDescriptor(
+  rawSlot: unknown,
+  slotId: string,
+): SceneBuilderMaterialSlotSourceDescriptor | null {
+  if (!isRecord(rawSlot)) return null;
+  const ownerNodePath = typeof rawSlot.ownerNodePath === 'string'
+    ? rawSlot.ownerNodePath.trim()
+    : typeof rawSlot.path === 'string'
+      ? rawSlot.path.trim()
+      : '';
+  if (!ownerNodePath) return null;
+  return readSceneBuilderMaterialSlotSourceDescriptor(rawSlot, slotId, ownerNodePath);
 }
 
 function readPositiveFiniteNumber(value: unknown, fallback: number): number {
