@@ -31,12 +31,17 @@ for (const [index, asset] of scene.scene.assets.entries()) {
 }
 
 for (const [index, gameObject] of editorScene.scene.gameObjects.entries()) {
-  const textureId = gameObject.groundDecal?.textureId;
-  if (typeof textureId !== 'string') continue;
-  const entry = catalogById.get(textureId);
-  assert(entry, `groundDecal gameObject[${index}] textureId must reference catalog`);
-  assert.equal(entry.kind, 'texture', `groundDecal gameObject[${index}] textureId must reference a texture`);
-  assert.doesNotMatch(textureId, /^texture_texture_/, `groundDecal gameObject[${index}] textureId must not be double-prefixed`);
+  const groundDecal = gameObject.groundDecal;
+  if (!groundDecal || typeof groundDecal !== 'object' || Array.isArray(groundDecal)) continue;
+  for (const key of ['version', 'textureId', 'color', 'alphaIndex', 'diffuseTextureLevel', 'emissiveTextureLevel']) {
+    assert.equal(Object.hasOwn(groundDecal, key), false, `groundDecal gameObject[${index}] must not contain removed field ${key}`);
+  }
+  for (const { path, textureId } of collectGroundDecalTextureRefs(groundDecal, `gameObject[${index}].groundDecal`)) {
+    const entry = catalogById.get(textureId);
+    assert(entry, `groundDecal ${path} textureId must reference catalog`);
+    assert.equal(entry.kind, 'texture', `groundDecal ${path} textureId must reference a texture`);
+    assert.doesNotMatch(textureId, /^texture_texture_/, `groundDecal ${path} textureId must not be double-prefixed`);
+  }
 }
 
 await assertEditorAssetLibraryRuntime();
@@ -57,6 +62,21 @@ for (const [relativePath, pattern, shouldMatch] of sourceChecks) {
 }
 
 console.log('editor canonical asset checks passed');
+
+function collectGroundDecalTextureRefs(groundDecal, basePath) {
+  const refs = [];
+  if (groundDecal.mask && typeof groundDecal.mask === 'object' && typeof groundDecal.mask.textureId === 'string') {
+    refs.push({ path: `${basePath}.mask`, textureId: groundDecal.mask.textureId });
+  }
+  if (Array.isArray(groundDecal.layers)) {
+    groundDecal.layers.forEach((layer, index) => {
+      if (layer && typeof layer === 'object' && typeof layer.textureId === 'string') {
+        refs.push({ path: `${basePath}.layers[${index}]`, textureId: layer.textureId });
+      }
+    });
+  }
+  return refs;
+}
 
 async function assertEditorAssetLibraryRuntime() {
   const sourcePath = path.join(root, 'src/fps-game-editor-adapter/editor-asset-library.ts');

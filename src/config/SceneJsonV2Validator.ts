@@ -664,26 +664,7 @@ function validateGroundDecal(value: unknown, path: string, add: (path: string, m
     add(path, 'groundDecal must be an object');
     return;
   }
-  if (value.version === 2) {
-    validateGroundDecalUi(value, path, add);
-    return;
-  }
-  if (!isRecord(value.size)) {
-    add(`${path}.size`, 'groundDecal.size must be an object');
-  } else {
-    for (const key of ['width', 'depth']) {
-      if (typeof value.size[key] !== 'number' || !Number.isFinite(value.size[key]) || value.size[key] <= 0) {
-        add(`${path}.size.${key}`, 'groundDecal size must be a positive finite number');
-      }
-    }
-  }
-  if (value.textureId != null && !nonEmptyString(value.textureId)) add(`${path}.textureId`, 'textureId must be non-empty when present');
-  validateColor(value.color, `${path}.color`, add);
-  for (const key of ['alphaIndex', 'diffuseTextureLevel', 'emissiveTextureLevel']) {
-    if (value[key] != null && (typeof value[key] !== 'number' || !Number.isFinite(value[key]))) {
-      add(`${path}.${key}`, `${key} must be a finite number`);
-    }
-  }
+  validateGroundDecalUi(value, path, add);
 }
 
 function validateGroundDecalUi(value: Record<string, any>, path: string, add: (path: string, message: string) => void): void {

@@ -252,15 +252,49 @@ function validateGroundDecal(value, path, add) {
     add(path, 'groundDecal must be an object');
     return;
   }
-  if (value.size != null) {
-    if (!isObject(value.size)) {
-      add(`${path}.size`, 'groundDecal.size must be an object');
-    } else {
-      for (const key of ['width', 'depth']) {
-        if (typeof value.size[key] !== 'number' || !Number.isFinite(value.size[key])) {
-          add(`${path}.size.${key}`, 'groundDecal size must be a finite number');
-        }
+  if (value.uiKind !== 'operation' && value.uiKind !== 'delivery') {
+    add(`${path}.uiKind`, 'groundDecal uiKind must be operation or delivery');
+  }
+  if (!isObject(value.size)) {
+    add(`${path}.size`, 'groundDecal.size must be an object');
+  } else {
+    for (const key of ['width', 'depth']) {
+      if (typeof value.size[key] !== 'number' || !Number.isFinite(value.size[key]) || value.size[key] <= 0) {
+        add(`${path}.size.${key}`, 'groundDecal size must be a positive finite number');
       }
+    }
+  }
+  if (!Array.isArray(value.layers)) {
+    add(`${path}.layers`, 'groundDecal layers must be an array');
+    return;
+  }
+  value.layers.forEach((layer, index) => validateGroundDecalLayer(layer, `${path}.layers[${index}]`, add));
+}
+
+function validateGroundDecalLayer(value, path, add) {
+  if (!isObject(value)) {
+    add(path, 'groundDecal layer must be an object');
+    return;
+  }
+  if (!nonEmptyString(value.id)) add(`${path}.id`, 'layer.id must be non-empty');
+  if (!['base', 'border', 'mainLogo', 'subLogo', 'amount', 'progressFill'].includes(String(value.role))) {
+    add(`${path}.role`, 'layer.role is invalid');
+  }
+  if (!['texture', 'color', 'progress', 'text'].includes(String(value.kind))) {
+    add(`${path}.kind`, 'layer.kind is invalid');
+  }
+  if (!isObject(value.rect)) {
+    add(`${path}.rect`, 'layer.rect must be an object');
+    return;
+  }
+  for (const key of ['x', 'z', 'width', 'depth']) {
+    if (typeof value.rect[key] !== 'number' || !Number.isFinite(value.rect[key])) {
+      add(`${path}.rect.${key}`, `rect.${key} must be a finite number`);
+    }
+  }
+  for (const key of ['width', 'depth']) {
+    if (typeof value.rect[key] === 'number' && value.rect[key] <= 0) {
+      add(`${path}.rect.${key}`, `rect.${key} must be positive`);
     }
   }
 }

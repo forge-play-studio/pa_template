@@ -556,7 +556,6 @@ export interface GroundDecalUiRenderingConfig {
 }
 
 export interface GroundDecalUiConfig {
-  version: 2;
   uiKind: GroundDecalUiKind;
   size: {
     width: number;
@@ -569,24 +568,12 @@ export interface GroundDecalUiConfig {
   rendering?: GroundDecalUiRenderingConfig;
 }
 
-export interface LegacyGroundDecalConfig {
-  size: {
-    width: number;
-    depth: number;
-  };
-  textureId?: string;
-  color?: ColorRGB;
-  alphaIndex?: number;
-  diffuseTextureLevel?: number;
-  emissiveTextureLevel?: number;
-}
-
 export interface SceneTransformNode extends SceneNodeBase {
   kind: 'transform';
   transformType?: TransformType;
   overrides?: SceneNodeVisualOverrides;
   marker?: SceneMarkerConfig;
-  groundDecal?: LegacyGroundDecalConfig | GroundDecalUiConfig;
+  groundDecal?: GroundDecalUiConfig;
   camera?: SceneCameraRigConfig;
   light?: SceneLightConfig;
 }

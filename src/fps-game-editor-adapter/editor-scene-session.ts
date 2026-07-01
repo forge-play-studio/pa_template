@@ -178,7 +178,9 @@ import type {
 } from './editor-scene-document';
 import type {
   ArtistMaterialProfile,
-  LegacyGroundDecalConfig,
+  GroundDecalUiConfig,
+  GroundDecalUiLayer,
+  GroundDecalUiRect,
   MaterialOverrideConfig,
   OutlineOverrideConfig,
   SceneCameraProjection,
@@ -226,6 +228,8 @@ import {
   normalizeDirectionalLightAngleValue,
 } from './editor-lighting-utils';
 import { getActiveRenderingProfile } from '../rendering/editor-rendering-profile-store';
+import { resolveTextureAssetUrl } from '../assets';
+import { createDefaultGroundDecalUiConfig, isGroundDecalUiConfig } from '../services/GroundDecalUiService';
 
 export {
   createEditorSceneMarkerGraphPatch,
@@ -5004,17 +5008,30 @@ function createGroundDecalInspectorProperties(
   nodeKind: SceneNodeConfig['kind'],
   groundDecal: EditorSceneGameObject['groundDecal'],
 ): InspectorProperty<EditorSceneDocument>[] {
-  const size = groundDecal?.size ?? createDefaultGroundDecal().size;
-  const legacyDecal = readLegacyGroundDecalConfig(groundDecal) ?? createDefaultGroundDecal();
+  const decal = mergeGroundDecalDefaults(groundDecal);
   const properties: InspectorProperty<EditorSceneDocument>[] = [
+    createDocumentInspectorProperty(null, nodeKind, {
+      path: 'groundDecal.uiKind',
+      label: 'Kind',
+      valueType: 'enum',
+      control: 'enum',
+      value: decal.uiKind,
+      commitMode: 'immediate',
+      order: 0,
+      options: [
+        { label: 'Operation', value: 'operation' },
+        { label: 'Delivery', value: 'delivery' },
+      ],
+      controlOptions: { variant: 'segmented' },
+    }),
     createDocumentInspectorProperty(null, nodeKind, {
       path: 'groundDecal.size.width',
       label: 'Width',
       valueType: 'number',
       control: 'number',
-      value: size.width,
+      value: decal.size.width,
       commitMode: 'live',
-      order: 0,
+      order: 1,
       min: 0.001,
       step: 0.1,
     }),
@@ -5023,71 +5040,109 @@ function createGroundDecalInspectorProperties(
       label: 'Depth',
       valueType: 'number',
       control: 'number',
-      value: size.depth,
+      value: decal.size.depth,
       commitMode: 'live',
-      order: 1,
+      order: 2,
       min: 0.001,
       step: 0.1,
     }),
     createDocumentInspectorProperty(null, nodeKind, {
-      path: 'groundDecal.textureId',
-      label: 'Texture ID',
-      valueType: 'string',
-      control: 'string',
-      value: legacyDecal.textureId ?? '',
-      commitMode: 'blur',
-      order: 2,
-      coerce: (value: unknown) => normalizeEditorSceneInspectorValue('groundDecal.textureId', value),
-    }),
-    createDocumentInspectorProperty(null, nodeKind, {
-      path: 'groundDecal.color',
-      label: 'Color',
-      valueType: 'color',
-      control: 'color',
-      value: legacyDecal.color ?? { r: 1, g: 1, b: 1 },
-      commitMode: 'immediate',
+      path: 'groundDecal.layers',
+      label: 'Layout',
+      valueType: 'object',
+      control: 'custom',
+      customControl: 'ground-decal-layout',
+      value: createGroundDecalLayoutInspectorValue(decal),
+      commitMode: 'change',
       order: 3,
-    }),
-    createDocumentInspectorProperty(null, nodeKind, {
-      path: 'groundDecal.alphaIndex',
-      label: 'Alpha Index',
-      valueType: 'number',
-      control: 'number',
-      value: legacyDecal.alphaIndex ?? 0,
-      commitMode: 'live',
-      order: 4,
-      step: 1,
-    }),
-    createDocumentInspectorProperty(null, nodeKind, {
-      path: 'groundDecal.diffuseTextureLevel',
-      label: 'Diffuse Level',
-      valueType: 'number',
-      control: 'number',
-      value: legacyDecal.diffuseTextureLevel ?? 1,
-      commitMode: 'live',
-      order: 5,
-      step: 0.05,
-    }),
-    createDocumentInspectorProperty(null, nodeKind, {
-      path: 'groundDecal.emissiveTextureLevel',
-      label: 'Emissive Level',
-      valueType: 'number',
-      control: 'number',
-      value: legacyDecal.emissiveTextureLevel ?? 0,
-      commitMode: 'live',
-      order: 6,
-      step: 0.05,
+      coerce: (value: unknown) => normalizeEditorSceneInspectorValue('groundDecal.layers', value),
     }),
   ];
   appendReadonlyInspectorProperty(properties, {
     path: 'groundDecal.raw',
     label: 'Raw Ground Decal',
-    value: groundDecal ?? 'not configured',
+    value: groundDecal ?? decal,
     order: properties.length,
     source: 'Document',
     tags: ['Raw'],
   });
   return properties;
+}
+
+function createGroundDecalLayoutInspectorValue(decal: GroundDecalUiConfig): Record<string, unknown> {
+  return {
+    textureSize: {
+      width: decal.rendering?.textureWidth ?? 512,
+      height: decal.rendering?.textureHeight ?? 512,
+    },
+    mask: decal.mask,
+    layers: decal.layers.map((layer, index) => createGroundDecalLayoutInspectorLayer(layer, index)),
+  };
+}
+
+function createGroundDecalLayoutInspectorLayer(layer: GroundDecalUiLayer, index: number): Record<string, unknown> {
+  return {
+    index,
+    id: layer.id,
+    role: layer.role,
+    kind: layer.kind,
+    label: createGroundDecalLayerLabel(layer),
+    rect: layer.rect,
+    enabled: layer.enabled !== false,
+    editable: true,
+    zOrder: layer.zOrder,
+    ...(typeof layer.opacity === 'number' ? { opacity: layer.opacity } : {}),
+    ...(layer.role === 'border' || layer.role === 'mainLogo' || layer.role === 'subLogo' ? { scaleMode: 'uniform' } : {}),
+    preview: createGroundDecalLayerPreview(layer),
+  };
+}
+
+function createGroundDecalLayerLabel(layer: GroundDecalUiLayer): string {
+  if (layer.role === 'mainLogo') return 'Main Logo';
+  if (layer.role === 'subLogo') return layer.id === 'subLogo2' ? 'Sub Logo 2' : 'Sub Logo';
+  if (layer.role === 'amount') return layer.id === 'amount2' ? 'Amount 2' : 'Amount';
+  if (layer.role === 'progressFill') return 'Progress Fill';
+  return layer.role.charAt(0).toUpperCase() + layer.role.slice(1);
+}
+
+function createGroundDecalLayerPreview(layer: GroundDecalUiLayer): Record<string, unknown> | undefined {
+  if (layer.kind === 'texture') {
+    const url = resolveTextureAssetUrl(layer.textureId);
+    return url
+      ? {
+        kind: 'image',
+        url,
+        alt: layer.textureId,
+        ...(layer.tint ? { tint: layer.tint } : {}),
+      }
+      : undefined;
+  }
+  if (layer.kind === 'color') {
+    return { kind: 'color', color: layer.color };
+  }
+  if (layer.kind === 'progress') {
+    return {
+      kind: 'progress',
+      value: layer.value,
+      direction: layer.direction,
+      color: layer.color,
+    };
+  }
+  if (layer.kind === 'text') {
+    return {
+      kind: 'text',
+      text: layer.text.value,
+      fontFamily: layer.text.fontFamily,
+      fontSize: layer.text.fontSize,
+      fontWeight: layer.text.fontWeight,
+      color: layer.text.color,
+      strokeColor: layer.text.strokeColor,
+      strokeWidth: layer.text.strokeWidth,
+      align: layer.text.align,
+      baseline: layer.text.baseline,
+    };
+  }
+  return undefined;
 }
 
 function createCameraInspectorProperties(
@@ -6581,6 +6636,17 @@ function validateProjectEditorSceneInspectorField(input: {
       ? { ok: true, value: input.value }
       : { ok: false, message: 'Invalid value for scene node field: light.inspectorLanguage.' };
   }
+  if (input.path === 'groundDecal.uiKind') {
+    return input.value === 'operation' || input.value === 'delivery'
+      ? { ok: true, value: input.value }
+      : { ok: false, message: 'Invalid value for scene node field: groundDecal.uiKind.' };
+  }
+  if (input.path === 'groundDecal.layers') {
+    const value = normalizeGroundDecalLayoutPatchValue(input.value);
+    return value
+      ? { ok: true, value }
+      : { ok: false, message: 'Invalid value for scene node field: groundDecal.layers.' };
+  }
   if (isDirectionalLightAnglePath(input.path)) {
     return typeof input.value === 'number' && Number.isFinite(input.value)
       ? { ok: true, value: input.value }
@@ -6686,6 +6752,9 @@ function normalizeEditorSceneInspectorValue(path: string, value: unknown): unkno
   if (isDirectionalLightAnglePath(path)) {
     return normalizeDirectionalLightAngleValue(path, value);
   }
+  if (path === 'groundDecal.layers') {
+    return normalizeGroundDecalLayoutPatchValue(value);
+  }
   if (path === 'marker.type' && typeof value === 'string') {
     return value.trim();
   }
@@ -6731,6 +6800,135 @@ function normalizeMarkerTagsInspectorValue(value: unknown): string[] | null {
   return normalized.length > 0 ? normalized : null;
 }
 
+type GroundDecalLayoutLayerPatch = {
+  id: string;
+  rect: GroundDecalUiRect;
+};
+
+function normalizeGroundDecalLayoutPatchValue(value: unknown): GroundDecalLayoutLayerPatch[] | null {
+  const source = readEditorSceneRecord(value);
+  const layers = Array.isArray(value)
+    ? value
+    : source && Array.isArray(source.layers)
+      ? source.layers
+      : null;
+  if (!layers) return null;
+  const normalized = layers
+    .map((layer, index) => normalizeGroundDecalLayoutLayerPatch(layer, index))
+    .filter((layer): layer is GroundDecalLayoutLayerPatch => !!layer);
+  return normalized.length > 0 ? normalized : null;
+}
+
+function normalizeGroundDecalLayoutLayerPatch(value: unknown, index: number): GroundDecalLayoutLayerPatch | null {
+  const source = readEditorSceneRecord(value);
+  if (!source) return null;
+  const id = readEditorSceneString(source.id) ?? `layer_${index}`;
+  const rect = normalizeGroundDecalLayoutRect(source.rect);
+  return rect ? { id, rect } : null;
+}
+
+function normalizeGroundDecalLayoutRect(value: unknown): GroundDecalUiRect | null {
+  const source = readEditorSceneRecord(value);
+  if (!source) return null;
+  const x = readGroundDecalFiniteNumber(source.x);
+  const z = readGroundDecalFiniteNumber(source.z);
+  const width = readGroundDecalPositiveFiniteNumber(source.width);
+  const depth = readGroundDecalPositiveFiniteNumber(source.depth);
+  return x == null || z == null || width == null || depth == null
+    ? null
+    : { x, z, width, depth };
+}
+
+function readGroundDecalFiniteNumber(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function readGroundDecalPositiveFiniteNumber(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : null;
+}
+
+function patchEditorSceneGroundDecalLayout(
+  document: EditorSceneDocument,
+  targetId: string,
+  value: unknown,
+): EditorSceneDocument {
+  const patches = normalizeGroundDecalLayoutPatchValue(value);
+  if (!patches) return document;
+  return {
+    ...document,
+    scene: {
+      ...document.scene,
+      gameObjects: document.scene.gameObjects.map(entry => (
+        entry.id === targetId ? patchEditorSceneGroundDecalLayoutGameObject(entry, patches) : entry
+      )),
+    },
+  };
+}
+
+function patchEditorSceneGroundDecalLayoutGameObject(
+  gameObject: EditorSceneGameObject,
+  patches: readonly GroundDecalLayoutLayerPatch[],
+): EditorSceneGameObject {
+  const patchById = new Map(patches.map(patch => [patch.id, patch]));
+  const decal = mergeGroundDecalDefaults(gameObject.groundDecal);
+  const next = ensureTransformComponent({
+    ...gameObject,
+    kind: 'transform',
+    transformType: 'groundDecal',
+    groundDecal: {
+      ...decal,
+      layers: decal.layers.map((layer, index) => {
+        const patch = patchById.get(layer.id) ?? patches[index];
+        return patch ? { ...layer, rect: patch.rect } : layer;
+      }),
+    },
+  });
+  delete next.camera;
+  delete next.light;
+  delete next.primitive;
+  return next;
+}
+
+function patchEditorSceneGroundDecalKind(
+  document: EditorSceneDocument,
+  targetId: string,
+  value: unknown,
+): EditorSceneDocument {
+  if (value !== 'operation' && value !== 'delivery') return document;
+  return {
+    ...document,
+    scene: {
+      ...document.scene,
+      gameObjects: document.scene.gameObjects.map(entry => (
+        entry.id === targetId ? patchEditorSceneGroundDecalKindGameObject(entry, value) : entry
+      )),
+    },
+  };
+}
+
+function patchEditorSceneGroundDecalKindGameObject(
+  gameObject: EditorSceneGameObject,
+  uiKind: GroundDecalUiConfig['uiKind'],
+): EditorSceneGameObject {
+  const previous = mergeGroundDecalDefaults(gameObject.groundDecal);
+  const defaults = createDefaultGroundDecalUiConfig(uiKind);
+  const next = ensureTransformComponent({
+    ...gameObject,
+    kind: 'transform',
+    transformType: 'groundDecal',
+    groundDecal: {
+      ...defaults,
+      size: previous.size,
+      mask: previous.mask ?? defaults.mask,
+      rendering: previous.rendering ?? defaults.rendering,
+    },
+  });
+  delete next.camera;
+  delete next.light;
+  delete next.primitive;
+  return next;
+}
+
 const EDITOR_SCENE_FIELD_MUTATION_OPTIONS: PlayableEditorSceneFieldMutationOptions<EditorSceneDocument, EditorSceneGameObject> = {
   normalizeFieldValue: normalizeEditorSceneInspectorValue,
   validateField: ({ document, gameObject, path, value }) => (
@@ -6754,6 +6952,12 @@ export function patchEditorSceneGameObjectField(
   path: string,
   value: unknown,
 ): EditorSceneDocument {
+  if (path === 'groundDecal.uiKind') {
+    return patchEditorSceneGroundDecalKind(document, targetId, value);
+  }
+  if (path === 'groundDecal.layers') {
+    return patchEditorSceneGroundDecalLayout(document, targetId, value);
+  }
   if (path.startsWith('metadata.') || isDirectionalLightAnglePath(path)) {
     const gameObject = findEditorSceneGameObject(document, targetId);
     if (!gameObject) return document;
@@ -6820,6 +7024,16 @@ export function patchEditorSceneGameObjectsField(
 ): EditorSceneDocument {
   const uniqueTargetIds = Array.from(new Set(targetIds.filter(Boolean)));
   if (uniqueTargetIds.length === 0) return document;
+  if (path === 'groundDecal.uiKind') {
+    return uniqueTargetIds.reduce((nextDocument, targetId) => (
+      patchEditorSceneGroundDecalKind(nextDocument, targetId, value)
+    ), document);
+  }
+  if (path === 'groundDecal.layers') {
+    return uniqueTargetIds.reduce((nextDocument, targetId) => (
+      patchEditorSceneGroundDecalLayout(nextDocument, targetId, value)
+    ), document);
+  }
   if (path.startsWith('metadata.')) {
     return patchEditorSceneGameObjectsMetadataField(document, uniqueTargetIds, path, value);
   }
@@ -7158,36 +7372,22 @@ function splitChildMaterialBindingFieldPath(path: string): string[] | null {
 }
 
 
-function createDefaultGroundDecal(): LegacyGroundDecalConfig {
-  return {
-    size: { width: 1, depth: 1 },
-    color: { r: 1, g: 1, b: 1 },
-  };
-}
-
 function mergeGroundDecalDefaults(
   groundDecal: EditorSceneGameObject['groundDecal'],
-): LegacyGroundDecalConfig {
-  const defaults = createDefaultGroundDecal();
-  const legacyGroundDecal = readLegacyGroundDecalConfig(groundDecal);
+): GroundDecalUiConfig {
+  const defaults = createDefaultGroundDecalUiConfig('operation');
+  if (!isGroundDecalUiConfig(groundDecal)) return defaults;
   return {
     ...defaults,
-    ...(legacyGroundDecal ?? {}),
+    ...structuredClone(groundDecal),
     size: {
       ...defaults.size,
-      ...(legacyGroundDecal?.size ?? groundDecal?.size ?? {}),
+      ...groundDecal.size,
     },
-    color: legacyGroundDecal?.color
-      ? { ...defaults.color, ...legacyGroundDecal.color }
-      : defaults.color,
+    layers: groundDecal.layers.length > 0 ? structuredClone(groundDecal.layers) : defaults.layers,
+    mask: groundDecal.mask ? { ...defaults.mask, ...groundDecal.mask } : defaults.mask,
+    rendering: groundDecal.rendering ? { ...defaults.rendering, ...groundDecal.rendering } : defaults.rendering,
   };
-}
-
-function readLegacyGroundDecalConfig(
-  groundDecal: EditorSceneGameObject['groundDecal'],
-): LegacyGroundDecalConfig | null {
-  if (!groundDecal || (groundDecal as { version?: unknown }).version === 2) return null;
-  return groundDecal as LegacyGroundDecalConfig;
 }
 
 function createDefaultEditorSceneCameraGameObject(
@@ -7546,6 +7746,7 @@ function isEditorSceneProjectionShapePath(path: string): boolean {
   return path === 'shadowMode'
     || path.startsWith('shadow.')
     || path === 'transformType'
+    || path.startsWith('groundDecal.')
     || path.startsWith('rendering.')
     || path.startsWith('primitive.')
     || path.startsWith('camera.')

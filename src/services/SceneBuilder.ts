@@ -6,7 +6,7 @@
  * - 从配置加载场景实例（可选：GLB 场景/道具）
  *
  * 注意：这是“去业务化”的脚手架版本：
- * - 不包含 zones / interactionSlots / decals 等强场景绑定能力
+ * - 不包含 zones / interactionSlots 等强业务绑定能力
  * - 这些能力应在具体游戏项目中按需扩展（保持文件名/入口一致，可迁移）
  */
 
@@ -75,22 +75,6 @@ import {
 const BABYLON_MATERIAL_RUNTIME = { Color3, MaterialPluginBase, Texture };
 
 const DEFAULT_CAMERA_FOV = 0.85;
-
-type LegacyGroundDecalRuntimeConfig = {
-  size: { width: number; depth: number };
-  textureId?: string;
-  color?: ColorRGB;
-  alphaIndex?: number;
-  diffuseTextureLevel?: number;
-  emissiveTextureLevel?: number;
-};
-
-function readLegacyGroundDecalConfig(
-  groundDecal: SceneTransformNode['groundDecal'],
-): LegacyGroundDecalRuntimeConfig | null {
-  if (!groundDecal || (groundDecal as { version?: unknown }).version === 2) return null;
-  return groundDecal as LegacyGroundDecalRuntimeConfig;
-}
 
 /** 场景环境构建结果 */
 export interface SceneEnvironment {
@@ -1254,46 +1238,13 @@ export class SceneBuilder {
       };
     }
 
-    if (nodeConfig.transformType !== 'groundDecal' || !nodeConfig.groundDecal) return;
-    if (isGroundDecalUiConfig(nodeConfig.groundDecal)) {
+    if (
+      nodeConfig.transformType === 'groundDecal'
+      && nodeConfig.groundDecal
+      && isGroundDecalUiConfig(nodeConfig.groundDecal)
+    ) {
       this.attachGroundDecalUiRuntime(nodeConfig, runtimeNode, nodeConfig.groundDecal);
-      return;
     }
-
-    const legacyGroundDecal = readLegacyGroundDecalConfig(nodeConfig.groundDecal);
-    if (!legacyGroundDecal) return;
-
-    if (typeof legacyGroundDecal.alphaIndex === 'number' && Number.isFinite(legacyGroundDecal.alphaIndex)) {
-      (runtimeNode as any).alphaIndex = legacyGroundDecal.alphaIndex;
-    }
-
-    const mat = new StandardMaterial(`${nodeConfig.id}_mat`, this.scene);
-    const color = legacyGroundDecal.color ?? { r: 1, g: 1, b: 1 };
-    mat.diffuseColor = new Color3(color.r, color.g, color.b);
-    mat.specularColor = new Color3(0, 0, 0);
-    mat.backFaceCulling = false;
-
-    const textureUrl = legacyGroundDecal.textureId ? resolveTextureAssetUrl(legacyGroundDecal.textureId) : undefined;
-    if (textureUrl) {
-      const texture = new Texture(textureUrl, this.scene);
-      texture.hasAlpha = true;
-      // Ground decal 是 XZ 平面；图片像素行方向与地面 UV 的 V 轴相反。
-      // 在贴图层翻转 V 轴，而不是设置 mesh rotation，避免破坏地贴朝向语义。
-      texture.vScale = -1;
-      texture.vOffset = 1;
-      mat.diffuseTexture = texture;
-      if (typeof legacyGroundDecal.diffuseTextureLevel === 'number' && Number.isFinite(legacyGroundDecal.diffuseTextureLevel)) {
-        mat.diffuseTexture.level = legacyGroundDecal.diffuseTextureLevel;
-      }
-      mat.useAlphaFromDiffuseTexture = true;
-      mat.diffuseColor = new Color3(1, 1, 1);
-      if (typeof legacyGroundDecal.emissiveTextureLevel === 'number' && Number.isFinite(legacyGroundDecal.emissiveTextureLevel)) {
-        mat.emissiveTexture = mat.emissiveTexture ?? texture;
-        mat.emissiveTexture.level = legacyGroundDecal.emissiveTextureLevel;
-      }
-    }
-
-    (runtimeNode as any).material = mat;
   }
 
   private attachGroundDecalUiRuntime(

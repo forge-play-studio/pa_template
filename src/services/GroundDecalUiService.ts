@@ -40,13 +40,12 @@ export function isGroundDecalUiConfig(value: unknown): value is GroundDecalUiCon
   return !!value
     && typeof value === 'object'
     && !Array.isArray(value)
-    && (value as { version?: unknown }).version === 2
-    && ((value as { uiKind?: unknown }).uiKind === 'operation' || (value as { uiKind?: unknown }).uiKind === 'delivery');
+    && ((value as { uiKind?: unknown }).uiKind === 'operation' || (value as { uiKind?: unknown }).uiKind === 'delivery')
+    && Array.isArray((value as { layers?: unknown }).layers);
 }
 
 export function createDefaultGroundDecalUiConfig(uiKind: GroundDecalUiKind): GroundDecalUiConfig {
-  const common: Pick<GroundDecalUiConfig, 'version' | 'uiKind' | 'size' | 'aspectSourceLayerId' | 'lockAspectToBorder' | 'mask' | 'rendering'> = {
-    version: 2,
+  const common: Pick<GroundDecalUiConfig, 'uiKind' | 'size' | 'aspectSourceLayerId' | 'lockAspectToBorder' | 'mask' | 'rendering'> = {
     uiKind,
     size: { width: 1.8, depth: 1.8 },
     aspectSourceLayerId: 'border',

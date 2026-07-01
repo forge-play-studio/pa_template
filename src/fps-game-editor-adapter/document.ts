@@ -2,6 +2,7 @@ import { configService } from '../config';
 import { ASSET_CATALOG, isModelAssetRegistered } from '../assets';
 import { validateSceneJsonV2 } from '../config/SceneJsonV2Validator';
 import sceneJsonV2Rules from '../config/scene-json-v2-rules.json';
+import { createDefaultGroundDecalUiConfig } from '../services/GroundDecalUiService';
 import type {
   CanonicalMaterialChange,
   CanonicalOutlineChange,
@@ -1897,10 +1898,7 @@ function createSceneNodeFromArgs(sceneConfig: SceneConfig, args: ProjectEditorCr
     transformType,
   };
   if (transformType === 'groundDecal') {
-    node.groundDecal = cloneJson(args.groundDecal ?? {
-      size: { width: 1, depth: 1 },
-      color: { r: 1, g: 1, b: 1 },
-    });
+    node.groundDecal = cloneJson(args.groundDecal ?? createDefaultGroundDecalUiConfig('operation'));
   } else if (args.groundDecal) {
     node.groundDecal = cloneJson(args.groundDecal);
   }
