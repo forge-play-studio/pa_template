@@ -22,6 +22,7 @@ import {
   saveRuntimeCameraRigToEditorScene,
   type RuntimeCameraEditorBinding,
 } from './runtime-camera-rig-save';
+import { mountRuntimeDebugPanelContainer } from './framework/panel-layout';
 
 export interface CameraDebugPanelOptions {
   root?: HTMLElement;
@@ -42,10 +43,16 @@ const CAMERA_DEBUG_STORAGE_KEY = 'pa-template.camera-debug.open';
 const CAMERA_DEBUG_LANGUAGE_STORAGE_KEY = 'pa-template.camera-debug.language';
 
 export function mountCameraDebugPanel(options: CameraDebugPanelOptions): CameraDebugPanel {
+  const root = options.root ?? document.body;
+  const host = root.ownerDocument.createElement('div');
+  host.id = 'runtime-camera-debug-panel';
+  host.setAttribute('aria-label', 'Camera');
+  const unmountHost = mountRuntimeDebugPanelContainer(root, host, { placement: 'right-rail' });
   let targetMarker: TransformNode | null = null;
 
-  return mountEditorRuntimeCameraDebugPanel({
-    root: options.root,
+  const panel = mountEditorRuntimeCameraDebugPanel({
+    root: host,
+    panelMode: 'managed',
     storageKey: CAMERA_DEBUG_STORAGE_KEY,
     languageStorageKey: CAMERA_DEBUG_LANGUAGE_STORAGE_KEY,
     readSnapshot: () => readSnapshot(options.getGame()),
@@ -67,10 +74,18 @@ export function mountCameraDebugPanel(options: CameraDebugPanelOptions): CameraD
     },
     reloadAfterSave: true,
     placement: {
-      right: 16,
-      width: 320,
+      width: '100%',
     },
-  });
+  } as Parameters<typeof mountEditorRuntimeCameraDebugPanel>[0] & { panelMode: 'managed' });
+
+  return {
+    dispose() {
+      panel.dispose();
+      targetMarker?.dispose();
+      targetMarker = null;
+      unmountHost();
+    },
+  };
 }
 
 function readSnapshot(game: Game | null): CameraDebugSnapshot | null {

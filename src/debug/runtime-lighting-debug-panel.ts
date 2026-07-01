@@ -11,6 +11,7 @@ import {
   type EditorSceneLightingDebugSnapshot as LightingDebugSnapshot,
   type EditorSceneRuntimeShadowMode as RuntimeShadowMode,
 } from '@fps-games/editor/playable-sdk';
+import { mountRuntimeDebugPanelContainer } from './framework/panel-layout';
 
 export interface RuntimeLightingDebugPanelOptions {
   root?: HTMLElement;
@@ -20,17 +21,28 @@ export interface RuntimeLightingDebugPanelOptions {
 export type RuntimeLightingDebugPanel = EditorRuntimeLightingDebugPanel;
 
 export function mountRuntimeLightingDebugPanel(options: RuntimeLightingDebugPanelOptions): RuntimeLightingDebugPanel {
-  return mountEditorRuntimeLightingDebugPanel({
-    root: options.root,
+  const root = options.root ?? document.body;
+  const host = root.ownerDocument.createElement('div');
+  host.id = 'runtime-lighting-debug-panel';
+  host.setAttribute('aria-label', 'Light');
+  const unmountHost = mountRuntimeDebugPanelContainer(root, host, { placement: 'right-rail' });
+  const panel = mountEditorRuntimeLightingDebugPanel({
+    root: host,
+    panelMode: 'managed',
     readSnapshot: () => readSnapshot(options.getGame()),
     applySnapshot: snapshot => applySnapshot(options.getGame(), snapshot),
     saveSnapshot: snapshot => saveRuntimeLightsToEditorScene(toEditorSceneRuntimeLightingPatches(snapshot)),
     reloadAfterSave: true,
     placement: {
-      right: 100,
-      width: 330,
+      width: '100%',
     },
-  });
+  } as Parameters<typeof mountEditorRuntimeLightingDebugPanel>[0] & { panelMode: 'managed' });
+  return {
+    dispose() {
+      panel.dispose();
+      unmountHost();
+    },
+  };
 }
 
 function applySnapshot(game: Game | null, snapshot: LightingDebugSnapshot): void {

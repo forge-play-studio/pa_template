@@ -6,7 +6,7 @@ import { mountRuntimeGameplayDebugPanels } from './runtime-gameplay-debug-panels
 import { mountRuntimeLightingDebugPanel } from './runtime-lighting-debug-panel';
 import { mountRuntimeVfxDebugPanel } from './runtime-vfx-debug-panel';
 import { DisposableStack, type Disposable } from './framework/disposables';
-import { RuntimeDebugActionRegistry } from './framework/debug-action-registry';
+import { createRuntimeDebugPanelManager } from './framework/panel-manager';
 
 export interface RuntimeDebugBootstrapOptions {
   root?: HTMLElement;
@@ -22,7 +22,8 @@ export interface RuntimeDebugBootstrap extends Disposable {
 export function mountRuntimeDebug(options: RuntimeDebugBootstrapOptions): RuntimeDebugBootstrap {
   const root = options.root ?? document.body;
   const runtimePanels = new DisposableStack();
-  const actions = runtimePanels.use(new RuntimeDebugActionRegistry(root.ownerDocument.defaultView ?? window));
+  const panelManager = runtimePanels.use(createRuntimeDebugPanelManager({ root }));
+  const actions = panelManager.actions;
 
   runtimePanels.use(mountCameraDebugPanel({
     root,

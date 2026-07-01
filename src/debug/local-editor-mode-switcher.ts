@@ -9,7 +9,6 @@ import {
   createEditorSceneRuntimePreviewImportPlan,
   createEditorSceneRuntimePreviewMissingAssetUrlDiagnostic,
   createEditorSceneRuntimePreviewNode,
-  createEditorSceneRuntimePreviewNodes,
   createEditorScenePrefabAgentSummary,
   EDITOR_SCENE_STATIC_SHADOW_BAKE_ACTION_PATH,
   createEditorSceneSerializedMultiTransformPatch as createPlayableEditorSceneSerializedMultiTransformPatch,
@@ -52,10 +51,10 @@ import {
   type PlayableLocalEditorLoadingOverlayContent,
   type PlayablePlatformAssetDropPoint,
   type PlayablePlatformAssetExternal,
-  type EditorSceneRuntimePreviewGroundDecalDescriptor,
 } from '@fps-games/editor/playable-sdk';
 import baseSceneConfig from '../config/scene.json';
 import type {
+  GroundDecalUiConfig,
   SceneConfig,
 } from '../config/types';
 import type { EditorSceneDocument } from '../fps-game-editor-adapter/editor-scene-document';
@@ -119,6 +118,7 @@ import {
   hasEditorRenderingDraftChanges,
   resetEditorRenderingDraft,
 } from '../fps-game-editor-adapter/editor-rendering-profile';
+import { createGroundDecalUiDynamicTexture, isGroundDecalUiConfig } from '../services/GroundDecalUiService';
 import * as editorAssets from '../assets';
 
 type BabylonModule = Record<string, any>;
@@ -216,7 +216,7 @@ const editorPrimitiveProjectionSourceMeshes = new WeakMap<object, Map<string, an
 const editorProjectionModelImporter = createBabylonAssetContainerProjectionImporter({
   loadContainer: async (context) => {
     const importPlan = resolveCachedEditorProjectionImportPlan(context);
-    if (!importPlan || importPlan.kind === 'groundDecal') {
+    if (!importPlan) {
       throw new Error('[LocalEditor] Missing model import plan for projection asset container');
     }
     await import('@babylonjs/loaders/glTF');
@@ -235,7 +235,7 @@ const editorProjectionModelImporter = createBabylonAssetContainerProjectionImpor
     const assetId = readEditorSceneRuntimePreviewAssetId(context.asset) ?? '';
     const assetRecord = context.asset as Record<string, unknown>;
     const assetGuid = typeof assetRecord.guid === 'string' ? assetRecord.guid : '';
-    return importPlan && importPlan.kind !== 'groundDecal'
+    return importPlan
       ? `pa-template:model:${assetId}:${assetGuid}:${importPlan.url}`
       : `pa-template:model:${assetId}:${assetGuid}`;
   },
@@ -739,7 +739,7 @@ function isEnvironmentTextureAsset(asset: EditorSceneAssetLibraryItem, resolvedU
 }
 
 function createProjectionNodes(editorScene: EditorSceneDocument): PlayableBabylonProjectionNode[] {
-  const nodes = createEditorSceneRuntimePreviewNodes(editorScene) as unknown as PlayableBabylonProjectionNode[];
+  const nodes = editorScene.scene.gameObjects.map(gameObject => createProjectionNode(editorScene, gameObject));
   editorPrimitiveProjectionInstancingByNodeId.clear();
   for (const node of nodes) rememberEditorPrimitiveProjectionInstancing(node);
   return nodes;
@@ -750,6 +750,17 @@ function createProjectionNode(
   gameObject: EditorSceneGameObject,
 ): PlayableBabylonProjectionNode {
   const node = createEditorSceneRuntimePreviewNode(editorScene, gameObject) as unknown as PlayableBabylonProjectionNode;
+  if (isGroundDecalUiConfig(gameObject.groundDecal)) {
+    node.asset = {
+      id: `ground-decal-ui:${gameObject.id}`,
+      metadata: {
+        assetId: `ground-decal-ui:${gameObject.id}`,
+        type: 'texture',
+        groundDecalUi: structuredClone(gameObject.groundDecal),
+      },
+    };
+    node.primitive = null;
+  }
   rememberEditorPrimitiveProjectionInstancing(node);
   return node;
 }
@@ -789,6 +800,8 @@ async function importEditorProjectionModel(
 ): Promise<PlayableBabylonProjectionImportResult | null> {
   editorProjectionImportStats.importModelCalls += 1;
   publishEditorProjectionImportStats();
+  const groundDecalUi = readPreviewGroundDecalUiConfig(context.asset);
+  if (groundDecalUi) return createGroundDecalUiProjectionResult(context, groundDecalUi);
   const assetId = readEditorSceneRuntimePreviewAssetId(context.asset);
   if (!assetId) {
     editorProjectionImportStats.fallbackCount += 1;
@@ -803,9 +816,18 @@ async function importEditorProjectionModel(
     warnProjectionAssetUrlMissing(context.asset, kind);
     return null;
   }
-  if (importPlan.kind === 'groundDecal') return createGroundDecalProjectionResult(context, importPlan.decal);
 
   return await editorProjectionModelImporter(context) ?? null;
+}
+
+function readPreviewGroundDecalUiConfig(asset: unknown): GroundDecalUiConfig | null {
+  const metadata = asset && typeof asset === 'object' && !Array.isArray(asset)
+    ? (asset as { metadata?: unknown }).metadata
+    : null;
+  const groundDecalUi = metadata && typeof metadata === 'object' && !Array.isArray(metadata)
+    ? (metadata as { groundDecalUi?: unknown }).groundDecalUi
+    : null;
+  return isGroundDecalUiConfig(groundDecalUi) ? groundDecalUi : null;
 }
 
 function warnProjectionAssetUrlMissing(asset: unknown, kind: 'model' | 'texture'): void {
@@ -848,32 +870,30 @@ function publishEditorProjectionImportStats(): void {
   (window as ProjectGameRestartWindow).__localEditorProjectionImportStats = { ...editorProjectionImportStats };
 }
 
-async function createGroundDecalProjectionResult(
+async function createGroundDecalUiProjectionResult(
   context: PlayableBabylonProjectionImportContext,
-  decal: EditorSceneRuntimePreviewGroundDecalDescriptor,
+  decal: GroundDecalUiConfig,
 ): Promise<PlayableBabylonProjectionImportResult> {
-  const [{ MeshBuilder }, { StandardMaterial }, { Texture }, { Color3 }] = await Promise.all([
+  const [{ MeshBuilder }, { StandardMaterial }, { Color3 }] = await Promise.all([
     import('@babylonjs/core/Meshes/meshBuilder'),
     import('@babylonjs/core/Materials/standardMaterial'),
-    import('@babylonjs/core/Materials/Textures/texture'),
     import('@babylonjs/core/Maths/math.color'),
   ]);
-  const mesh = MeshBuilder.CreateGround(decal.meshName, {
+  const mesh = MeshBuilder.CreateGround(`${context.node.id}.groundDecalUiProjection`, {
     width: decal.size.width,
     height: decal.size.depth,
   }, context.scene);
-  const mat = new StandardMaterial(decal.materialName, context.scene);
-  const texture = new Texture(decal.textureUrl, context.scene);
-  texture.hasAlpha = decal.textureHasAlpha;
-  // Ground decal 是 XZ 平面；图片像素行方向与地面 UV 的 V 轴相反。
-  // 在贴图层翻转 V 轴，避免旋转 mesh 破坏地贴朝向语义。
-  texture.vScale = decal.textureVScale;
-  texture.vOffset = decal.textureVOffset;
+  mesh.isPickable = false;
+  mesh.receiveShadows = false;
+  mesh.alphaIndex = decal.rendering?.alphaIndex ?? 100;
+  const mat = new StandardMaterial(`${context.node.id}.groundDecalUiProjectionMaterial`, context.scene);
+  const { texture } = createGroundDecalUiDynamicTexture(`${context.node.id}.groundDecalUiProjectionTexture`, context.scene as any, decal);
   mat.diffuseTexture = texture;
   mat.useAlphaFromDiffuseTexture = true;
-  mat.diffuseColor = new Color3(decal.color.r, decal.color.g, decal.color.b);
+  mat.diffuseColor = new Color3(1, 1, 1);
   mat.specularColor = new Color3(0, 0, 0);
   mat.backFaceCulling = false;
+  mat.disableLighting = true;
   mesh.material = mat;
   return { meshes: [mesh], transformNodes: [], animationGroups: [] };
 }

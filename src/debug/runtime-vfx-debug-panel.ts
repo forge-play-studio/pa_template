@@ -1,9 +1,9 @@
 import type { Game } from '../core/Game';
 import {
-  applyRuntimeDebugButtonStyle,
-  createRuntimeDebugDockButton,
+  createRuntimeDebugPanelButton,
   mountRuntimeDebugPanelContainer,
-} from './framework/runtime-debug-dock';
+  readDebugHudVisible,
+} from './framework/panel-layout';
 import type {
   VfxColorValue,
   VfxEffectPackage,
@@ -22,6 +22,10 @@ export interface RuntimeVfxDebugPanel {
 }
 
 type DraftValues = Record<string, string>;
+type VfxNumberParamDefinition = Extract<VfxParamDefinition, { kind: 'number' | 'opacity' | 'lifetime' | 'scale' }>;
+type VfxColorParamDefinition = Extract<VfxParamDefinition, { kind: 'color' }>;
+type VfxBooleanParamDefinition = Extract<VfxParamDefinition, { kind: 'boolean' }>;
+type VfxEnumParamDefinition = Extract<VfxParamDefinition, { kind: 'enum' }>;
 interface DropdownOption {
   value: string;
   label: string;
@@ -52,6 +56,15 @@ const DEFAULT_SPAWN_PARAM_DEFINITIONS: VfxParamDefinition[] = [
   { key: DEFAULT_SPAWN_PARAM_KEYS.offsetZ, label: '位置偏移 Z', kind: 'number', min: -5, max: 5, step: 0.01 },
 ];
 
+function createRuntimeDebugDockButton(ownerDocument: Document, text: string): HTMLButtonElement {
+  return createRuntimeDebugPanelButton(ownerDocument, text);
+}
+
+function applyRuntimeDebugButtonStyle(button: HTMLButtonElement, text = button.textContent ?? ''): void {
+  const styled = createRuntimeDebugPanelButton(button.ownerDocument, text);
+  button.style.cssText = styled.style.cssText;
+}
+
 export function mountRuntimeVfxDebugPanel(options: RuntimeVfxDebugPanelOptions): RuntimeVfxDebugPanel {
   const root = options.root ?? document.body;
   const ownerDocument = root.ownerDocument;
@@ -72,8 +85,10 @@ export function mountRuntimeVfxDebugPanel(options: RuntimeVfxDebugPanelOptions):
   let previewHandle: { dispose(): void } | null = null;
 
   const container = ownerDocument.createElement('div');
+  container.id = 'runtime-vfx-debug-panel';
   container.setAttribute('data-input-layer', '');
   container.setAttribute(VFX_DEBUG_PANEL_ATTRIBUTE, '');
+  container.setAttribute('aria-label', 'VFX 调试');
   container.style.cssText = [
     'position:relative',
     'display:none',
@@ -224,6 +239,7 @@ export function mountRuntimeVfxDebugPanel(options: RuntimeVfxDebugPanelOptions):
   function createParamRow(definition: VfxParamDefinition): HTMLElement {
     if (definition.kind === 'color') return createColorRow(definition);
     if (definition.kind === 'enum') return createEnumRow(definition);
+    if (definition.kind === 'boolean') return createBooleanRow(definition);
     return createNumberRow(definition);
   }
 
@@ -241,7 +257,7 @@ export function mountRuntimeVfxDebugPanel(options: RuntimeVfxDebugPanelOptions):
     return title;
   }
 
-  function createNumberRow(definition: VfxParamDefinition): HTMLElement {
+  function createNumberRow(definition: VfxNumberParamDefinition): HTMLElement {
     const row = ownerDocument.createElement('div');
     row.style.cssText = 'display:grid;grid-template-columns:92px 1fr;align-items:center;gap:8px;font-size:12px;color:#dbeafe;';
 
@@ -279,7 +295,7 @@ export function mountRuntimeVfxDebugPanel(options: RuntimeVfxDebugPanelOptions):
     return row;
   }
 
-  function createColorRow(definition: VfxParamDefinition): HTMLElement {
+  function createColorRow(definition: VfxColorParamDefinition): HTMLElement {
     const row = ownerDocument.createElement('div');
     row.style.cssText = 'display:grid;grid-template-columns:92px 1fr;align-items:center;gap:8px;font-size:12px;color:#dbeafe;';
 
@@ -311,7 +327,43 @@ export function mountRuntimeVfxDebugPanel(options: RuntimeVfxDebugPanelOptions):
     return row;
   }
 
-  function createEnumRow(definition: VfxParamDefinition): HTMLElement {
+  function createBooleanRow(definition: VfxBooleanParamDefinition): HTMLElement {
+    const row = ownerDocument.createElement('label');
+    row.style.cssText = 'display:grid;grid-template-columns:92px 1fr;align-items:center;gap:8px;font-size:12px;color:#dbeafe;cursor:pointer;';
+
+    const label = ownerDocument.createElement('span');
+    label.textContent = definition.label;
+    label.title = definition.description ?? definition.label;
+
+    const input = ownerDocument.createElement('input');
+    input.type = 'checkbox';
+    input.checked = readDraftBoolean(draftValues[definition.key], false);
+    input.value = input.checked ? 'true' : 'false';
+    input.dataset.vfxParamKey = definition.key;
+    input.style.cssText = [
+      'width:18px',
+      'height:18px',
+      'margin:0',
+      'accent-color:#60a5fa',
+      'pointer-events:auto',
+      'position:relative',
+      'z-index:1',
+      'cursor:pointer',
+    ].join(';');
+    input.addEventListener('pointerdown', (event) => event.stopPropagation());
+    input.addEventListener('click', (event) => event.stopPropagation());
+    input.addEventListener('change', () => {
+      input.value = input.checked ? 'true' : 'false';
+      draftValues[definition.key] = input.value;
+      writeDraftValues();
+      schedulePreview();
+    });
+
+    row.append(label, input);
+    return row;
+  }
+
+  function createEnumRow(definition: VfxEnumParamDefinition): HTMLElement {
     const row = ownerDocument.createElement('div');
     row.style.cssText = 'display:grid;grid-template-columns:92px 1fr;align-items:center;gap:8px;font-size:12px;color:#dbeafe;';
 
@@ -365,7 +417,7 @@ export function mountRuntimeVfxDebugPanel(options: RuntimeVfxDebugPanelOptions):
     for (const input of paramsRoot.querySelectorAll<HTMLInputElement>('input[data-vfx-param-key]')) {
       const key = input.dataset.vfxParamKey ?? '';
       if (!key) continue;
-      draftValues[key] = input.value;
+      draftValues[key] = input.type === 'checkbox' ? (input.checked ? 'true' : 'false') : input.value;
     }
     writeDraftValues();
   }
@@ -390,6 +442,10 @@ export function mountRuntimeVfxDebugPanel(options: RuntimeVfxDebugPanelOptions):
       }
       if (definition.kind === 'enum') {
         result[definition.key] = raw ?? String(readDefaultParam(effectPackage, definition.key) ?? '');
+        continue;
+      }
+      if (definition.kind === 'boolean') {
+        result[definition.key] = readDraftBoolean(raw, readDefaultBoolean(effectPackage, definition.key));
         continue;
       }
       const value = readDraftNumber(raw);
@@ -703,6 +759,7 @@ function formatSavedParamsSummary(params: Partial<VfxParamValues>): string {
 function formatStatusValue(value: VfxParamValue): string {
   if (typeof value === 'number') return formatNumber(value);
   if (typeof value === 'string') return value;
+  if (typeof value === 'boolean') return value ? 'true' : 'false';
   return colorToHex(value);
 }
 
@@ -782,7 +839,9 @@ function paramsToDraft(params: Partial<VfxParamValues>, effectPackage: VfxEffect
       ? colorToHex(readColorValue(value) ?? readDefaultColor(effectPackage, definition.key))
       : definition.kind === 'enum'
         ? String(value ?? '')
-        : formatNumber(typeof value === 'number' ? value : 0);
+        : definition.kind === 'boolean'
+          ? String(readBooleanValue(value))
+          : formatNumber(typeof value === 'number' ? value : 0);
   }
   return result;
 }
@@ -796,8 +855,12 @@ function readDefaultColor(effectPackage: VfxEffectPackage, key: string): VfxColo
   return readColorValue(value) ?? { r: 1, g: 1, b: 1 };
 }
 
-function readNumberProp(definition: VfxParamDefinition, key: 'min' | 'max', fallback: number): number {
-  const value = definition.kind !== 'color' && definition.kind !== 'enum' ? definition[key] : undefined;
+function readDefaultBoolean(effectPackage: VfxEffectPackage, key: string): boolean {
+  return readBooleanValue(effectPackage.defaultParams[key]);
+}
+
+function readNumberProp(definition: VfxNumberParamDefinition, key: 'min' | 'max', fallback: number): number {
+  const value = definition[key];
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 }
 
@@ -805,6 +868,17 @@ function readDraftNumber(value: string | undefined): number | null {
   if (value == null || isIncompleteNumberDraft(value)) return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function readDraftBoolean(value: string | undefined, fallback: boolean): boolean {
+  if (value == null || value.trim() === '') return fallback;
+  return readBooleanValue(value);
+}
+
+function readBooleanValue(value: VfxParamValue | undefined): boolean {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') return ['true', '1', 'yes', 'on'].includes(value.trim().toLowerCase());
+  return false;
 }
 
 function isIncompleteNumberDraft(value: string): boolean {
@@ -883,19 +957,6 @@ function getPanelParamDefinitions(effectPackage: VfxEffectPackage): {
     effectDefinitions,
     allDefinitions: [...spawnDefinitions, ...effectDefinitions],
   };
-}
-
-function readDebugHudVisible(ownerDocument: Document): boolean {
-  const candidates = [...ownerDocument.querySelectorAll<HTMLElement>('button,[role="button"]')]
-    .filter((element) => {
-      const text = (element.textContent ?? '').trim();
-      return text === 'Task' || text === 'Debug' || text === '任务' || text === '调试';
-    });
-  if (candidates.length === 0) return true;
-  return candidates.some((element) => {
-    const style = ownerDocument.defaultView?.getComputedStyle(element);
-    return !!style && style.display !== 'none' && style.visibility !== 'hidden' && Number(style.opacity || 1) > 0;
-  });
 }
 
 function readLocalDraft(win: Window, effectId: string): DraftValues {

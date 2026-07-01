@@ -43,8 +43,8 @@
   "dependencies": {
     "@babylonjs/core": "8.52.1",
     "@babylonjs/loaders": "8.52.1",
-    "@fps-games/editor": "0.1.6-beta.1",
-    "@fps-games/vfx": "0.3.4",
+    "@fps-games/editor": "0.1.7-beta.1",
+    "@fps-games/vfx": "0.3.6",
     "brotli-dec-wasm": "^2.3.2"
   },
   "appConfig": {

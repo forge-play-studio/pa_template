@@ -1297,7 +1297,6 @@ export class SceneBuilder {
   ): (() => void) | null {
     const rendering = resolveEditorSceneGameObjectRendering({
       rendering: nodeConfig.rendering,
-      groundDecal: nodeConfig.kind === 'transform' ? nodeConfig.groundDecal : undefined,
     });
     if (!rendering) return null;
     if (typeof rendering.renderingGroupId === 'number') {

@@ -277,9 +277,11 @@ zone 检测能力默认内置，但只负责矩形区域几何检测和 `enter/t
 2. `runtime-lighting-debug-panel.ts`：编辑器灯光 runtime 调试面板。
 3. `local-editor-mode-switcher.ts`：本地编辑器/游戏模式切换入口。
 4. `runtime-debug-bootstrap.ts`：dev-only debug 总入口；只由 `src/main.ts` 的 dev dynamic import 加载。
-5. `framework/`：debug 面板基础能力，包括 dock layout、controls、config client、overlay、action registry 和 disposable helpers。
+5. `framework/`：debug 面板基础能力，包括统一 panel manager、controls、config client、overlay、action registry 和 disposable helpers。
 6. `panel-manifest.ts`：玩法阶段面板注册 manifest。模板默认不注册具体玩法面板，builder 按阶段生成。
-7. `runtime-gameplay-debug-panels.ts`：读取 panel manifest 并统一 mount 玩法阶段 debug 面板。
+7. `runtime-gameplay-debug-panels.ts`：读取 panel manifest 并通过统一 manager mount 玩法阶段 debug 面板。
+
+runtime debug UI 由 `src/debug/framework/panel-manager.ts` 统一管理。全局 Debug 显隐、底部 dock、右侧 rail、面板顺序、折叠状态和 `RuntimeDebugActionRegistry` 生命周期都由 manager 持有；新面板不应自行创建 fixed 全局 dock、全局 toggle 或独立 z-index 层。Camera / Lighting 这类 editor SDK 面板通过 managed shell 挂入右侧 rail，VFX 和玩法阶段面板挂入底部 dock。
 
 具体玩法阶段的 debug 面板不在模板里默认写死。开发 Ready phase 时，builder 应按项目 `gameplay.md` 的 `Debug & Tuning` 合同，先使用 `debug-panel` skill，再在 `src/debug/runtime-<feature>-debug-panel.ts` 生成面板，并把 descriptor 注册到 `src/debug/panel-manifest.ts`。
 
