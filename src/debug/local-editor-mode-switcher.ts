@@ -66,6 +66,7 @@ import {
 } from '../fps-game-editor-adapter/editor-scene-document';
 import { enrichEditorSceneDocumentAssets } from '../fps-game-editor-adapter/editor-asset-library';
 import {
+  canPatchEditorSceneGroundDecalMultiField,
   createEditorSceneCreateGroupPatch,
   createEditorSceneCreatePrimitivePatch,
   createEditorSceneDeleteSubtreePatch,
@@ -75,6 +76,7 @@ import {
   createEditorSceneInspectorPropertyPatch,
   createEditorSceneMarkerGraphPatch,
   createEditorScenePlacedAssetPatch,
+  createEditorSceneGroundDecalUiPatch,
   createEditorSceneAssetActionPatch,
   createEditorSceneBrowserAssetItems as createEditorSceneDocumentBrowserAssetItems,
   getEditorScenePrefabStageDescriptor,
@@ -96,6 +98,7 @@ import {
   getEditorSceneRuntimeInspectorSections,
   getEditorSceneSerializedObject,
   getEditorSceneSerializedMultiObject,
+  isEditorSceneSelectableHierarchyId,
   normalizeEditorSceneHierarchyDocument,
   reduceEditorSceneDocument,
   toEditorSceneLocalTransformFromWorld,
@@ -324,7 +327,7 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
         summarize: summarizeEditorScene,
       },
       selection: {
-        isSelectable: (_document, id) => id !== 'root',
+        isSelectable: isEditorSceneSelectableHierarchyId,
         isLocked: () => false,
       },
       inspector: {
@@ -334,7 +337,12 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
           activeId,
           { textureAssets: createEditorSceneInspectorTextureAssets(currentEditorAssetLibrary) },
         ),
-        getInspectorMultiObject: getEditorSceneInspectorMultiObject,
+        getInspectorMultiObject: (document, selectedIds, activeId) => getEditorSceneInspectorMultiObject(
+          document,
+          selectedIds,
+          activeId,
+          { textureAssets: createEditorSceneInspectorTextureAssets(currentEditorAssetLibrary) },
+        ),
         getRuntimeInspectorSections: getEditorSceneRuntimeInspectorSections,
       },
       assetBrowser: {
@@ -386,6 +394,22 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
         createSceneGraphDropPatch: createEditorSceneReparentPatch,
         createSceneGraphMovePatch: createEditorSceneHierarchyMovePatch,
         createSceneGraphGroupSelectionPatch: createEditorSceneGroupSelectionPatch,
+      },
+      hierarchyActions: {
+        contextActions: [
+          {
+            id: 'ground-decal-ui.create-operation',
+            label: '添加操作类地贴 UI',
+            placement: 'after-create',
+            run: context => createEditorSceneGroundDecalUiPatch(context.document, 'operation') as any,
+          },
+          {
+            id: 'ground-decal-ui.create-delivery',
+            label: '添加交付类地贴 UI',
+            placement: 'after-create',
+            run: context => createEditorSceneGroundDecalUiPatch(context.document, 'delivery') as any,
+          },
+        ],
       },
       worldPreview: {
         getSceneCameraPreviewRig: createSceneCameraPreviewRig,
@@ -883,7 +907,7 @@ async function createGroundDecalUiProjectionResult(
     width: decal.size.width,
     height: decal.size.depth,
   }, context.scene);
-  mesh.isPickable = false;
+  mesh.isPickable = true;
   mesh.receiveShadows = false;
   mesh.alphaIndex = decal.rendering?.alphaIndex ?? 100;
   const mat = new StandardMaterial(`${context.node.id}.groundDecalUiProjectionMaterial`, context.scene);
@@ -907,35 +931,42 @@ function createEditorSceneSerializedPropertyPatch(
 function canCreateEditorSceneSerializedMultiPropertyPatch(
   input: PlayableLocalEditorMultiPropertyCapabilityInput<EditorSceneDocument>,
 ): boolean {
-  return input.path.startsWith('transform.')
-    || isEditorSceneSerializedMultiFieldPath(input.path)
-    || input.path === EDITOR_SCENE_STATIC_SHADOW_BAKE_ACTION_PATH;
+  if (input.path.startsWith('transform.') || input.path === EDITOR_SCENE_STATIC_SHADOW_BAKE_ACTION_PATH) return true;
+  return getEditorSceneSerializedMultiPropertyPatchTargets({
+    document: input.document,
+    targetIds: input.targetIds,
+    activeId: input.activeId,
+    path: input.path,
+    value: getEditorSceneSerializedMultiPropertyProbeValue(input.path),
+  }).length > 0;
 }
 
 function createEditorSceneSerializedMultiPropertyPatch(
   input: PlayableLocalEditorMultiPropertyPatchInput<EditorSceneDocument>,
 ): { patch: EditorSceneDocumentPatch; label: string; changedIds: string[]; reprojectIds?: string[] } | null {
+  if (isEditorSceneSerializedMultiFieldPath(input.path)) {
+    const targetIds = getEditorSceneSerializedMultiPropertyPatchTargets(input);
+    if (targetIds.length === 0) return null;
+    return {
+      label: `Patch ${targetIds.length} GameObjects ${input.path}`,
+      patch: {
+        kind: 'game-object.field-batch',
+        fields: targetIds.map((targetId) => ({
+          targetId,
+          path: input.path,
+          value: input.value,
+        })),
+      },
+      changedIds: targetIds,
+      ...(isEditorSceneSerializedMultiProjectionPath(input.path) ? { reprojectIds: targetIds } : {}),
+    };
+  }
   if (input.targetIds.some((targetId) => !createEditorSceneInspectorPropertyPatch({
     document: input.document,
     targetId,
     path: input.path,
     value: input.value,
   }))) return null;
-  if (isEditorSceneSerializedMultiFieldPath(input.path)) {
-    return {
-      label: `Patch ${input.targetIds.length} GameObjects ${input.path}`,
-      patch: {
-        kind: 'game-object.field-batch',
-        fields: input.targetIds.map((targetId) => ({
-          targetId,
-          path: input.path,
-          value: input.value,
-        })),
-      },
-      changedIds: input.targetIds,
-      ...(isEditorSceneShadowProjectionPath(input.path) ? { reprojectIds: input.targetIds } : {}),
-    };
-  }
   const result = createPlayableEditorSceneSerializedMultiTransformPatch(input);
   if (!result) return null;
   return {
@@ -944,12 +975,104 @@ function createEditorSceneSerializedMultiPropertyPatch(
   };
 }
 
+function getEditorSceneSerializedMultiPropertyPatchTargets(
+  input: Pick<PlayableLocalEditorMultiPropertyPatchInput<EditorSceneDocument>, 'document' | 'targetIds' | 'activeId' | 'path' | 'value'>,
+): string[] {
+  if (!isEditorSceneSerializedMultiFieldPath(input.path)) return [];
+  return input.targetIds.filter((targetId) => {
+    const gameObject = input.document.scene.gameObjects.find(entry => entry.id === targetId);
+    if (isEditorSceneGroundDecalSerializedMultiFieldPath(input.path) && !canPatchEditorSceneGroundDecalMultiField(input.document, targetId, input.path, input.value)) {
+      return false;
+    }
+    if (isEditorSceneShadowProjectionPath(input.path) && (!gameObject || !!gameObject.camera || !!gameObject.light)) {
+      return false;
+    }
+    return !!createEditorSceneInspectorPropertyPatch({
+      document: input.document,
+      targetId,
+      path: input.path,
+      value: input.value,
+    });
+  });
+}
+
+function getEditorSceneSerializedMultiPropertyProbeValue(path: string): unknown {
+  if (path === 'groundDecal.size.width' || path === 'groundDecal.size.depth') return 1;
+  if (path === 'groundDecal.rendering.textureWidth' || path === 'groundDecal.rendering.textureHeight') return 512;
+  if (path === 'groundDecal.layers') {
+    return {
+      layers: [{
+        id: 'mainLogo',
+        rect: { x: 0, z: 0, width: 1, depth: 1 },
+      }],
+    };
+  }
+  if (isGroundDecalLayerTexturePath(path)) return 'texture_probe';
+  if (isGroundDecalLayerTextValuePath(path)) return '30';
+  if (isGroundDecalLayerColorPath(path) || isGroundDecalLayerTextureTintPath(path) || isGroundDecalLayerTextColorPath(path)) {
+    return { r: 1, g: 1, b: 1, a: 1 };
+  }
+  if (isGroundDecalLayerColorAlphaPath(path) || isGroundDecalLayerTextureTintAlphaPath(path) || isGroundDecalLayerTextColorAlphaPath(path)) return 1;
+  if (path === 'shadow.cast' || path === 'shadow.receive') return 'none';
+  if (path === 'shadow.mode') return 'none';
+  if (path === 'shadow.quality') return 'medium';
+  if (path === 'metadata.shadowInspectorLanguage') return 'en';
+  return undefined;
+}
+
 function isEditorSceneSerializedMultiFieldPath(path: string): boolean {
-  return isEditorSceneShadowProjectionPath(path) || path === 'metadata.shadowInspectorLanguage';
+  return isEditorSceneShadowProjectionPath(path)
+    || isEditorSceneGroundDecalSerializedMultiFieldPath(path)
+    || path === 'metadata.shadowInspectorLanguage';
+}
+
+function isEditorSceneGroundDecalSerializedMultiFieldPath(path: string): boolean {
+  return path === 'groundDecal.size.width'
+    || path === 'groundDecal.size.depth'
+    || path === 'groundDecal.layers'
+    || path === 'groundDecal.rendering.textureWidth'
+    || path === 'groundDecal.rendering.textureHeight'
+    || /^groundDecal\.layers\.\d+\.(rect|textureId|text\.value|color|color\.a|tint|tint\.a|text\.color|text\.color\.a)$/.test(path);
 }
 
 function isEditorSceneShadowProjectionPath(path: string): boolean {
   return path === 'shadowMode' || path.startsWith('shadow.');
+}
+
+function isEditorSceneSerializedMultiProjectionPath(path: string): boolean {
+  return isEditorSceneShadowProjectionPath(path) || isEditorSceneGroundDecalSerializedMultiFieldPath(path);
+}
+
+function isGroundDecalLayerTexturePath(path: string): boolean {
+  return /^groundDecal\.layers\.\d+\.textureId$/.test(path);
+}
+
+function isGroundDecalLayerTextValuePath(path: string): boolean {
+  return /^groundDecal\.layers\.\d+\.text\.value$/.test(path);
+}
+
+function isGroundDecalLayerColorPath(path: string): boolean {
+  return /^groundDecal\.layers\.\d+\.color$/.test(path);
+}
+
+function isGroundDecalLayerColorAlphaPath(path: string): boolean {
+  return /^groundDecal\.layers\.\d+\.color\.a$/.test(path);
+}
+
+function isGroundDecalLayerTextureTintPath(path: string): boolean {
+  return /^groundDecal\.layers\.\d+\.tint$/.test(path);
+}
+
+function isGroundDecalLayerTextureTintAlphaPath(path: string): boolean {
+  return /^groundDecal\.layers\.\d+\.tint\.a$/.test(path);
+}
+
+function isGroundDecalLayerTextColorPath(path: string): boolean {
+  return /^groundDecal\.layers\.\d+\.text\.color$/.test(path);
+}
+
+function isGroundDecalLayerTextColorAlphaPath(path: string): boolean {
+  return /^groundDecal\.layers\.\d+\.text\.color\.a$/.test(path);
 }
 
 function createEditorSceneTransformPatch(
