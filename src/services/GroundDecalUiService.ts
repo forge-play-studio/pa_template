@@ -530,6 +530,9 @@ function loadImage(url: string): Promise<HTMLImageElement | null> {
   if (cached) return cached;
   const promise = new Promise<HTMLImageElement | null>((resolve) => {
     const image = new Image();
+    if (!url.startsWith('data:') && !url.startsWith('blob:')) {
+      image.crossOrigin = 'anonymous';
+    }
     image.onload = () => resolve(image);
     image.onerror = () => resolve(null);
     image.src = url;

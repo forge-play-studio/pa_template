@@ -201,82 +201,6 @@ function setNestedValue(target: Record<string, any>, path: string, value: unknow
   cursor[parts[parts.length - 1]!] = value;
 }
 
-const IMAGE_CROSS_ORIGIN_BOOTSTRAP = `
-(() => {
-  const CROSS_ORIGIN = 'anonymous';
-  const isLocalImageUrl = (value) => /^(?:data|blob):/i.test(String(value || ''));
-  const applyCrossOrigin = (image) => {
-    if (!image.hasAttribute('crossorigin') && !isLocalImageUrl(image.getAttribute('src') || image.currentSrc || '')) {
-      image.crossOrigin = CROSS_ORIGIN;
-    }
-    return image;
-  };
-  const NativeImage = window.Image;
-  const CrossOriginImage = function(width, height) {
-    const image = arguments.length === 0
-      ? new NativeImage()
-      : arguments.length === 1
-        ? new NativeImage(width)
-        : new NativeImage(width, height);
-    return applyCrossOrigin(image);
-  };
-  CrossOriginImage.prototype = NativeImage.prototype;
-  Object.setPrototypeOf(CrossOriginImage, NativeImage);
-  window.Image = CrossOriginImage;
-  const srcDescriptor = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, 'src');
-  if (srcDescriptor?.get && srcDescriptor?.set) {
-    Object.defineProperty(HTMLImageElement.prototype, 'src', {
-      get() {
-        return srcDescriptor.get.call(this);
-      },
-      set(value) {
-        if (isLocalImageUrl(value)) {
-          this.removeAttribute('crossorigin');
-        } else if (!this.hasAttribute('crossorigin')) {
-          this.crossOrigin = CROSS_ORIGIN;
-        }
-        srcDescriptor.set.call(this, value);
-      },
-      configurable: true,
-      enumerable: srcDescriptor.enumerable,
-    });
-  }
-  const nativeCreateElement = Document.prototype.createElement;
-  Document.prototype.createElement = function(tagName, options) {
-    const element = arguments.length > 1
-      ? nativeCreateElement.call(this, tagName, options)
-      : nativeCreateElement.call(this, tagName);
-    if (String(tagName).toLowerCase() === 'img') applyCrossOrigin(element);
-    return element;
-  };
-  const applyExistingImages = () => document.querySelectorAll('img:not([crossorigin])').forEach(applyCrossOrigin);
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', applyExistingImages, { once: true });
-  } else {
-    applyExistingImages();
-  }
-})();
-`.trim();
-
-function viteImgCrossOriginPlugin() {
-  return {
-    name: 'vite-img-crossorigin',
-    enforce: 'pre' as const,
-    transformIndexHtml(html: string) {
-      return {
-        html: html.replace(/<img(?![^>]*\bcrossorigin=)/gi, '<img crossorigin="anonymous"'),
-        tags: [
-          {
-            tag: 'script',
-            injectTo: 'head-prepend' as const,
-            children: IMAGE_CROSS_ORIGIN_BOOTSTRAP,
-          },
-        ],
-      };
-    },
-  };
-}
-
 function debugPanelConfigApiPlugin() {
   return {
     name: 'debug-panel-config-api',
@@ -896,7 +820,6 @@ export default defineConfig({
     __BUNDLED_LOCALES__: JSON.stringify(bundledLocales),
   },
   plugins: [
-    viteImgCrossOriginPlugin(),
     // 平台 bridge 自动注入（仅开发模式）
     bridgePlugin({
       port: 8080,
