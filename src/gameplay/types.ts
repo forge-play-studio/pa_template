@@ -23,6 +23,11 @@ export interface GameplayModule {
   dispose?(): void;
 }
 
+export interface CameraFollowController {
+  readonly isCameraFollowEnabled: boolean;
+  setCameraFollowEnabled(enabled: boolean): void;
+}
+
 export interface GameplayRuntimeContext {
   scene: Scene;
   camera: ArcRotateCamera | null;
@@ -40,4 +45,5 @@ export interface GameplayRuntimeContext {
   cta: PlayableCtaService;
   player: SimplePlayer;
   zoneSystem: ZoneSystem;
+  registerCameraFollowController?: (controller: CameraFollowController) => void;
 }

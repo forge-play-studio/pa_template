@@ -1,6 +1,6 @@
 import type { ArcRotateCamera } from '@babylonjs/core/Cameras/arcRotateCamera';
 import type { Scene } from '@babylonjs/core/scene';
-import type { GameplayModule } from '../gameplay';
+import type { CameraFollowController, GameplayModule } from '../gameplay';
 import type { SimplePlayer } from '../entities';
 import type { InputService, MovementInputSource } from '../services';
 import type { ZoneSystem } from './ZoneSystem';
@@ -12,7 +12,9 @@ export interface ThreeCSnapshot {
   rightHanded: boolean;
 }
 
-export class ThreeCSystem implements GameplayModule {
+export class ThreeCSystem implements GameplayModule, CameraFollowController {
+  private cameraFollowEnabled = true;
+
   constructor(private readonly options: {
     scene: Scene;
     camera: ArcRotateCamera | null;
@@ -45,9 +47,17 @@ export class ThreeCSystem implements GameplayModule {
   }
 
   update(): void {
-    if (this.options.camera) {
+    if (this.options.camera && this.cameraFollowEnabled) {
       this.options.camera.target.copyFrom(this.options.player.position);
     }
+  }
+
+  get isCameraFollowEnabled(): boolean {
+    return this.cameraFollowEnabled;
+  }
+
+  setCameraFollowEnabled(enabled: boolean): void {
+    this.cameraFollowEnabled = enabled;
   }
 
   getSnapshot(): ThreeCSnapshot {

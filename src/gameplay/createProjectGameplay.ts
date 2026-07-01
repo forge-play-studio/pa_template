@@ -65,6 +65,7 @@ export function createProjectGameplayRuntime(context: GameplayRuntimeContext): P
     zoneSystem: context.zoneSystem,
     gameplayState,
   });
+  context.registerCameraFollowController?.(threeC);
   const guide = new GuideSystem(PROJECT_GAMEPLAY_CONFIG.guideTargets, runtimeNodes);
   const endConditions = new EndConditionSystem(PROJECT_GAMEPLAY_CONFIG.endConditions, gameplayState);
 

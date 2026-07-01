@@ -64,7 +64,7 @@ import { SimplePlayer } from '../entities';
 import { configService, PROJECT_GAMEPLAY_CONFIG } from '../config';
 import type { SceneConfig } from '../config';
 import { createProjectGameplayRuntime } from '../gameplay';
-import type { GameplayModule, ProjectGameplayRuntime } from '../gameplay';
+import type { CameraFollowController, GameplayModule, ProjectGameplayRuntime } from '../gameplay';
 import type { EffectPackageService } from '@fps-games/vfx';
 import type { VfxParamValues, VfxSpawnTransform } from '../assets/vfx';
 
@@ -105,6 +105,7 @@ export class Game {
   // Project gameplay modules
   private gameplayModules: GameplayModule[] = [];
   private projectGameplayRuntime: ProjectGameplayRuntime | null = null;
+  private cameraFollowController: CameraFollowController | null = null;
 
   // Loop state
   private isRunning = false;
@@ -284,6 +285,9 @@ export class Game {
       cta: this.ctaService,
       player: this.player,
       zoneSystem: this.zoneSystem,
+      registerCameraFollowController: (controller) => {
+        this.cameraFollowController = controller;
+      },
     });
     this.gameplayModules = this.projectGameplayRuntime.modules;
 
@@ -388,6 +392,10 @@ export class Game {
     return this.sceneBuilder;
   }
 
+  getCameraFollowController(): CameraFollowController | null {
+    return this.cameraFollowController;
+  }
+
   getShadowService(): ShadowService | null {
     return this.shadowService;
   }
@@ -444,6 +452,7 @@ export class Game {
     }
     this.gameplayModules = [];
     this.projectGameplayRuntime = null;
+    this.cameraFollowController = null;
 
     this.player?.dispose();
     this.player = null;

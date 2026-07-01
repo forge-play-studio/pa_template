@@ -44,7 +44,23 @@ const CAMERA_DEBUG_LANGUAGE_STORAGE_KEY = 'pa-template.camera-debug.language';
 export function mountCameraDebugPanel(options: CameraDebugPanelOptions): CameraDebugPanel {
   let targetMarker: TransformNode | null = null;
 
-  return mountEditorRuntimeCameraDebugPanel({
+  let cameraFollowSuppressed = false;
+  let cameraFollowWasEnabled = false;
+  const suppressCameraFollow = (): void => {
+    if (cameraFollowSuppressed) return;
+    const controller = options.getGame()?.getCameraFollowController();
+    if (!controller) return;
+    cameraFollowWasEnabled = controller.isCameraFollowEnabled;
+    controller.setCameraFollowEnabled(false);
+    cameraFollowSuppressed = true;
+  };
+  const restoreCameraFollow = (): void => {
+    if (!cameraFollowSuppressed) return;
+    cameraFollowSuppressed = false;
+    options.getGame()?.getCameraFollowController()?.setCameraFollowEnabled(cameraFollowWasEnabled);
+  };
+
+  const panel = mountEditorRuntimeCameraDebugPanel({
     root: options.root,
     storageKey: CAMERA_DEBUG_STORAGE_KEY,
     languageStorageKey: CAMERA_DEBUG_LANGUAGE_STORAGE_KEY,
@@ -58,12 +74,16 @@ export function mountCameraDebugPanel(options: CameraDebugPanelOptions): CameraD
     createTargetMarker: target => {
       const scene = options.getGame()?.getScene();
       if (!scene) return;
-      if (!targetMarker) targetMarker = createTargetMarker(scene);
+      if (!targetMarker) {
+        targetMarker = createTargetMarker(scene);
+        suppressCameraFollow();
+      }
       targetMarker.position.set(target.x, target.y, target.z);
     },
     disposeTargetMarker: () => {
       targetMarker?.dispose();
       targetMarker = null;
+      restoreCameraFollow();
     },
     reloadAfterSave: true,
     placement: {
@@ -71,6 +91,13 @@ export function mountCameraDebugPanel(options: CameraDebugPanelOptions): CameraD
       width: 320,
     },
   });
+
+  return {
+    dispose: () => {
+      restoreCameraFollow();
+      panel.dispose();
+    },
+  };
 }
 
 function readSnapshot(game: Game | null): CameraDebugSnapshot | null {
