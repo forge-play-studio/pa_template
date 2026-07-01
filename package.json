@@ -14,6 +14,7 @@
     "test:asset-runtime-catalog": "node scripts/check-asset-runtime-catalog.mjs",
     "test:asset-manager-guid-external": "node scripts/check-asset-manager-guid-external.mjs",
     "test:editor-canonical-assets": "node scripts/check-editor-canonical-assets.mjs",
+    "test:editor-ground-decal-authoring": "node scripts/check-editor-ground-decal-authoring.mjs",
     "test:asset-registry-unregister": "node scripts/check-asset-registry-unregister-guard.mjs",
     "build": "./scripts/build-all.sh en applovin",
     "build:all": "./scripts/build-all.sh",

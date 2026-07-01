@@ -23494,5 +23494,113 @@
     },
     "createdAt": "2026-06-28T06:14:22.510Z",
     "updatedAt": "2026-06-28T06:14:22.510Z"
+  },
+  {
+    "guid": "ee97d50a-7eb4-42b5-905a-dd9aaae74f2c",
+    "assetId": "texture_ee97d50a7eb442b5905add9aaae74f2c",
+    "kind": "texture",
+    "displayName": "地贴_传送带",
+    "relativePath": "../imported/textures/texture_ee97d50a7eb442b5905add9aaae74f2c.png",
+    "originalFileName": "ground_decal_conveyor_reference.png",
+    "codeKey": "ground_decal_conveyor_reference",
+    "placeable": false,
+    "contentHash": "sha256:822c7759161df2fafe2fdbc59a561492f43bf70fb5f698c50c2b742bb75f2f7e",
+    "byteSize": 4356,
+    "metadata": {
+      "sourceProject": "lumber-truck",
+      "usage": "groundDecalUiDefault",
+      "textureUsage": "material",
+      "capabilities": {
+        "materialTexture": true,
+        "environmentTexture": false
+      },
+      "assetAnalysis": {
+        "kind": "image",
+        "format": "png",
+        "summary": "200x200 image/png",
+        "complexity": "low",
+        "width": 200,
+        "height": 200,
+        "mime": "image/png",
+        "bitDepth": 8,
+        "hasAlpha": true,
+        "estimatedPixels": 40000,
+        "diagnostics": []
+      }
+    },
+    "createdAt": "2026-07-01T10:34:12.467Z",
+    "updatedAt": "2026-07-01T10:34:12.467Z"
+  },
+  {
+    "guid": "331e1620-9e8c-47cc-9421-7508d719cbbb",
+    "assetId": "texture_331e16209e8c47cc94217508d719cbbb",
+    "kind": "texture",
+    "displayName": "地贴_大钱",
+    "relativePath": "../imported/textures/texture_331e16209e8c47cc94217508d719cbbb.png",
+    "originalFileName": "ground_decal_money_reference.png",
+    "codeKey": "ground_decal_money_reference",
+    "placeable": false,
+    "contentHash": "sha256:7606505320e88d46cdc0a703ace4c0f8b699426a33be5387d885a1bc4aac9623",
+    "byteSize": 10034,
+    "metadata": {
+      "sourceProject": "lumber-truck",
+      "usage": "groundDecalUiDefault",
+      "textureUsage": "material",
+      "capabilities": {
+        "materialTexture": true,
+        "environmentTexture": false
+      },
+      "assetAnalysis": {
+        "kind": "image",
+        "format": "png",
+        "summary": "200x200 image/png",
+        "complexity": "low",
+        "width": 200,
+        "height": 200,
+        "mime": "image/png",
+        "bitDepth": 8,
+        "hasAlpha": true,
+        "estimatedPixels": 40000,
+        "diagnostics": []
+      }
+    },
+    "createdAt": "2026-07-01T10:34:12.644Z",
+    "updatedAt": "2026-07-01T10:34:12.644Z"
+  },
+  {
+    "guid": "969907ee-4a1d-453e-a7b0-ee3247cb6bb1",
+    "assetId": "texture_969907ee4a1d453ea7b0ee3247cb6bb1",
+    "kind": "texture",
+    "displayName": "地贴_白框",
+    "relativePath": "../imported/textures/texture_969907ee4a1d453ea7b0ee3247cb6bb1.png",
+    "originalFileName": "ground_decal_border_reference.png",
+    "codeKey": "ground_decal_border_reference",
+    "placeable": false,
+    "contentHash": "sha256:fe4d1450283b16a49a7eb1a924f51044e61108df416dedc3e54563659a04cfa4",
+    "byteSize": 4352,
+    "metadata": {
+      "sourceProject": "lumber-truck",
+      "usage": "groundDecalUiDefault",
+      "textureUsage": "material",
+      "capabilities": {
+        "materialTexture": true,
+        "environmentTexture": false
+      },
+      "assetAnalysis": {
+        "kind": "image",
+        "format": "png",
+        "summary": "200x200 image/png",
+        "complexity": "low",
+        "width": 200,
+        "height": 200,
+        "mime": "image/png",
+        "bitDepth": 8,
+        "hasAlpha": true,
+        "estimatedPixels": 40000,
+        "diagnostics": []
+      }
+    },
+    "createdAt": "2026-07-01T10:34:12.822Z",
+    "updatedAt": "2026-07-01T10:34:12.822Z"
   }
 ]
