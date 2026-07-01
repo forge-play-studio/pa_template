@@ -11,6 +11,7 @@
  */
 
 import { Scene } from '@babylonjs/core/scene';
+import type { AnimationGroup } from '@babylonjs/core/Animations/animationGroup';
 import { Vector2, Vector3 } from '@babylonjs/core/Maths/math.vector';
 import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
@@ -92,6 +93,7 @@ export class SceneBuilder {
   private root: TransformNode;
   readonly sceneNodeRuntimes = new Map<string, TransformNode>();
   private sceneNodeCleanup = new Map<string, (() => void) | null>();
+  private sceneNodeAnimationGroups = new Map<string, AnimationGroup[]>();
   private sceneAssetConfigs = new Map<string, SceneAssetConfig>();
   private selectedCameraRig: SceneCameraRigConfig | null = null;
   private hemisphericLight: HemisphericLight | null = null;
@@ -547,6 +549,10 @@ export class SceneBuilder {
     return this.sceneNodeRuntimes.get(id);
   }
 
+  getSceneNodeAnimationGroups(id: string): AnimationGroup[] {
+    return this.sceneNodeAnimationGroups.get(id) ?? [];
+  }
+
   /**
    * 编辑器运行时可调用的最小增量接口。
    *
@@ -571,6 +577,7 @@ export class SceneBuilder {
     const cleanup = this.sceneNodeCleanup.get(id) ?? null;
     this.sceneNodeRuntimes.delete(id);
     this.sceneNodeCleanup.delete(id);
+    this.sceneNodeAnimationGroups.delete(id);
     node.parent = null;
     cleanup?.();
     node.dispose();
@@ -751,7 +758,7 @@ export class SceneBuilder {
     nodeConfig: SceneInstanceNode,
     runtimeNode: TransformNode,
   ): Promise<TransformNode | null> {
-    let attached: { asset: SceneAssetConfig; modelNode: TransformNode; cleanup: () => void } | null = null;
+    let attached: { asset: SceneAssetConfig; modelNode: TransformNode; animations: AnimationGroup[]; cleanup: () => void } | null = null;
     try {
       attached = await this.createSceneAssetRuntime(nodeConfig, 'async');
     } catch (error) {
@@ -764,6 +771,7 @@ export class SceneBuilder {
     }
 
     attached.modelNode.parent = runtimeNode;
+    this.sceneNodeAnimationGroups.set(nodeConfig.id, attached.animations);
     this.applyTransform(attached.modelNode, attached.asset.defaults?.transform);
     this.applyChildTransforms(attached.modelNode, nodeConfig.overrides?.childTransforms);
     this.applySharedMaterialOverrides(attached.asset, attached.modelNode);
@@ -782,7 +790,7 @@ export class SceneBuilder {
     nodeConfig: SceneInstanceNode,
     runtimeNode: TransformNode,
   ): TransformNode | null {
-    let attached: { asset: SceneAssetConfig; modelNode: TransformNode; cleanup: () => void } | null = null;
+    let attached: { asset: SceneAssetConfig; modelNode: TransformNode; animations: AnimationGroup[]; cleanup: () => void } | null = null;
     try {
       attached = this.createSceneAssetRuntime(nodeConfig, 'sync');
     } catch (error) {
@@ -795,6 +803,7 @@ export class SceneBuilder {
     }
 
     attached.modelNode.parent = runtimeNode;
+    this.sceneNodeAnimationGroups.set(nodeConfig.id, attached.animations);
     this.applyTransform(attached.modelNode, attached.asset.defaults?.transform);
     this.applyChildTransforms(attached.modelNode, nodeConfig.overrides?.childTransforms);
     this.applySharedMaterialOverrides(attached.asset, attached.modelNode);
@@ -812,15 +821,15 @@ export class SceneBuilder {
   private async createSceneAssetRuntime(
     nodeConfig: SceneInstanceNode,
     mode: 'async',
-  ): Promise<{ asset: SceneAssetConfig; modelNode: TransformNode; cleanup: () => void } | null>;
+  ): Promise<{ asset: SceneAssetConfig; modelNode: TransformNode; animations: AnimationGroup[]; cleanup: () => void } | null>;
   private createSceneAssetRuntime(
     nodeConfig: SceneInstanceNode,
     mode: 'sync',
-  ): { asset: SceneAssetConfig; modelNode: TransformNode; cleanup: () => void } | null;
+  ): { asset: SceneAssetConfig; modelNode: TransformNode; animations: AnimationGroup[]; cleanup: () => void } | null;
   private createSceneAssetRuntime(
     nodeConfig: SceneInstanceNode,
     mode: 'async' | 'sync',
-  ): Promise<{ asset: SceneAssetConfig; modelNode: TransformNode; cleanup: () => void } | null> | { asset: SceneAssetConfig; modelNode: TransformNode; cleanup: () => void } | null {
+  ): Promise<{ asset: SceneAssetConfig; modelNode: TransformNode; animations: AnimationGroup[]; cleanup: () => void } | null> | { asset: SceneAssetConfig; modelNode: TransformNode; animations: AnimationGroup[]; cleanup: () => void } | null {
     const asset = this.sceneAssetConfigs.get(nodeConfig.instance.assetId) ?? configService.getSceneAssetById(nodeConfig.instance.assetId);
     if (!asset) {
       console.warn(`[SceneBuilder] Missing scene asset "${nodeConfig.instance.assetId}" for node "${nodeConfig.id}"`);
@@ -837,13 +846,14 @@ export class SceneBuilder {
   private async createSceneAssetRuntimeAsync(
     asset: SceneAssetConfig,
     nodeConfig?: SceneInstanceNode,
-  ): Promise<{ asset: SceneAssetConfig; modelNode: TransformNode; cleanup: () => void } | null> {
+  ): Promise<{ asset: SceneAssetConfig; modelNode: TransformNode; animations: AnimationGroup[]; cleanup: () => void } | null> {
     if (asset.singleton && this.modelPool) {
       const pooled = await this.modelPool.acquireOnce(asset.id);
       pooled.node.setEnabled(true);
       return {
         asset,
         modelNode: pooled.node,
+        animations: pooled.animations,
         cleanup: () => {
           pooled.node.parent = null;
           pooled.node.setEnabled(false);
@@ -862,6 +872,7 @@ export class SceneBuilder {
       return {
         asset,
         modelNode: pooled.node,
+        animations: pooled.animations,
         cleanup: () => {
           pooled.node.parent = null;
           if (requiresUniqueMaterialRuntime) {
@@ -878,6 +889,7 @@ export class SceneBuilder {
     return {
       asset,
       modelNode,
+      animations: [],
       cleanup: () => {
         modelNode.parent = null;
         modelNode.dispose();
@@ -889,7 +901,7 @@ export class SceneBuilder {
     asset: SceneAssetConfig,
     sceneNodeId: string,
     nodeConfig?: SceneInstanceNode,
-  ): { asset: SceneAssetConfig; modelNode: TransformNode; cleanup: () => void } | null {
+  ): { asset: SceneAssetConfig; modelNode: TransformNode; animations: AnimationGroup[]; cleanup: () => void } | null {
     if (!this.modelPool) return null;
 
     const requiresUniqueMaterialRuntime = nodeConfig ? this.requiresUniqueMaterialRuntime(nodeConfig) : false;
@@ -903,6 +915,7 @@ export class SceneBuilder {
     return {
       asset,
       modelNode: pooled.node,
+      animations: pooled.animations,
       cleanup: () => {
         pooled.node.parent = null;
         restoreMaterials?.();
@@ -1336,6 +1349,7 @@ export class SceneBuilder {
 
     this.sceneNodeRuntimes.clear();
     this.sceneNodeCleanup.clear();
+    this.sceneNodeAnimationGroups.clear();
     this.sceneAssetConfigs.clear();
     this.root.parent = null;
   }

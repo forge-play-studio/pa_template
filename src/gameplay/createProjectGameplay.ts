@@ -1,4 +1,5 @@
 import type { GameplayModule, GameplayRuntimeContext } from './types';
+import { ShadowFixtureAnimationModule } from './ShadowFixtureAnimationModule';
 import { PROJECT_GAMEPLAY_CONFIG } from '../config/projectGameplayConfig';
 import { RuntimeNodeService } from '../services';
 import {
@@ -67,6 +68,7 @@ export function createProjectGameplayRuntime(context: GameplayRuntimeContext): P
   });
   const guide = new GuideSystem(PROJECT_GAMEPLAY_CONFIG.guideTargets, runtimeNodes);
   const endConditions = new EndConditionSystem(PROJECT_GAMEPLAY_CONFIG.endConditions, gameplayState);
+  const shadowFixtureAnimations = new ShadowFixtureAnimationModule(context);
 
   const modules: GameplayModule[] = [
     gameplayState,
@@ -80,6 +82,7 @@ export function createProjectGameplayRuntime(context: GameplayRuntimeContext): P
     upgrades,
     guide,
     endConditions,
+    shadowFixtureAnimations,
   ];
 
   return {

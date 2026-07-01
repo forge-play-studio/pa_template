@@ -5,7 +5,7 @@
     "authoringSource": {
       "sourceId": "scene.main",
       "sourceType": "scene",
-      "revision": 54
+      "revision": 60
     }
   },
   "assets": [
@@ -17,36 +17,36 @@
       "category": "Model",
       "materialMode": "shared",
       "metadata": {
-        "originalFileName": "木材订单主角.glb",
+        "originalFileName": "主角.glb",
         "relativePath": "../imported/asset_699aee4da2b84a3eb07f4496872ad249.glb",
         "codeKey": "shadow_fixture_player",
-        "contentHash": "sha256:4c472def3f8215eb2e2ba25a486750568d15effefe4210f53b085e8804e483e6",
-        "byteSize": 390248,
+        "contentHash": "sha256:fdba0d9ad4c3074c1e32088fbdfeddce119243be116bda92603f9797e77a0bf2",
+        "byteSize": 900140,
         "category": "shadow-fixture/character",
         "shadowFixture": true,
-        "sourceProject": "lumber-order-260525",
-        "sourceFileName": "木材订单主角.glb",
+        "sourceProject": "lumber-truck",
+        "sourceFileName": "主角.glb",
         "materialSlots": [
           {
-            "slotId": "slot_7bdc2eef",
-            "ownerNodePath": "男主",
-            "label": "男主",
-            "nodeIndex": 0,
+            "slotId": "slot_26caed25",
+            "ownerNodePath": "maozinan_DZY_Skin",
+            "label": "maozinan_DZY_Skin",
+            "nodeIndex": 2,
             "meshIndex": 0,
             "sourceMaterialIndex": 0,
             "sourceMaterialIndices": [
               0,
               1
             ],
-            "materialName": "ren_C_Mat",
+            "materialName": "新建材质",
             "materialNames": [
-              "ren_C_Mat",
-              "maozi_C_Mat"
+              "新建材质",
+              "02 - Default"
             ],
             "sourceMaterialProfiles": [
               {
                 "sourceMaterialIndex": 0,
-                "materialName": "ren_C_Mat",
+                "materialName": "新建材质",
                 "profile": {
                   "metallic": 0,
                   "roughness": 0.5
@@ -56,29 +56,55 @@
                     "profilePath": "baseColor.texture",
                     "textureIndex": 0,
                     "imageIndex": 0,
-                    "bufferView": 12,
-                    "mimeType": "image/png",
+                    "bufferView": 5,
+                    "mimeType": "image/jpeg",
                     "reason": "embedded-texture"
                   }
                 ]
               },
               {
                 "sourceMaterialIndex": 1,
-                "materialName": "maozi_C_Mat",
+                "materialName": "02 - Default",
+                "profile": {
+                  "baseColor": {
+                    "color": {
+                      "r": 0.214041144,
+                      "g": 0.214041144,
+                      "b": 0.214041144
+                    },
+                    "brightness": 1,
+                    "saturation": 1,
+                    "contrast": 1,
+                    "hue": 0
+                  },
+                  "metallic": 0,
+                  "roughness": 0.5
+                }
+              }
+            ]
+          },
+          {
+            "slotId": "slot_53300b02",
+            "ownerNodePath": "root/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 Spine1/Bip001 Neck/Bip001 R Clavicle/Bip001 R UpperArm/Bip001 R Forearm/Bip001 R Hand/wuqiguadiandummy/wuqiguadianbox",
+            "label": "wuqiguadianbox",
+            "nodeIndex": 39,
+            "meshIndex": 1,
+            "sourceMaterialIndex": 2,
+            "sourceMaterialIndices": [
+              2
+            ],
+            "materialName": "Default-Material",
+            "materialNames": [
+              "Default-Material"
+            ],
+            "sourceMaterialProfiles": [
+              {
+                "sourceMaterialIndex": 2,
+                "materialName": "Default-Material",
                 "profile": {
                   "metallic": 0,
                   "roughness": 0.5
-                },
-                "textureHints": [
-                  {
-                    "profilePath": "baseColor.texture",
-                    "textureIndex": 1,
-                    "imageIndex": 1,
-                    "bufferView": 13,
-                    "mimeType": "image/png",
-                    "reason": "embedded-texture"
-                  }
-                ]
+                }
               }
             ]
           }
@@ -86,36 +112,47 @@
         "assetAnalysis": {
           "kind": "gltf",
           "format": "glb",
-          "summary": "1 nodes, 1 meshes, 2 primitives, 2 materials",
+          "summary": "40 nodes, 2 meshes, 3 primitives, 3 materials",
           "complexity": "low",
           "sceneCount": 1,
-          "nodeCount": 1,
-          "meshCount": 1,
-          "primitiveCount": 2,
-          "materialCount": 2,
-          "textureCount": 2,
-          "imageCount": 2,
-          "animationCount": 0,
-          "skinCount": 0,
+          "nodeCount": 40,
+          "meshCount": 2,
+          "primitiveCount": 3,
+          "materialCount": 3,
+          "textureCount": 1,
+          "imageCount": 1,
+          "animationCount": 7,
+          "skinCount": 1,
           "meshes": [
             {
               "meshIndex": 0,
-              "name": "男主",
+              "name": "maozinan_DZY_Skin",
               "primitiveCount": 2,
               "materialIndices": [
                 0,
                 1
               ],
               "materialNames": [
-                "ren_C_Mat",
-                "maozi_C_Mat"
+                "新建材质",
+                "02 - Default"
+              ]
+            },
+            {
+              "meshIndex": 1,
+              "name": "wuqiguadianbox",
+              "primitiveCount": 1,
+              "materialIndices": [
+                2
+              ],
+              "materialNames": [
+                "Default-Material"
               ]
             }
           ],
           "materials": [
             {
               "sourceMaterialIndex": 0,
-              "materialName": "ren_C_Mat",
+              "materialName": "新建材质",
               "metallicFactor": 0,
               "roughnessFactor": 0.5,
               "alphaMode": "opaque",
@@ -128,19 +165,42 @@
             },
             {
               "sourceMaterialIndex": 1,
-              "materialName": "maozi_C_Mat",
+              "materialName": "02 - Default",
+              "baseColorFactor": [
+                0.214041144,
+                0.214041144,
+                0.214041144,
+                1
+              ],
               "metallicFactor": 0,
               "roughnessFactor": 0.5,
-              "alphaMode": "opaque",
-              "textureSlots": [
-                {
-                  "slot": "baseColor",
-                  "textureIndex": 1
-                }
-              ]
+              "alphaMode": "opaque"
+            },
+            {
+              "sourceMaterialIndex": 2,
+              "materialName": "Default-Material",
+              "metallicFactor": 0,
+              "roughnessFactor": 0.5,
+              "alphaMode": "opaque"
             }
           ],
-          "diagnostics": []
+          "diagnostics": [
+            {
+              "severity": "info",
+              "source": "asset",
+              "code": "asset.analysis.riggedOrAnimated",
+              "message": "GLTF asset contains animation or skin data.",
+              "details": {
+                "animationCount": 7,
+                "skinCount": 1
+              }
+            }
+          ]
+        },
+        "animationRole": "random-move-idle-run",
+        "preferredAnimations": {
+          "idle": "idle",
+          "move": "run"
         }
       }
     },
@@ -152,15 +212,15 @@
       "category": "Model",
       "materialMode": "shared",
       "metadata": {
-        "originalFileName": "工人_2.glb",
+        "originalFileName": "工人.glb",
         "relativePath": "../imported/asset_ade25007e0964563b197b21c2759c027.glb",
         "codeKey": "shadow_fixture_worker",
-        "contentHash": "sha256:4a6718371965120bc98f444142858bfe819dacaec4cd3a4b9f8a3d9d552ae7c9",
-        "byteSize": 424920,
+        "contentHash": "sha256:fee128df48f93449e778e6688aa195277f84864564cb063fe8803b9f4d022a82",
+        "byteSize": 131700,
         "category": "shadow-fixture/character",
         "shadowFixture": true,
-        "sourceProject": "lumber-order-260525",
-        "sourceFileName": "工人_2.glb",
+        "sourceProject": "lumber-truck",
+        "sourceFileName": "工人.glb",
         "materialSlots": [
           {
             "slotId": "slot_74e9cbf9",
@@ -181,31 +241,14 @@
                 "sourceMaterialIndex": 0,
                 "materialName": "lambert2",
                 "profile": {
-                  "baseColor": {
-                    "color": {
-                      "r": 1,
-                      "g": 1,
-                      "b": 1
-                    },
-                    "brightness": 1,
-                    "saturation": 1,
-                    "contrast": 1,
-                    "hue": 0
-                  },
                   "metallic": 0,
-                  "roughness": 0.4500536322593689,
-                  "alpha": {
-                    "mode": "opaque"
-                  }
+                  "roughness": 0.4500536322593689
                 },
                 "textureHints": [
                   {
                     "profilePath": "baseColor.texture",
                     "textureIndex": 0,
-                    "imageIndex": 0,
-                    "bufferView": 6,
-                    "mimeType": "image/jpeg",
-                    "reason": "embedded-texture"
+                    "reason": "missing-image-uri"
                   }
                 ]
               }
@@ -224,7 +267,7 @@
           "materialCount": 1,
           "textureCount": 1,
           "imageCount": 1,
-          "animationCount": 1,
+          "animationCount": 3,
           "skinCount": 1,
           "meshes": [
             {
@@ -243,20 +286,13 @@
             {
               "sourceMaterialIndex": 0,
               "materialName": "lambert2",
-              "baseColorFactor": [
-                1,
-                1,
-                1,
-                1
-              ],
               "metallicFactor": 0,
               "roughnessFactor": 0.4500536322593689,
               "alphaMode": "opaque",
               "textureSlots": [
                 {
                   "slot": "baseColor",
-                  "textureIndex": 0,
-                  "texCoord": 0
+                  "textureIndex": 0
                 }
               ]
             }
@@ -268,11 +304,17 @@
               "code": "asset.analysis.riggedOrAnimated",
               "message": "GLTF asset contains animation or skin data.",
               "details": {
-                "animationCount": 1,
+                "animationCount": 3,
                 "skinCount": 1
               }
             }
           ]
+        },
+        "animationRole": "idle-run-loop",
+        "preferredAnimations": {
+          "idle": "待机",
+          "move": "跑",
+          "drive": "驾驶"
         }
       }
     },
@@ -1706,6 +1748,309 @@
           "diagnostics": []
         }
       }
+    },
+    {
+      "id": "asset_07e860eb2bf04e6f9a81e0832cddc014",
+      "guid": "07e860eb-2bf0-4e6f-9a81-e0832cddc014",
+      "type": "glb",
+      "displayName": "阴影接收测试-地板块",
+      "category": "Model",
+      "materialMode": "shared",
+      "metadata": {
+        "originalFileName": "SM_diban.glb",
+        "relativePath": "../imported/asset_07e860eb2bf04e6f9a81e0832cddc014.glb",
+        "codeKey": "shadow_receiver_test_floor_tile",
+        "contentHash": "sha256:df91002113be5565813d8a3d9b1da0024b3477de5353ea62d7a4130e96feb282",
+        "byteSize": 10304,
+        "category": "shadow-receiver-test/ground",
+        "shadowReceiverFixture": true,
+        "sourceProject": "lumber-truck",
+        "sourceFileName": "SM_diban.glb",
+        "testPurpose": "small-floor-receiver",
+        "assetAnalysis": {
+          "kind": "gltf",
+          "format": "glb",
+          "summary": "1 nodes, 1 meshes, 1 primitives, 1 materials",
+          "complexity": "low",
+          "sceneCount": 1,
+          "nodeCount": 1,
+          "meshCount": 1,
+          "primitiveCount": 1,
+          "materialCount": 1,
+          "textureCount": 1,
+          "imageCount": 1,
+          "animationCount": 0,
+          "skinCount": 0,
+          "meshes": [
+            {
+              "meshIndex": 0,
+              "name": "SM_diban",
+              "primitiveCount": 1,
+              "materialIndices": [
+                0
+              ],
+              "materialNames": [
+                "diban_Mat"
+              ]
+            }
+          ],
+          "materials": [
+            {
+              "sourceMaterialIndex": 0,
+              "materialName": "diban_Mat",
+              "metallicFactor": 1,
+              "roughnessFactor": 0.5527864098548889,
+              "alphaMode": "opaque",
+              "textureSlots": [
+                {
+                  "slot": "baseColor",
+                  "textureIndex": 0
+                }
+              ]
+            }
+          ],
+          "diagnostics": []
+        },
+        "materialSlots": [
+          {
+            "slotId": "slot_2e82b283",
+            "ownerNodePath": "SM_diban",
+            "label": "SM_diban",
+            "nodeIndex": 0,
+            "meshIndex": 0,
+            "sourceMaterialIndex": 0,
+            "sourceMaterialIndices": [
+              0
+            ],
+            "materialName": "diban_Mat",
+            "materialNames": [
+              "diban_Mat"
+            ],
+            "sourceMaterialProfiles": [
+              {
+                "sourceMaterialIndex": 0,
+                "materialName": "diban_Mat",
+                "profile": {
+                  "metallic": 1,
+                  "roughness": 0.5527864098548889
+                },
+                "textureHints": [
+                  {
+                    "profilePath": "baseColor.texture",
+                    "textureIndex": 0,
+                    "imageIndex": 0,
+                    "bufferView": 0,
+                    "mimeType": "image/jpeg",
+                    "reason": "embedded-texture"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "asset_96ed807ee58f4928bcfcc44004a44ef3",
+      "guid": "96ed807e-e58f-4928-bcfc-c44004a44ef3",
+      "type": "glb",
+      "displayName": "阴影接收测试-抬高木台",
+      "category": "Model",
+      "materialMode": "shared",
+      "metadata": {
+        "originalFileName": "低多边形木色展示地台_TaiZi.glb",
+        "relativePath": "../imported/asset_96ed807ee58f4928bcfcc44004a44ef3.glb",
+        "codeKey": "shadow_receiver_test_raised_platform",
+        "contentHash": "sha256:be8d94efce498914096e8e9ea0cac038e95e64c5e7a1ebd209bda4d2044971e4",
+        "byteSize": 84424,
+        "category": "shadow-receiver-test/platform",
+        "shadowReceiverFixture": true,
+        "sourceProject": "lumber-truck",
+        "sourceFileName": "低多边形木色展示地台_TaiZi.glb",
+        "testPurpose": "raised-platform-receiver",
+        "assetAnalysis": {
+          "kind": "gltf",
+          "format": "glb",
+          "summary": "1 nodes, 1 meshes, 1 primitives, 1 materials",
+          "complexity": "low",
+          "sceneCount": 1,
+          "nodeCount": 1,
+          "meshCount": 1,
+          "primitiveCount": 1,
+          "materialCount": 1,
+          "textureCount": 1,
+          "imageCount": 1,
+          "animationCount": 0,
+          "skinCount": 0,
+          "meshes": [
+            {
+              "meshIndex": 0,
+              "name": "Mesh",
+              "primitiveCount": 1,
+              "materialIndices": [
+                0
+              ],
+              "materialNames": [
+                "lambert2"
+              ]
+            }
+          ],
+          "materials": [
+            {
+              "sourceMaterialIndex": 0,
+              "materialName": "lambert2",
+              "metallicFactor": 0,
+              "roughnessFactor": 0.5527864098548889,
+              "alphaMode": "opaque",
+              "textureSlots": [
+                {
+                  "slot": "baseColor",
+                  "textureIndex": 0
+                }
+              ]
+            }
+          ],
+          "diagnostics": []
+        },
+        "materialSlots": [
+          {
+            "slotId": "slot_924b32f0",
+            "ownerNodePath": "ZHUOZI",
+            "label": "ZHUOZI",
+            "nodeIndex": 0,
+            "meshIndex": 0,
+            "sourceMaterialIndex": 0,
+            "sourceMaterialIndices": [
+              0
+            ],
+            "materialName": "lambert2",
+            "materialNames": [
+              "lambert2"
+            ],
+            "sourceMaterialProfiles": [
+              {
+                "sourceMaterialIndex": 0,
+                "materialName": "lambert2",
+                "profile": {
+                  "metallic": 0,
+                  "roughness": 0.5527864098548889
+                },
+                "textureHints": [
+                  {
+                    "profilePath": "baseColor.texture",
+                    "textureIndex": 0,
+                    "imageIndex": 0,
+                    "bufferView": 4,
+                    "mimeType": "image/jpeg",
+                    "reason": "embedded-texture"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "asset_c52042a3dd6544d59408c015320ebc75",
+      "guid": "c52042a3-dd65-44d5-9408-c015320ebc75",
+      "type": "glb",
+      "displayName": "阴影接收测试-真实地面",
+      "category": "Model",
+      "materialMode": "shared",
+      "metadata": {
+        "originalFileName": "SSD_Ground.glb",
+        "relativePath": "../imported/asset_c52042a3dd6544d59408c015320ebc75.glb",
+        "codeKey": "shadow_receiver_test_ssd_ground",
+        "contentHash": "sha256:5de2e98e448467420cdd3d85c159fc14811d0032ed0fe773d7ff816da0f76362",
+        "byteSize": 196900,
+        "category": "shadow-receiver-test/ground",
+        "shadowReceiverFixture": true,
+        "sourceProject": "lumber-truck",
+        "sourceFileName": "SSD_Ground.glb",
+        "testPurpose": "model-ground-receiver",
+        "assetAnalysis": {
+          "kind": "gltf",
+          "format": "glb",
+          "summary": "1 nodes, 1 meshes, 1 primitives, 1 materials",
+          "complexity": "low",
+          "sceneCount": 1,
+          "nodeCount": 1,
+          "meshCount": 1,
+          "primitiveCount": 1,
+          "materialCount": 1,
+          "textureCount": 1,
+          "imageCount": 1,
+          "animationCount": 0,
+          "skinCount": 0,
+          "meshes": [
+            {
+              "meshIndex": 0,
+              "name": "Mesh",
+              "primitiveCount": 1,
+              "materialIndices": [
+                0
+              ],
+              "materialNames": [
+                "standardSurface2"
+              ]
+            }
+          ],
+          "materials": [
+            {
+              "sourceMaterialIndex": 0,
+              "materialName": "standardSurface2",
+              "metallicFactor": 0,
+              "roughnessFactor": 0.5527864098548889,
+              "alphaMode": "opaque",
+              "textureSlots": [
+                {
+                  "slot": "baseColor",
+                  "textureIndex": 0
+                }
+              ]
+            }
+          ],
+          "diagnostics": []
+        },
+        "materialSlots": [
+          {
+            "slotId": "slot_7cdede92",
+            "ownerNodePath": "pPlane1",
+            "label": "pPlane1",
+            "nodeIndex": 0,
+            "meshIndex": 0,
+            "sourceMaterialIndex": 0,
+            "sourceMaterialIndices": [
+              0
+            ],
+            "materialName": "standardSurface2",
+            "materialNames": [
+              "standardSurface2"
+            ],
+            "sourceMaterialProfiles": [
+              {
+                "sourceMaterialIndex": 0,
+                "materialName": "standardSurface2",
+                "profile": {
+                  "metallic": 0,
+                  "roughness": 0.5527864098548889
+                },
+                "textureHints": [
+                  {
+                    "profilePath": "baseColor.texture",
+                    "textureIndex": 0,
+                    "imageIndex": 0,
+                    "bufferView": 4,
+                    "mimeType": "image/jpeg",
+                    "reason": "embedded-texture"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
     }
   ],
   "scene": {
@@ -1909,7 +2254,8 @@
           }
         ],
         "shadow": {
-          "receive": "enabled",
+          "receive": "none",
+          "cast": "none",
           "mode": "none"
         }
       },
@@ -1927,14 +2273,14 @@
           {
             "type": "Transform",
             "position": {
-              "x": 5.044337272644043,
-              "y": 0.5,
-              "z": 2.5112922191619873
+              "x": 4.5,
+              "y": 1.45,
+              "z": -3.2
             },
             "rotation": {
-              "z": 0,
               "x": 0,
-              "y": 0
+              "y": 0,
+              "z": 0
             },
             "scale": {
               "x": 1,
@@ -1947,9 +2293,10 @@
           "cast": "enabled",
           "mode": "projected",
           "quality": "high",
+          "receive": "none",
           "params": {
-            "opacity": 0.62,
-            "softness": 0.25
+            "opacity": 0.65,
+            "softness": 0.28
           }
         }
       },
@@ -2094,8 +2441,11 @@
         ],
         "overrides": {
           "materialSlotBindings": {
-            "slot_7bdc2eef": {
+            "slot_26caed25": {
               "materialAssetId": "mat_cd94c2cdcc94413aab94bfa7ca94be14"
+            },
+            "slot_53300b02": {
+              "materialAssetId": "mat_6fc78e976ec74d04a1c791bd70c7902a"
             }
           }
         },
@@ -2103,10 +2453,7 @@
           "cast": "enabled",
           "mode": "projected",
           "quality": "high",
-          "params": {
-            "opacity": 0.62,
-            "softness": 0.25
-          }
+          "receive": "none"
         }
       },
       {
@@ -2259,10 +2606,7 @@
           "cast": "enabled",
           "mode": "projected",
           "quality": "high",
-          "params": {
-            "opacity": 0.62,
-            "softness": 0.25
-          }
+          "receive": "none"
         }
       },
       {
@@ -2696,6 +3040,109 @@
             "softness": 0.25
           }
         }
+      },
+      {
+        "id": "asset",
+        "guid": "go_8c25b316-6074-41ae-a1f2-49f3709453ec",
+        "name": "接收测试-地板块",
+        "parentId": "root",
+        "active": true,
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": -3.8,
+              "y": 0.04,
+              "z": -3.2
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 2.5,
+              "y": 1,
+              "z": 2.5
+            }
+          },
+          {
+            "type": "ModelRenderer",
+            "assetId": "asset_07e860eb2bf04e6f9a81e0832cddc014"
+          }
+        ]
+      },
+      {
+        "id": "asset_2",
+        "guid": "go_1ecaee91-9738-4914-8fc2-5f2b69cc018a",
+        "name": "接收测试-真实地面",
+        "parentId": "root",
+        "active": true,
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": 1.5,
+              "y": 0.08,
+              "z": -3.2
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1.5,
+              "y": 1,
+              "z": 1.5
+            }
+          },
+          {
+            "type": "ModelRenderer",
+            "assetId": "asset_c52042a3dd6544d59408c015320ebc75"
+          }
+        ],
+        "shadow": {
+          "cast": "none",
+          "receive": "none",
+          "mode": "none"
+        }
+      },
+      {
+        "id": "asset_3",
+        "guid": "go_cd724b70-f492-4014-ac1d-e51ef61cfc0d",
+        "name": "接收测试-抬高木台",
+        "parentId": "root",
+        "active": true,
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": 4.5,
+              "y": 0.42,
+              "z": -3.2
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0.25000000000000006,
+              "z": 0
+            },
+            "scale": {
+              "x": 1.2,
+              "y": 1.2,
+              "z": 1.2
+            }
+          },
+          {
+            "type": "ModelRenderer",
+            "assetId": "asset_96ed807ee58f4928bcfcc44004a44ef3"
+          }
+        ],
+        "shadow": {
+          "cast": "none",
+          "receive": "enabled",
+          "mode": "none"
+        }
       }
     ],
     "materialAssets": [
@@ -2761,82 +3208,6 @@
             "contrast": 1,
             "hue": 0
           },
-          "emission": {
-            "color": {
-              "r": 0,
-              "g": 0,
-              "b": 0
-            },
-            "intensity": 0
-          }
-        }
-      },
-      {
-        "id": "mat_cd94c2cdcc94413aab94bfa7ca94be14",
-        "guid": "cd94c2cd-cc94-413a-ab94-bfa7ca94be14",
-        "name": "ren_C_Mat",
-        "materialKind": "pbr",
-        "origin": {
-          "type": "imported",
-          "sourceAssetGuid": "699aee4d-a2b8-4a3e-b07f-4496872ad249",
-          "sourceAssetId": "asset_699aee4da2b84a3eb07f4496872ad249",
-          "sourceSlotId": "slot_7bdc2eef",
-          "sourceMaterialIndex": 0,
-          "sourceMaterialName": "ren_C_Mat"
-        },
-        "profile": {
-          "lightingModel": "lit",
-          "baseColor": {
-            "color": {
-              "r": 1,
-              "g": 1,
-              "b": 1
-            },
-            "brightness": 1,
-            "saturation": 1,
-            "contrast": 1,
-            "hue": 0
-          },
-          "metallic": 0,
-          "roughness": 0.5,
-          "emission": {
-            "color": {
-              "r": 0,
-              "g": 0,
-              "b": 0
-            },
-            "intensity": 0
-          }
-        }
-      },
-      {
-        "id": "mat_ceae7442cfae45d5acae711ccdae72af",
-        "guid": "ceae7442-cfae-45d5-acae-711ccdae72af",
-        "name": "maozi_C_Mat",
-        "materialKind": "pbr",
-        "origin": {
-          "type": "imported",
-          "sourceAssetGuid": "699aee4d-a2b8-4a3e-b07f-4496872ad249",
-          "sourceAssetId": "asset_699aee4da2b84a3eb07f4496872ad249",
-          "sourceSlotId": "slot_7bdc2eef",
-          "sourceMaterialIndex": 1,
-          "sourceMaterialName": "maozi_C_Mat"
-        },
-        "profile": {
-          "lightingModel": "lit",
-          "baseColor": {
-            "color": {
-              "r": 1,
-              "g": 1,
-              "b": 1
-            },
-            "brightness": 1,
-            "saturation": 1,
-            "contrast": 1,
-            "hue": 0
-          },
-          "metallic": 0,
-          "roughness": 0.5,
           "emission": {
             "color": {
               "r": 0,
@@ -3318,6 +3689,120 @@
           "sourceSlotId": "slot_5cd8df33",
           "sourceMaterialIndex": 0,
           "sourceMaterialName": "收银桌子aa_Mat"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 0.5,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_cd94c2cdcc94413aab94bfa7ca94be14",
+        "guid": "cd94c2cd-cc94-413a-ab94-bfa7ca94be14",
+        "name": "ren_C_Mat",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "699aee4d-a2b8-4a3e-b07f-4496872ad249",
+          "sourceAssetId": "asset_699aee4da2b84a3eb07f4496872ad249",
+          "sourceSlotId": "slot_7bdc2eef",
+          "sourceMaterialIndex": 0,
+          "sourceMaterialName": "ren_C_Mat"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 0.5,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_ceae7442cfae45d5acae711ccdae72af",
+        "guid": "ceae7442-cfae-45d5-acae-711ccdae72af",
+        "name": "maozi_C_Mat",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "699aee4d-a2b8-4a3e-b07f-4496872ad249",
+          "sourceAssetId": "asset_699aee4da2b84a3eb07f4496872ad249",
+          "sourceSlotId": "slot_7bdc2eef",
+          "sourceMaterialIndex": 1,
+          "sourceMaterialName": "maozi_C_Mat"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 0.5,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_6fc78e976ec74d04a1c791bd70c7902a",
+        "guid": "6fc78e97-6ec7-4d04-a1c7-91bd70c7902a",
+        "name": "Default-Material",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "699aee4d-a2b8-4a3e-b07f-4496872ad249",
+          "sourceAssetId": "asset_699aee4da2b84a3eb07f4496872ad249",
+          "sourceSlotId": "slot_53300b02",
+          "sourceMaterialIndex": 2,
+          "sourceMaterialName": "Default-Material"
         },
         "profile": {
           "lightingModel": "lit",

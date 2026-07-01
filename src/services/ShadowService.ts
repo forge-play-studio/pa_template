@@ -412,8 +412,9 @@ export class ShadowService {
     }
 
     const mode = this.resolveMeshShadowMode(mesh);
+    const canRenderCaster = this.canRenderShadowCaster(mesh, mode);
     const dynamicReady = mode === 'dynamic'
-      ? this.ensureDynamicShadowGenerator()
+      ? canRenderCaster && this.ensureDynamicShadowGenerator()
       : !!this.shadowGenerator;
     const receiveShadows = this.isShadowReceiver(mesh);
     mesh.receiveShadows = receiveShadows && dynamicReady;
@@ -425,6 +426,15 @@ export class ShadowService {
     if (this.planarShadowSystem) {
       if (receiveShadows) this.planarShadowSystem.addReceiver(mesh);
       else this.planarShadowSystem.removeReceiver(mesh);
+    }
+
+    if (!canRenderCaster) {
+      this.logShadowDebug('service.caster.skippedNoReceiver', this.describeMeshShadowDecision(mesh, {
+        mode,
+        receiveShadows,
+        dynamicReady,
+      }));
+      return;
     }
 
     if (mode === 'blob') {
@@ -468,6 +478,35 @@ export class ShadowService {
       return true;
     }
     return this.isNameMatched(mesh.name, this.shadowReceivers);
+  }
+
+  private canRenderShadowCaster(mesh: AbstractMesh, mode: SceneShadowMode): boolean {
+    if (mode !== 'blob' && mode !== 'planar' && mode !== 'dynamic') return true;
+    const plan = this.readMeshShadowPlan(mesh);
+    const hasReceiver = plan
+      ? this.hasRenderableReceiverForPlan(plan)
+      : this.hasAnyRenderableReceiver();
+    return hasReceiver;
+  }
+
+  private hasRenderableReceiverForPlan(plan: EditorShadowResolvedPlan): boolean {
+    if (plan.backend === 'none' || plan.mode === 'none') return false;
+    if (plan.receiverIds.length === 0) return false;
+    const receiverIds = new Set(plan.receiverIds);
+    return this.scene.meshes.some(candidate => {
+      if (!this.isRuntimeReceiverCandidate(candidate)) return false;
+      return this.readMeshProjectionNodeIds(candidate).some(nodeId => receiverIds.has(nodeId));
+    });
+  }
+
+  private hasAnyRenderableReceiver(): boolean {
+    return this.scene.meshes.some(candidate => this.isRuntimeReceiverCandidate(candidate));
+  }
+
+  private isRuntimeReceiverCandidate(mesh: AbstractMesh): boolean {
+    if (typeof mesh.isDisposed === 'function' && mesh.isDisposed()) return false;
+    if (this.isGeneratedShadowExcluded(mesh)) return false;
+    return this.isShadowReceiver(mesh);
   }
 
   /**
