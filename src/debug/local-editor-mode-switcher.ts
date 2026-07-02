@@ -288,6 +288,9 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
     },
     root: options.root,
     localTestActions: window.parent === window,
+    agentBridge: {
+      sessionMetadata: __FPS_EDITOR_AGENT_SESSION_METADATA__,
+    },
     authoring: {
       drivers: [sceneMainSourceDriver],
     },

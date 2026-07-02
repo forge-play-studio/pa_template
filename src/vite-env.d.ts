@@ -69,6 +69,7 @@ declare const __CHANNEL__: string;
 declare const __RTL__: boolean;
 declare const __MULTI_LOCALE__: boolean;
 declare const __BUNDLED_LOCALES__: string[];
+declare const __FPS_EDITOR_AGENT_SESSION_METADATA__: Record<string, unknown>;
 
 // 在某些环境下（例如仅跑 tsc 且未安装完整 Vite 类型）
 // 这里补充最小的 import.meta.env 类型，避免 TS2339。

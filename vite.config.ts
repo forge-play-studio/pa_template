@@ -128,6 +128,82 @@ function readFpsEditorVersion(): string {
   }
 }
 
+type GitWorkspaceInfo = {
+  root: string;
+  repoRemote?: string;
+  branch?: string;
+  gitSha?: string;
+};
+
+function readJsonRecord(filePath: string): Record<string, unknown> | null {
+  if (!existsSync(filePath)) return null;
+  try {
+    const value = JSON.parse(readFileSync(filePath, 'utf8') || '{}') as unknown;
+    return value && typeof value === 'object' && !Array.isArray(value)
+      ? value as Record<string, unknown>
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function readGitOutput(cwd: string, args: string[]): string | null {
+  const result = spawnSync('git', args, {
+    cwd,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'ignore'],
+  });
+  if (result.status !== 0) return null;
+  const value = String(result.stdout ?? '').trim();
+  return value || null;
+}
+
+function readGitWorkspaceInfo(root: string | null): GitWorkspaceInfo | null {
+  if (!root || !existsSync(root)) return null;
+  const workspaceRoot = readGitOutput(root, ['rev-parse', '--show-toplevel']) ?? root;
+  const branch = readGitOutput(workspaceRoot, ['branch', '--show-current'])
+    ?? readGitOutput(workspaceRoot, ['rev-parse', '--abbrev-ref', 'HEAD']);
+  const repoRemote = readGitOutput(workspaceRoot, ['config', '--get', 'remote.origin.url']);
+  const gitSha = readGitOutput(workspaceRoot, ['rev-parse', 'HEAD']);
+  return {
+    root: workspaceRoot,
+    ...(repoRemote ? { repoRemote } : {}),
+    ...(branch && branch !== 'HEAD' ? { branch } : {}),
+    ...(gitSha ? { gitSha } : {}),
+  };
+}
+
+function createEditorBuildInfoMetadata(): Record<string, unknown> {
+  const packageJson = readJsonRecord(fpsEditorPackageJsonPath);
+  const distBuildInfo = readJsonRecord(resolve(path.dirname(fpsEditorPackageJsonPath), 'dist/build-info.json'));
+  return {
+    source: localFpsGameEditorRepo ? 'local-source' : 'bundled-package',
+    packageJsonPath: fpsEditorPackageJsonPath,
+    ...(typeof packageJson?.name === 'string' ? { packageName: packageJson.name } : {}),
+    ...(typeof packageJson?.version === 'string' ? { version: packageJson.version } : {}),
+    ...(distBuildInfo ? { buildInfo: distBuildInfo } : {}),
+  };
+}
+
+function createAgentBridgeSessionMetadata(): Record<string, unknown> {
+  const editorGit = readGitWorkspaceInfo(localFpsGameEditorRepo);
+  const projectGit = readGitWorkspaceInfo(__dirname);
+  const workspaceRoot = editorGit?.root ?? localFpsGameEditorRepo;
+  const projectRoot = projectGit?.root ?? __dirname;
+  return {
+    ...(workspaceRoot ? { workspaceRoot } : {}),
+    ...(editorGit?.repoRemote ? { repoRemote: editorGit.repoRemote } : {}),
+    ...(editorGit?.branch ? { branch: editorGit.branch } : {}),
+    ...(editorGit?.gitSha ? { gitSha: editorGit.gitSha } : {}),
+    projectRoot,
+    paTemplateRoot: projectRoot,
+    ...(projectGit?.repoRemote ? { projectRepoRemote: projectGit.repoRemote } : {}),
+    ...(projectGit?.branch ? { projectBranch: projectGit.branch } : {}),
+    ...(projectGit?.gitSha ? { projectGitSha: projectGit.gitSha } : {}),
+    editorBuildInfo: createEditorBuildInfoMetadata(),
+  };
+}
+
 function editorPackageAlias(find: string | RegExp, replacement: string): { find: string | RegExp; replacement: string } {
   return { find, replacement };
 }
@@ -818,6 +894,7 @@ export default defineConfig({
     __RTL__: JSON.stringify(localeMeta.isRTL),
     __MULTI_LOCALE__: JSON.stringify(isMultiLocale),
     __BUNDLED_LOCALES__: JSON.stringify(bundledLocales),
+    __FPS_EDITOR_AGENT_SESSION_METADATA__: JSON.stringify(createAgentBridgeSessionMetadata()),
   },
   plugins: [
     // 平台 bridge 自动注入（仅开发模式）
