@@ -177,6 +177,14 @@ export interface LocalEditorModeSwitcher {
   dispose(): void;
 }
 
+type LocalEditorHostManifestWithAgentBridge = Parameters<
+  typeof createPlayableLocalEditorHost<EditorSceneDocument, EditorSceneDocumentPatch, EditorSceneAssetLibraryItem>
+>[0] & {
+  agentBridge?: {
+    sessionMetadata?: typeof __FPS_EDITOR_AGENT_SESSION_METADATA__;
+  };
+};
+
 const EDITOR_LOADING_OVERLAY_CONTENT: Record<'enter' | 'saveScene' | 'saveAndRunGame' | 'discardAndRunGame' | 'assetImport', PlayableLocalEditorLoadingOverlayContent> = {
   enter: {
     title: '正在进入编辑界面…',
@@ -248,15 +256,10 @@ const editorProjectionModelImporter = createBabylonAssetContainerProjectionImpor
 export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOptions): LocalEditorModeSwitcher {
   const sceneMainSourceDriver = createSceneMainSourceDriver();
   let editorHost: PlayableLocalEditorHost<EditorSceneDocument> | null = null;
-  const runWithAssetLoadingOverlay = async <T>(operation: () => Promise<T>): Promise<T> => {
-    return editorHost
-      ? editorHost.runWithAssetLoadingOverlay(operation)
-      : operation();
-  };
   const importProjectionModelWithLoading = async (
     context: PlayableBabylonProjectionImportContext,
   ): Promise<PlayableBabylonProjectionImportResult | null> => {
-    return runWithAssetLoadingOverlay(() => importEditorProjectionModel(context));
+    return importEditorProjectionModel(context);
   };
   const editorLightingPreviewAdapter = {
     getWorldAppearance: resolveEditorLightingPreviewProfile,
@@ -279,7 +282,7 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
     await options.onBeforeEnterEditor?.();
   };
 
-  editorHost = createPlayableLocalEditorHost<EditorSceneDocument, EditorSceneDocumentPatch, EditorSceneAssetLibraryItem>({
+  const hostManifest: LocalEditorHostManifestWithAgentBridge = {
     metadata: {
       manifestVersion: PLAYABLE_LOCAL_EDITOR_HOST_MANIFEST_VERSION,
       projectId: 'pa_template',
@@ -505,7 +508,9 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
         console.error('[LocalEditorModeSwitcher] Forge Play mode change failed', error);
       },
     },
-  });
+  };
+
+  editorHost = createPlayableLocalEditorHost<EditorSceneDocument, EditorSceneDocumentPatch, EditorSceneAssetLibraryItem>(hostManifest);
 
   const host = editorHost;
   logPlayableLocalEditorHostCompatibilityReport(host.getCompatibilityReport());
