@@ -35818,8 +35818,8 @@
     "originalFileName": "SM_diban.glb",
     "codeKey": "shadow_receiver_test_floor_tile",
     "placeable": true,
-    "contentHash": "sha256:df91002113be5565813d8a3d9b1da0024b3477de5353ea62d7a4130e96feb282",
-    "byteSize": 10304,
+    "contentHash": "sha256:7c4d80ba441abe4dc907a2440cae4be4408b446a522cb21290a6a143b926f034",
+    "byteSize": 9120,
     "metadata": {
       "category": "shadow-receiver-test/ground",
       "shadowReceiverFixture": true,
@@ -35981,7 +35981,7 @@
       ]
     },
     "createdAt": "2026-07-01T02:00:01.885Z",
-    "updatedAt": "2026-07-01T02:00:01.885Z"
+    "updatedAt": "2026-07-02T08:35:26.591Z"
   },
   {
     "guid": "96ed807e-e58f-4928-bcfc-c44004a44ef3",
@@ -38428,8 +38428,8 @@
     "originalFileName": "工人.glb",
     "codeKey": "shadow_fixture_worker",
     "placeable": true,
-    "contentHash": "sha256:fee128df48f93449e778e6688aa195277f84864564cb063fe8803b9f4d022a82",
-    "byteSize": 131700,
+    "contentHash": "sha256:5d44ff57ba16dc78c6e7639d29bfe03e468845b35b98a9a480ea3eb60cdeec31",
+    "byteSize": 149020,
     "metadata": {
       "category": "shadow-fixture/character",
       "shadowFixture": true,
@@ -39937,7 +39937,7 @@
       }
     },
     "createdAt": "2026-06-27T23:03:55.817Z",
-    "updatedAt": "2026-06-30T19:30:26.658Z"
+    "updatedAt": "2026-07-02T08:37:48.831Z"
   },
   {
     "guid": "26e79030-d245-4658-85b6-e4349c9d81d9",
@@ -40753,8 +40753,8 @@
     "originalFileName": "松树.glb",
     "codeKey": "shadow_fixture_pine_tree",
     "placeable": true,
-    "contentHash": "sha256:30f4359bf67f78a1279b154228326c6c8dfe0b6da5478734f24ac466a4e44706",
-    "byteSize": 26812,
+    "contentHash": "sha256:20a7c3c942182d3d86d95aabb68327a250357c61ab62ea07d6659855426dde7d",
+    "byteSize": 30440,
     "metadata": {
       "category": "shadow-fixture/vegetation",
       "shadowFixture": true,
@@ -40915,7 +40915,7 @@
       }
     },
     "createdAt": "2026-06-27T23:03:56.360Z",
-    "updatedAt": "2026-06-27T23:03:56.360Z"
+    "updatedAt": "2026-07-02T08:37:50.065Z"
   },
   {
     "guid": "e726be04-0428-4908-8cf7-3e4f2f92c00f",
@@ -41456,8 +41456,8 @@
     "originalFileName": "鸡.glb",
     "codeKey": "shadow_fixture_chicken",
     "placeable": true,
-    "contentHash": "sha256:db72ad930562c7efaafaf3b2d9183003eaf0280be3c8b2cfa12cc589a024398d",
-    "byteSize": 54424,
+    "contentHash": "sha256:7dbafd9a2546d6b66be7f3db2b74746abcb3f251e16d186613b5d851ffae76b6",
+    "byteSize": 77612,
     "metadata": {
       "category": "shadow-fixture/animal",
       "shadowFixture": true,
@@ -41859,7 +41859,7 @@
       }
     },
     "createdAt": "2026-06-27T23:03:58.287Z",
-    "updatedAt": "2026-06-27T23:03:58.287Z"
+    "updatedAt": "2026-07-02T08:37:51.220Z"
   },
   {
     "guid": "1213c074-e685-4e53-8fe1-8d78806be154",

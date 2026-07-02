@@ -81,6 +81,10 @@ const analyticsConfig = appConfig.analytics;
 const i18nConfig = appConfig.i18n;
 const liteBuild = process.env.LITE_BUILD === 'true';
 const isProduction = process.env.NODE_ENV === 'production';
+const VFX_USAGES_SCHEMA_REF = './usages.schema.json';
+const VFX_USAGES_SCHEMA_VERSION = 'project-vfx-usages/1.0';
+const VFX_USAGE_TARGET_KINDS = new Set(['socket', 'node']);
+const VFX_USAGE_LIFECYCLES = new Set(['follow', 'loop', 'oneshot']);
 const bridgeEnabled = process.env.BRIDGE_ENABLED !== 'false';
 const bundleStatsEnabled = process.env.BUNDLE_STATS === 'true';
 const buildMatrix = process.env.BUILD_MATRIX === 'true';
@@ -126,6 +130,82 @@ function readFpsEditorVersion(): string {
   } catch {
     return 'unknown';
   }
+}
+
+type GitWorkspaceInfo = {
+  root: string;
+  repoRemote?: string;
+  branch?: string;
+  gitSha?: string;
+};
+
+function readJsonRecord(filePath: string): Record<string, unknown> | null {
+  if (!existsSync(filePath)) return null;
+  try {
+    const value = JSON.parse(readFileSync(filePath, 'utf8') || '{}') as unknown;
+    return value && typeof value === 'object' && !Array.isArray(value)
+      ? value as Record<string, unknown>
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function readGitOutput(cwd: string, args: string[]): string | null {
+  const result = spawnSync('git', args, {
+    cwd,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'ignore'],
+  });
+  if (result.status !== 0) return null;
+  const value = String(result.stdout ?? '').trim();
+  return value || null;
+}
+
+function readGitWorkspaceInfo(root: string | null): GitWorkspaceInfo | null {
+  if (!root || !existsSync(root)) return null;
+  const workspaceRoot = readGitOutput(root, ['rev-parse', '--show-toplevel']) ?? root;
+  const branch = readGitOutput(workspaceRoot, ['branch', '--show-current'])
+    ?? readGitOutput(workspaceRoot, ['rev-parse', '--abbrev-ref', 'HEAD']);
+  const repoRemote = readGitOutput(workspaceRoot, ['config', '--get', 'remote.origin.url']);
+  const gitSha = readGitOutput(workspaceRoot, ['rev-parse', 'HEAD']);
+  return {
+    root: workspaceRoot,
+    ...(repoRemote ? { repoRemote } : {}),
+    ...(branch && branch !== 'HEAD' ? { branch } : {}),
+    ...(gitSha ? { gitSha } : {}),
+  };
+}
+
+function createEditorBuildInfoMetadata(): Record<string, unknown> {
+  const packageJson = readJsonRecord(fpsEditorPackageJsonPath);
+  const distBuildInfo = readJsonRecord(resolve(path.dirname(fpsEditorPackageJsonPath), 'dist/build-info.json'));
+  return {
+    source: localFpsGameEditorRepo ? 'local-source' : 'bundled-package',
+    packageJsonPath: fpsEditorPackageJsonPath,
+    ...(typeof packageJson?.name === 'string' ? { packageName: packageJson.name } : {}),
+    ...(typeof packageJson?.version === 'string' ? { version: packageJson.version } : {}),
+    ...(distBuildInfo ? { buildInfo: distBuildInfo } : {}),
+  };
+}
+
+function createAgentBridgeSessionMetadata(): Record<string, unknown> {
+  const editorGit = readGitWorkspaceInfo(localFpsGameEditorRepo);
+  const projectGit = readGitWorkspaceInfo(__dirname);
+  const workspaceRoot = editorGit?.root ?? localFpsGameEditorRepo;
+  const projectRoot = projectGit?.root ?? __dirname;
+  return {
+    ...(workspaceRoot ? { workspaceRoot } : {}),
+    ...(editorGit?.repoRemote ? { repoRemote: editorGit.repoRemote } : {}),
+    ...(editorGit?.branch ? { branch: editorGit.branch } : {}),
+    ...(editorGit?.gitSha ? { gitSha: editorGit.gitSha } : {}),
+    projectRoot,
+    paTemplateRoot: projectRoot,
+    ...(projectGit?.repoRemote ? { projectRepoRemote: projectGit.repoRemote } : {}),
+    ...(projectGit?.branch ? { projectBranch: projectGit.branch } : {}),
+    ...(projectGit?.gitSha ? { projectGitSha: projectGit.gitSha } : {}),
+    editorBuildInfo: createEditorBuildInfoMetadata(),
+  };
 }
 
 function editorPackageAlias(find: string | RegExp, replacement: string): { find: string | RegExp; replacement: string } {
@@ -777,12 +857,241 @@ function vfxDebugOverridesApiPlugin() {
   };
 }
 
+// VFX usage overrides API（仅 dev serve）：写入 src/assets/vfx/usages.json 中某个 usage 的实例参数。
+function vfxUsageOverridesApiPlugin() {
+  return {
+    name: 'vfx-usage-overrides-api',
+    apply: 'serve' as const,
+    configureServer(server: any) {
+      server.middlewares.use('/__vfx_usage_overrides', async (req: any, res: any) => {
+        if (req.method === 'GET') {
+          res.setHeader('Content-Type', 'application/json; charset=utf-8');
+          res.end(JSON.stringify(readVfxUsagesDocument(), null, 2));
+          return;
+        }
+
+        if (req.method !== 'POST') {
+          sendJson(res, 405, { ok: false, error: 'method_not_allowed' });
+          return;
+        }
+
+        try {
+          const body = await readJsonBody(req);
+          const usageId = typeof body.usageId === 'string' ? body.usageId.trim() : '';
+          const params = readOptionalRecord(body.params);
+          const offset = readOptionalRecord(body.offset);
+          if (!usageId || !params) {
+            sendJson(res, 400, { ok: false, error: 'missing_usage_id_or_params' });
+            return;
+          }
+
+          const usagesPath = resolveVfxUsagesPath();
+          const document = readVfxUsagesDocument();
+          const usages = Array.isArray(document.usages) ? document.usages : [];
+          const usage = usages.find((entry: any) => entry && typeof entry === 'object' && entry.id === usageId);
+          if (!usage) {
+            sendJson(res, 404, { ok: false, error: 'unknown_usage_id' });
+            return;
+          }
+
+          usage.params = params;
+          if (offset) {
+            usage.offset = sanitizeVfxUsageOffset(offset);
+          }
+          document.$schema = typeof document.$schema === 'string' ? document.$schema : VFX_USAGES_SCHEMA_REF;
+          document.schemaVersion = typeof document.schemaVersion === 'string' ? document.schemaVersion : VFX_USAGES_SCHEMA_VERSION;
+          document.updatedAt = new Date().toISOString();
+          const validationErrors = validateVfxUsagesDocument(document);
+          if (validationErrors.length > 0) {
+            sendJson(res, 400, { ok: false, error: 'invalid_vfx_usages_document', issues: validationErrors });
+            return;
+          }
+
+          await mkdir(path.dirname(usagesPath), { recursive: true });
+          await writeFile(usagesPath, `${JSON.stringify(document, null, 2)}\n`, 'utf8');
+          invalidateViteFileModules(server, [
+            usagesPath,
+            resolve(__dirname, 'src/systems/ProjectVfxDirector.ts'),
+          ]);
+          sendJson(res, 200, { ok: true, path: usagesPath, usage });
+        } catch (error) {
+          sendJson(res, 500, { ok: false, error: error instanceof Error ? error.message : String(error) });
+        }
+      });
+    },
+  };
+}
+
 function resolveVfxEffectParamsPath(effectId: string): string | null {
   // debug-only 端点:仅需保证落点不逃出 effects 目录；不做字符白名单，所以下划线 id 也支持。
   const effectDir = resolve(__dirname, 'src/assets/vfx/effects', effectId);
   const vfxRoot = resolve(__dirname, 'src/assets/vfx/effects');
   if (!effectDir.startsWith(`${vfxRoot}${path.sep}`)) return null;
   return resolve(effectDir, 'vfx-params.json');
+}
+
+function resolveVfxUsagesPath(): string {
+  return resolve(__dirname, 'src/assets/vfx/usages.json');
+}
+
+function readVfxUsagesDocument(): any {
+  const usagesPath = resolveVfxUsagesPath();
+  if (!existsSync(usagesPath)) {
+    return {
+      $schema: VFX_USAGES_SCHEMA_REF,
+      schemaVersion: VFX_USAGES_SCHEMA_VERSION,
+      usages: [],
+    };
+  }
+  return JSON.parse(stripVfxJsonBom(readFileSync(usagesPath, 'utf8')) || '{}');
+}
+
+function validateVfxUsagesDocument(document: any): string[] {
+  const issues: string[] = [];
+  const add = (pathLabel: string, message: string) => issues.push(`${pathLabel}: ${message}`);
+  if (!document || typeof document !== 'object' || Array.isArray(document)) {
+    return ['document: must be an object'];
+  }
+  if (document.$schema !== undefined && document.$schema !== VFX_USAGES_SCHEMA_REF) {
+    add('$schema', `expected ${VFX_USAGES_SCHEMA_REF}`);
+  }
+  if (document.schemaVersion !== VFX_USAGES_SCHEMA_VERSION) {
+    add('schemaVersion', `expected ${VFX_USAGES_SCHEMA_VERSION}`);
+  }
+  if (!Array.isArray(document.usages)) {
+    add('usages', 'must be an array');
+    return issues;
+  }
+
+  const ids = new Map<string, number>();
+  document.usages.forEach((usage: any, index: number) => {
+    const base = `usages[${index}]`;
+    if (!usage || typeof usage !== 'object' || Array.isArray(usage)) {
+      add(base, 'must be an object');
+      return;
+    }
+    const id = typeof usage.id === 'string' ? usage.id.trim() : '';
+    if (!id) add(`${base}.id`, 'must be a non-empty string');
+    if (id && ids.has(id)) add(`${base}.id`, `duplicates usages[${ids.get(id)}].id`);
+    if (id) ids.set(id, index);
+    if (typeof usage.effect !== 'string' || usage.effect.trim().length === 0) add(`${base}.effect`, 'must be a non-empty string');
+
+    const placement = typeof usage.placement === 'string' ? usage.placement : '';
+    if (!VFX_USAGE_TARGET_KINDS.has(placement)) add(`${base}.placement`, 'must be socket or node');
+    validateVfxUsagePositionSourceConfig(usage.positionSource, placement, `${base}.positionSource`, add);
+
+    if (usage.inputs !== undefined) validateVfxUsageInputsConfig(usage.inputs, `${base}.inputs`, add);
+
+    const lifecycle = typeof usage.lifecycle === 'string' ? usage.lifecycle : '';
+    if (!VFX_USAGE_LIFECYCLES.has(lifecycle)) add(`${base}.lifecycle`, 'must be follow, loop, or oneshot');
+    if (usage.repeatIntervalSec !== undefined) {
+      if (!isFiniteConfigNumber(usage.repeatIntervalSec) || usage.repeatIntervalSec < 0) add(`${base}.repeatIntervalSec`, 'must be a non-negative number');
+      if (lifecycle !== 'loop') add(`${base}.repeatIntervalSec`, 'is only valid when lifecycle is loop');
+    }
+    if (usage.offset !== undefined) validateVfxUsageOffsetConfig(usage.offset, `${base}.offset`, add);
+    if (usage.params !== undefined) validateVfxUsageParamsConfig(usage.params, `${base}.params`, add);
+  });
+  return issues;
+}
+
+function validateVfxUsagePositionSourceConfig(
+  source: unknown,
+  placement: string,
+  pathLabel: string,
+  add: (pathLabel: string, message: string) => void,
+): void {
+  if (!source || typeof source !== 'object' || Array.isArray(source)) {
+    add(pathLabel, 'must be an object');
+    return;
+  }
+  const value = source as Record<string, unknown>;
+  for (const key of Object.keys(value)) {
+    if (key !== 'kind' && key !== 'nodeId') add(`${pathLabel}.${key}`, 'unknown position source field');
+  }
+  const kind = typeof value.kind === 'string' ? value.kind : '';
+  if (!VFX_USAGE_TARGET_KINDS.has(kind)) add(`${pathLabel}.kind`, 'must be socket or node');
+  if (placement && kind && placement !== kind) add(`${pathLabel}.kind`, 'must match placement');
+  if (typeof value.nodeId !== 'string' || value.nodeId.trim().length === 0) {
+    add(`${pathLabel}.nodeId`, 'must be a non-empty string');
+  }
+}
+
+function validateVfxUsageInputsConfig(
+  inputs: unknown,
+  pathLabel: string,
+  add: (pathLabel: string, message: string) => void,
+): void {
+  if (!inputs || typeof inputs !== 'object' || Array.isArray(inputs)) {
+    add(pathLabel, 'must be an object');
+    return;
+  }
+  const value = inputs as Record<string, unknown>;
+  const keys = Object.keys(value);
+  if (keys.length === 0) add(pathLabel, 'must contain at least one input');
+  for (const key of keys) {
+    if (key !== 'reference') add(`${pathLabel}.${key}`, 'unknown input field');
+  }
+  if (value.reference !== undefined) {
+    validateVfxUsagePositionSourceConfig(value.reference, '', `${pathLabel}.reference`, add);
+  }
+}
+
+function validateVfxUsageOffsetConfig(offset: unknown, pathLabel: string, add: (pathLabel: string, message: string) => void): void {
+  if (!offset || typeof offset !== 'object' || Array.isArray(offset)) {
+    add(pathLabel, 'must be an object');
+    return;
+  }
+  const source = offset as Record<string, unknown>;
+  for (const key of Object.keys(source)) {
+    if (key !== 'position' && key !== 'rotation' && key !== 'scale') add(`${pathLabel}.${key}`, 'unknown offset field');
+  }
+  if (source.position !== undefined) validateVfxUsageVector3Config(source.position, `${pathLabel}.position`, add);
+  if (source.rotation !== undefined) validateVfxUsageVector3Config(source.rotation, `${pathLabel}.rotation`, add);
+  if (source.scale !== undefined && !isFiniteConfigNumber(source.scale)) {
+    validateVfxUsageVector3Config(source.scale, `${pathLabel}.scale`, add);
+  }
+}
+
+function validateVfxUsageVector3Config(value: unknown, pathLabel: string, add: (pathLabel: string, message: string) => void): void {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    add(pathLabel, 'must be a vector object');
+    return;
+  }
+  const source = value as Record<string, unknown>;
+  const keys = Object.keys(source);
+  if (keys.length === 0) add(pathLabel, 'must contain at least one axis');
+  for (const key of keys) {
+    if (key !== 'x' && key !== 'y' && key !== 'z') {
+      add(`${pathLabel}.${key}`, 'unknown vector axis');
+      continue;
+    }
+    if (!isFiniteConfigNumber(source[key])) add(`${pathLabel}.${key}`, 'must be a finite number');
+  }
+}
+
+function validateVfxUsageParamsConfig(params: unknown, pathLabel: string, add: (pathLabel: string, message: string) => void): void {
+  if (!params || typeof params !== 'object' || Array.isArray(params)) {
+    add(pathLabel, 'must be an object');
+    return;
+  }
+  validateNoDebugVfxUsageParamKeys(params, pathLabel, add);
+}
+
+function validateNoDebugVfxUsageParamKeys(value: unknown, pathLabel: string, add: (pathLabel: string, message: string) => void): void {
+  if (!value || typeof value !== 'object') return;
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => validateNoDebugVfxUsageParamKeys(item, `${pathLabel}[${index}]`, add));
+    return;
+  }
+  for (const [key, item] of Object.entries(value as Record<string, unknown>)) {
+    const nextPath = `${pathLabel}.${key}`;
+    if (key.startsWith('__debug.')) add(nextPath, 'debug-only params must not be persisted');
+    validateNoDebugVfxUsageParamKeys(item, nextPath, add);
+  }
+}
+
+function isFiniteConfigNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
 }
 
 function readAllVfxEffectParams(): Record<string, unknown> {
@@ -804,6 +1113,35 @@ function readAllVfxEffectParams(): Record<string, unknown> {
     }
   }
   return result;
+}
+
+function sanitizeVfxUsageOffset(offset: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  const position = readOptionalVector3Config(offset.position);
+  const rotation = readOptionalVector3Config(offset.rotation);
+  const scale = readOptionalScaleConfig(offset.scale);
+  if (position) result.position = position;
+  if (rotation) result.rotation = rotation;
+  if (scale !== undefined) result.scale = scale;
+  return result;
+}
+
+function readOptionalVector3Config(value: unknown): Record<string, number> | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const source = value as Record<string, unknown>;
+  const result: Record<string, number> = {};
+  for (const axis of ['x', 'y', 'z']) {
+    const axisValue = source[axis];
+    if (typeof axisValue === 'number' && Number.isFinite(axisValue)) {
+      result[axis] = axisValue;
+    }
+  }
+  return Object.keys(result).length > 0 ? result : null;
+}
+
+function readOptionalScaleConfig(value: unknown): number | Record<string, number> | undefined {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  return readOptionalVector3Config(value) ?? undefined;
 }
 
 function readOptionalRecord(value: unknown): Record<string, unknown> | null {
@@ -834,6 +1172,7 @@ export default defineConfig({
     __RTL__: JSON.stringify(localeMeta.isRTL),
     __MULTI_LOCALE__: JSON.stringify(isMultiLocale),
     __BUNDLED_LOCALES__: JSON.stringify(bundledLocales),
+    __FPS_EDITOR_AGENT_SESSION_METADATA__: JSON.stringify(createAgentBridgeSessionMetadata()),
   },
   plugins: [
     // 平台 bridge 自动注入（仅开发模式）
@@ -846,6 +1185,7 @@ export default defineConfig({
     inspectorPlugin(),
     debugPanelConfigApiPlugin(),
     vfxDebugOverridesApiPlugin(),
+    vfxUsageOverridesApiPlugin(),
     projectAuthoringApiPlugin(),
     // 开发模式模型强缓存 + URL 版本化（mtime）
     modelCachePlugin({

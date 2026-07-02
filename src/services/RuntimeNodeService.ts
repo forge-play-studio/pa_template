@@ -17,8 +17,32 @@ export interface RuntimeBindingReadinessReport {
   issues: RuntimeBindingIssue[];
 }
 
+export interface RuntimeNodeRegistration {
+  id: string;
+  label?: string;
+  node: TransformNode;
+  source?: 'scene' | 'runtime';
+}
+
 export class RuntimeNodeService {
+  private readonly runtimeNodes = new Map<string, RuntimeNodeRegistration>();
+
   constructor(private readonly sceneBuilder: SceneBuilder) {}
+
+  registerRuntimeNode(registration: RuntimeNodeRegistration): () => void {
+    const id = registration.id.trim();
+    if (!id) return () => {};
+    this.runtimeNodes.set(id, { ...registration, id, source: registration.source ?? 'runtime' });
+    return () => this.unregisterRuntimeNode(id);
+  }
+
+  unregisterRuntimeNode(id: string): void {
+    this.runtimeNodes.delete(id);
+  }
+
+  getRegisteredRuntimeNodes(): RuntimeNodeRegistration[] {
+    return [...this.runtimeNodes.values()];
+  }
 
   getBinding(bindingId: string): GameplayBindingConfig | undefined {
     return gameplayBindingService.getById(bindingId);
@@ -31,11 +55,13 @@ export class RuntimeNodeService {
   getRuntimeNode(bindingOrNodeId: string): TransformNode | undefined {
     const binding = gameplayBindingService.getById(bindingOrNodeId);
     if (binding?.entityId) return this.sceneBuilder.getSceneNodeRuntime(binding.entityId);
-    return this.sceneBuilder.getSceneNodeRuntime(bindingOrNodeId);
+    return this.sceneBuilder.getSceneNodeRuntime(bindingOrNodeId)
+      ?? this.runtimeNodes.get(bindingOrNodeId)?.node;
   }
 
   getRuntimeNodeByEntityId(entityId: string): TransformNode | undefined {
-    return this.sceneBuilder.getSceneNodeRuntime(entityId);
+    return this.sceneBuilder.getSceneNodeRuntime(entityId)
+      ?? this.runtimeNodes.get(entityId)?.node;
   }
 
   getRuntimeNodesByLogicType(logicType: GameplayObjectType): TransformNode[] {
@@ -64,7 +90,7 @@ export class RuntimeNodeService {
         });
         continue;
       }
-      if (!this.sceneBuilder.getSceneNodeRuntime(binding.entityId)) {
+      if (!this.getRuntimeNode(binding.entityId)) {
         issues.push({
           bindingId,
           type: 'missing-runtime-node',
