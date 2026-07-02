@@ -598,21 +598,28 @@ function migrateSceneMaterialSlotBindings(scene: NonNullable<SceneConfig['scene'
     const materialSlotBindings = {
       ...(overrides.materialSlotBindings ?? {}),
     };
-    const childMaterialBindings = {
+    const legacyChildMaterialBindings = {
       ...overrides.childMaterialBindings,
     };
+    const nextChildMaterialBindings = {
+      ...overrides.childMaterialBindings,
+    };
+    const migratedLegacyOwnerPaths = new Set<string>();
     let changed = false;
     for (const slot of slots) {
-      const legacy = findLegacySceneMaterialSlotBinding(childMaterialBindings, slot.ownerNodePath);
+      const legacy = findLegacySceneMaterialSlotBinding(legacyChildMaterialBindings, slot.ownerNodePath);
       const legacyBinding = legacy?.binding;
       if (!legacyBinding || materialSlotBindings[slot.slotId]) continue;
       materialSlotBindings[slot.slotId] = structuredClone(legacyBinding);
-      delete childMaterialBindings[legacy.ownerNodePath];
+      migratedLegacyOwnerPaths.add(legacy.ownerNodePath);
       changed = true;
     }
     if (!changed) continue;
+    for (const ownerNodePath of migratedLegacyOwnerPaths) {
+      delete nextChildMaterialBindings[ownerNodePath];
+    }
     overrides.materialSlotBindings = materialSlotBindings;
-    if (Object.keys(childMaterialBindings).length > 0) overrides.childMaterialBindings = childMaterialBindings;
+    if (Object.keys(nextChildMaterialBindings).length > 0) overrides.childMaterialBindings = nextChildMaterialBindings;
     else delete overrides.childMaterialBindings;
   }
 }

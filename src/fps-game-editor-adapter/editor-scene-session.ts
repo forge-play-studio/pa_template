@@ -1590,19 +1590,30 @@ function migrateEditorSceneMaterialSlotBindings(
     if (slots.length === 0) return gameObject;
 
     let nextGameObject = gameObject;
+    const migratedLegacyOwnerPaths = new Set<string>();
     for (const slot of slots) {
-      const legacy = findEditorSceneLegacyMaterialSlotBinding(nextGameObject.overrides?.childMaterialBindings, slot.ownerNodePath);
+      const legacy = findEditorSceneLegacyMaterialSlotBinding(gameObject.overrides?.childMaterialBindings, slot.ownerNodePath);
       const legacyBinding = legacy?.binding;
       if (!legacyBinding || nextGameObject.overrides?.materialSlotBindings?.[slot.slotId]) continue;
       nextGameObject = structuredClone(nextGameObject);
       nextGameObject.overrides = nextGameObject.overrides ?? {};
       nextGameObject.overrides.materialSlotBindings = nextGameObject.overrides.materialSlotBindings ?? {};
       nextGameObject.overrides.materialSlotBindings[slot.slotId] = structuredClone(legacyBinding);
-      delete nextGameObject.overrides.childMaterialBindings?.[legacy.ownerNodePath];
-      if (nextGameObject.overrides.childMaterialBindings && Object.keys(nextGameObject.overrides.childMaterialBindings).length === 0) {
+      migratedLegacyOwnerPaths.add(legacy.ownerNodePath);
+      changed = true;
+    }
+    if (migratedLegacyOwnerPaths.size > 0) {
+      nextGameObject = structuredClone(nextGameObject);
+      nextGameObject.overrides = nextGameObject.overrides ?? {};
+      nextGameObject.overrides.childMaterialBindings = {
+        ...(nextGameObject.overrides.childMaterialBindings ?? {}),
+      };
+      for (const ownerNodePath of migratedLegacyOwnerPaths) {
+        delete nextGameObject.overrides.childMaterialBindings[ownerNodePath];
+      }
+      if (Object.keys(nextGameObject.overrides.childMaterialBindings).length === 0) {
         delete nextGameObject.overrides.childMaterialBindings;
       }
-      changed = true;
     }
     return nextGameObject;
   });
@@ -2927,6 +2938,9 @@ function createEditorScenePrefabSourceStructureInspectorSection(
   if (!sourceAssetId) return null;
   const sourceAsset = document.assets.find(asset => asset.id === sourceAssetId);
   const materialSlots = createEditorScenePrefabStageMaterialSlotItems(sourceAsset);
+  const analysis = readEditorSceneRecord(sourceAsset?.metadata?.assetAnalysis);
+  const analysisNodes = readEditorSceneRecordArray(analysis?.nodes);
+  const analysisMeshes = readEditorSceneRecordArray(analysis?.meshes);
   const runtimeNodeCount = readEditorSceneImportArray(context.importStructure, 'nodes').length;
   const runtimeMaterialCount = readEditorSceneImportArray(context.importStructure, 'materials').length;
   const runtimeTextureCount = readEditorSceneImportArray(context.importStructure, 'textures').length;
@@ -2961,6 +2975,22 @@ function createEditorScenePrefabSourceStructureInspectorSection(
       10,
     ),
     createReadonlyInspectorProperty(
+      'prefab.sourceStructure.modelNodes',
+      'Model Nodes',
+      analysisNodes.length > 0
+        ? formatEditorSceneSourceStructureNodeSummary(analysisNodes)
+        : 'No SDK node analysis',
+      11,
+    ),
+    createReadonlyInspectorProperty(
+      'prefab.sourceStructure.meshPrimitives',
+      'Mesh Primitives',
+      analysisMeshes.length > 0
+        ? formatEditorSceneSourceStructureMeshSummary(analysisMeshes)
+        : 'No SDK mesh primitive analysis',
+      12,
+    ),
+    createReadonlyInspectorProperty(
       'prefab.sourceStructure.runtimeNodes',
       'Runtime Nodes',
       String(runtimeNodeCount),
@@ -2989,7 +3019,7 @@ function createEditorScenePrefabSourceStructureInspectorSection(
     properties.push(createReadonlyInspectorProperty(
       'prefab.sourceStructure.materialSlotSummary',
       'Material Slot Summary',
-      materialSlots.map(slot => slot.label).join(', '),
+      formatEditorScenePrefabStageMaterialSlotSummary(materialSlots),
       30,
     ));
   }
@@ -3976,6 +4006,19 @@ type EditorScenePrefabMaterialOverrideTarget = EditorScenePrefabStageStructureIt
   profilePathPrefix: string;
   slotId?: string;
   ownerNodePath?: string;
+  nodeIndex?: number;
+  nodeIndexPath?: number[];
+  meshIndex?: number;
+  primitiveIndex?: number;
+  sourceMaterialIndex?: number;
+  sourceMaterialIndices?: number[];
+  sourceMaterialName?: string;
+  sourceMaterialNames?: string[];
+  triangleCount?: number;
+  boundingBox?: {
+    min?: [number, number, number];
+    max?: [number, number, number];
+  };
 };
 
 function createEditorScenePrefabStageNodeTreeItem(
@@ -4102,18 +4145,81 @@ function createEditorScenePrefabStageMaterialSlotItems(
         ...(slot.slotId ? { slotId: slot.slotId } : {}),
         ownerNodePath,
         ...(typeof slot.nodeIndex === 'number' ? { nodeIndex: slot.nodeIndex } : {}),
+        ...(slot.nodeIndexPath?.length ? { nodeIndexPath: slot.nodeIndexPath } : {}),
         ...(typeof slot.meshIndex === 'number' ? { meshIndex: slot.meshIndex } : {}),
         ...(typeof slot.primitiveIndex === 'number' ? { primitiveIndex: slot.primitiveIndex } : {}),
         ...(sourceMaterialIndex == null ? {} : { sourceMaterialIndex }),
         ...(sourceMaterialIndices.length > 0 ? { sourceMaterialIndices } : {}),
         ...(sourceMaterialNames[0] ? { sourceMaterialName: sourceMaterialNames[0] } : {}),
         ...(sourceMaterialNames.length > 0 ? { sourceMaterialNames } : {}),
+        ...(typeof slot.triangleCount === 'number' ? { triangleCount: slot.triangleCount } : {}),
+        ...(slot.boundingBox ? { boundingBox: slot.boundingBox } : {}),
         meta: [
           ownerNodePath,
+          typeof slot.primitiveIndex === 'number' ? `primitive #${slot.primitiveIndex}` : null,
           sourceMaterialNames.length > 0 ? sourceMaterialNames.join(', ') : null,
         ].filter(Boolean).join(' - '),
       };
     });
+}
+
+function formatEditorScenePrefabStageMaterialSlotSummary(
+  materialSlots: readonly EditorScenePrefabMaterialOverrideTarget[],
+): string {
+  return materialSlots
+    .map((slot) => [
+      slot.label,
+      typeof slot.primitiveIndex === 'number' ? `primitive #${slot.primitiveIndex}` : null,
+      typeof slot.sourceMaterialIndex === 'number' ? `material #${slot.sourceMaterialIndex}` : null,
+      typeof slot.triangleCount === 'number' ? `${slot.triangleCount} triangles` : null,
+      formatEditorSceneBoundsSummary(slot.boundingBox),
+    ].filter(Boolean).join(' · '))
+    .join('\n');
+}
+
+function formatEditorSceneSourceStructureNodeSummary(nodes: readonly Record<string, unknown>[]): string {
+  return nodes
+    .slice(0, 8)
+    .map((node, index) => {
+      const label = readEditorSceneString(node.ownerNodePath)
+        ?? readEditorSceneString(node.name)
+        ?? `node #${typeof node.nodeIndex === 'number' ? node.nodeIndex : index}`;
+      const meshIndex = typeof node.meshIndex === 'number' ? `mesh #${node.meshIndex}` : null;
+      const primitiveCount = typeof node.primitiveCount === 'number' ? `${node.primitiveCount} primitives` : null;
+      return [label, meshIndex, primitiveCount].filter(Boolean).join(' · ');
+    })
+    .join('\n');
+}
+
+function formatEditorSceneSourceStructureMeshSummary(meshes: readonly Record<string, unknown>[]): string {
+  return meshes
+    .slice(0, 8)
+    .map((mesh, index) => {
+      const label = readEditorSceneString(mesh.name) ?? `mesh #${typeof mesh.meshIndex === 'number' ? mesh.meshIndex : index}`;
+      const primitives = readEditorSceneRecordArray(mesh.primitives);
+      if (primitives.length === 0) return label;
+      const primitiveSummary = primitives
+        .slice(0, 6)
+        .map((primitive, primitiveIndex) => [
+          `p${typeof primitive.primitiveIndex === 'number' ? primitive.primitiveIndex : primitiveIndex}`,
+          typeof primitive.sourceMaterialIndex === 'number' ? `mat #${primitive.sourceMaterialIndex}` : null,
+          readEditorSceneString(primitive.materialName),
+          typeof primitive.triangleCount === 'number' ? `${primitive.triangleCount} tri` : null,
+        ].filter(Boolean).join(' '))
+        .join(', ');
+      return `${label}: ${primitiveSummary}`;
+    })
+    .join('\n');
+}
+
+function formatEditorSceneBoundsSummary(bounds: EditorScenePrefabMaterialOverrideTarget['boundingBox']): string | null {
+  if (!bounds) return null;
+  const min = bounds.min ? bounds.min.join(', ') : '';
+  const max = bounds.max ? bounds.max.join(', ') : '';
+  if (min && max) return `bounds min ${min}; max ${max}`;
+  if (min) return `bounds min ${min}`;
+  if (max) return `bounds max ${max}`;
+  return null;
 }
 
 function readEditorScenePrefabStageMaterialSlot(value: unknown): EditorSceneChildMaterialSlot | null {
@@ -4122,8 +4228,10 @@ function readEditorScenePrefabStageMaterialSlot(value: unknown): EditorSceneChil
   const slotId = readEditorSceneString(source.slotId);
   const ownerNodePath = normalizeEditorScenePrefabStageOwnerNodePath(readEditorSceneString(source.ownerNodePath) ?? '');
   if (!slotId && !ownerNodePath) return null;
+  const nodeIndexPath = readEditorSceneNumberArray(source.nodeIndexPath);
   const sourceMaterialIndices = readEditorSceneNumberArray(source.sourceMaterialIndices);
   const materialNames = readEditorSceneStringArray(source.materialNames);
+  const boundingBox = readEditorSceneBoundingBox(source.boundingBox);
   const sourceMaterialProfiles = Array.isArray(source.sourceMaterialProfiles)
     ? source.sourceMaterialProfiles
       .map((profile) => {
@@ -4142,12 +4250,15 @@ function readEditorScenePrefabStageMaterialSlot(value: unknown): EditorSceneChil
     ownerNodePath,
     ...(readEditorSceneString(source.label) ? { label: readEditorSceneString(source.label)! } : {}),
     ...(typeof source.nodeIndex === 'number' ? { nodeIndex: source.nodeIndex } : {}),
+    ...(nodeIndexPath.length > 0 ? { nodeIndexPath } : {}),
     ...(typeof source.meshIndex === 'number' ? { meshIndex: source.meshIndex } : {}),
     ...(typeof source.primitiveIndex === 'number' ? { primitiveIndex: source.primitiveIndex } : {}),
     ...(typeof source.sourceMaterialIndex === 'number' ? { sourceMaterialIndex: source.sourceMaterialIndex } : {}),
     ...(sourceMaterialIndices.length > 0 ? { sourceMaterialIndices } : {}),
     ...(readEditorSceneString(source.materialName) ? { materialName: readEditorSceneString(source.materialName)! } : {}),
     ...(materialNames.length > 0 ? { materialNames } : {}),
+    ...(typeof source.triangleCount === 'number' ? { triangleCount: source.triangleCount } : {}),
+    ...(boundingBox ? { boundingBox } : {}),
     ...(sourceMaterialProfiles && sourceMaterialProfiles.length > 0 ? { sourceMaterialProfiles } : {}),
   };
 }
@@ -4553,6 +4664,12 @@ function readEditorSceneRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : null;
 }
 
+function readEditorSceneRecordArray(value: unknown): Record<string, unknown>[] {
+  return Array.isArray(value)
+    ? value.map(readEditorSceneRecord).filter((entry): entry is Record<string, unknown> => !!entry)
+    : [];
+}
+
 function readEditorSceneString(value: unknown): string | null {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
@@ -4565,6 +4682,31 @@ function readEditorSceneNumberArray(value: unknown): number[] {
   return Array.isArray(value)
     ? value.filter((entry): entry is number => Number.isInteger(entry))
     : [];
+}
+
+function readEditorSceneBoundingBox(value: unknown): {
+  min?: [number, number, number];
+  max?: [number, number, number];
+} | null {
+  const source = readEditorSceneRecord(value);
+  if (!source) return null;
+  const min = readEditorSceneVec3Tuple(source.min);
+  const max = readEditorSceneVec3Tuple(source.max);
+  if (!min && !max) return null;
+  return {
+    ...(min ? { min } : {}),
+    ...(max ? { max } : {}),
+  };
+}
+
+function readEditorSceneVec3Tuple(value: unknown): [number, number, number] | null {
+  if (!Array.isArray(value) || value.length < 3) return null;
+  const [x, y, z] = value;
+  return typeof x === 'number' && Number.isFinite(x)
+    && typeof y === 'number' && Number.isFinite(y)
+    && typeof z === 'number' && Number.isFinite(z)
+    ? [x, y, z]
+    : null;
 }
 
 function normalizeEditorScenePrefabStageOwnerNodePath(value: string): string {
@@ -6519,6 +6661,9 @@ function createReadonlyMaterialSlotListInspectorProperties(
         slotId: text.slotId,
         ownerNodePath: text.slotOwnerPath,
         sourceMaterial: text.slotSourceMaterial,
+        primitive: 'Primitive',
+        triangles: 'Triangles',
+        bounds: 'Bounds',
         bindingPath: text.slotBindingPath,
       },
       slots: slots.map((slot, slotIndex) => createReadonlyMaterialSlotListItem(document, gameObject, slot, slotIndex, text)),
@@ -6582,12 +6727,20 @@ function createReadonlyMaterialSlotListItem(
     selectionTargetId: createEditorSceneAssetMeshSelectionId(gameObject.id, getEditorSceneSlotSelectionKey(slot)),
     ...(slot.slotId ? { slotId: slot.slotId } : {}),
     ownerNodePath: slot.ownerNodePath,
+    ...(typeof slot.nodeIndex === 'number' ? { nodeIndex: slot.nodeIndex } : {}),
+    ...(slot.nodeIndexPath?.length ? { nodeIndexPath: slot.nodeIndexPath } : {}),
+    ...(typeof slot.meshIndex === 'number' ? { meshIndex: slot.meshIndex } : {}),
+    ...(typeof slot.primitiveIndex === 'number' ? { primitiveIndex: slot.primitiveIndex } : {}),
     materialAssetId: binding?.materialAssetId ?? '',
     materialLabel: materialOptions.currentLabel ?? text.inheritNone,
     materialMeta: materialOptions.currentMeta ?? text.summaryInherit,
     ...(materialOptions.currentPreview ? { materialPreview: materialOptions.currentPreview } : {}),
     ...(sourceMaterialIndex == null ? {} : { sourceMaterialIndex }),
+    ...(slot.sourceMaterialIndices?.length ? { sourceMaterialIndices: slot.sourceMaterialIndices } : {}),
     ...(sourceMaterialName ? { sourceMaterialName } : {}),
+    ...(slot.materialNames?.length ? { materialNames: slot.materialNames } : {}),
+    ...(typeof slot.triangleCount === 'number' ? { triangleCount: slot.triangleCount } : {}),
+    ...(slot.boundingBox ? { boundingBox: slot.boundingBox } : {}),
     bindingPath: getEditorSceneSlotMaterialBindingPath(slot),
   };
 }
@@ -6597,12 +6750,18 @@ type EditorSceneChildMaterialSlot = {
   ownerNodePath: string;
   label?: string;
   nodeIndex?: number;
+  nodeIndexPath?: number[];
   meshIndex?: number;
   primitiveIndex?: number;
   sourceMaterialIndex?: number;
   sourceMaterialIndices?: number[];
   materialName?: string;
   materialNames?: string[];
+  triangleCount?: number;
+  boundingBox?: {
+    min?: [number, number, number];
+    max?: [number, number, number];
+  };
   sourceMaterialProfiles?: EditorSceneSourceMaterialProfile[];
 };
 

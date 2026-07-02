@@ -410,9 +410,19 @@ function projectAuthoringApiPlugin() {
               ? JSON.parse(readFileSync(scenePath, 'utf8') || '{}')
               : null;
             const { ensureEditorSceneAuthoringSource, detectEditorSceneRuntimeInputDrift } = await server.ssrLoadModule('/src/fps-game-editor-adapter/editor-authoring-source.ts');
-            const { repairEditorSceneMaterialAssetsFromSceneConfig } = await server.ssrLoadModule('/src/fps-game-editor-adapter/editor-scene-session.ts');
+            const { enrichEditorSceneDocumentAssets } = await server.ssrLoadModule('/src/fps-game-editor-adapter/editor-asset-library.ts');
+            const {
+              ensureEditorSceneEnvironmentDefaults,
+              repairEditorSceneMaterialAssetsFromSceneConfig,
+            } = await server.ssrLoadModule('/src/fps-game-editor-adapter/editor-scene-session.ts');
+            const editorAssets = await listEditorAssetLibrary(server);
             const normalizedEditorScene = editorScene
-              ? repairEditorSceneMaterialAssetsFromSceneConfig(ensureEditorSceneAuthoringSource(editorScene), runtimeScene)
+              ? ensureEditorSceneEnvironmentDefaults(
+                repairEditorSceneMaterialAssetsFromSceneConfig(
+                  enrichEditorSceneDocumentAssets(ensureEditorSceneAuthoringSource(editorScene), editorAssets),
+                  runtimeScene,
+                ),
+              )
               : editorScene;
             const companionConfigs = readSceneMainSourceSaveCompanionConfigs(normalizedEditorScene);
             return {
@@ -453,16 +463,22 @@ function projectAuthoringApiPlugin() {
               : {};
             const { compileEditorSceneDocumentToSceneConfig } = await server.ssrLoadModule('/src/fps-game-editor-adapter/editor-scene-compiler.ts');
             const { enrichEditorSceneDocumentAssets } = await server.ssrLoadModule('/src/fps-game-editor-adapter/editor-asset-library.ts');
-            const { repairEditorSceneMaterialAssetsFromSceneConfig, assertEditorSceneMaterialAssetIntegrity } = await server.ssrLoadModule('/src/fps-game-editor-adapter/editor-scene-session.ts');
+            const {
+              ensureEditorSceneEnvironmentDefaults,
+              repairEditorSceneMaterialAssetsFromSceneConfig,
+              assertEditorSceneMaterialAssetIntegrity,
+            } = await server.ssrLoadModule('/src/fps-game-editor-adapter/editor-scene-session.ts');
             const { bumpEditorSceneAuthoringSourceRevision, ensureEditorSceneAuthoringSource } = await server.ssrLoadModule('/src/fps-game-editor-adapter/editor-authoring-source.ts');
             const { normalizeRenderingProfile } = await server.ssrLoadModule('/src/rendering/rendering-profile.ts');
             const { assertSceneJsonV2 } = await import('./scripts/platform-sim/lib/scene-json-v2-schema.mjs');
             assertEditorSceneDocument(rawEditorScene);
             const normalizedRenderingConfig = renderingConfig ? normalizeRenderingProfile(renderingConfig) : null;
             const editorAssets = await listEditorAssetLibrary(server);
-            const repairedEditorScene = repairEditorSceneMaterialAssetsFromSceneConfig(
-              enrichEditorSceneDocumentAssets(ensureEditorSceneAuthoringSource(rawEditorScene), editorAssets),
-              previousSceneConfig,
+            const repairedEditorScene = ensureEditorSceneEnvironmentDefaults(
+              repairEditorSceneMaterialAssetsFromSceneConfig(
+                enrichEditorSceneDocumentAssets(ensureEditorSceneAuthoringSource(rawEditorScene), editorAssets),
+                previousSceneConfig,
+              ),
             );
             assertEditorSceneMaterialAssetIntegrity(repairedEditorScene);
             const editorScene = bumpEditorSceneAuthoringSourceRevision(

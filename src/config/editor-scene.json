@@ -5,7 +5,7 @@
     "authoringSource": {
       "sourceId": "scene.main",
       "sourceType": "scene",
-      "revision": 60
+      "revision": 66
     }
   },
   "assets": [
@@ -28,21 +28,37 @@
         "sourceFileName": "主角.glb",
         "materialSlots": [
           {
-            "slotId": "slot_26caed25",
+            "slotId": "slot_427a5347",
             "ownerNodePath": "maozinan_DZY_Skin",
-            "label": "maozinan_DZY_Skin",
+            "label": "maozinan_DZY_Skin / Primitive 0",
             "nodeIndex": 2,
+            "nodeIndexPath": [
+              0,
+              2
+            ],
             "meshIndex": 0,
+            "primitiveIndex": 0,
             "sourceMaterialIndex": 0,
             "sourceMaterialIndices": [
-              0,
-              1
+              0
             ],
             "materialName": "新建材质",
             "materialNames": [
-              "新建材质",
-              "02 - Default"
+              "新建材质"
             ],
+            "triangleCount": 1106,
+            "boundingBox": {
+              "min": [
+                -0.8800150156021118,
+                -0.3340138792991638,
+                0.0006533985724672675
+              ],
+              "max": [
+                0.8800155520439148,
+                0.24680671095848083,
+                1.8511325120925903
+              ]
+            },
             "sourceMaterialProfiles": [
               {
                 "sourceMaterialIndex": 0,
@@ -61,7 +77,42 @@
                     "reason": "embedded-texture"
                   }
                 ]
-              },
+              }
+            ]
+          },
+          {
+            "slotId": "slot_417a51b4",
+            "ownerNodePath": "maozinan_DZY_Skin",
+            "label": "maozinan_DZY_Skin / Primitive 1",
+            "nodeIndex": 2,
+            "nodeIndexPath": [
+              0,
+              2
+            ],
+            "meshIndex": 0,
+            "primitiveIndex": 1,
+            "sourceMaterialIndex": 1,
+            "sourceMaterialIndices": [
+              1
+            ],
+            "materialName": "02 - Default",
+            "materialNames": [
+              "02 - Default"
+            ],
+            "triangleCount": 64,
+            "boundingBox": {
+              "min": [
+                -0.8800150156021118,
+                -0.3340138792991638,
+                0.0006533985724672675
+              ],
+              "max": [
+                0.8800155520439148,
+                0.24680671095848083,
+                1.8511325120925903
+              ]
+            },
+            "sourceMaterialProfiles": [
               {
                 "sourceMaterialIndex": 1,
                 "materialName": "02 - Default",
@@ -88,7 +139,23 @@
             "ownerNodePath": "root/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 Spine1/Bip001 Neck/Bip001 R Clavicle/Bip001 R UpperArm/Bip001 R Forearm/Bip001 R Hand/wuqiguadiandummy/wuqiguadianbox",
             "label": "wuqiguadianbox",
             "nodeIndex": 39,
+            "nodeIndexPath": [
+              0,
+              3,
+              4,
+              6,
+              7,
+              18,
+              19,
+              30,
+              31,
+              32,
+              33,
+              38,
+              39
+            ],
             "meshIndex": 1,
+            "primitiveIndex": 0,
             "sourceMaterialIndex": 2,
             "sourceMaterialIndices": [
               2
@@ -97,6 +164,19 @@
             "materialNames": [
               "Default-Material"
             ],
+            "triangleCount": 12,
+            "boundingBox": {
+              "min": [
+                -0.007672332227230072,
+                -0.007672332227230072,
+                0
+              ],
+              "max": [
+                0.007672332227230072,
+                0.007672332227230072,
+                0.015344664454460144
+              ]
+            },
             "sourceMaterialProfiles": [
               {
                 "sourceMaterialIndex": 2,
@@ -123,11 +203,826 @@
           "imageCount": 1,
           "animationCount": 7,
           "skinCount": 1,
+          "nodes": [
+            {
+              "nodeIndex": 0,
+              "nodeIndexPath": [
+                0
+              ],
+              "name": "主角 (2)",
+              "ownerNodePath": "主角 (2)",
+              "children": [
+                1,
+                2,
+                3
+              ]
+            },
+            {
+              "nodeIndex": 1,
+              "nodeIndexPath": [
+                0,
+                1
+              ],
+              "name": "FBX_NPC_Yuxuenan_Equipment",
+              "ownerNodePath": "FBX_NPC_Yuxuenan_Equipment"
+            },
+            {
+              "nodeIndex": 2,
+              "nodeIndexPath": [
+                0,
+                2
+              ],
+              "name": "maozinan_DZY_Skin",
+              "ownerNodePath": "maozinan_DZY_Skin",
+              "meshIndex": 0,
+              "meshName": "maozinan_DZY_Skin",
+              "primitiveCount": 2,
+              "primitives": [
+                {
+                  "primitiveIndex": 0,
+                  "sourceMaterialIndex": 0,
+                  "materialName": "新建材质",
+                  "triangleCount": 1106,
+                  "boundingBox": {
+                    "min": [
+                      -0.8800150156021118,
+                      -0.3340138792991638,
+                      0.0006533985724672675
+                    ],
+                    "max": [
+                      0.8800155520439148,
+                      0.24680671095848083,
+                      1.8511325120925903
+                    ]
+                  }
+                },
+                {
+                  "primitiveIndex": 1,
+                  "sourceMaterialIndex": 1,
+                  "materialName": "02 - Default",
+                  "triangleCount": 64,
+                  "boundingBox": {
+                    "min": [
+                      -0.8800150156021118,
+                      -0.3340138792991638,
+                      0.0006533985724672675
+                    ],
+                    "max": [
+                      0.8800155520439148,
+                      0.24680671095848083,
+                      1.8511325120925903
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "nodeIndex": 3,
+              "nodeIndexPath": [
+                0,
+                3
+              ],
+              "name": "root",
+              "ownerNodePath": "root",
+              "children": [
+                4
+              ]
+            },
+            {
+              "nodeIndex": 4,
+              "nodeIndexPath": [
+                0,
+                3,
+                4
+              ],
+              "name": "Bip001",
+              "ownerNodePath": "root/Bip001",
+              "children": [
+                5,
+                6
+              ]
+            },
+            {
+              "nodeIndex": 5,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                5
+              ],
+              "name": "Bip001 Footsteps",
+              "ownerNodePath": "root/Bip001/Bip001 Footsteps"
+            },
+            {
+              "nodeIndex": 6,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                6
+              ],
+              "name": "Bip001 Pelvis",
+              "ownerNodePath": "root/Bip001/Bip001 Pelvis",
+              "children": [
+                7
+              ]
+            },
+            {
+              "nodeIndex": 7,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                6,
+                7
+              ],
+              "name": "Bip001 Spine",
+              "ownerNodePath": "root/Bip001/Bip001 Pelvis/Bip001 Spine",
+              "children": [
+                8,
+                13,
+                18
+              ]
+            },
+            {
+              "nodeIndex": 8,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                6,
+                7,
+                8
+              ],
+              "name": "Bip001 L Thigh",
+              "ownerNodePath": "root/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 L Thigh",
+              "children": [
+                9
+              ]
+            },
+            {
+              "nodeIndex": 9,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                6,
+                7,
+                8,
+                9
+              ],
+              "name": "Bip001 L Calf",
+              "ownerNodePath": "root/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 L Thigh/Bip001 L Calf",
+              "children": [
+                10
+              ]
+            },
+            {
+              "nodeIndex": 10,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                6,
+                7,
+                8,
+                9,
+                10
+              ],
+              "name": "Bip001 L Foot",
+              "ownerNodePath": "root/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 L Thigh/Bip001 L Calf/Bip001 L Foot",
+              "children": [
+                11
+              ]
+            },
+            {
+              "nodeIndex": 11,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11
+              ],
+              "name": "Bip001 L Toe0",
+              "ownerNodePath": "root/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 L Thigh/Bip001 L Calf/Bip001 L Foot/Bip001 L Toe0",
+              "children": [
+                12
+              ]
+            },
+            {
+              "nodeIndex": 12,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12
+              ],
+              "name": "Bip001 L Toe0Nub",
+              "ownerNodePath": "root/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 L Thigh/Bip001 L Calf/Bip001 L Foot/Bip001 L Toe0/Bip001 L Toe0Nub"
+            },
+            {
+              "nodeIndex": 13,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                6,
+                7,
+                13
+              ],
+              "name": "Bip001 R Thigh",
+              "ownerNodePath": "root/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 R Thigh",
+              "children": [
+                14
+              ]
+            },
+            {
+              "nodeIndex": 14,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                6,
+                7,
+                13,
+                14
+              ],
+              "name": "Bip001 R Calf",
+              "ownerNodePath": "root/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 R Thigh/Bip001 R Calf",
+              "children": [
+                15
+              ]
+            },
+            {
+              "nodeIndex": 15,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                6,
+                7,
+                13,
+                14,
+                15
+              ],
+              "name": "Bip001 R Foot",
+              "ownerNodePath": "root/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 R Thigh/Bip001 R Calf/Bip001 R Foot",
+              "children": [
+                16
+              ]
+            },
+            {
+              "nodeIndex": 16,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                6,
+                7,
+                13,
+                14,
+                15,
+                16
+              ],
+              "name": "Bip001 R Toe0",
+              "ownerNodePath": "root/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 R Thigh/Bip001 R Calf/Bip001 R Foot/Bip001 R Toe0",
+              "children": [
+                17
+              ]
+            },
+            {
+              "nodeIndex": 17,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                6,
+                7,
+                13,
+                14,
+                15,
+                16,
+                17
+              ],
+              "name": "Bip001 R Toe0Nub",
+              "ownerNodePath": "root/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 R Thigh/Bip001 R Calf/Bip001 R Foot/Bip001 R Toe0/Bip001 R Toe0Nub"
+            },
+            {
+              "nodeIndex": 18,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                6,
+                7,
+                18
+              ],
+              "name": "Bip001 Spine1",
+              "ownerNodePath": "root/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 Spine1",
+              "children": [
+                19
+              ]
+            },
+            {
+              "nodeIndex": 19,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                6,
+                7,
+                18,
+                19
+              ],
+              "name": "Bip001 Neck",
+              "ownerNodePath": "root/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 Spine1/Bip001 Neck",
+              "children": [
+                20,
+                22,
+                30
+              ]
+            },
+            {
+              "nodeIndex": 20,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                6,
+                7,
+                18,
+                19,
+                20
+              ],
+              "name": "Bip001 Head",
+              "ownerNodePath": "root/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 Spine1/Bip001 Neck/Bip001 Head",
+              "children": [
+                21
+              ]
+            },
+            {
+              "nodeIndex": 21,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                6,
+                7,
+                18,
+                19,
+                20,
+                21
+              ],
+              "name": "Bip001 HeadNub",
+              "ownerNodePath": "root/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 Spine1/Bip001 Neck/Bip001 Head/Bip001 HeadNub"
+            },
+            {
+              "nodeIndex": 22,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                6,
+                7,
+                18,
+                19,
+                22
+              ],
+              "name": "Bip001 L Clavicle",
+              "ownerNodePath": "root/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 Spine1/Bip001 Neck/Bip001 L Clavicle",
+              "children": [
+                23
+              ]
+            },
+            {
+              "nodeIndex": 23,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                6,
+                7,
+                18,
+                19,
+                22,
+                23
+              ],
+              "name": "Bip001 L UpperArm",
+              "ownerNodePath": "root/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 Spine1/Bip001 Neck/Bip001 L Clavicle/Bip001 L UpperArm",
+              "children": [
+                24
+              ]
+            },
+            {
+              "nodeIndex": 24,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                6,
+                7,
+                18,
+                19,
+                22,
+                23,
+                24
+              ],
+              "name": "Bip001 L Forearm",
+              "ownerNodePath": "root/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 Spine1/Bip001 Neck/Bip001 L Clavicle/Bip001 L UpperArm/Bip001 L Forearm",
+              "children": [
+                25
+              ]
+            },
+            {
+              "nodeIndex": 25,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                6,
+                7,
+                18,
+                19,
+                22,
+                23,
+                24,
+                25
+              ],
+              "name": "Bip001 L Hand",
+              "ownerNodePath": "root/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 Spine1/Bip001 Neck/Bip001 L Clavicle/Bip001 L UpperArm/Bip001 L Forearm/Bip001 L Hand",
+              "children": [
+                26,
+                28
+              ]
+            },
+            {
+              "nodeIndex": 26,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                6,
+                7,
+                18,
+                19,
+                22,
+                23,
+                24,
+                25,
+                26
+              ],
+              "name": "Bip001 L Finger0",
+              "ownerNodePath": "root/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 Spine1/Bip001 Neck/Bip001 L Clavicle/Bip001 L UpperArm/Bip001 L Forearm/Bip001 L Hand/Bip001 L Finger0",
+              "children": [
+                27
+              ]
+            },
+            {
+              "nodeIndex": 27,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                6,
+                7,
+                18,
+                19,
+                22,
+                23,
+                24,
+                25,
+                26,
+                27
+              ],
+              "name": "Bip001 L Finger0Nub",
+              "ownerNodePath": "root/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 Spine1/Bip001 Neck/Bip001 L Clavicle/Bip001 L UpperArm/Bip001 L Forearm/Bip001 L Hand/Bip001 L Finger0/Bip001 L Finger0Nub"
+            },
+            {
+              "nodeIndex": 28,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                6,
+                7,
+                18,
+                19,
+                22,
+                23,
+                24,
+                25,
+                28
+              ],
+              "name": "Bip001 L Finger1",
+              "ownerNodePath": "root/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 Spine1/Bip001 Neck/Bip001 L Clavicle/Bip001 L UpperArm/Bip001 L Forearm/Bip001 L Hand/Bip001 L Finger1",
+              "children": [
+                29
+              ]
+            },
+            {
+              "nodeIndex": 29,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                6,
+                7,
+                18,
+                19,
+                22,
+                23,
+                24,
+                25,
+                28,
+                29
+              ],
+              "name": "Bip001 L Finger1Nub",
+              "ownerNodePath": "root/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 Spine1/Bip001 Neck/Bip001 L Clavicle/Bip001 L UpperArm/Bip001 L Forearm/Bip001 L Hand/Bip001 L Finger1/Bip001 L Finger1Nub"
+            },
+            {
+              "nodeIndex": 30,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                6,
+                7,
+                18,
+                19,
+                30
+              ],
+              "name": "Bip001 R Clavicle",
+              "ownerNodePath": "root/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 Spine1/Bip001 Neck/Bip001 R Clavicle",
+              "children": [
+                31
+              ]
+            },
+            {
+              "nodeIndex": 31,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                6,
+                7,
+                18,
+                19,
+                30,
+                31
+              ],
+              "name": "Bip001 R UpperArm",
+              "ownerNodePath": "root/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 Spine1/Bip001 Neck/Bip001 R Clavicle/Bip001 R UpperArm",
+              "children": [
+                32
+              ]
+            },
+            {
+              "nodeIndex": 32,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                6,
+                7,
+                18,
+                19,
+                30,
+                31,
+                32
+              ],
+              "name": "Bip001 R Forearm",
+              "ownerNodePath": "root/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 Spine1/Bip001 Neck/Bip001 R Clavicle/Bip001 R UpperArm/Bip001 R Forearm",
+              "children": [
+                33
+              ]
+            },
+            {
+              "nodeIndex": 33,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                6,
+                7,
+                18,
+                19,
+                30,
+                31,
+                32,
+                33
+              ],
+              "name": "Bip001 R Hand",
+              "ownerNodePath": "root/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 Spine1/Bip001 Neck/Bip001 R Clavicle/Bip001 R UpperArm/Bip001 R Forearm/Bip001 R Hand",
+              "children": [
+                34,
+                36,
+                38
+              ]
+            },
+            {
+              "nodeIndex": 34,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                6,
+                7,
+                18,
+                19,
+                30,
+                31,
+                32,
+                33,
+                34
+              ],
+              "name": "Bip001 R Finger0",
+              "ownerNodePath": "root/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 Spine1/Bip001 Neck/Bip001 R Clavicle/Bip001 R UpperArm/Bip001 R Forearm/Bip001 R Hand/Bip001 R Finger0",
+              "children": [
+                35
+              ]
+            },
+            {
+              "nodeIndex": 35,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                6,
+                7,
+                18,
+                19,
+                30,
+                31,
+                32,
+                33,
+                34,
+                35
+              ],
+              "name": "Bip001 R Finger0Nub",
+              "ownerNodePath": "root/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 Spine1/Bip001 Neck/Bip001 R Clavicle/Bip001 R UpperArm/Bip001 R Forearm/Bip001 R Hand/Bip001 R Finger0/Bip001 R Finger0Nub"
+            },
+            {
+              "nodeIndex": 36,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                6,
+                7,
+                18,
+                19,
+                30,
+                31,
+                32,
+                33,
+                36
+              ],
+              "name": "Bip001 R Finger1",
+              "ownerNodePath": "root/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 Spine1/Bip001 Neck/Bip001 R Clavicle/Bip001 R UpperArm/Bip001 R Forearm/Bip001 R Hand/Bip001 R Finger1",
+              "children": [
+                37
+              ]
+            },
+            {
+              "nodeIndex": 37,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                6,
+                7,
+                18,
+                19,
+                30,
+                31,
+                32,
+                33,
+                36,
+                37
+              ],
+              "name": "Bip001 R Finger1Nub",
+              "ownerNodePath": "root/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 Spine1/Bip001 Neck/Bip001 R Clavicle/Bip001 R UpperArm/Bip001 R Forearm/Bip001 R Hand/Bip001 R Finger1/Bip001 R Finger1Nub"
+            },
+            {
+              "nodeIndex": 38,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                6,
+                7,
+                18,
+                19,
+                30,
+                31,
+                32,
+                33,
+                38
+              ],
+              "name": "wuqiguadiandummy",
+              "ownerNodePath": "root/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 Spine1/Bip001 Neck/Bip001 R Clavicle/Bip001 R UpperArm/Bip001 R Forearm/Bip001 R Hand/wuqiguadiandummy",
+              "children": [
+                39
+              ]
+            },
+            {
+              "nodeIndex": 39,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                6,
+                7,
+                18,
+                19,
+                30,
+                31,
+                32,
+                33,
+                38,
+                39
+              ],
+              "name": "wuqiguadianbox",
+              "ownerNodePath": "root/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 Spine1/Bip001 Neck/Bip001 R Clavicle/Bip001 R UpperArm/Bip001 R Forearm/Bip001 R Hand/wuqiguadiandummy/wuqiguadianbox",
+              "meshIndex": 1,
+              "meshName": "wuqiguadianbox",
+              "primitiveCount": 1,
+              "primitives": [
+                {
+                  "primitiveIndex": 0,
+                  "sourceMaterialIndex": 2,
+                  "materialName": "Default-Material",
+                  "triangleCount": 12,
+                  "boundingBox": {
+                    "min": [
+                      -0.007672332227230072,
+                      -0.007672332227230072,
+                      0
+                    ],
+                    "max": [
+                      0.007672332227230072,
+                      0.007672332227230072,
+                      0.015344664454460144
+                    ]
+                  }
+                }
+              ]
+            }
+          ],
           "meshes": [
             {
               "meshIndex": 0,
               "name": "maozinan_DZY_Skin",
               "primitiveCount": 2,
+              "primitives": [
+                {
+                  "primitiveIndex": 0,
+                  "sourceMaterialIndex": 0,
+                  "materialName": "新建材质",
+                  "triangleCount": 1106,
+                  "boundingBox": {
+                    "min": [
+                      -0.8800150156021118,
+                      -0.3340138792991638,
+                      0.0006533985724672675
+                    ],
+                    "max": [
+                      0.8800155520439148,
+                      0.24680671095848083,
+                      1.8511325120925903
+                    ]
+                  }
+                },
+                {
+                  "primitiveIndex": 1,
+                  "sourceMaterialIndex": 1,
+                  "materialName": "02 - Default",
+                  "triangleCount": 64,
+                  "boundingBox": {
+                    "min": [
+                      -0.8800150156021118,
+                      -0.3340138792991638,
+                      0.0006533985724672675
+                    ],
+                    "max": [
+                      0.8800155520439148,
+                      0.24680671095848083,
+                      1.8511325120925903
+                    ]
+                  }
+                }
+              ],
               "materialIndices": [
                 0,
                 1
@@ -141,6 +1036,26 @@
               "meshIndex": 1,
               "name": "wuqiguadianbox",
               "primitiveCount": 1,
+              "primitives": [
+                {
+                  "primitiveIndex": 0,
+                  "sourceMaterialIndex": 2,
+                  "materialName": "Default-Material",
+                  "triangleCount": 12,
+                  "boundingBox": {
+                    "min": [
+                      -0.007672332227230072,
+                      -0.007672332227230072,
+                      0
+                    ],
+                    "max": [
+                      0.007672332227230072,
+                      0.007672332227230072,
+                      0.015344664454460144
+                    ]
+                  }
+                }
+              ],
               "materialIndices": [
                 2
               ],
@@ -227,7 +1142,13 @@
             "ownerNodePath": "gongren_Rig:Geometry/gongren_Rig:fbx_city_npc_worker_male03",
             "label": "gongren_Rig:fbx_city_npc_worker_male03",
             "nodeIndex": 2,
+            "nodeIndexPath": [
+              0,
+              1,
+              2
+            ],
             "meshIndex": 0,
+            "primitiveIndex": 0,
             "sourceMaterialIndex": 0,
             "sourceMaterialIndices": [
               0
@@ -236,6 +1157,19 @@
             "materialNames": [
               "lambert2"
             ],
+            "triangleCount": 784,
+            "boundingBox": {
+              "min": [
+                -17606,
+                -11841,
+                -32767
+              ],
+              "max": [
+                17606,
+                11841,
+                32767
+              ]
+            },
             "sourceMaterialProfiles": [
               {
                 "sourceMaterialIndex": 0,
@@ -269,11 +1203,1397 @@
           "imageCount": 1,
           "animationCount": 3,
           "skinCount": 1,
+          "nodes": [
+            {
+              "nodeIndex": 0,
+              "nodeIndexPath": [
+                0
+              ],
+              "name": "待机",
+              "ownerNodePath": "待机",
+              "children": [
+                1,
+                3
+              ]
+            },
+            {
+              "nodeIndex": 1,
+              "nodeIndexPath": [
+                0,
+                1
+              ],
+              "name": "gongren_Rig:Geometry",
+              "ownerNodePath": "gongren_Rig:Geometry",
+              "children": [
+                2
+              ]
+            },
+            {
+              "nodeIndex": 2,
+              "nodeIndexPath": [
+                0,
+                1,
+                2
+              ],
+              "name": "gongren_Rig:fbx_city_npc_worker_male03",
+              "ownerNodePath": "gongren_Rig:Geometry/gongren_Rig:fbx_city_npc_worker_male03",
+              "meshIndex": 0,
+              "meshName": "gongren_Rig:fbx_city_npc_worker_male03",
+              "primitiveCount": 1,
+              "primitives": [
+                {
+                  "primitiveIndex": 0,
+                  "mode": 4,
+                  "sourceMaterialIndex": 0,
+                  "materialName": "lambert2",
+                  "triangleCount": 784,
+                  "boundingBox": {
+                    "min": [
+                      -17606,
+                      -11841,
+                      -32767
+                    ],
+                    "max": [
+                      17606,
+                      11841,
+                      32767
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "nodeIndex": 3,
+              "nodeIndexPath": [
+                0,
+                3
+              ],
+              "name": "gongren_Rig:DeformationSystem",
+              "ownerNodePath": "gongren_Rig:DeformationSystem",
+              "children": [
+                4
+              ]
+            },
+            {
+              "nodeIndex": 4,
+              "nodeIndexPath": [
+                0,
+                3,
+                4
+              ],
+              "name": "gongren_Rig:Root_M",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M",
+              "children": [
+                5,
+                12,
+                55
+              ]
+            },
+            {
+              "nodeIndex": 5,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                5
+              ],
+              "name": "gongren_Rig:Hip_R",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:Hip_R",
+              "children": [
+                6
+              ]
+            },
+            {
+              "nodeIndex": 6,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                5,
+                6
+              ],
+              "name": "gongren_Rig:HipPart1_R",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:Hip_R/gongren_Rig:HipPart1_R",
+              "children": [
+                7
+              ]
+            },
+            {
+              "nodeIndex": 7,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                5,
+                6,
+                7
+              ],
+              "name": "gongren_Rig:HipPart2_R",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:Hip_R/gongren_Rig:HipPart1_R/gongren_Rig:HipPart2_R",
+              "children": [
+                8
+              ]
+            },
+            {
+              "nodeIndex": 8,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8
+              ],
+              "name": "gongren_Rig:Knee_R",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:Hip_R/gongren_Rig:HipPart1_R/gongren_Rig:HipPart2_R/gongren_Rig:Knee_R",
+              "children": [
+                9
+              ]
+            },
+            {
+              "nodeIndex": 9,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9
+              ],
+              "name": "gongren_Rig:Ankle_R",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:Hip_R/gongren_Rig:HipPart1_R/gongren_Rig:HipPart2_R/gongren_Rig:Knee_R/gongren_Rig:Ankle_R",
+              "children": [
+                10
+              ]
+            },
+            {
+              "nodeIndex": 10,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10
+              ],
+              "name": "gongren_Rig:Toes_R",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:Hip_R/gongren_Rig:HipPart1_R/gongren_Rig:HipPart2_R/gongren_Rig:Knee_R/gongren_Rig:Ankle_R/gongren_Rig:Toes_R",
+              "children": [
+                11
+              ]
+            },
+            {
+              "nodeIndex": 11,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11
+              ],
+              "name": "gongren_Rig:ToesEnd_R",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:Hip_R/gongren_Rig:HipPart1_R/gongren_Rig:HipPart2_R/gongren_Rig:Knee_R/gongren_Rig:Ankle_R/gongren_Rig:Toes_R/gongren_Rig:ToesEnd_R"
+            },
+            {
+              "nodeIndex": 12,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                12
+              ],
+              "name": "gongren_Rig:RootPart1_M",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:RootPart1_M",
+              "children": [
+                13
+              ]
+            },
+            {
+              "nodeIndex": 13,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                12,
+                13
+              ],
+              "name": "gongren_Rig:RootPart2_M",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:RootPart1_M/gongren_Rig:RootPart2_M",
+              "children": [
+                14
+              ]
+            },
+            {
+              "nodeIndex": 14,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                12,
+                13,
+                14
+              ],
+              "name": "gongren_Rig:Spine1_M",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:RootPart1_M/gongren_Rig:RootPart2_M/gongren_Rig:Spine1_M",
+              "children": [
+                15
+              ]
+            },
+            {
+              "nodeIndex": 15,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                12,
+                13,
+                14,
+                15
+              ],
+              "name": "gongren_Rig:Spine1Part1_M",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:RootPart1_M/gongren_Rig:RootPart2_M/gongren_Rig:Spine1_M/gongren_Rig:Spine1Part1_M",
+              "children": [
+                16
+              ]
+            },
+            {
+              "nodeIndex": 16,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                12,
+                13,
+                14,
+                15,
+                16
+              ],
+              "name": "gongren_Rig:Spine1Part2_M",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:RootPart1_M/gongren_Rig:RootPart2_M/gongren_Rig:Spine1_M/gongren_Rig:Spine1Part1_M/gongren_Rig:Spine1Part2_M",
+              "children": [
+                17
+              ]
+            },
+            {
+              "nodeIndex": 17,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17
+              ],
+              "name": "gongren_Rig:Chest_M",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:RootPart1_M/gongren_Rig:RootPart2_M/gongren_Rig:Spine1_M/gongren_Rig:Spine1Part1_M/gongren_Rig:Spine1Part2_M/gongren_Rig:Chest_M",
+              "children": [
+                18,
+                23,
+                39
+              ]
+            },
+            {
+              "nodeIndex": 18,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                18
+              ],
+              "name": "gongren_Rig:Neck_M",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:RootPart1_M/gongren_Rig:RootPart2_M/gongren_Rig:Spine1_M/gongren_Rig:Spine1Part1_M/gongren_Rig:Spine1Part2_M/gongren_Rig:Chest_M/gongren_Rig:Neck_M",
+              "children": [
+                19
+              ]
+            },
+            {
+              "nodeIndex": 19,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                18,
+                19
+              ],
+              "name": "gongren_Rig:NeckPart1_M",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:RootPart1_M/gongren_Rig:RootPart2_M/gongren_Rig:Spine1_M/gongren_Rig:Spine1Part1_M/gongren_Rig:Spine1Part2_M/gongren_Rig:Chest_M/gongren_Rig:Neck_M/gongren_Rig:NeckPart1_M",
+              "children": [
+                20
+              ]
+            },
+            {
+              "nodeIndex": 20,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                18,
+                19,
+                20
+              ],
+              "name": "gongren_Rig:NeckPart2_M",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:RootPart1_M/gongren_Rig:RootPart2_M/gongren_Rig:Spine1_M/gongren_Rig:Spine1Part1_M/gongren_Rig:Spine1Part2_M/gongren_Rig:Chest_M/gongren_Rig:Neck_M/gongren_Rig:NeckPart1_M/gongren_Rig:NeckPart2_M",
+              "children": [
+                21
+              ]
+            },
+            {
+              "nodeIndex": 21,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                18,
+                19,
+                20,
+                21
+              ],
+              "name": "gongren_Rig:Head_M",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:RootPart1_M/gongren_Rig:RootPart2_M/gongren_Rig:Spine1_M/gongren_Rig:Spine1Part1_M/gongren_Rig:Spine1Part2_M/gongren_Rig:Chest_M/gongren_Rig:Neck_M/gongren_Rig:NeckPart1_M/gongren_Rig:NeckPart2_M/gongren_Rig:Head_M",
+              "children": [
+                22
+              ]
+            },
+            {
+              "nodeIndex": 22,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                18,
+                19,
+                20,
+                21,
+                22
+              ],
+              "name": "gongren_Rig:HeadEnd_M",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:RootPart1_M/gongren_Rig:RootPart2_M/gongren_Rig:Spine1_M/gongren_Rig:Spine1Part1_M/gongren_Rig:Spine1Part2_M/gongren_Rig:Chest_M/gongren_Rig:Neck_M/gongren_Rig:NeckPart1_M/gongren_Rig:NeckPart2_M/gongren_Rig:Head_M/gongren_Rig:HeadEnd_M"
+            },
+            {
+              "nodeIndex": 23,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                23
+              ],
+              "name": "gongren_Rig:Scapula_R",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:RootPart1_M/gongren_Rig:RootPart2_M/gongren_Rig:Spine1_M/gongren_Rig:Spine1Part1_M/gongren_Rig:Spine1Part2_M/gongren_Rig:Chest_M/gongren_Rig:Scapula_R",
+              "children": [
+                24
+              ]
+            },
+            {
+              "nodeIndex": 24,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                23,
+                24
+              ],
+              "name": "gongren_Rig:Shoulder_R",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:RootPart1_M/gongren_Rig:RootPart2_M/gongren_Rig:Spine1_M/gongren_Rig:Spine1Part1_M/gongren_Rig:Spine1Part2_M/gongren_Rig:Chest_M/gongren_Rig:Scapula_R/gongren_Rig:Shoulder_R",
+              "children": [
+                25
+              ]
+            },
+            {
+              "nodeIndex": 25,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                23,
+                24,
+                25
+              ],
+              "name": "gongren_Rig:ShoulderPart1_R",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:RootPart1_M/gongren_Rig:RootPart2_M/gongren_Rig:Spine1_M/gongren_Rig:Spine1Part1_M/gongren_Rig:Spine1Part2_M/gongren_Rig:Chest_M/gongren_Rig:Scapula_R/gongren_Rig:Shoulder_R/gongren_Rig:ShoulderPart1_R",
+              "children": [
+                26
+              ]
+            },
+            {
+              "nodeIndex": 26,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                23,
+                24,
+                25,
+                26
+              ],
+              "name": "gongren_Rig:ShoulderPart2_R",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:RootPart1_M/gongren_Rig:RootPart2_M/gongren_Rig:Spine1_M/gongren_Rig:Spine1Part1_M/gongren_Rig:Spine1Part2_M/gongren_Rig:Chest_M/gongren_Rig:Scapula_R/gongren_Rig:Shoulder_R/gongren_Rig:ShoulderPart1_R/gongren_Rig:ShoulderPart2_R",
+              "children": [
+                27
+              ]
+            },
+            {
+              "nodeIndex": 27,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                23,
+                24,
+                25,
+                26,
+                27
+              ],
+              "name": "gongren_Rig:Elbow_R",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:RootPart1_M/gongren_Rig:RootPart2_M/gongren_Rig:Spine1_M/gongren_Rig:Spine1Part1_M/gongren_Rig:Spine1Part2_M/gongren_Rig:Chest_M/gongren_Rig:Scapula_R/gongren_Rig:Shoulder_R/gongren_Rig:ShoulderPart1_R/gongren_Rig:ShoulderPart2_R/gongren_Rig:Elbow_R",
+              "children": [
+                28
+              ]
+            },
+            {
+              "nodeIndex": 28,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                23,
+                24,
+                25,
+                26,
+                27,
+                28
+              ],
+              "name": "gongren_Rig:ElbowPart1_R",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:RootPart1_M/gongren_Rig:RootPart2_M/gongren_Rig:Spine1_M/gongren_Rig:Spine1Part1_M/gongren_Rig:Spine1Part2_M/gongren_Rig:Chest_M/gongren_Rig:Scapula_R/gongren_Rig:Shoulder_R/gongren_Rig:ShoulderPart1_R/gongren_Rig:ShoulderPart2_R/gongren_Rig:Elbow_R/gongren_Rig:ElbowPart1_R",
+              "children": [
+                29
+              ]
+            },
+            {
+              "nodeIndex": 29,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                23,
+                24,
+                25,
+                26,
+                27,
+                28,
+                29
+              ],
+              "name": "gongren_Rig:ElbowPart2_R",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:RootPart1_M/gongren_Rig:RootPart2_M/gongren_Rig:Spine1_M/gongren_Rig:Spine1Part1_M/gongren_Rig:Spine1Part2_M/gongren_Rig:Chest_M/gongren_Rig:Scapula_R/gongren_Rig:Shoulder_R/gongren_Rig:ShoulderPart1_R/gongren_Rig:ShoulderPart2_R/gongren_Rig:Elbow_R/gongren_Rig:ElbowPart1_R/gongren_Rig:ElbowPart2_R",
+              "children": [
+                30
+              ]
+            },
+            {
+              "nodeIndex": 30,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                23,
+                24,
+                25,
+                26,
+                27,
+                28,
+                29,
+                30
+              ],
+              "name": "gongren_Rig:Wrist_R",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:RootPart1_M/gongren_Rig:RootPart2_M/gongren_Rig:Spine1_M/gongren_Rig:Spine1Part1_M/gongren_Rig:Spine1Part2_M/gongren_Rig:Chest_M/gongren_Rig:Scapula_R/gongren_Rig:Shoulder_R/gongren_Rig:ShoulderPart1_R/gongren_Rig:ShoulderPart2_R/gongren_Rig:Elbow_R/gongren_Rig:ElbowPart1_R/gongren_Rig:ElbowPart2_R/gongren_Rig:Wrist_R",
+              "children": [
+                31,
+                35
+              ]
+            },
+            {
+              "nodeIndex": 31,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                23,
+                24,
+                25,
+                26,
+                27,
+                28,
+                29,
+                30,
+                31
+              ],
+              "name": "gongren_Rig:MiddleFinger1_R",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:RootPart1_M/gongren_Rig:RootPart2_M/gongren_Rig:Spine1_M/gongren_Rig:Spine1Part1_M/gongren_Rig:Spine1Part2_M/gongren_Rig:Chest_M/gongren_Rig:Scapula_R/gongren_Rig:Shoulder_R/gongren_Rig:ShoulderPart1_R/gongren_Rig:ShoulderPart2_R/gongren_Rig:Elbow_R/gongren_Rig:ElbowPart1_R/gongren_Rig:ElbowPart2_R/gongren_Rig:Wrist_R/gongren_Rig:MiddleFinger1_R",
+              "children": [
+                32
+              ]
+            },
+            {
+              "nodeIndex": 32,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                23,
+                24,
+                25,
+                26,
+                27,
+                28,
+                29,
+                30,
+                31,
+                32
+              ],
+              "name": "gongren_Rig:MiddleFinger2_R",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:RootPart1_M/gongren_Rig:RootPart2_M/gongren_Rig:Spine1_M/gongren_Rig:Spine1Part1_M/gongren_Rig:Spine1Part2_M/gongren_Rig:Chest_M/gongren_Rig:Scapula_R/gongren_Rig:Shoulder_R/gongren_Rig:ShoulderPart1_R/gongren_Rig:ShoulderPart2_R/gongren_Rig:Elbow_R/gongren_Rig:ElbowPart1_R/gongren_Rig:ElbowPart2_R/gongren_Rig:Wrist_R/gongren_Rig:MiddleFinger1_R/gongren_Rig:MiddleFinger2_R",
+              "children": [
+                33
+              ]
+            },
+            {
+              "nodeIndex": 33,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                23,
+                24,
+                25,
+                26,
+                27,
+                28,
+                29,
+                30,
+                31,
+                32,
+                33
+              ],
+              "name": "gongren_Rig:MiddleFinger3_R",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:RootPart1_M/gongren_Rig:RootPart2_M/gongren_Rig:Spine1_M/gongren_Rig:Spine1Part1_M/gongren_Rig:Spine1Part2_M/gongren_Rig:Chest_M/gongren_Rig:Scapula_R/gongren_Rig:Shoulder_R/gongren_Rig:ShoulderPart1_R/gongren_Rig:ShoulderPart2_R/gongren_Rig:Elbow_R/gongren_Rig:ElbowPart1_R/gongren_Rig:ElbowPart2_R/gongren_Rig:Wrist_R/gongren_Rig:MiddleFinger1_R/gongren_Rig:MiddleFinger2_R/gongren_Rig:MiddleFinger3_R",
+              "children": [
+                34
+              ]
+            },
+            {
+              "nodeIndex": 34,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                23,
+                24,
+                25,
+                26,
+                27,
+                28,
+                29,
+                30,
+                31,
+                32,
+                33,
+                34
+              ],
+              "name": "gongren_Rig:MiddleFinger4_R",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:RootPart1_M/gongren_Rig:RootPart2_M/gongren_Rig:Spine1_M/gongren_Rig:Spine1Part1_M/gongren_Rig:Spine1Part2_M/gongren_Rig:Chest_M/gongren_Rig:Scapula_R/gongren_Rig:Shoulder_R/gongren_Rig:ShoulderPart1_R/gongren_Rig:ShoulderPart2_R/gongren_Rig:Elbow_R/gongren_Rig:ElbowPart1_R/gongren_Rig:ElbowPart2_R/gongren_Rig:Wrist_R/gongren_Rig:MiddleFinger1_R/gongren_Rig:MiddleFinger2_R/gongren_Rig:MiddleFinger3_R/gongren_Rig:MiddleFinger4_R"
+            },
+            {
+              "nodeIndex": 35,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                23,
+                24,
+                25,
+                26,
+                27,
+                28,
+                29,
+                30,
+                35
+              ],
+              "name": "gongren_Rig:ThumbFinger1_R",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:RootPart1_M/gongren_Rig:RootPart2_M/gongren_Rig:Spine1_M/gongren_Rig:Spine1Part1_M/gongren_Rig:Spine1Part2_M/gongren_Rig:Chest_M/gongren_Rig:Scapula_R/gongren_Rig:Shoulder_R/gongren_Rig:ShoulderPart1_R/gongren_Rig:ShoulderPart2_R/gongren_Rig:Elbow_R/gongren_Rig:ElbowPart1_R/gongren_Rig:ElbowPart2_R/gongren_Rig:Wrist_R/gongren_Rig:ThumbFinger1_R",
+              "children": [
+                36
+              ]
+            },
+            {
+              "nodeIndex": 36,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                23,
+                24,
+                25,
+                26,
+                27,
+                28,
+                29,
+                30,
+                35,
+                36
+              ],
+              "name": "gongren_Rig:ThumbFinger2_R",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:RootPart1_M/gongren_Rig:RootPart2_M/gongren_Rig:Spine1_M/gongren_Rig:Spine1Part1_M/gongren_Rig:Spine1Part2_M/gongren_Rig:Chest_M/gongren_Rig:Scapula_R/gongren_Rig:Shoulder_R/gongren_Rig:ShoulderPart1_R/gongren_Rig:ShoulderPart2_R/gongren_Rig:Elbow_R/gongren_Rig:ElbowPart1_R/gongren_Rig:ElbowPart2_R/gongren_Rig:Wrist_R/gongren_Rig:ThumbFinger1_R/gongren_Rig:ThumbFinger2_R",
+              "children": [
+                37
+              ]
+            },
+            {
+              "nodeIndex": 37,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                23,
+                24,
+                25,
+                26,
+                27,
+                28,
+                29,
+                30,
+                35,
+                36,
+                37
+              ],
+              "name": "gongren_Rig:ThumbFinger3_R",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:RootPart1_M/gongren_Rig:RootPart2_M/gongren_Rig:Spine1_M/gongren_Rig:Spine1Part1_M/gongren_Rig:Spine1Part2_M/gongren_Rig:Chest_M/gongren_Rig:Scapula_R/gongren_Rig:Shoulder_R/gongren_Rig:ShoulderPart1_R/gongren_Rig:ShoulderPart2_R/gongren_Rig:Elbow_R/gongren_Rig:ElbowPart1_R/gongren_Rig:ElbowPart2_R/gongren_Rig:Wrist_R/gongren_Rig:ThumbFinger1_R/gongren_Rig:ThumbFinger2_R/gongren_Rig:ThumbFinger3_R",
+              "children": [
+                38
+              ]
+            },
+            {
+              "nodeIndex": 38,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                23,
+                24,
+                25,
+                26,
+                27,
+                28,
+                29,
+                30,
+                35,
+                36,
+                37,
+                38
+              ],
+              "name": "gongren_Rig:ThumbFinger4_R",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:RootPart1_M/gongren_Rig:RootPart2_M/gongren_Rig:Spine1_M/gongren_Rig:Spine1Part1_M/gongren_Rig:Spine1Part2_M/gongren_Rig:Chest_M/gongren_Rig:Scapula_R/gongren_Rig:Shoulder_R/gongren_Rig:ShoulderPart1_R/gongren_Rig:ShoulderPart2_R/gongren_Rig:Elbow_R/gongren_Rig:ElbowPart1_R/gongren_Rig:ElbowPart2_R/gongren_Rig:Wrist_R/gongren_Rig:ThumbFinger1_R/gongren_Rig:ThumbFinger2_R/gongren_Rig:ThumbFinger3_R/gongren_Rig:ThumbFinger4_R"
+            },
+            {
+              "nodeIndex": 39,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                39
+              ],
+              "name": "gongren_Rig:Scapula_L",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:RootPart1_M/gongren_Rig:RootPart2_M/gongren_Rig:Spine1_M/gongren_Rig:Spine1Part1_M/gongren_Rig:Spine1Part2_M/gongren_Rig:Chest_M/gongren_Rig:Scapula_L",
+              "children": [
+                40
+              ]
+            },
+            {
+              "nodeIndex": 40,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                39,
+                40
+              ],
+              "name": "gongren_Rig:Shoulder_L",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:RootPart1_M/gongren_Rig:RootPart2_M/gongren_Rig:Spine1_M/gongren_Rig:Spine1Part1_M/gongren_Rig:Spine1Part2_M/gongren_Rig:Chest_M/gongren_Rig:Scapula_L/gongren_Rig:Shoulder_L",
+              "children": [
+                41
+              ]
+            },
+            {
+              "nodeIndex": 41,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                39,
+                40,
+                41
+              ],
+              "name": "gongren_Rig:ShoulderPart1_L",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:RootPart1_M/gongren_Rig:RootPart2_M/gongren_Rig:Spine1_M/gongren_Rig:Spine1Part1_M/gongren_Rig:Spine1Part2_M/gongren_Rig:Chest_M/gongren_Rig:Scapula_L/gongren_Rig:Shoulder_L/gongren_Rig:ShoulderPart1_L",
+              "children": [
+                42
+              ]
+            },
+            {
+              "nodeIndex": 42,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                39,
+                40,
+                41,
+                42
+              ],
+              "name": "gongren_Rig:ShoulderPart2_L",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:RootPart1_M/gongren_Rig:RootPart2_M/gongren_Rig:Spine1_M/gongren_Rig:Spine1Part1_M/gongren_Rig:Spine1Part2_M/gongren_Rig:Chest_M/gongren_Rig:Scapula_L/gongren_Rig:Shoulder_L/gongren_Rig:ShoulderPart1_L/gongren_Rig:ShoulderPart2_L",
+              "children": [
+                43
+              ]
+            },
+            {
+              "nodeIndex": 43,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                39,
+                40,
+                41,
+                42,
+                43
+              ],
+              "name": "gongren_Rig:Elbow_L",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:RootPart1_M/gongren_Rig:RootPart2_M/gongren_Rig:Spine1_M/gongren_Rig:Spine1Part1_M/gongren_Rig:Spine1Part2_M/gongren_Rig:Chest_M/gongren_Rig:Scapula_L/gongren_Rig:Shoulder_L/gongren_Rig:ShoulderPart1_L/gongren_Rig:ShoulderPart2_L/gongren_Rig:Elbow_L",
+              "children": [
+                44
+              ]
+            },
+            {
+              "nodeIndex": 44,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                39,
+                40,
+                41,
+                42,
+                43,
+                44
+              ],
+              "name": "gongren_Rig:ElbowPart1_L",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:RootPart1_M/gongren_Rig:RootPart2_M/gongren_Rig:Spine1_M/gongren_Rig:Spine1Part1_M/gongren_Rig:Spine1Part2_M/gongren_Rig:Chest_M/gongren_Rig:Scapula_L/gongren_Rig:Shoulder_L/gongren_Rig:ShoulderPart1_L/gongren_Rig:ShoulderPart2_L/gongren_Rig:Elbow_L/gongren_Rig:ElbowPart1_L",
+              "children": [
+                45
+              ]
+            },
+            {
+              "nodeIndex": 45,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                39,
+                40,
+                41,
+                42,
+                43,
+                44,
+                45
+              ],
+              "name": "gongren_Rig:ElbowPart2_L",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:RootPart1_M/gongren_Rig:RootPart2_M/gongren_Rig:Spine1_M/gongren_Rig:Spine1Part1_M/gongren_Rig:Spine1Part2_M/gongren_Rig:Chest_M/gongren_Rig:Scapula_L/gongren_Rig:Shoulder_L/gongren_Rig:ShoulderPart1_L/gongren_Rig:ShoulderPart2_L/gongren_Rig:Elbow_L/gongren_Rig:ElbowPart1_L/gongren_Rig:ElbowPart2_L",
+              "children": [
+                46
+              ]
+            },
+            {
+              "nodeIndex": 46,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                39,
+                40,
+                41,
+                42,
+                43,
+                44,
+                45,
+                46
+              ],
+              "name": "gongren_Rig:Wrist_L",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:RootPart1_M/gongren_Rig:RootPart2_M/gongren_Rig:Spine1_M/gongren_Rig:Spine1Part1_M/gongren_Rig:Spine1Part2_M/gongren_Rig:Chest_M/gongren_Rig:Scapula_L/gongren_Rig:Shoulder_L/gongren_Rig:ShoulderPart1_L/gongren_Rig:ShoulderPart2_L/gongren_Rig:Elbow_L/gongren_Rig:ElbowPart1_L/gongren_Rig:ElbowPart2_L/gongren_Rig:Wrist_L",
+              "children": [
+                47,
+                51
+              ]
+            },
+            {
+              "nodeIndex": 47,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                39,
+                40,
+                41,
+                42,
+                43,
+                44,
+                45,
+                46,
+                47
+              ],
+              "name": "gongren_Rig:MiddleFinger1_L",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:RootPart1_M/gongren_Rig:RootPart2_M/gongren_Rig:Spine1_M/gongren_Rig:Spine1Part1_M/gongren_Rig:Spine1Part2_M/gongren_Rig:Chest_M/gongren_Rig:Scapula_L/gongren_Rig:Shoulder_L/gongren_Rig:ShoulderPart1_L/gongren_Rig:ShoulderPart2_L/gongren_Rig:Elbow_L/gongren_Rig:ElbowPart1_L/gongren_Rig:ElbowPart2_L/gongren_Rig:Wrist_L/gongren_Rig:MiddleFinger1_L",
+              "children": [
+                48
+              ]
+            },
+            {
+              "nodeIndex": 48,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                39,
+                40,
+                41,
+                42,
+                43,
+                44,
+                45,
+                46,
+                47,
+                48
+              ],
+              "name": "gongren_Rig:MiddleFinger2_L",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:RootPart1_M/gongren_Rig:RootPart2_M/gongren_Rig:Spine1_M/gongren_Rig:Spine1Part1_M/gongren_Rig:Spine1Part2_M/gongren_Rig:Chest_M/gongren_Rig:Scapula_L/gongren_Rig:Shoulder_L/gongren_Rig:ShoulderPart1_L/gongren_Rig:ShoulderPart2_L/gongren_Rig:Elbow_L/gongren_Rig:ElbowPart1_L/gongren_Rig:ElbowPart2_L/gongren_Rig:Wrist_L/gongren_Rig:MiddleFinger1_L/gongren_Rig:MiddleFinger2_L",
+              "children": [
+                49
+              ]
+            },
+            {
+              "nodeIndex": 49,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                39,
+                40,
+                41,
+                42,
+                43,
+                44,
+                45,
+                46,
+                47,
+                48,
+                49
+              ],
+              "name": "gongren_Rig:MiddleFinger3_L",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:RootPart1_M/gongren_Rig:RootPart2_M/gongren_Rig:Spine1_M/gongren_Rig:Spine1Part1_M/gongren_Rig:Spine1Part2_M/gongren_Rig:Chest_M/gongren_Rig:Scapula_L/gongren_Rig:Shoulder_L/gongren_Rig:ShoulderPart1_L/gongren_Rig:ShoulderPart2_L/gongren_Rig:Elbow_L/gongren_Rig:ElbowPart1_L/gongren_Rig:ElbowPart2_L/gongren_Rig:Wrist_L/gongren_Rig:MiddleFinger1_L/gongren_Rig:MiddleFinger2_L/gongren_Rig:MiddleFinger3_L",
+              "children": [
+                50
+              ]
+            },
+            {
+              "nodeIndex": 50,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                39,
+                40,
+                41,
+                42,
+                43,
+                44,
+                45,
+                46,
+                47,
+                48,
+                49,
+                50
+              ],
+              "name": "gongren_Rig:MiddleFinger4_L",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:RootPart1_M/gongren_Rig:RootPart2_M/gongren_Rig:Spine1_M/gongren_Rig:Spine1Part1_M/gongren_Rig:Spine1Part2_M/gongren_Rig:Chest_M/gongren_Rig:Scapula_L/gongren_Rig:Shoulder_L/gongren_Rig:ShoulderPart1_L/gongren_Rig:ShoulderPart2_L/gongren_Rig:Elbow_L/gongren_Rig:ElbowPart1_L/gongren_Rig:ElbowPart2_L/gongren_Rig:Wrist_L/gongren_Rig:MiddleFinger1_L/gongren_Rig:MiddleFinger2_L/gongren_Rig:MiddleFinger3_L/gongren_Rig:MiddleFinger4_L"
+            },
+            {
+              "nodeIndex": 51,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                39,
+                40,
+                41,
+                42,
+                43,
+                44,
+                45,
+                46,
+                51
+              ],
+              "name": "gongren_Rig:ThumbFinger1_L",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:RootPart1_M/gongren_Rig:RootPart2_M/gongren_Rig:Spine1_M/gongren_Rig:Spine1Part1_M/gongren_Rig:Spine1Part2_M/gongren_Rig:Chest_M/gongren_Rig:Scapula_L/gongren_Rig:Shoulder_L/gongren_Rig:ShoulderPart1_L/gongren_Rig:ShoulderPart2_L/gongren_Rig:Elbow_L/gongren_Rig:ElbowPart1_L/gongren_Rig:ElbowPart2_L/gongren_Rig:Wrist_L/gongren_Rig:ThumbFinger1_L",
+              "children": [
+                52
+              ]
+            },
+            {
+              "nodeIndex": 52,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                39,
+                40,
+                41,
+                42,
+                43,
+                44,
+                45,
+                46,
+                51,
+                52
+              ],
+              "name": "gongren_Rig:ThumbFinger2_L",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:RootPart1_M/gongren_Rig:RootPart2_M/gongren_Rig:Spine1_M/gongren_Rig:Spine1Part1_M/gongren_Rig:Spine1Part2_M/gongren_Rig:Chest_M/gongren_Rig:Scapula_L/gongren_Rig:Shoulder_L/gongren_Rig:ShoulderPart1_L/gongren_Rig:ShoulderPart2_L/gongren_Rig:Elbow_L/gongren_Rig:ElbowPart1_L/gongren_Rig:ElbowPart2_L/gongren_Rig:Wrist_L/gongren_Rig:ThumbFinger1_L/gongren_Rig:ThumbFinger2_L",
+              "children": [
+                53
+              ]
+            },
+            {
+              "nodeIndex": 53,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                39,
+                40,
+                41,
+                42,
+                43,
+                44,
+                45,
+                46,
+                51,
+                52,
+                53
+              ],
+              "name": "gongren_Rig:ThumbFinger3_L",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:RootPart1_M/gongren_Rig:RootPart2_M/gongren_Rig:Spine1_M/gongren_Rig:Spine1Part1_M/gongren_Rig:Spine1Part2_M/gongren_Rig:Chest_M/gongren_Rig:Scapula_L/gongren_Rig:Shoulder_L/gongren_Rig:ShoulderPart1_L/gongren_Rig:ShoulderPart2_L/gongren_Rig:Elbow_L/gongren_Rig:ElbowPart1_L/gongren_Rig:ElbowPart2_L/gongren_Rig:Wrist_L/gongren_Rig:ThumbFinger1_L/gongren_Rig:ThumbFinger2_L/gongren_Rig:ThumbFinger3_L",
+              "children": [
+                54
+              ]
+            },
+            {
+              "nodeIndex": 54,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                39,
+                40,
+                41,
+                42,
+                43,
+                44,
+                45,
+                46,
+                51,
+                52,
+                53,
+                54
+              ],
+              "name": "gongren_Rig:ThumbFinger4_L",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:RootPart1_M/gongren_Rig:RootPart2_M/gongren_Rig:Spine1_M/gongren_Rig:Spine1Part1_M/gongren_Rig:Spine1Part2_M/gongren_Rig:Chest_M/gongren_Rig:Scapula_L/gongren_Rig:Shoulder_L/gongren_Rig:ShoulderPart1_L/gongren_Rig:ShoulderPart2_L/gongren_Rig:Elbow_L/gongren_Rig:ElbowPart1_L/gongren_Rig:ElbowPart2_L/gongren_Rig:Wrist_L/gongren_Rig:ThumbFinger1_L/gongren_Rig:ThumbFinger2_L/gongren_Rig:ThumbFinger3_L/gongren_Rig:ThumbFinger4_L"
+            },
+            {
+              "nodeIndex": 55,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                55
+              ],
+              "name": "gongren_Rig:Hip_L",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:Hip_L",
+              "children": [
+                56
+              ]
+            },
+            {
+              "nodeIndex": 56,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                55,
+                56
+              ],
+              "name": "gongren_Rig:HipPart1_L",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:Hip_L/gongren_Rig:HipPart1_L",
+              "children": [
+                57
+              ]
+            },
+            {
+              "nodeIndex": 57,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                55,
+                56,
+                57
+              ],
+              "name": "gongren_Rig:HipPart2_L",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:Hip_L/gongren_Rig:HipPart1_L/gongren_Rig:HipPart2_L",
+              "children": [
+                58
+              ]
+            },
+            {
+              "nodeIndex": 58,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                55,
+                56,
+                57,
+                58
+              ],
+              "name": "gongren_Rig:Knee_L",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:Hip_L/gongren_Rig:HipPart1_L/gongren_Rig:HipPart2_L/gongren_Rig:Knee_L",
+              "children": [
+                59
+              ]
+            },
+            {
+              "nodeIndex": 59,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                55,
+                56,
+                57,
+                58,
+                59
+              ],
+              "name": "gongren_Rig:Ankle_L",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:Hip_L/gongren_Rig:HipPart1_L/gongren_Rig:HipPart2_L/gongren_Rig:Knee_L/gongren_Rig:Ankle_L",
+              "children": [
+                60
+              ]
+            },
+            {
+              "nodeIndex": 60,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                55,
+                56,
+                57,
+                58,
+                59,
+                60
+              ],
+              "name": "gongren_Rig:Toes_L",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:Hip_L/gongren_Rig:HipPart1_L/gongren_Rig:HipPart2_L/gongren_Rig:Knee_L/gongren_Rig:Ankle_L/gongren_Rig:Toes_L",
+              "children": [
+                61
+              ]
+            },
+            {
+              "nodeIndex": 61,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                55,
+                56,
+                57,
+                58,
+                59,
+                60,
+                61
+              ],
+              "name": "gongren_Rig:ToesEnd_L",
+              "ownerNodePath": "gongren_Rig:DeformationSystem/gongren_Rig:Root_M/gongren_Rig:Hip_L/gongren_Rig:HipPart1_L/gongren_Rig:HipPart2_L/gongren_Rig:Knee_L/gongren_Rig:Ankle_L/gongren_Rig:Toes_L/gongren_Rig:ToesEnd_L"
+            }
+          ],
           "meshes": [
             {
               "meshIndex": 0,
               "name": "gongren_Rig:fbx_city_npc_worker_male03",
               "primitiveCount": 1,
+              "primitives": [
+                {
+                  "primitiveIndex": 0,
+                  "mode": 4,
+                  "sourceMaterialIndex": 0,
+                  "materialName": "lambert2",
+                  "triangleCount": 784,
+                  "boundingBox": {
+                    "min": [
+                      -17606,
+                      -11841,
+                      -32767
+                    ],
+                    "max": [
+                      17606,
+                      11841,
+                      32767
+                    ]
+                  }
+                }
+              ],
               "materialIndices": [
                 0
               ],
@@ -341,7 +2661,13 @@
             "ownerNodePath": "ST_kache_Rig:Geometry/ST_kache_Rig:polySurface102",
             "label": "ST_kache_Rig:polySurface102",
             "nodeIndex": 6,
+            "nodeIndexPath": [
+              0,
+              1,
+              6
+            ],
             "meshIndex": 4,
+            "primitiveIndex": 0,
             "sourceMaterialIndex": 0,
             "sourceMaterialIndices": [
               0
@@ -350,6 +2676,19 @@
             "materialNames": [
               "ST_kache_Rig:lambert21"
             ],
+            "triangleCount": 3754,
+            "boundingBox": {
+              "min": [
+                -1.09695506,
+                0.160106286,
+                -1.92993653
+              ],
+              "max": [
+                1.09695506,
+                1.85055542,
+                1.92297828
+              ]
+            },
             "sourceMaterialProfiles": [
               {
                 "sourceMaterialIndex": 0,
@@ -384,7 +2723,13 @@
             "ownerNodePath": "ST_kache_Rig:Geometry/ST_kache_Rig:polySurface108",
             "label": "ST_kache_Rig:polySurface108",
             "nodeIndex": 3,
+            "nodeIndexPath": [
+              0,
+              1,
+              3
+            ],
             "meshIndex": 1,
+            "primitiveIndex": 0,
             "sourceMaterialIndex": 0,
             "sourceMaterialIndices": [
               0
@@ -393,6 +2738,19 @@
             "materialNames": [
               "ST_kache_Rig:lambert21"
             ],
+            "triangleCount": 285,
+            "boundingBox": {
+              "min": [
+                0.823688865,
+                0.00243759737,
+                -1.42641115
+              ],
+              "max": [
+                1.10181391,
+                0.74309057,
+                -0.6816792
+              ]
+            },
             "sourceMaterialProfiles": [
               {
                 "sourceMaterialIndex": 0,
@@ -427,7 +2785,13 @@
             "ownerNodePath": "ST_kache_Rig:Geometry/ST_kache_Rig:polySurface119",
             "label": "ST_kache_Rig:polySurface119",
             "nodeIndex": 2,
+            "nodeIndexPath": [
+              0,
+              1,
+              2
+            ],
             "meshIndex": 0,
+            "primitiveIndex": 0,
             "sourceMaterialIndex": 0,
             "sourceMaterialIndices": [
               0
@@ -436,6 +2800,19 @@
             "materialNames": [
               "ST_kache_Rig:lambert21"
             ],
+            "triangleCount": 285,
+            "boundingBox": {
+              "min": [
+                0.823688865,
+                0.00243759737,
+                0.798541546
+              ],
+              "max": [
+                1.10181391,
+                0.74309057,
+                1.54327357
+              ]
+            },
             "sourceMaterialProfiles": [
               {
                 "sourceMaterialIndex": 0,
@@ -470,7 +2847,13 @@
             "ownerNodePath": "ST_kache_Rig:Geometry/ST_kache_Rig:polySurface96",
             "label": "ST_kache_Rig:polySurface96",
             "nodeIndex": 4,
+            "nodeIndexPath": [
+              0,
+              1,
+              4
+            ],
             "meshIndex": 2,
+            "primitiveIndex": 0,
             "sourceMaterialIndex": 0,
             "sourceMaterialIndices": [
               0
@@ -479,6 +2862,19 @@
             "materialNames": [
               "ST_kache_Rig:lambert21"
             ],
+            "triangleCount": 285,
+            "boundingBox": {
+              "min": [
+                -1.10181391,
+                0.00243759737,
+                0.798541546
+              ],
+              "max": [
+                -0.823688865,
+                0.74309057,
+                1.54327357
+              ]
+            },
             "sourceMaterialProfiles": [
               {
                 "sourceMaterialIndex": 0,
@@ -513,7 +2909,13 @@
             "ownerNodePath": "ST_kache_Rig:Geometry/ST_kache_Rig:polySurface99",
             "label": "ST_kache_Rig:polySurface99",
             "nodeIndex": 5,
+            "nodeIndexPath": [
+              0,
+              1,
+              5
+            ],
             "meshIndex": 3,
+            "primitiveIndex": 0,
             "sourceMaterialIndex": 0,
             "sourceMaterialIndices": [
               0
@@ -522,6 +2924,19 @@
             "materialNames": [
               "ST_kache_Rig:lambert21"
             ],
+            "triangleCount": 285,
+            "boundingBox": {
+              "min": [
+                -1.10181391,
+                0.00243759737,
+                -1.42641115
+              ],
+              "max": [
+                -0.823688865,
+                0.74309057,
+                -0.6816792
+              ]
+            },
             "sourceMaterialProfiles": [
               {
                 "sourceMaterialIndex": 0,
@@ -566,11 +2981,310 @@
           "imageCount": 1,
           "animationCount": 1,
           "skinCount": 5,
+          "nodes": [
+            {
+              "nodeIndex": 0,
+              "nodeIndexPath": [
+                0
+              ],
+              "name": "ST_kache_Rig:Group",
+              "ownerNodePath": "ST_kache_Rig:Group",
+              "children": [
+                1,
+                7
+              ]
+            },
+            {
+              "nodeIndex": 1,
+              "nodeIndexPath": [
+                0,
+                1
+              ],
+              "name": "ST_kache_Rig:Geometry",
+              "ownerNodePath": "ST_kache_Rig:Geometry",
+              "children": [
+                2,
+                3,
+                4,
+                5,
+                6
+              ]
+            },
+            {
+              "nodeIndex": 2,
+              "nodeIndexPath": [
+                0,
+                1,
+                2
+              ],
+              "name": "ST_kache_Rig:polySurface119",
+              "ownerNodePath": "ST_kache_Rig:Geometry/ST_kache_Rig:polySurface119",
+              "meshIndex": 0,
+              "meshName": "ST_kache_Rig:polySurface119",
+              "primitiveCount": 1,
+              "primitives": [
+                {
+                  "primitiveIndex": 0,
+                  "sourceMaterialIndex": 0,
+                  "materialName": "ST_kache_Rig:lambert21",
+                  "triangleCount": 285,
+                  "boundingBox": {
+                    "min": [
+                      0.823688865,
+                      0.00243759737,
+                      0.798541546
+                    ],
+                    "max": [
+                      1.10181391,
+                      0.74309057,
+                      1.54327357
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "nodeIndex": 3,
+              "nodeIndexPath": [
+                0,
+                1,
+                3
+              ],
+              "name": "ST_kache_Rig:polySurface108",
+              "ownerNodePath": "ST_kache_Rig:Geometry/ST_kache_Rig:polySurface108",
+              "meshIndex": 1,
+              "meshName": "ST_kache_Rig:polySurface108",
+              "primitiveCount": 1,
+              "primitives": [
+                {
+                  "primitiveIndex": 0,
+                  "sourceMaterialIndex": 0,
+                  "materialName": "ST_kache_Rig:lambert21",
+                  "triangleCount": 285,
+                  "boundingBox": {
+                    "min": [
+                      0.823688865,
+                      0.00243759737,
+                      -1.42641115
+                    ],
+                    "max": [
+                      1.10181391,
+                      0.74309057,
+                      -0.6816792
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "nodeIndex": 4,
+              "nodeIndexPath": [
+                0,
+                1,
+                4
+              ],
+              "name": "ST_kache_Rig:polySurface96",
+              "ownerNodePath": "ST_kache_Rig:Geometry/ST_kache_Rig:polySurface96",
+              "meshIndex": 2,
+              "meshName": "ST_kache_Rig:polySurface96",
+              "primitiveCount": 1,
+              "primitives": [
+                {
+                  "primitiveIndex": 0,
+                  "sourceMaterialIndex": 0,
+                  "materialName": "ST_kache_Rig:lambert21",
+                  "triangleCount": 285,
+                  "boundingBox": {
+                    "min": [
+                      -1.10181391,
+                      0.00243759737,
+                      0.798541546
+                    ],
+                    "max": [
+                      -0.823688865,
+                      0.74309057,
+                      1.54327357
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "nodeIndex": 5,
+              "nodeIndexPath": [
+                0,
+                1,
+                5
+              ],
+              "name": "ST_kache_Rig:polySurface99",
+              "ownerNodePath": "ST_kache_Rig:Geometry/ST_kache_Rig:polySurface99",
+              "meshIndex": 3,
+              "meshName": "ST_kache_Rig:polySurface99",
+              "primitiveCount": 1,
+              "primitives": [
+                {
+                  "primitiveIndex": 0,
+                  "sourceMaterialIndex": 0,
+                  "materialName": "ST_kache_Rig:lambert21",
+                  "triangleCount": 285,
+                  "boundingBox": {
+                    "min": [
+                      -1.10181391,
+                      0.00243759737,
+                      -1.42641115
+                    ],
+                    "max": [
+                      -0.823688865,
+                      0.74309057,
+                      -0.6816792
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "nodeIndex": 6,
+              "nodeIndexPath": [
+                0,
+                1,
+                6
+              ],
+              "name": "ST_kache_Rig:polySurface102",
+              "ownerNodePath": "ST_kache_Rig:Geometry/ST_kache_Rig:polySurface102",
+              "meshIndex": 4,
+              "meshName": "ST_kache_Rig:polySurface102",
+              "primitiveCount": 1,
+              "primitives": [
+                {
+                  "primitiveIndex": 0,
+                  "sourceMaterialIndex": 0,
+                  "materialName": "ST_kache_Rig:lambert21",
+                  "triangleCount": 3754,
+                  "boundingBox": {
+                    "min": [
+                      -1.09695506,
+                      0.160106286,
+                      -1.92993653
+                    ],
+                    "max": [
+                      1.09695506,
+                      1.85055542,
+                      1.92297828
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "nodeIndex": 7,
+              "nodeIndexPath": [
+                0,
+                7
+              ],
+              "name": "ST_kache_Rig:DeformationSystem",
+              "ownerNodePath": "ST_kache_Rig:DeformationSystem",
+              "children": [
+                8
+              ]
+            },
+            {
+              "nodeIndex": 8,
+              "nodeIndexPath": [
+                0,
+                7,
+                8
+              ],
+              "name": "ST_kache_Rig:Root_M",
+              "ownerNodePath": "ST_kache_Rig:DeformationSystem/ST_kache_Rig:Root_M",
+              "children": [
+                9,
+                10,
+                11,
+                12,
+                13
+              ]
+            },
+            {
+              "nodeIndex": 9,
+              "nodeIndexPath": [
+                0,
+                7,
+                8,
+                9
+              ],
+              "name": "ST_kache_Rig:joint1_L",
+              "ownerNodePath": "ST_kache_Rig:DeformationSystem/ST_kache_Rig:Root_M/ST_kache_Rig:joint1_L"
+            },
+            {
+              "nodeIndex": 10,
+              "nodeIndexPath": [
+                0,
+                7,
+                8,
+                10
+              ],
+              "name": "ST_kache_Rig:joint2_L",
+              "ownerNodePath": "ST_kache_Rig:DeformationSystem/ST_kache_Rig:Root_M/ST_kache_Rig:joint2_L"
+            },
+            {
+              "nodeIndex": 11,
+              "nodeIndexPath": [
+                0,
+                7,
+                8,
+                11
+              ],
+              "name": "ST_kache_Rig:joint3_R",
+              "ownerNodePath": "ST_kache_Rig:DeformationSystem/ST_kache_Rig:Root_M/ST_kache_Rig:joint3_R"
+            },
+            {
+              "nodeIndex": 12,
+              "nodeIndexPath": [
+                0,
+                7,
+                8,
+                12
+              ],
+              "name": "ST_kache_Rig:joint4_R",
+              "ownerNodePath": "ST_kache_Rig:DeformationSystem/ST_kache_Rig:Root_M/ST_kache_Rig:joint4_R"
+            },
+            {
+              "nodeIndex": 13,
+              "nodeIndexPath": [
+                0,
+                7,
+                8,
+                13
+              ],
+              "name": "ST_kache_Rig:joint5_M",
+              "ownerNodePath": "ST_kache_Rig:DeformationSystem/ST_kache_Rig:Root_M/ST_kache_Rig:joint5_M"
+            }
+          ],
           "meshes": [
             {
               "meshIndex": 0,
               "name": "ST_kache_Rig:polySurface119",
               "primitiveCount": 1,
+              "primitives": [
+                {
+                  "primitiveIndex": 0,
+                  "sourceMaterialIndex": 0,
+                  "materialName": "ST_kache_Rig:lambert21",
+                  "triangleCount": 285,
+                  "boundingBox": {
+                    "min": [
+                      0.823688865,
+                      0.00243759737,
+                      0.798541546
+                    ],
+                    "max": [
+                      1.10181391,
+                      0.74309057,
+                      1.54327357
+                    ]
+                  }
+                }
+              ],
               "materialIndices": [
                 0
               ],
@@ -582,6 +3296,26 @@
               "meshIndex": 1,
               "name": "ST_kache_Rig:polySurface108",
               "primitiveCount": 1,
+              "primitives": [
+                {
+                  "primitiveIndex": 0,
+                  "sourceMaterialIndex": 0,
+                  "materialName": "ST_kache_Rig:lambert21",
+                  "triangleCount": 285,
+                  "boundingBox": {
+                    "min": [
+                      0.823688865,
+                      0.00243759737,
+                      -1.42641115
+                    ],
+                    "max": [
+                      1.10181391,
+                      0.74309057,
+                      -0.6816792
+                    ]
+                  }
+                }
+              ],
               "materialIndices": [
                 0
               ],
@@ -593,6 +3327,26 @@
               "meshIndex": 2,
               "name": "ST_kache_Rig:polySurface96",
               "primitiveCount": 1,
+              "primitives": [
+                {
+                  "primitiveIndex": 0,
+                  "sourceMaterialIndex": 0,
+                  "materialName": "ST_kache_Rig:lambert21",
+                  "triangleCount": 285,
+                  "boundingBox": {
+                    "min": [
+                      -1.10181391,
+                      0.00243759737,
+                      0.798541546
+                    ],
+                    "max": [
+                      -0.823688865,
+                      0.74309057,
+                      1.54327357
+                    ]
+                  }
+                }
+              ],
               "materialIndices": [
                 0
               ],
@@ -604,6 +3358,26 @@
               "meshIndex": 3,
               "name": "ST_kache_Rig:polySurface99",
               "primitiveCount": 1,
+              "primitives": [
+                {
+                  "primitiveIndex": 0,
+                  "sourceMaterialIndex": 0,
+                  "materialName": "ST_kache_Rig:lambert21",
+                  "triangleCount": 285,
+                  "boundingBox": {
+                    "min": [
+                      -1.10181391,
+                      0.00243759737,
+                      -1.42641115
+                    ],
+                    "max": [
+                      -0.823688865,
+                      0.74309057,
+                      -0.6816792
+                    ]
+                  }
+                }
+              ],
               "materialIndices": [
                 0
               ],
@@ -615,6 +3389,26 @@
               "meshIndex": 4,
               "name": "ST_kache_Rig:polySurface102",
               "primitiveCount": 1,
+              "primitives": [
+                {
+                  "primitiveIndex": 0,
+                  "sourceMaterialIndex": 0,
+                  "materialName": "ST_kache_Rig:lambert21",
+                  "triangleCount": 3754,
+                  "boundingBox": {
+                    "min": [
+                      -1.09695506,
+                      0.160106286,
+                      -1.92993653
+                    ],
+                    "max": [
+                      1.09695506,
+                      1.85055542,
+                      1.92297828
+                    ]
+                  }
+                }
+              ],
               "materialIndices": [
                 0
               ],
@@ -676,7 +3470,11 @@
             "ownerNodePath": "树",
             "label": "树",
             "nodeIndex": 0,
+            "nodeIndexPath": [
+              0
+            ],
             "meshIndex": 0,
+            "primitiveIndex": 0,
             "sourceMaterialIndex": 0,
             "sourceMaterialIndices": [
               0
@@ -685,6 +3483,19 @@
             "materialNames": [
               "Material #104"
             ],
+            "triangleCount": 466,
+            "boundingBox": {
+              "min": [
+                -19582,
+                -32767,
+                -19570
+              ],
+              "max": [
+                19582,
+                32767,
+                19570
+              ]
+            },
             "sourceMaterialProfiles": [
               {
                 "sourceMaterialIndex": 0,
@@ -721,11 +3532,66 @@
           "imageCount": 1,
           "animationCount": 0,
           "skinCount": 0,
+          "nodes": [
+            {
+              "nodeIndex": 0,
+              "nodeIndexPath": [
+                0
+              ],
+              "name": "树",
+              "ownerNodePath": "树",
+              "meshIndex": 0,
+              "meshName": "Mesh",
+              "primitiveCount": 1,
+              "primitives": [
+                {
+                  "primitiveIndex": 0,
+                  "mode": 4,
+                  "sourceMaterialIndex": 0,
+                  "materialName": "Material #104",
+                  "triangleCount": 466,
+                  "boundingBox": {
+                    "min": [
+                      -19582,
+                      -32767,
+                      -19570
+                    ],
+                    "max": [
+                      19582,
+                      32767,
+                      19570
+                    ]
+                  }
+                }
+              ]
+            }
+          ],
           "meshes": [
             {
               "meshIndex": 0,
               "name": "Mesh",
               "primitiveCount": 1,
+              "primitives": [
+                {
+                  "primitiveIndex": 0,
+                  "mode": 4,
+                  "sourceMaterialIndex": 0,
+                  "materialName": "Material #104",
+                  "triangleCount": 466,
+                  "boundingBox": {
+                    "min": [
+                      -19582,
+                      -32767,
+                      -19570
+                    ],
+                    "max": [
+                      19582,
+                      32767,
+                      19570
+                    ]
+                  }
+                }
+              ],
               "materialIndices": [
                 0
               ],
@@ -776,7 +3642,11 @@
             "ownerNodePath": "SM_SSD_S_M_huacaoo49",
             "label": "SM_SSD_S_M_huacaoo49",
             "nodeIndex": 0,
+            "nodeIndexPath": [
+              0
+            ],
             "meshIndex": 0,
+            "primitiveIndex": 0,
             "sourceMaterialIndex": 0,
             "sourceMaterialIndices": [
               0
@@ -785,6 +3655,19 @@
             "materialNames": [
               "SSD_S_M_Cao_C3_Mat"
             ],
+            "triangleCount": 1330,
+            "boundingBox": {
+              "min": [
+                -1.64309823513031,
+                0,
+                -1.3473223447799683
+              ],
+              "max": [
+                1.64309823513031,
+                1.8050456047058105,
+                1.347322940826416
+              ]
+            },
             "sourceMaterialProfiles": [
               {
                 "sourceMaterialIndex": 0,
@@ -821,11 +3704,64 @@
           "imageCount": 1,
           "animationCount": 0,
           "skinCount": 0,
+          "nodes": [
+            {
+              "nodeIndex": 0,
+              "nodeIndexPath": [
+                0
+              ],
+              "name": "SM_SSD_S_M_huacaoo49",
+              "ownerNodePath": "SM_SSD_S_M_huacaoo49",
+              "meshIndex": 0,
+              "meshName": "SM_SSD_S_M_huacaoo49",
+              "primitiveCount": 1,
+              "primitives": [
+                {
+                  "primitiveIndex": 0,
+                  "sourceMaterialIndex": 0,
+                  "materialName": "SSD_S_M_Cao_C3_Mat",
+                  "triangleCount": 1330,
+                  "boundingBox": {
+                    "min": [
+                      -1.64309823513031,
+                      0,
+                      -1.3473223447799683
+                    ],
+                    "max": [
+                      1.64309823513031,
+                      1.8050456047058105,
+                      1.347322940826416
+                    ]
+                  }
+                }
+              ]
+            }
+          ],
           "meshes": [
             {
               "meshIndex": 0,
               "name": "SM_SSD_S_M_huacaoo49",
               "primitiveCount": 1,
+              "primitives": [
+                {
+                  "primitiveIndex": 0,
+                  "sourceMaterialIndex": 0,
+                  "materialName": "SSD_S_M_Cao_C3_Mat",
+                  "triangleCount": 1330,
+                  "boundingBox": {
+                    "min": [
+                      -1.64309823513031,
+                      0,
+                      -1.3473223447799683
+                    ],
+                    "max": [
+                      1.64309823513031,
+                      1.8050456047058105,
+                      1.347322940826416
+                    ]
+                  }
+                }
+              ],
               "materialIndices": [
                 0
               ],
@@ -876,7 +3812,11 @@
             "ownerNodePath": "yanshi_02",
             "label": "yanshi_02",
             "nodeIndex": 0,
+            "nodeIndexPath": [
+              0
+            ],
             "meshIndex": 0,
+            "primitiveIndex": 0,
             "sourceMaterialIndex": 0,
             "sourceMaterialIndices": [
               0
@@ -885,6 +3825,19 @@
             "materialNames": [
               "standardSurface2"
             ],
+            "triangleCount": 201,
+            "boundingBox": {
+              "min": [
+                -1.7398592233657837,
+                -0.08262676745653152,
+                -1.3106112480163574
+              ],
+              "max": [
+                1.7398592233657837,
+                1.5907940864562988,
+                1.3106112480163574
+              ]
+            },
             "sourceMaterialProfiles": [
               {
                 "sourceMaterialIndex": 0,
@@ -921,11 +3874,64 @@
           "imageCount": 1,
           "animationCount": 0,
           "skinCount": 0,
+          "nodes": [
+            {
+              "nodeIndex": 0,
+              "nodeIndexPath": [
+                0
+              ],
+              "name": "yanshi_02",
+              "ownerNodePath": "yanshi_02",
+              "meshIndex": 0,
+              "meshName": "Mesh",
+              "primitiveCount": 1,
+              "primitives": [
+                {
+                  "primitiveIndex": 0,
+                  "sourceMaterialIndex": 0,
+                  "materialName": "standardSurface2",
+                  "triangleCount": 201,
+                  "boundingBox": {
+                    "min": [
+                      -1.7398592233657837,
+                      -0.08262676745653152,
+                      -1.3106112480163574
+                    ],
+                    "max": [
+                      1.7398592233657837,
+                      1.5907940864562988,
+                      1.3106112480163574
+                    ]
+                  }
+                }
+              ]
+            }
+          ],
           "meshes": [
             {
               "meshIndex": 0,
               "name": "Mesh",
               "primitiveCount": 1,
+              "primitives": [
+                {
+                  "primitiveIndex": 0,
+                  "sourceMaterialIndex": 0,
+                  "materialName": "standardSurface2",
+                  "triangleCount": 201,
+                  "boundingBox": {
+                    "min": [
+                      -1.7398592233657837,
+                      -0.08262676745653152,
+                      -1.3106112480163574
+                    ],
+                    "max": [
+                      1.7398592233657837,
+                      1.5907940864562988,
+                      1.3106112480163574
+                    ]
+                  }
+                }
+              ],
               "materialIndices": [
                 0
               ],
@@ -976,7 +3982,11 @@
             "ownerNodePath": "ZHALAN__5_",
             "label": "ZHALAN__5_",
             "nodeIndex": 0,
+            "nodeIndexPath": [
+              0
+            ],
             "meshIndex": 0,
+            "primitiveIndex": 0,
             "sourceMaterialIndex": 0,
             "sourceMaterialIndices": [
               0
@@ -985,6 +3995,19 @@
             "materialNames": [
               "ZHALAN_Mat"
             ],
+            "triangleCount": 136,
+            "boundingBox": {
+              "min": [
+                -3.1565611362457275,
+                -0.046984829008579254,
+                -0.07706180959939957
+              ],
+              "max": [
+                -0.5463781356811523,
+                1.3614014387130737,
+                0.07706180959939957
+              ]
+            },
             "sourceMaterialProfiles": [
               {
                 "sourceMaterialIndex": 0,
@@ -1021,11 +4044,64 @@
           "imageCount": 1,
           "animationCount": 0,
           "skinCount": 0,
+          "nodes": [
+            {
+              "nodeIndex": 0,
+              "nodeIndexPath": [
+                0
+              ],
+              "name": "ZHALAN__5_",
+              "ownerNodePath": "ZHALAN__5_",
+              "meshIndex": 0,
+              "meshName": "ZHALAN__5_",
+              "primitiveCount": 1,
+              "primitives": [
+                {
+                  "primitiveIndex": 0,
+                  "sourceMaterialIndex": 0,
+                  "materialName": "ZHALAN_Mat",
+                  "triangleCount": 136,
+                  "boundingBox": {
+                    "min": [
+                      -3.1565611362457275,
+                      -0.046984829008579254,
+                      -0.07706180959939957
+                    ],
+                    "max": [
+                      -0.5463781356811523,
+                      1.3614014387130737,
+                      0.07706180959939957
+                    ]
+                  }
+                }
+              ]
+            }
+          ],
           "meshes": [
             {
               "meshIndex": 0,
               "name": "ZHALAN__5_",
               "primitiveCount": 1,
+              "primitives": [
+                {
+                  "primitiveIndex": 0,
+                  "sourceMaterialIndex": 0,
+                  "materialName": "ZHALAN_Mat",
+                  "triangleCount": 136,
+                  "boundingBox": {
+                    "min": [
+                      -3.1565611362457275,
+                      -0.046984829008579254,
+                      -0.07706180959939957
+                    ],
+                    "max": [
+                      -0.5463781356811523,
+                      1.3614014387130737,
+                      0.07706180959939957
+                    ]
+                  }
+                }
+              ],
               "materialIndices": [
                 0
               ],
@@ -1072,21 +4148,36 @@
         "sourceFileName": "成捆木材.glb",
         "materialSlots": [
           {
-            "slotId": "slot_fa0049a6",
+            "slotId": "slot_786aa22c",
             "ownerNodePath": "node_0",
-            "label": "asset_20fda03a2e3c410da8df4741b_eae9a5__1781600584273_upload__1_",
+            "label": "asset_20fda03a2e3c410da8df4741b_eae9a5__1781600584273_upload__1_ / Primitive 0",
             "nodeIndex": 0,
+            "nodeIndexPath": [
+              0
+            ],
             "meshIndex": 0,
+            "primitiveIndex": 0,
             "sourceMaterialIndex": 0,
             "sourceMaterialIndices": [
-              0,
-              1
+              0
             ],
             "materialName": "MI_Pipe_Stacks_01a_asset_20fda0_4_741b2eae9a5__1780739654514_upload_asset_20fda03a2e3c410da8df4741b_eae9a5__1781600584273_upload__1_",
             "materialNames": [
-              "MI_Pipe_Stacks_01a_asset_20fda0_4_741b2eae9a5__1780739654514_upload_asset_20fda03a2e3c410da8df4741b_eae9a5__1781600584273_upload__1_",
-              "lambert2_SM_木材-单根_单根木材_asset_20_4_741b2eae9a5__1780739654514_upload_asset_20fda03a2e3c410da8df4741b_eae9a5__1781600584273_upload__1_"
+              "MI_Pipe_Stacks_01a_asset_20fda0_4_741b2eae9a5__1780739654514_upload_asset_20fda03a2e3c410da8df4741b_eae9a5__1781600584273_upload__1_"
             ],
+            "triangleCount": 1656,
+            "boundingBox": {
+              "min": [
+                -0.790232897,
+                -0.51118356,
+                -0.63541919
+              ],
+              "max": [
+                0.790232897,
+                0.550695896,
+                0.621959209
+              ]
+            },
             "sourceMaterialProfiles": [
               {
                 "sourceMaterialIndex": 0,
@@ -1105,7 +4196,41 @@
                     "reason": "embedded-texture"
                   }
                 ]
-              },
+              }
+            ]
+          },
+          {
+            "slotId": "slot_796aa3bf",
+            "ownerNodePath": "node_0",
+            "label": "asset_20fda03a2e3c410da8df4741b_eae9a5__1781600584273_upload__1_ / Primitive 1",
+            "nodeIndex": 0,
+            "nodeIndexPath": [
+              0
+            ],
+            "meshIndex": 0,
+            "primitiveIndex": 1,
+            "sourceMaterialIndex": 1,
+            "sourceMaterialIndices": [
+              1
+            ],
+            "materialName": "lambert2_SM_木材-单根_单根木材_asset_20_4_741b2eae9a5__1780739654514_upload_asset_20fda03a2e3c410da8df4741b_eae9a5__1781600584273_upload__1_",
+            "materialNames": [
+              "lambert2_SM_木材-单根_单根木材_asset_20_4_741b2eae9a5__1780739654514_upload_asset_20fda03a2e3c410da8df4741b_eae9a5__1781600584273_upload__1_"
+            ],
+            "triangleCount": 960,
+            "boundingBox": {
+              "min": [
+                -0.742880702,
+                -0.512519836,
+                -1.02333248
+              ],
+              "max": [
+                0.762598276,
+                0.54313302,
+                1.02334332
+              ]
+            },
+            "sourceMaterialProfiles": [
               {
                 "sourceMaterialIndex": 1,
                 "materialName": "lambert2_SM_木材-单根_单根木材_asset_20_4_741b2eae9a5__1780739654514_upload_asset_20fda03a2e3c410da8df4741b_eae9a5__1781600584273_upload__1_",
@@ -1152,11 +4277,99 @@
           "imageCount": 2,
           "animationCount": 0,
           "skinCount": 0,
+          "nodes": [
+            {
+              "nodeIndex": 0,
+              "nodeIndexPath": [
+                0
+              ],
+              "ownerNodePath": "node_0",
+              "meshIndex": 0,
+              "meshName": "asset_20fda03a2e3c410da8df4741b_eae9a5__1781600584273_upload__1_",
+              "primitiveCount": 2,
+              "primitives": [
+                {
+                  "primitiveIndex": 0,
+                  "sourceMaterialIndex": 0,
+                  "materialName": "MI_Pipe_Stacks_01a_asset_20fda0_4_741b2eae9a5__1780739654514_upload_asset_20fda03a2e3c410da8df4741b_eae9a5__1781600584273_upload__1_",
+                  "triangleCount": 1656,
+                  "boundingBox": {
+                    "min": [
+                      -0.790232897,
+                      -0.51118356,
+                      -0.63541919
+                    ],
+                    "max": [
+                      0.790232897,
+                      0.550695896,
+                      0.621959209
+                    ]
+                  }
+                },
+                {
+                  "primitiveIndex": 1,
+                  "sourceMaterialIndex": 1,
+                  "materialName": "lambert2_SM_木材-单根_单根木材_asset_20_4_741b2eae9a5__1780739654514_upload_asset_20fda03a2e3c410da8df4741b_eae9a5__1781600584273_upload__1_",
+                  "triangleCount": 960,
+                  "boundingBox": {
+                    "min": [
+                      -0.742880702,
+                      -0.512519836,
+                      -1.02333248
+                    ],
+                    "max": [
+                      0.762598276,
+                      0.54313302,
+                      1.02334332
+                    ]
+                  }
+                }
+              ]
+            }
+          ],
           "meshes": [
             {
               "meshIndex": 0,
               "name": "asset_20fda03a2e3c410da8df4741b_eae9a5__1781600584273_upload__1_",
               "primitiveCount": 2,
+              "primitives": [
+                {
+                  "primitiveIndex": 0,
+                  "sourceMaterialIndex": 0,
+                  "materialName": "MI_Pipe_Stacks_01a_asset_20fda0_4_741b2eae9a5__1780739654514_upload_asset_20fda03a2e3c410da8df4741b_eae9a5__1781600584273_upload__1_",
+                  "triangleCount": 1656,
+                  "boundingBox": {
+                    "min": [
+                      -0.790232897,
+                      -0.51118356,
+                      -0.63541919
+                    ],
+                    "max": [
+                      0.790232897,
+                      0.550695896,
+                      0.621959209
+                    ]
+                  }
+                },
+                {
+                  "primitiveIndex": 1,
+                  "sourceMaterialIndex": 1,
+                  "materialName": "lambert2_SM_木材-单根_单根木材_asset_20_4_741b2eae9a5__1780739654514_upload_asset_20fda03a2e3c410da8df4741b_eae9a5__1781600584273_upload__1_",
+                  "triangleCount": 960,
+                  "boundingBox": {
+                    "min": [
+                      -0.742880702,
+                      -0.512519836,
+                      -1.02333248
+                    ],
+                    "max": [
+                      0.762598276,
+                      0.54313302,
+                      1.02334332
+                    ]
+                  }
+                }
+              ],
               "materialIndices": [
                 0,
                 1
@@ -1230,7 +4443,11 @@
             "ownerNodePath": "xiangzi",
             "label": "xiangzi",
             "nodeIndex": 0,
+            "nodeIndexPath": [
+              0
+            ],
             "meshIndex": 0,
+            "primitiveIndex": 0,
             "sourceMaterialIndex": 0,
             "sourceMaterialIndices": [
               0
@@ -1239,6 +4456,19 @@
             "materialNames": [
               "xiangzi01_Mat_卡通风格手绘木质板箱组_xiangzi01-_xiangzi"
             ],
+            "triangleCount": 88,
+            "boundingBox": {
+              "min": [
+                -0.250211,
+                -0.250008583,
+                -0.250216484
+              ],
+              "max": [
+                0.250212669,
+                0.250008613,
+                0.250204623
+              ]
+            },
             "sourceMaterialProfiles": [
               {
                 "sourceMaterialIndex": 0,
@@ -1286,11 +4516,64 @@
           "imageCount": 1,
           "animationCount": 0,
           "skinCount": 0,
+          "nodes": [
+            {
+              "nodeIndex": 0,
+              "nodeIndexPath": [
+                0
+              ],
+              "name": "xiangzi",
+              "ownerNodePath": "xiangzi",
+              "meshIndex": 0,
+              "meshName": "xiangzi",
+              "primitiveCount": 1,
+              "primitives": [
+                {
+                  "primitiveIndex": 0,
+                  "sourceMaterialIndex": 0,
+                  "materialName": "xiangzi01_Mat_卡通风格手绘木质板箱组_xiangzi01-_xiangzi",
+                  "triangleCount": 88,
+                  "boundingBox": {
+                    "min": [
+                      -0.250211,
+                      -0.250008583,
+                      -0.250216484
+                    ],
+                    "max": [
+                      0.250212669,
+                      0.250008613,
+                      0.250204623
+                    ]
+                  }
+                }
+              ]
+            }
+          ],
           "meshes": [
             {
               "meshIndex": 0,
               "name": "xiangzi",
               "primitiveCount": 1,
+              "primitives": [
+                {
+                  "primitiveIndex": 0,
+                  "sourceMaterialIndex": 0,
+                  "materialName": "xiangzi01_Mat_卡通风格手绘木质板箱组_xiangzi01-_xiangzi",
+                  "triangleCount": 88,
+                  "boundingBox": {
+                    "min": [
+                      -0.250211,
+                      -0.250008583,
+                      -0.250216484
+                    ],
+                    "max": [
+                      0.250212669,
+                      0.250008613,
+                      0.250204623
+                    ]
+                  }
+                }
+              ],
               "materialIndices": [
                 0
               ],
@@ -1347,7 +4630,11 @@
             "ownerNodePath": "SM_mutong",
             "label": "SM_mutong",
             "nodeIndex": 0,
+            "nodeIndexPath": [
+              0
+            ],
             "meshIndex": 0,
+            "primitiveIndex": 0,
             "sourceMaterialIndex": 0,
             "sourceMaterialIndices": [
               0
@@ -1356,6 +4643,19 @@
             "materialNames": [
               "T_Mat"
             ],
+            "triangleCount": 250,
+            "boundingBox": {
+              "min": [
+                -0.4161913990974426,
+                0,
+                -0.39581298828125
+              ],
+              "max": [
+                0.41618162393569946,
+                0.8000031113624573,
+                0.39581298828125
+              ]
+            },
             "sourceMaterialProfiles": [
               {
                 "sourceMaterialIndex": 0,
@@ -1392,11 +4692,64 @@
           "imageCount": 1,
           "animationCount": 0,
           "skinCount": 0,
+          "nodes": [
+            {
+              "nodeIndex": 0,
+              "nodeIndexPath": [
+                0
+              ],
+              "name": "SM_mutong",
+              "ownerNodePath": "SM_mutong",
+              "meshIndex": 0,
+              "meshName": "SM_mutong",
+              "primitiveCount": 1,
+              "primitives": [
+                {
+                  "primitiveIndex": 0,
+                  "sourceMaterialIndex": 0,
+                  "materialName": "T_Mat",
+                  "triangleCount": 250,
+                  "boundingBox": {
+                    "min": [
+                      -0.4161913990974426,
+                      0,
+                      -0.39581298828125
+                    ],
+                    "max": [
+                      0.41618162393569946,
+                      0.8000031113624573,
+                      0.39581298828125
+                    ]
+                  }
+                }
+              ]
+            }
+          ],
           "meshes": [
             {
               "meshIndex": 0,
               "name": "SM_mutong",
               "primitiveCount": 1,
+              "primitives": [
+                {
+                  "primitiveIndex": 0,
+                  "sourceMaterialIndex": 0,
+                  "materialName": "T_Mat",
+                  "triangleCount": 250,
+                  "boundingBox": {
+                    "min": [
+                      -0.4161913990974426,
+                      0,
+                      -0.39581298828125
+                    ],
+                    "max": [
+                      0.41618162393569946,
+                      0.8000031113624573,
+                      0.39581298828125
+                    ]
+                  }
+                }
+              ],
               "materialIndices": [
                 0
               ],
@@ -1447,7 +4800,13 @@
             "ownerNodePath": "Geometry/ji2",
             "label": "ji2",
             "nodeIndex": 2,
+            "nodeIndexPath": [
+              0,
+              1,
+              2
+            ],
             "meshIndex": 0,
+            "primitiveIndex": 0,
             "sourceMaterialIndex": 0,
             "sourceMaterialIndices": [
               0
@@ -1456,6 +4815,19 @@
             "materialNames": [
               "Mat_ji"
             ],
+            "triangleCount": 1354,
+            "boundingBox": {
+              "min": [
+                -19706,
+                -31899,
+                -32767
+              ],
+              "max": [
+                19706,
+                31899,
+                32767
+              ]
+            },
             "sourceMaterialProfiles": [
               {
                 "sourceMaterialIndex": 0,
@@ -1500,11 +4872,280 @@
           "imageCount": 1,
           "animationCount": 1,
           "skinCount": 1,
+          "nodes": [
+            {
+              "nodeIndex": 0,
+              "nodeIndexPath": [
+                0
+              ],
+              "name": "Group",
+              "ownerNodePath": "Group",
+              "children": [
+                1,
+                3
+              ]
+            },
+            {
+              "nodeIndex": 1,
+              "nodeIndexPath": [
+                0,
+                1
+              ],
+              "name": "Geometry",
+              "ownerNodePath": "Geometry",
+              "children": [
+                2
+              ]
+            },
+            {
+              "nodeIndex": 2,
+              "nodeIndexPath": [
+                0,
+                1,
+                2
+              ],
+              "name": "ji2",
+              "ownerNodePath": "Geometry/ji2",
+              "meshIndex": 0,
+              "meshName": "ji2",
+              "primitiveCount": 1,
+              "primitives": [
+                {
+                  "primitiveIndex": 0,
+                  "mode": 4,
+                  "sourceMaterialIndex": 0,
+                  "materialName": "Mat_ji",
+                  "triangleCount": 1354,
+                  "boundingBox": {
+                    "min": [
+                      -19706,
+                      -31899,
+                      -32767
+                    ],
+                    "max": [
+                      19706,
+                      31899,
+                      32767
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "nodeIndex": 3,
+              "nodeIndexPath": [
+                0,
+                3
+              ],
+              "name": "DeformationSystem",
+              "ownerNodePath": "DeformationSystem",
+              "children": [
+                4
+              ]
+            },
+            {
+              "nodeIndex": 4,
+              "nodeIndexPath": [
+                0,
+                3,
+                4
+              ],
+              "name": "Root_M",
+              "ownerNodePath": "DeformationSystem/Root_M",
+              "children": [
+                5,
+                10,
+                13
+              ]
+            },
+            {
+              "nodeIndex": 5,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                5
+              ],
+              "name": "Spine1_M",
+              "ownerNodePath": "DeformationSystem/Root_M/Spine1_M",
+              "children": [
+                6
+              ]
+            },
+            {
+              "nodeIndex": 6,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                5,
+                6
+              ],
+              "name": "Chest_M",
+              "ownerNodePath": "DeformationSystem/Root_M/Spine1_M/Chest_M",
+              "children": [
+                7
+              ]
+            },
+            {
+              "nodeIndex": 7,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                5,
+                6,
+                7
+              ],
+              "name": "Neck_M",
+              "ownerNodePath": "DeformationSystem/Root_M/Spine1_M/Chest_M/Neck_M",
+              "children": [
+                8
+              ]
+            },
+            {
+              "nodeIndex": 8,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8
+              ],
+              "name": "Head_M",
+              "ownerNodePath": "DeformationSystem/Root_M/Spine1_M/Chest_M/Neck_M/Head_M",
+              "children": [
+                9
+              ]
+            },
+            {
+              "nodeIndex": 9,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9
+              ],
+              "name": "joint1_M",
+              "ownerNodePath": "DeformationSystem/Root_M/Spine1_M/Chest_M/Neck_M/Head_M/joint1_M"
+            },
+            {
+              "nodeIndex": 10,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                10
+              ],
+              "name": "Hip_R",
+              "ownerNodePath": "DeformationSystem/Root_M/Hip_R",
+              "children": [
+                11
+              ]
+            },
+            {
+              "nodeIndex": 11,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                10,
+                11
+              ],
+              "name": "Knee_R",
+              "ownerNodePath": "DeformationSystem/Root_M/Hip_R/Knee_R",
+              "children": [
+                12
+              ]
+            },
+            {
+              "nodeIndex": 12,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                10,
+                11,
+                12
+              ],
+              "name": "Ankle_R",
+              "ownerNodePath": "DeformationSystem/Root_M/Hip_R/Knee_R/Ankle_R"
+            },
+            {
+              "nodeIndex": 13,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                13
+              ],
+              "name": "Hip_L",
+              "ownerNodePath": "DeformationSystem/Root_M/Hip_L",
+              "children": [
+                14
+              ]
+            },
+            {
+              "nodeIndex": 14,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                13,
+                14
+              ],
+              "name": "Knee_L",
+              "ownerNodePath": "DeformationSystem/Root_M/Hip_L/Knee_L",
+              "children": [
+                15
+              ]
+            },
+            {
+              "nodeIndex": 15,
+              "nodeIndexPath": [
+                0,
+                3,
+                4,
+                13,
+                14,
+                15
+              ],
+              "name": "Ankle_L",
+              "ownerNodePath": "DeformationSystem/Root_M/Hip_L/Knee_L/Ankle_L"
+            }
+          ],
           "meshes": [
             {
               "meshIndex": 0,
               "name": "ji2",
               "primitiveCount": 1,
+              "primitives": [
+                {
+                  "primitiveIndex": 0,
+                  "mode": 4,
+                  "sourceMaterialIndex": 0,
+                  "materialName": "Mat_ji",
+                  "triangleCount": 1354,
+                  "boundingBox": {
+                    "min": [
+                      -19706,
+                      -31899,
+                      -32767
+                    ],
+                    "max": [
+                      19706,
+                      31899,
+                      32767
+                    ]
+                  }
+                }
+              ],
               "materialIndices": [
                 0
               ],
@@ -1572,7 +5213,11 @@
             "ownerNodePath": "SM_maiduo",
             "label": "SM_maiduo",
             "nodeIndex": 0,
+            "nodeIndexPath": [
+              0
+            ],
             "meshIndex": 0,
+            "primitiveIndex": 0,
             "sourceMaterialIndex": 0,
             "sourceMaterialIndices": [
               0
@@ -1581,6 +5226,19 @@
             "materialNames": [
               "麦垛-_Mat"
             ],
+            "triangleCount": 504,
+            "boundingBox": {
+              "min": [
+                -0.7301366925239563,
+                0,
+                -0.38887694478034973
+              ],
+              "max": [
+                0.7301366925239563,
+                0.7977583408355713,
+                0.38887694478034973
+              ]
+            },
             "sourceMaterialProfiles": [
               {
                 "sourceMaterialIndex": 0,
@@ -1617,11 +5275,64 @@
           "imageCount": 1,
           "animationCount": 0,
           "skinCount": 0,
+          "nodes": [
+            {
+              "nodeIndex": 0,
+              "nodeIndexPath": [
+                0
+              ],
+              "name": "SM_maiduo",
+              "ownerNodePath": "SM_maiduo",
+              "meshIndex": 0,
+              "meshName": "SM_maiduo",
+              "primitiveCount": 1,
+              "primitives": [
+                {
+                  "primitiveIndex": 0,
+                  "sourceMaterialIndex": 0,
+                  "materialName": "麦垛-_Mat",
+                  "triangleCount": 504,
+                  "boundingBox": {
+                    "min": [
+                      -0.7301366925239563,
+                      0,
+                      -0.38887694478034973
+                    ],
+                    "max": [
+                      0.7301366925239563,
+                      0.7977583408355713,
+                      0.38887694478034973
+                    ]
+                  }
+                }
+              ]
+            }
+          ],
           "meshes": [
             {
               "meshIndex": 0,
               "name": "SM_maiduo",
               "primitiveCount": 1,
+              "primitives": [
+                {
+                  "primitiveIndex": 0,
+                  "sourceMaterialIndex": 0,
+                  "materialName": "麦垛-_Mat",
+                  "triangleCount": 504,
+                  "boundingBox": {
+                    "min": [
+                      -0.7301366925239563,
+                      0,
+                      -0.38887694478034973
+                    ],
+                    "max": [
+                      0.7301366925239563,
+                      0.7977583408355713,
+                      0.38887694478034973
+                    ]
+                  }
+                }
+              ],
               "materialIndices": [
                 0
               ],
@@ -1672,7 +5383,11 @@
             "ownerNodePath": "收银桌子",
             "label": "收银桌子",
             "nodeIndex": 0,
+            "nodeIndexPath": [
+              0
+            ],
             "meshIndex": 0,
+            "primitiveIndex": 0,
             "sourceMaterialIndex": 0,
             "sourceMaterialIndices": [
               0
@@ -1681,6 +5396,19 @@
             "materialNames": [
               "收银桌子aa_Mat"
             ],
+            "triangleCount": 384,
+            "boundingBox": {
+              "min": [
+                -2.25,
+                -3.25984075e-8,
+                -0.8125
+              ],
+              "max": [
+                2.25,
+                1.43305051,
+                0.8125
+              ]
+            },
             "sourceMaterialProfiles": [
               {
                 "sourceMaterialIndex": 0,
@@ -1717,11 +5445,64 @@
           "imageCount": 1,
           "animationCount": 0,
           "skinCount": 0,
+          "nodes": [
+            {
+              "nodeIndex": 0,
+              "nodeIndexPath": [
+                0
+              ],
+              "name": "收银桌子",
+              "ownerNodePath": "收银桌子",
+              "meshIndex": 0,
+              "meshName": "收银桌子",
+              "primitiveCount": 1,
+              "primitives": [
+                {
+                  "primitiveIndex": 0,
+                  "sourceMaterialIndex": 0,
+                  "materialName": "收银桌子aa_Mat",
+                  "triangleCount": 384,
+                  "boundingBox": {
+                    "min": [
+                      -2.25,
+                      -3.25984075e-8,
+                      -0.8125
+                    ],
+                    "max": [
+                      2.25,
+                      1.43305051,
+                      0.8125
+                    ]
+                  }
+                }
+              ]
+            }
+          ],
           "meshes": [
             {
               "meshIndex": 0,
               "name": "收银桌子",
               "primitiveCount": 1,
+              "primitives": [
+                {
+                  "primitiveIndex": 0,
+                  "sourceMaterialIndex": 0,
+                  "materialName": "收银桌子aa_Mat",
+                  "triangleCount": 384,
+                  "boundingBox": {
+                    "min": [
+                      -2.25,
+                      -3.25984075e-8,
+                      -0.8125
+                    ],
+                    "max": [
+                      2.25,
+                      1.43305051,
+                      0.8125
+                    ]
+                  }
+                }
+              ],
               "materialIndices": [
                 0
               ],
@@ -1781,11 +5562,66 @@
           "imageCount": 1,
           "animationCount": 0,
           "skinCount": 0,
+          "nodes": [
+            {
+              "nodeIndex": 0,
+              "nodeIndexPath": [
+                0
+              ],
+              "name": "SM_diban",
+              "ownerNodePath": "SM_diban",
+              "meshIndex": 0,
+              "meshName": "SM_diban",
+              "primitiveCount": 1,
+              "primitives": [
+                {
+                  "primitiveIndex": 0,
+                  "mode": 4,
+                  "sourceMaterialIndex": 0,
+                  "materialName": "diban_Mat",
+                  "triangleCount": 2,
+                  "boundingBox": {
+                    "min": [
+                      -32767,
+                      0,
+                      -32491
+                    ],
+                    "max": [
+                      32767,
+                      0,
+                      32491
+                    ]
+                  }
+                }
+              ]
+            }
+          ],
           "meshes": [
             {
               "meshIndex": 0,
               "name": "SM_diban",
               "primitiveCount": 1,
+              "primitives": [
+                {
+                  "primitiveIndex": 0,
+                  "mode": 4,
+                  "sourceMaterialIndex": 0,
+                  "materialName": "diban_Mat",
+                  "triangleCount": 2,
+                  "boundingBox": {
+                    "min": [
+                      -32767,
+                      0,
+                      -32491
+                    ],
+                    "max": [
+                      32767,
+                      0,
+                      32491
+                    ]
+                  }
+                }
+              ],
               "materialIndices": [
                 0
               ],
@@ -1817,7 +5653,11 @@
             "ownerNodePath": "SM_diban",
             "label": "SM_diban",
             "nodeIndex": 0,
+            "nodeIndexPath": [
+              0
+            ],
             "meshIndex": 0,
+            "primitiveIndex": 0,
             "sourceMaterialIndex": 0,
             "sourceMaterialIndices": [
               0
@@ -1826,6 +5666,19 @@
             "materialNames": [
               "diban_Mat"
             ],
+            "triangleCount": 2,
+            "boundingBox": {
+              "min": [
+                -32767,
+                0,
+                -32491
+              ],
+              "max": [
+                32767,
+                0,
+                32491
+              ]
+            },
             "sourceMaterialProfiles": [
               {
                 "sourceMaterialIndex": 0,
@@ -1882,11 +5735,64 @@
           "imageCount": 1,
           "animationCount": 0,
           "skinCount": 0,
+          "nodes": [
+            {
+              "nodeIndex": 0,
+              "nodeIndexPath": [
+                0
+              ],
+              "name": "ZHUOZI",
+              "ownerNodePath": "ZHUOZI",
+              "meshIndex": 0,
+              "meshName": "Mesh",
+              "primitiveCount": 1,
+              "primitives": [
+                {
+                  "primitiveIndex": 0,
+                  "sourceMaterialIndex": 0,
+                  "materialName": "lambert2",
+                  "triangleCount": 78,
+                  "boundingBox": {
+                    "min": [
+                      -0.7914437651634216,
+                      0.12154453992843628,
+                      -0.5955353379249573
+                    ],
+                    "max": [
+                      0.7472906112670898,
+                      0.3748580813407898,
+                      0.6857994794845581
+                    ]
+                  }
+                }
+              ]
+            }
+          ],
           "meshes": [
             {
               "meshIndex": 0,
               "name": "Mesh",
               "primitiveCount": 1,
+              "primitives": [
+                {
+                  "primitiveIndex": 0,
+                  "sourceMaterialIndex": 0,
+                  "materialName": "lambert2",
+                  "triangleCount": 78,
+                  "boundingBox": {
+                    "min": [
+                      -0.7914437651634216,
+                      0.12154453992843628,
+                      -0.5955353379249573
+                    ],
+                    "max": [
+                      0.7472906112670898,
+                      0.3748580813407898,
+                      0.6857994794845581
+                    ]
+                  }
+                }
+              ],
               "materialIndices": [
                 0
               ],
@@ -1918,7 +5824,11 @@
             "ownerNodePath": "ZHUOZI",
             "label": "ZHUOZI",
             "nodeIndex": 0,
+            "nodeIndexPath": [
+              0
+            ],
             "meshIndex": 0,
+            "primitiveIndex": 0,
             "sourceMaterialIndex": 0,
             "sourceMaterialIndices": [
               0
@@ -1927,6 +5837,19 @@
             "materialNames": [
               "lambert2"
             ],
+            "triangleCount": 78,
+            "boundingBox": {
+              "min": [
+                -0.7914437651634216,
+                0.12154453992843628,
+                -0.5955353379249573
+              ],
+              "max": [
+                0.7472906112670898,
+                0.3748580813407898,
+                0.6857994794845581
+              ]
+            },
             "sourceMaterialProfiles": [
               {
                 "sourceMaterialIndex": 0,
@@ -1983,11 +5906,64 @@
           "imageCount": 1,
           "animationCount": 0,
           "skinCount": 0,
+          "nodes": [
+            {
+              "nodeIndex": 0,
+              "nodeIndexPath": [
+                0
+              ],
+              "name": "pPlane1",
+              "ownerNodePath": "pPlane1",
+              "meshIndex": 0,
+              "meshName": "Mesh",
+              "primitiveCount": 1,
+              "primitives": [
+                {
+                  "primitiveIndex": 0,
+                  "sourceMaterialIndex": 0,
+                  "materialName": "standardSurface2",
+                  "triangleCount": 2,
+                  "boundingBox": {
+                    "min": [
+                      -0.9999998807907104,
+                      -7.549789415861596e-8,
+                      -0.9999998807907104
+                    ],
+                    "max": [
+                      0.9999998807907104,
+                      7.549789415861596e-8,
+                      0.9999998807907104
+                    ]
+                  }
+                }
+              ]
+            }
+          ],
           "meshes": [
             {
               "meshIndex": 0,
               "name": "Mesh",
               "primitiveCount": 1,
+              "primitives": [
+                {
+                  "primitiveIndex": 0,
+                  "sourceMaterialIndex": 0,
+                  "materialName": "standardSurface2",
+                  "triangleCount": 2,
+                  "boundingBox": {
+                    "min": [
+                      -0.9999998807907104,
+                      -7.549789415861596e-8,
+                      -0.9999998807907104
+                    ],
+                    "max": [
+                      0.9999998807907104,
+                      7.549789415861596e-8,
+                      0.9999998807907104
+                    ]
+                  }
+                }
+              ],
               "materialIndices": [
                 0
               ],
@@ -2019,7 +5995,11 @@
             "ownerNodePath": "pPlane1",
             "label": "pPlane1",
             "nodeIndex": 0,
+            "nodeIndexPath": [
+              0
+            ],
             "meshIndex": 0,
+            "primitiveIndex": 0,
             "sourceMaterialIndex": 0,
             "sourceMaterialIndices": [
               0
@@ -2028,6 +6008,19 @@
             "materialNames": [
               "standardSurface2"
             ],
+            "triangleCount": 2,
+            "boundingBox": {
+              "min": [
+                -0.9999998807907104,
+                -7.549789415861596e-8,
+                -0.9999998807907104
+              ],
+              "max": [
+                0.9999998807907104,
+                7.549789415861596e-8,
+                0.9999998807907104
+              ]
+            },
             "sourceMaterialProfiles": [
               {
                 "sourceMaterialIndex": 0,
@@ -2046,6 +6039,1050 @@
                     "reason": "embedded-texture"
                   }
                 ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "asset_6d7f108f88ba476cae5c2b10288aaa60",
+      "guid": "6d7f108f-88ba-476c-ae5c-2b10288aaa60",
+      "type": "glb",
+      "displayName": "外墙04",
+      "category": "Model",
+      "metadata": {
+        "originalFileName": "外墙04.glb",
+        "relativePath": "../imported/asset_6d7f108f88ba476cae5c2b10288aaa60.glb",
+        "codeKey": "issue444exteriorwall04",
+        "contentHash": "sha256:3d8d52007fa177e9194848a450b09f2451fc89e3eb1cea474ddf4f5de14c6e01",
+        "byteSize": 1011836,
+        "testFixture": "issue-444-source-structure-primitives",
+        "expectedPrimitiveCount": 3,
+        "assetAnalysis": {
+          "kind": "gltf",
+          "format": "glb",
+          "summary": "1 nodes, 1 meshes, 3 primitives, 3 materials",
+          "complexity": "low",
+          "sceneCount": 1,
+          "nodeCount": 1,
+          "meshCount": 1,
+          "primitiveCount": 3,
+          "materialCount": 3,
+          "textureCount": 2,
+          "imageCount": 2,
+          "animationCount": 0,
+          "skinCount": 0,
+          "nodes": [
+            {
+              "nodeIndex": 0,
+              "nodeIndexPath": [
+                0
+              ],
+              "ownerNodePath": "node_0",
+              "meshIndex": 0,
+              "meshName": "Boolean_1A8A1B4F",
+              "primitiveCount": 3,
+              "primitives": [
+                {
+                  "primitiveIndex": 0,
+                  "sourceMaterialIndex": 0,
+                  "materialName": "MAT_PolygonSciFiSpace_01_A",
+                  "triangleCount": 196,
+                  "boundingBox": {
+                    "min": [
+                      0,
+                      -2.49772024,
+                      -0.643744469
+                    ],
+                    "max": [
+                      4.98752642,
+                      2.49772024,
+                      0.0000396347023
+                    ]
+                  }
+                },
+                {
+                  "primitiveIndex": 1,
+                  "sourceMaterialIndex": 1,
+                  "materialName": "NewMaterial_Inst",
+                  "triangleCount": 2,
+                  "boundingBox": {
+                    "min": [
+                      0.556017458,
+                      -1.01325333,
+                      -0.220717192
+                    ],
+                    "max": [
+                      4.41903543,
+                      1.2086941,
+                      -0.220717192
+                    ]
+                  }
+                },
+                {
+                  "primitiveIndex": 2,
+                  "sourceMaterialIndex": 2,
+                  "materialName": "BasicShapeMaterial",
+                  "triangleCount": 30,
+                  "boundingBox": {
+                    "min": [
+                      0,
+                      -2.49772024,
+                      -0.638181984
+                    ],
+                    "max": [
+                      0.638221562,
+                      2.49772024,
+                      0.0000396347023
+                    ]
+                  }
+                }
+              ]
+            }
+          ],
+          "meshes": [
+            {
+              "meshIndex": 0,
+              "name": "Boolean_1A8A1B4F",
+              "primitiveCount": 3,
+              "primitives": [
+                {
+                  "primitiveIndex": 0,
+                  "sourceMaterialIndex": 0,
+                  "materialName": "MAT_PolygonSciFiSpace_01_A",
+                  "triangleCount": 196,
+                  "boundingBox": {
+                    "min": [
+                      0,
+                      -2.49772024,
+                      -0.643744469
+                    ],
+                    "max": [
+                      4.98752642,
+                      2.49772024,
+                      0.0000396347023
+                    ]
+                  }
+                },
+                {
+                  "primitiveIndex": 1,
+                  "sourceMaterialIndex": 1,
+                  "materialName": "NewMaterial_Inst",
+                  "triangleCount": 2,
+                  "boundingBox": {
+                    "min": [
+                      0.556017458,
+                      -1.01325333,
+                      -0.220717192
+                    ],
+                    "max": [
+                      4.41903543,
+                      1.2086941,
+                      -0.220717192
+                    ]
+                  }
+                },
+                {
+                  "primitiveIndex": 2,
+                  "sourceMaterialIndex": 2,
+                  "materialName": "BasicShapeMaterial",
+                  "triangleCount": 30,
+                  "boundingBox": {
+                    "min": [
+                      0,
+                      -2.49772024,
+                      -0.638181984
+                    ],
+                    "max": [
+                      0.638221562,
+                      2.49772024,
+                      0.0000396347023
+                    ]
+                  }
+                }
+              ],
+              "materialIndices": [
+                0,
+                1,
+                2
+              ],
+              "materialNames": [
+                "MAT_PolygonSciFiSpace_01_A",
+                "NewMaterial_Inst",
+                "BasicShapeMaterial"
+              ]
+            }
+          ],
+          "materials": [
+            {
+              "sourceMaterialIndex": 0,
+              "materialName": "MAT_PolygonSciFiSpace_01_A",
+              "metallicFactor": 0,
+              "roughnessFactor": 0.800000012,
+              "alphaMode": "opaque",
+              "textureSlots": [
+                {
+                  "slot": "baseColor",
+                  "textureIndex": 0
+                },
+                {
+                  "slot": "emissive",
+                  "textureIndex": 1
+                }
+              ]
+            },
+            {
+              "sourceMaterialIndex": 1,
+              "materialName": "NewMaterial_Inst",
+              "baseColorFactor": [
+                0.260417014,
+                0.260417014,
+                0.260417014,
+                1
+              ],
+              "metallicFactor": 0,
+              "roughnessFactor": 0.5,
+              "alphaMode": "opaque"
+            },
+            {
+              "sourceMaterialIndex": 2,
+              "materialName": "BasicShapeMaterial",
+              "baseColorFactor": [
+                0.899999976,
+                0.899999976,
+                0.899999976,
+                1
+              ],
+              "metallicFactor": 0,
+              "roughnessFactor": 0.640699983,
+              "alphaMode": "opaque"
+            }
+          ],
+          "diagnostics": []
+        },
+        "materialSlots": [
+          {
+            "slotId": "slot_175932bc",
+            "ownerNodePath": "node_0",
+            "label": "Boolean_1A8A1B4F / Primitive 0",
+            "nodeIndex": 0,
+            "nodeIndexPath": [
+              0
+            ],
+            "meshIndex": 0,
+            "primitiveIndex": 0,
+            "sourceMaterialIndex": 0,
+            "sourceMaterialIndices": [
+              0
+            ],
+            "materialName": "MAT_PolygonSciFiSpace_01_A",
+            "materialNames": [
+              "MAT_PolygonSciFiSpace_01_A"
+            ],
+            "triangleCount": 196,
+            "boundingBox": {
+              "min": [
+                0,
+                -2.49772024,
+                -0.643744469
+              ],
+              "max": [
+                4.98752642,
+                2.49772024,
+                0.0000396347023
+              ]
+            },
+            "sourceMaterialProfiles": [
+              {
+                "sourceMaterialIndex": 0,
+                "materialName": "MAT_PolygonSciFiSpace_01_A",
+                "profile": {
+                  "metallic": 0,
+                  "roughness": 0.800000012,
+                  "emission": {
+                    "color": {
+                      "r": 1,
+                      "g": 1,
+                      "b": 1
+                    },
+                    "intensity": 1
+                  }
+                },
+                "textureHints": [
+                  {
+                    "profilePath": "baseColor.texture",
+                    "textureIndex": 0,
+                    "imageIndex": 0,
+                    "bufferView": 18,
+                    "mimeType": "image/png",
+                    "reason": "embedded-texture"
+                  },
+                  {
+                    "profilePath": "emission.texture",
+                    "textureIndex": 1,
+                    "imageIndex": 1,
+                    "bufferView": 19,
+                    "mimeType": "image/png",
+                    "reason": "embedded-texture"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "slotId": "slot_1859344f",
+            "ownerNodePath": "node_0",
+            "label": "Boolean_1A8A1B4F / Primitive 1",
+            "nodeIndex": 0,
+            "nodeIndexPath": [
+              0
+            ],
+            "meshIndex": 0,
+            "primitiveIndex": 1,
+            "sourceMaterialIndex": 1,
+            "sourceMaterialIndices": [
+              1
+            ],
+            "materialName": "NewMaterial_Inst",
+            "materialNames": [
+              "NewMaterial_Inst"
+            ],
+            "triangleCount": 2,
+            "boundingBox": {
+              "min": [
+                0.556017458,
+                -1.01325333,
+                -0.220717192
+              ],
+              "max": [
+                4.41903543,
+                1.2086941,
+                -0.220717192
+              ]
+            },
+            "sourceMaterialProfiles": [
+              {
+                "sourceMaterialIndex": 1,
+                "materialName": "NewMaterial_Inst",
+                "profile": {
+                  "baseColor": {
+                    "color": {
+                      "r": 0.260417014,
+                      "g": 0.260417014,
+                      "b": 0.260417014
+                    },
+                    "brightness": 1,
+                    "saturation": 1,
+                    "contrast": 1,
+                    "hue": 0
+                  },
+                  "metallic": 0,
+                  "roughness": 0.5
+                }
+              }
+            ]
+          },
+          {
+            "slotId": "slot_195935e2",
+            "ownerNodePath": "node_0",
+            "label": "Boolean_1A8A1B4F / Primitive 2",
+            "nodeIndex": 0,
+            "nodeIndexPath": [
+              0
+            ],
+            "meshIndex": 0,
+            "primitiveIndex": 2,
+            "sourceMaterialIndex": 2,
+            "sourceMaterialIndices": [
+              2
+            ],
+            "materialName": "BasicShapeMaterial",
+            "materialNames": [
+              "BasicShapeMaterial"
+            ],
+            "triangleCount": 30,
+            "boundingBox": {
+              "min": [
+                0,
+                -2.49772024,
+                -0.638181984
+              ],
+              "max": [
+                0.638221562,
+                2.49772024,
+                0.0000396347023
+              ]
+            },
+            "sourceMaterialProfiles": [
+              {
+                "sourceMaterialIndex": 2,
+                "materialName": "BasicShapeMaterial",
+                "profile": {
+                  "baseColor": {
+                    "color": {
+                      "r": 0.899999976,
+                      "g": 0.899999976,
+                      "b": 0.899999976
+                    },
+                    "brightness": 1,
+                    "saturation": 1,
+                    "contrast": 1,
+                    "hue": 0
+                  },
+                  "metallic": 0,
+                  "roughness": 0.640699983
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "asset_872358ed71a247bba9bdf2c947ea0c71",
+      "guid": "872358ed-71a2-47bb-a9bd-f2c947ea0c71",
+      "type": "glb",
+      "displayName": "测试模型",
+      "category": "Model",
+      "metadata": {
+        "originalFileName": "测试模型.glb",
+        "relativePath": "../imported/asset_872358ed71a247bba9bdf2c947ea0c71.glb",
+        "codeKey": "issue444testmodel",
+        "contentHash": "sha256:b0a5055ab66c0ef74c4d112488af8fbaf80e349eea4b560d13b830b449756b11",
+        "byteSize": 1008648,
+        "testFixture": "issue-444-source-structure-primitives",
+        "expectedPrimitiveCount": 5,
+        "assetAnalysis": {
+          "kind": "gltf",
+          "format": "glb",
+          "summary": "1 nodes, 1 meshes, 5 primitives, 4 materials",
+          "complexity": "low",
+          "sceneCount": 1,
+          "nodeCount": 1,
+          "meshCount": 1,
+          "primitiveCount": 5,
+          "materialCount": 4,
+          "textureCount": 4,
+          "imageCount": 4,
+          "animationCount": 0,
+          "skinCount": 0,
+          "nodes": [
+            {
+              "nodeIndex": 0,
+              "nodeIndexPath": [
+                0
+              ],
+              "ownerNodePath": "node_0",
+              "meshIndex": 0,
+              "meshName": "PA_chr_NanZhu_yhf_mod_V001",
+              "primitiveCount": 5,
+              "primitives": [
+                {
+                  "primitiveIndex": 0,
+                  "sourceMaterialIndex": 0,
+                  "materialName": "透明_Inst",
+                  "triangleCount": 928,
+                  "boundingBox": {
+                    "min": [
+                      -0.174169034,
+                      1.12433839,
+                      -0.13039501
+                    ],
+                    "max": [
+                      0.174169004,
+                      1.48152816,
+                      0.164452001
+                    ]
+                  }
+                },
+                {
+                  "primitiveIndex": 1,
+                  "sourceMaterialIndex": 1,
+                  "materialName": "透明_Inst1",
+                  "triangleCount": 108,
+                  "boundingBox": {
+                    "min": [
+                      -0.134945974,
+                      1.20060384,
+                      0.0865021423
+                    ],
+                    "max": [
+                      0.13491188,
+                      1.44453621,
+                      0.21178323
+                    ]
+                  }
+                },
+                {
+                  "primitiveIndex": 2,
+                  "sourceMaterialIndex": 2,
+                  "materialName": "1_Inst",
+                  "triangleCount": 3753,
+                  "boundingBox": {
+                    "min": [
+                      -0.638096392,
+                      0.00134699582,
+                      -0.152560487
+                    ],
+                    "max": [
+                      0.638096392,
+                      1.45642984,
+                      0.24021934
+                    ]
+                  }
+                },
+                {
+                  "primitiveIndex": 3,
+                  "sourceMaterialIndex": 2,
+                  "materialName": "1_Inst",
+                  "triangleCount": 930,
+                  "boundingBox": {
+                    "min": [
+                      -0.228552908,
+                      0.67405355,
+                      -0.318470895
+                    ],
+                    "max": [
+                      0.228552908,
+                      1.27010834,
+                      0.203941882
+                    ]
+                  }
+                },
+                {
+                  "primitiveIndex": 4,
+                  "sourceMaterialIndex": 3,
+                  "materialName": "BaiJInshu",
+                  "triangleCount": 263,
+                  "boundingBox": {
+                    "min": [
+                      0.348346382,
+                      0.494509071,
+                      -0.0677000135
+                    ],
+                    "max": [
+                      0.638096392,
+                      0.892603755,
+                      0.16165185
+                    ]
+                  }
+                }
+              ]
+            }
+          ],
+          "meshes": [
+            {
+              "meshIndex": 0,
+              "name": "PA_chr_NanZhu_yhf_mod_V001",
+              "primitiveCount": 5,
+              "primitives": [
+                {
+                  "primitiveIndex": 0,
+                  "sourceMaterialIndex": 0,
+                  "materialName": "透明_Inst",
+                  "triangleCount": 928,
+                  "boundingBox": {
+                    "min": [
+                      -0.174169034,
+                      1.12433839,
+                      -0.13039501
+                    ],
+                    "max": [
+                      0.174169004,
+                      1.48152816,
+                      0.164452001
+                    ]
+                  }
+                },
+                {
+                  "primitiveIndex": 1,
+                  "sourceMaterialIndex": 1,
+                  "materialName": "透明_Inst1",
+                  "triangleCount": 108,
+                  "boundingBox": {
+                    "min": [
+                      -0.134945974,
+                      1.20060384,
+                      0.0865021423
+                    ],
+                    "max": [
+                      0.13491188,
+                      1.44453621,
+                      0.21178323
+                    ]
+                  }
+                },
+                {
+                  "primitiveIndex": 2,
+                  "sourceMaterialIndex": 2,
+                  "materialName": "1_Inst",
+                  "triangleCount": 3753,
+                  "boundingBox": {
+                    "min": [
+                      -0.638096392,
+                      0.00134699582,
+                      -0.152560487
+                    ],
+                    "max": [
+                      0.638096392,
+                      1.45642984,
+                      0.24021934
+                    ]
+                  }
+                },
+                {
+                  "primitiveIndex": 3,
+                  "sourceMaterialIndex": 2,
+                  "materialName": "1_Inst",
+                  "triangleCount": 930,
+                  "boundingBox": {
+                    "min": [
+                      -0.228552908,
+                      0.67405355,
+                      -0.318470895
+                    ],
+                    "max": [
+                      0.228552908,
+                      1.27010834,
+                      0.203941882
+                    ]
+                  }
+                },
+                {
+                  "primitiveIndex": 4,
+                  "sourceMaterialIndex": 3,
+                  "materialName": "BaiJInshu",
+                  "triangleCount": 263,
+                  "boundingBox": {
+                    "min": [
+                      0.348346382,
+                      0.494509071,
+                      -0.0677000135
+                    ],
+                    "max": [
+                      0.638096392,
+                      0.892603755,
+                      0.16165185
+                    ]
+                  }
+                }
+              ],
+              "materialIndices": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "materialNames": [
+                "透明_Inst",
+                "透明_Inst1",
+                "1_Inst",
+                "BaiJInshu"
+              ]
+            }
+          ],
+          "materials": [
+            {
+              "sourceMaterialIndex": 0,
+              "materialName": "透明_Inst",
+              "baseColorFactor": [
+                1,
+                1,
+                1,
+                0.375999987
+              ],
+              "metallicFactor": 0,
+              "roughnessFactor": 0.5,
+              "alphaMode": "blend"
+            },
+            {
+              "sourceMaterialIndex": 1,
+              "materialName": "透明_Inst1",
+              "baseColorFactor": [
+                1,
+                1,
+                1,
+                0
+              ],
+              "metallicFactor": 0,
+              "roughnessFactor": 0.5,
+              "alphaMode": "blend"
+            },
+            {
+              "sourceMaterialIndex": 2,
+              "materialName": "1_Inst",
+              "metallicFactor": 1,
+              "roughnessFactor": 1,
+              "alphaMode": "opaque",
+              "textureSlots": [
+                {
+                  "slot": "baseColor",
+                  "textureIndex": 0
+                },
+                {
+                  "slot": "metallicRoughness",
+                  "textureIndex": 1
+                },
+                {
+                  "slot": "normal",
+                  "textureIndex": 3
+                },
+                {
+                  "slot": "emissive",
+                  "textureIndex": 2
+                }
+              ]
+            },
+            {
+              "sourceMaterialIndex": 3,
+              "materialName": "BaiJInshu",
+              "baseColorFactor": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "metallicFactor": 0,
+              "roughnessFactor": 0.498039246,
+              "alphaMode": "opaque"
+            }
+          ],
+          "diagnostics": []
+        },
+        "materialSlots": [
+          {
+            "slotId": "slot_f46c799b",
+            "ownerNodePath": "node_0",
+            "label": "PA_chr_NanZhu_yhf_mod_V001 / Primitive 0",
+            "nodeIndex": 0,
+            "nodeIndexPath": [
+              0
+            ],
+            "meshIndex": 0,
+            "primitiveIndex": 0,
+            "sourceMaterialIndex": 0,
+            "sourceMaterialIndices": [
+              0
+            ],
+            "materialName": "透明_Inst",
+            "materialNames": [
+              "透明_Inst"
+            ],
+            "triangleCount": 928,
+            "boundingBox": {
+              "min": [
+                -0.174169034,
+                1.12433839,
+                -0.13039501
+              ],
+              "max": [
+                0.174169004,
+                1.48152816,
+                0.164452001
+              ]
+            },
+            "sourceMaterialProfiles": [
+              {
+                "sourceMaterialIndex": 0,
+                "materialName": "透明_Inst",
+                "profile": {
+                  "baseColor": {
+                    "color": {
+                      "r": 1,
+                      "g": 1,
+                      "b": 1
+                    },
+                    "brightness": 1,
+                    "saturation": 1,
+                    "contrast": 1,
+                    "hue": 0
+                  },
+                  "metallic": 0,
+                  "roughness": 0.5,
+                  "alpha": {
+                    "mode": "blend",
+                    "opacity": 0.375999987
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "slotId": "slot_f36c7808",
+            "ownerNodePath": "node_0",
+            "label": "PA_chr_NanZhu_yhf_mod_V001 / Primitive 1",
+            "nodeIndex": 0,
+            "nodeIndexPath": [
+              0
+            ],
+            "meshIndex": 0,
+            "primitiveIndex": 1,
+            "sourceMaterialIndex": 1,
+            "sourceMaterialIndices": [
+              1
+            ],
+            "materialName": "透明_Inst1",
+            "materialNames": [
+              "透明_Inst1"
+            ],
+            "triangleCount": 108,
+            "boundingBox": {
+              "min": [
+                -0.134945974,
+                1.20060384,
+                0.0865021423
+              ],
+              "max": [
+                0.13491188,
+                1.44453621,
+                0.21178323
+              ]
+            },
+            "sourceMaterialProfiles": [
+              {
+                "sourceMaterialIndex": 1,
+                "materialName": "透明_Inst1",
+                "profile": {
+                  "baseColor": {
+                    "color": {
+                      "r": 1,
+                      "g": 1,
+                      "b": 1
+                    },
+                    "brightness": 1,
+                    "saturation": 1,
+                    "contrast": 1,
+                    "hue": 0
+                  },
+                  "metallic": 0,
+                  "roughness": 0.5,
+                  "alpha": {
+                    "mode": "blend",
+                    "opacity": 0
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "slotId": "slot_f66c7cc1",
+            "ownerNodePath": "node_0",
+            "label": "PA_chr_NanZhu_yhf_mod_V001 / Primitive 2",
+            "nodeIndex": 0,
+            "nodeIndexPath": [
+              0
+            ],
+            "meshIndex": 0,
+            "primitiveIndex": 2,
+            "sourceMaterialIndex": 2,
+            "sourceMaterialIndices": [
+              2
+            ],
+            "materialName": "1_Inst",
+            "materialNames": [
+              "1_Inst"
+            ],
+            "triangleCount": 3753,
+            "boundingBox": {
+              "min": [
+                -0.638096392,
+                0.00134699582,
+                -0.152560487
+              ],
+              "max": [
+                0.638096392,
+                1.45642984,
+                0.24021934
+              ]
+            },
+            "sourceMaterialProfiles": [
+              {
+                "sourceMaterialIndex": 2,
+                "materialName": "1_Inst",
+                "profile": {
+                  "metallic": 1,
+                  "roughness": 1,
+                  "emission": {
+                    "color": {
+                      "r": 1,
+                      "g": 1,
+                      "b": 1
+                    },
+                    "intensity": 1
+                  }
+                },
+                "textureHints": [
+                  {
+                    "profilePath": "baseColor.texture",
+                    "textureIndex": 0,
+                    "imageIndex": 1,
+                    "bufferView": 26,
+                    "mimeType": "image/png",
+                    "reason": "embedded-texture"
+                  },
+                  {
+                    "profilePath": "normal.texture",
+                    "textureIndex": 3,
+                    "imageIndex": 3,
+                    "bufferView": 28,
+                    "mimeType": "image/png",
+                    "reason": "embedded-texture"
+                  },
+                  {
+                    "profilePath": "metallicRoughness.texture",
+                    "textureIndex": 1,
+                    "imageIndex": 2,
+                    "bufferView": 27,
+                    "mimeType": "image/png",
+                    "reason": "embedded-texture"
+                  },
+                  {
+                    "profilePath": "emission.texture",
+                    "textureIndex": 2,
+                    "imageIndex": 0,
+                    "bufferView": 25,
+                    "mimeType": "image/png",
+                    "reason": "embedded-texture"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "slotId": "slot_f56c7b2e",
+            "ownerNodePath": "node_0",
+            "label": "PA_chr_NanZhu_yhf_mod_V001 / Primitive 3",
+            "nodeIndex": 0,
+            "nodeIndexPath": [
+              0
+            ],
+            "meshIndex": 0,
+            "primitiveIndex": 3,
+            "sourceMaterialIndex": 2,
+            "sourceMaterialIndices": [
+              2
+            ],
+            "materialName": "1_Inst",
+            "materialNames": [
+              "1_Inst"
+            ],
+            "triangleCount": 930,
+            "boundingBox": {
+              "min": [
+                -0.228552908,
+                0.67405355,
+                -0.318470895
+              ],
+              "max": [
+                0.228552908,
+                1.27010834,
+                0.203941882
+              ]
+            },
+            "sourceMaterialProfiles": [
+              {
+                "sourceMaterialIndex": 2,
+                "materialName": "1_Inst",
+                "profile": {
+                  "metallic": 1,
+                  "roughness": 1,
+                  "emission": {
+                    "color": {
+                      "r": 1,
+                      "g": 1,
+                      "b": 1
+                    },
+                    "intensity": 1
+                  }
+                },
+                "textureHints": [
+                  {
+                    "profilePath": "baseColor.texture",
+                    "textureIndex": 0,
+                    "imageIndex": 1,
+                    "bufferView": 26,
+                    "mimeType": "image/png",
+                    "reason": "embedded-texture"
+                  },
+                  {
+                    "profilePath": "normal.texture",
+                    "textureIndex": 3,
+                    "imageIndex": 3,
+                    "bufferView": 28,
+                    "mimeType": "image/png",
+                    "reason": "embedded-texture"
+                  },
+                  {
+                    "profilePath": "metallicRoughness.texture",
+                    "textureIndex": 1,
+                    "imageIndex": 2,
+                    "bufferView": 27,
+                    "mimeType": "image/png",
+                    "reason": "embedded-texture"
+                  },
+                  {
+                    "profilePath": "emission.texture",
+                    "textureIndex": 2,
+                    "imageIndex": 0,
+                    "bufferView": 25,
+                    "mimeType": "image/png",
+                    "reason": "embedded-texture"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "slotId": "slot_f86c7fe7",
+            "ownerNodePath": "node_0",
+            "label": "PA_chr_NanZhu_yhf_mod_V001 / Primitive 4",
+            "nodeIndex": 0,
+            "nodeIndexPath": [
+              0
+            ],
+            "meshIndex": 0,
+            "primitiveIndex": 4,
+            "sourceMaterialIndex": 3,
+            "sourceMaterialIndices": [
+              3
+            ],
+            "materialName": "BaiJInshu",
+            "materialNames": [
+              "BaiJInshu"
+            ],
+            "triangleCount": 263,
+            "boundingBox": {
+              "min": [
+                0.348346382,
+                0.494509071,
+                -0.0677000135
+              ],
+              "max": [
+                0.638096392,
+                0.892603755,
+                0.16165185
+              ]
+            },
+            "sourceMaterialProfiles": [
+              {
+                "sourceMaterialIndex": 3,
+                "materialName": "BaiJInshu",
+                "profile": {
+                  "baseColor": {
+                    "color": {
+                      "r": 0,
+                      "g": 0,
+                      "b": 0
+                    },
+                    "brightness": 1,
+                    "saturation": 1,
+                    "contrast": 1,
+                    "hue": 0
+                  },
+                  "metallic": 0,
+                  "roughness": 0.498039246
+                }
               }
             ]
           }
@@ -2441,11 +7478,14 @@
         ],
         "overrides": {
           "materialSlotBindings": {
-            "slot_26caed25": {
-              "materialAssetId": "mat_cd94c2cdcc94413aab94bfa7ca94be14"
-            },
             "slot_53300b02": {
               "materialAssetId": "mat_6fc78e976ec74d04a1c791bd70c7902a"
+            },
+            "slot_427a5347": {
+              "materialAssetId": "mat_cd94c2cdcc94413aab94bfa7ca94be14"
+            },
+            "slot_417a51b4": {
+              "materialAssetId": "mat_ceae7442cfae45d5acae711ccdae72af"
             }
           }
         },
@@ -2786,8 +7826,11 @@
         ],
         "overrides": {
           "materialSlotBindings": {
-            "slot_fa0049a6": {
+            "slot_786aa22c": {
               "materialAssetId": "mat_e42b5114e52b42a7a62b543ae72b55cd"
+            },
+            "slot_796aa3bf": {
+              "materialAssetId": "mat_431236bf4212452ca51239e544123852"
             }
           }
         },
@@ -3070,7 +8113,14 @@
             "type": "ModelRenderer",
             "assetId": "asset_07e860eb2bf04e6f9a81e0832cddc014"
           }
-        ]
+        ],
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_2e82b283": {
+              "materialAssetId": "mat_18ad2d3117ad4b9ea6ad2a0b15ad2878"
+            }
+          }
+        }
       },
       {
         "id": "asset_2",
@@ -3106,6 +8156,13 @@
           "cast": "none",
           "receive": "none",
           "mode": "none"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_7cdede92": {
+              "materialAssetId": "mat_c556d410c65645a3a756d736c856d8c9"
+            }
+          }
         }
       },
       {
@@ -3142,6 +8199,107 @@
           "cast": "none",
           "receive": "enabled",
           "mode": "none"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_924b32f0": {
+              "materialAssetId": "mat_1756d8e218564a75a556d5bc1656d74f"
+            }
+          }
+        }
+      },
+      {
+        "id": "issue_444__04",
+        "guid": "go_cc0008ef-62dc-4a23-ba98-bced26f56a80",
+        "name": "Issue_444_外墙04",
+        "parentId": "root",
+        "active": true,
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": -2.8,
+              "y": 0,
+              "z": 4.2
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          },
+          {
+            "type": "ModelRenderer",
+            "assetId": "asset_6d7f108f88ba476cae5c2b10288aaa60"
+          }
+        ],
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_175932bc": {
+              "materialAssetId": "mat_0bef38240cef49b7adef3b4a0eef3cdd"
+            },
+            "slot_1859344f": {
+              "materialAssetId": "mat_6ad61dcf69d64c3cacd620f56bd61f62"
+            },
+            "slot_195935e2": {
+              "materialAssetId": "mat_e9bd35daeabd476da7bd32b4e8bd3447"
+            }
+          }
+        }
+      },
+      {
+        "id": "issue_444",
+        "guid": "go_22987ad9-9e4b-46ce-9978-1e72c24fbc53",
+        "name": "Issue_444_测试模型",
+        "parentId": "root",
+        "active": true,
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": 2.8,
+              "y": 0,
+              "z": 4.2
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          },
+          {
+            "type": "ModelRenderer",
+            "assetId": "asset_872358ed71a247bba9bdf2c947ea0c71"
+          }
+        ],
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_f46c799b": {
+              "materialAssetId": "mat_7814dfeb77144e58aa14e3117914e17e"
+            },
+            "slot_f36c7808": {
+              "materialAssetId": "mat_792e91607a2e42f3ab2e94867c2e9619"
+            },
+            "slot_f66c7cc1": {
+              "materialAssetId": "mat_55e2dda154e24c0ea3e2da7b52e2d8e8"
+            },
+            "slot_f56c7b2e": {
+              "materialAssetId": "mat_55e2dda154e24c0ea3e2da7b52e2d8e8"
+            },
+            "slot_f86c7fe7": {
+              "materialAssetId": "mat_d6fbc596d7fb4729a4fbc270d5fbc403"
+            }
+          }
         }
       }
     ],
@@ -3277,8 +8435,8 @@
           "baseColor": {
             "color": {
               "r": 1,
-              "g": 1,
-              "b": 1
+              "g": 0,
+              "b": 0
             },
             "brightness": 1,
             "saturation": 1,
@@ -3732,11 +8890,11 @@
           "lightingModel": "lit",
           "baseColor": {
             "color": {
-              "r": 1,
-              "g": 1,
-              "b": 1
+              "r": 0,
+              "g": 0,
+              "b": 0
             },
-            "brightness": 1,
+            "brightness": 10,
             "saturation": 1,
             "contrast": 1,
             "hue": 0
@@ -3819,6 +8977,394 @@
           },
           "metallic": 0,
           "roughness": 0.5,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_18ad2d3117ad4b9ea6ad2a0b15ad2878",
+        "guid": "18ad2d31-17ad-4b9e-a6ad-2a0b15ad2878",
+        "name": "diban_Mat",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "07e860eb-2bf0-4e6f-9a81-e0832cddc014",
+          "sourceAssetId": "asset_07e860eb2bf04e6f9a81e0832cddc014",
+          "sourceSlotId": "slot_2e82b283",
+          "sourceMaterialIndex": 0,
+          "sourceMaterialName": "diban_Mat"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 1,
+          "roughness": 0.5527864098548889,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_c556d410c65645a3a756d736c856d8c9",
+        "guid": "c556d410-c656-45a3-a756-d736c856d8c9",
+        "name": "standardSurface2",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "c52042a3-dd65-44d5-9408-c015320ebc75",
+          "sourceAssetId": "asset_c52042a3dd6544d59408c015320ebc75",
+          "sourceSlotId": "slot_7cdede92",
+          "sourceMaterialIndex": 0,
+          "sourceMaterialName": "standardSurface2"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 0.5527864098548889,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_1756d8e218564a75a556d5bc1656d74f",
+        "guid": "1756d8e2-1856-4a75-a556-d5bc1656d74f",
+        "name": "lambert2",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "96ed807e-e58f-4928-bcfc-c44004a44ef3",
+          "sourceAssetId": "asset_96ed807ee58f4928bcfcc44004a44ef3",
+          "sourceSlotId": "slot_924b32f0",
+          "sourceMaterialIndex": 0,
+          "sourceMaterialName": "lambert2"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 0.5527864098548889,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_0bef38240cef49b7adef3b4a0eef3cdd",
+        "guid": "0bef3824-0cef-49b7-adef-3b4a0eef3cdd",
+        "name": "MAT_PolygonSciFiSpace_01_A",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "6d7f108f-88ba-476c-ae5c-2b10288aaa60",
+          "sourceAssetId": "asset_6d7f108f88ba476cae5c2b10288aaa60",
+          "sourceSlotId": "slot_175932bc",
+          "sourceMaterialIndex": 0,
+          "sourceMaterialName": "MAT_PolygonSciFiSpace_01_A"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 0.800000012,
+          "emission": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "intensity": 1
+          }
+        }
+      },
+      {
+        "id": "mat_6ad61dcf69d64c3cacd620f56bd61f62",
+        "guid": "6ad61dcf-69d6-4c3c-acd6-20f56bd61f62",
+        "name": "NewMaterial_Inst",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "6d7f108f-88ba-476c-ae5c-2b10288aaa60",
+          "sourceAssetId": "asset_6d7f108f88ba476cae5c2b10288aaa60",
+          "sourceSlotId": "slot_1859344f",
+          "sourceMaterialIndex": 1,
+          "sourceMaterialName": "NewMaterial_Inst"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 0.260417014,
+              "g": 0.260417014,
+              "b": 0.260417014
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 0.5,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_e9bd35daeabd476da7bd32b4e8bd3447",
+        "guid": "e9bd35da-eabd-476d-a7bd-32b4e8bd3447",
+        "name": "BasicShapeMaterial",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "6d7f108f-88ba-476c-ae5c-2b10288aaa60",
+          "sourceAssetId": "asset_6d7f108f88ba476cae5c2b10288aaa60",
+          "sourceSlotId": "slot_195935e2",
+          "sourceMaterialIndex": 2,
+          "sourceMaterialName": "BasicShapeMaterial"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 0.899999976,
+              "g": 0.899999976,
+              "b": 0.899999976
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 0.640699983,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_7814dfeb77144e58aa14e3117914e17e",
+        "guid": "7814dfeb-7714-4e58-aa14-e3117914e17e",
+        "name": "透明_Inst",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "872358ed-71a2-47bb-a9bd-f2c947ea0c71",
+          "sourceAssetId": "asset_872358ed71a247bba9bdf2c947ea0c71",
+          "sourceSlotId": "slot_f46c799b",
+          "sourceMaterialIndex": 0,
+          "sourceMaterialName": "透明_Inst"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 0.5,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          },
+          "alpha": {
+            "mode": "blend",
+            "opacity": 0.375999987
+          }
+        }
+      },
+      {
+        "id": "mat_792e91607a2e42f3ab2e94867c2e9619",
+        "guid": "792e9160-7a2e-42f3-ab2e-94867c2e9619",
+        "name": "透明_Inst1",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "872358ed-71a2-47bb-a9bd-f2c947ea0c71",
+          "sourceAssetId": "asset_872358ed71a247bba9bdf2c947ea0c71",
+          "sourceSlotId": "slot_f36c7808",
+          "sourceMaterialIndex": 1,
+          "sourceMaterialName": "透明_Inst1"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 0.5,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          },
+          "alpha": {
+            "mode": "blend",
+            "opacity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_55e2dda154e24c0ea3e2da7b52e2d8e8",
+        "guid": "55e2dda1-54e2-4c0e-a3e2-da7b52e2d8e8",
+        "name": "1_Inst",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "872358ed-71a2-47bb-a9bd-f2c947ea0c71",
+          "sourceAssetId": "asset_872358ed71a247bba9bdf2c947ea0c71",
+          "sourceSlotId": "slot_f66c7cc1",
+          "sourceMaterialIndex": 2,
+          "sourceMaterialName": "1_Inst"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 1,
+          "roughness": 1,
+          "emission": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "intensity": 1
+          }
+        }
+      },
+      {
+        "id": "mat_d6fbc596d7fb4729a4fbc270d5fbc403",
+        "guid": "d6fbc596-d7fb-4729-a4fb-c270d5fbc403",
+        "name": "BaiJInshu",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "872358ed-71a2-47bb-a9bd-f2c947ea0c71",
+          "sourceAssetId": "asset_872358ed71a247bba9bdf2c947ea0c71",
+          "sourceSlotId": "slot_f86c7fe7",
+          "sourceMaterialIndex": 3,
+          "sourceMaterialName": "BaiJInshu"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 0.498039246,
           "emission": {
             "color": {
               "r": 0,

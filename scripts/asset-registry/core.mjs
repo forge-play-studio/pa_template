@@ -46,6 +46,10 @@ export const stripKnownAssetExtension = sdk.stripKnownPlayableEditorAssetExtensi
 export const toImportName = sdk.toPlayableEditorAssetImportName;
 
 async function loadEditorAssetRegistrySdk() {
+  if (process.env.FPS_GAME_EDITOR_REPO) {
+    return loadLocalEditorAssetRegistrySdk(resolveLocalFpsEditorRepoRoot());
+  }
+
   try {
     const installed = await import('@fps-games/editor/playable-sdk/vite');
     if (hasAssetRegistryExports(installed).ok) {
@@ -56,6 +60,10 @@ async function loadEditorAssetRegistrySdk() {
   }
 
   const repoRoot = resolveLocalFpsEditorRepoRoot();
+  return loadLocalEditorAssetRegistrySdk(repoRoot);
+}
+
+async function loadLocalEditorAssetRegistrySdk(repoRoot) {
   const viteDistPath = path.join(repoRoot, 'packages/editor-playable-sdk/dist/vite/index.js');
   compileLocalPlayableSdk(repoRoot);
   const local = await import(`${pathToFileURL(viteDistPath).href}?asset-registry=${Date.now()}`);
