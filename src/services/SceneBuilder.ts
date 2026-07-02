@@ -70,6 +70,7 @@ import {
   resolveMaterialRuntimeKind,
   resolveMaterialOwnerNode,
   resolveMaterialSlotOwnerNodes,
+  isMaterialSlotRuntimeSplitPrimitiveOwnerNode,
 } from '@fps-games/editor/playable-sdk';
 
 const BABYLON_MATERIAL_RUNTIME = { Color3, MaterialPluginBase, Texture };
@@ -1591,7 +1592,7 @@ export class SceneBuilder {
       return { material: ownerNode.material };
     }
     if (!Array.isArray(material?.subMaterials)) {
-      if (!isSceneBuilderRuntimeSplitPrimitiveOwnerNode(ownerNode, materialSlot)
+      if (!isMaterialSlotRuntimeSplitPrimitiveOwnerNode(ownerNode, materialSlot)
         && (materialSlot.primitiveIndex !== 0 || !context.primitiveSingleMaterialFallbackAllowed)) return null;
       if (context.detachSharedMaterial) {
         this.detachOverrideMaterial(ownerNode, context.sceneNodeId, materialSlot.ownerNodePath);
@@ -1990,26 +1991,6 @@ function appendPrimitiveOwnerSuffix(value: string | null | undefined, primitiveI
   if (typeof value !== 'string') return null;
   const baseName = stripPrimitiveSuffix(value) ?? value.trim();
   return baseName ? `${baseName}_primitive${primitiveIndex}` : null;
-}
-
-function isSceneBuilderRuntimeSplitPrimitiveOwnerNode(
-  ownerNode: any,
-  materialSlot: SceneBuilderMaterialSlotSourceDescriptor,
-): boolean {
-  if (materialSlot.primitiveIndex == null) return false;
-  const primitiveNames = new Set<string>();
-  for (const baseName of [
-    materialSlot.ownerNodePath,
-    readMaterialSlotOwnerPathLastSegment(materialSlot.ownerNodePath),
-    stripPrimitiveSuffix(materialSlot.label),
-    materialSlot.label,
-  ]) {
-    addSceneBuilderMaterialSlotFallbackName(
-      primitiveNames,
-      appendPrimitiveOwnerSuffix(baseName, materialSlot.primitiveIndex),
-    );
-  }
-  return collectRuntimeNodeMatchNames(ownerNode).some(name => primitiveNames.has(name));
 }
 
 function collectRuntimeMaterialOwnerTailNames(value: string | null | undefined): string[] {
