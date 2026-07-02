@@ -529,6 +529,7 @@ export interface GroundDecalUiTextLayer extends GroundDecalUiLayerBase {
 export interface GroundDecalUiProgressLayer extends GroundDecalUiLayerBase {
   kind: 'progress';
   value: number;
+  editorPreviewPercent?: number;
   direction?: 'leftToRight' | 'rightToLeft' | 'bottomToTop' | 'topToBottom';
   color: GroundDecalUiColor;
 }

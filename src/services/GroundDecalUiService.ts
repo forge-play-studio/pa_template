@@ -99,7 +99,7 @@ export function createDefaultGroundDecalUiConfig(uiKind: GroundDecalUiKind): Gro
         id: 'progressFill',
         role: 'progressFill',
         kind: 'progress',
-        value: 0.65,
+        value: 0,
         direction: 'bottomToTop',
         color: PROGRESS_COLOR,
         zOrder: 10,

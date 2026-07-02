@@ -1016,6 +1016,7 @@ function getEditorSceneSerializedMultiPropertyProbeValue(path: string): unknown 
     return { r: 1, g: 1, b: 1, a: 1 };
   }
   if (isGroundDecalLayerColorAlphaPath(path) || isGroundDecalLayerTextureTintAlphaPath(path) || isGroundDecalLayerTextColorAlphaPath(path)) return 1;
+  if (isGroundDecalLayerProgressPreviewPercentPath(path)) return 75;
   if (path === 'shadow.cast' || path === 'shadow.receive') return 'none';
   if (path === 'shadow.mode') return 'none';
   if (path === 'shadow.quality') return 'medium';
@@ -1035,7 +1036,7 @@ function isEditorSceneGroundDecalSerializedMultiFieldPath(path: string): boolean
     || path === 'groundDecal.layers'
     || path === 'groundDecal.rendering.textureWidth'
     || path === 'groundDecal.rendering.textureHeight'
-    || /^groundDecal\.layers\.\d+\.(rect|textureId|text\.value|color|color\.a|tint|tint\.a|text\.color|text\.color\.a)$/.test(path);
+    || /^groundDecal\.layers\.\d+\.(rect|textureId|text\.value|color|color\.a|tint|tint\.a|text\.color|text\.color\.a|editorPreviewPercent)$/.test(path);
 }
 
 function isEditorSceneShadowProjectionPath(path: string): boolean {
@@ -1076,6 +1077,10 @@ function isGroundDecalLayerTextColorPath(path: string): boolean {
 
 function isGroundDecalLayerTextColorAlphaPath(path: string): boolean {
   return /^groundDecal\.layers\.\d+\.text\.color\.a$/.test(path);
+}
+
+function isGroundDecalLayerProgressPreviewPercentPath(path: string): boolean {
+  return /^groundDecal\.layers\.\d+\.editorPreviewPercent$/.test(path);
 }
 
 function createEditorSceneTransformPatch(

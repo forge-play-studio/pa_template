@@ -946,6 +946,7 @@ export interface EditorSceneInspectorContext {
 }
 
 const DEFAULT_GROUND_DECAL_UI_TEXTURE_TINT: GroundDecalUiColor = { r: 1, g: 1, b: 1, a: 1 };
+const DEFAULT_GROUND_DECAL_UI_EDITOR_PROGRESS_PERCENT = 75;
 
 const MATERIAL_LANGUAGE_OPTIONS = CAMERA_LANGUAGE_OPTIONS;
 
@@ -1334,6 +1335,14 @@ function reduceEditorSceneDocumentUnchecked(
       );
     }
     if (command.patch.kind === 'game-object.field' && isDirectionalLightAnglePath(command.patch.path)) {
+      return patchEditorSceneGameObjectField(
+        document,
+        command.patch.targetId,
+        command.patch.path,
+        command.patch.value,
+      );
+    }
+    if (command.patch.kind === 'game-object.field' && isGroundDecalInspectorPatchPath(command.patch.path)) {
       return patchEditorSceneGameObjectField(
         document,
         command.patch.targetId,
@@ -5466,6 +5475,10 @@ function createGroundDecalInspectorProperties(
       properties.push(createGroundDecalTextureTintAlphaInspectorProperty(nodeKind, layer, index, label, order));
       order += 1;
     }
+    if (layer.kind === 'progress' && layer.role === 'progressFill') {
+      properties.push(createGroundDecalProgressPreviewInspectorProperty(nodeKind, layer, index, label, order));
+      order += 1;
+    }
     if (isGroundDecalEditableColorLayer(layer)) {
       properties.push(createGroundDecalColorInspectorProperty(nodeKind, layer, index, label, order));
       order += 1;
@@ -5637,6 +5650,7 @@ function readGroundDecalLayerPatchFieldValue(
   if (field === 'tint.a') return layer.kind === 'texture' ? layer.tint?.a ?? 1 : undefined;
   if (field === 'text.color') return layer.kind === 'text' ? layer.text.color : undefined;
   if (field === 'text.color.a') return layer.kind === 'text' ? layer.text.color.a ?? 1 : undefined;
+  if (field === 'editorPreviewPercent') return layer.kind === 'progress' ? resolveGroundDecalEditorPreviewProgressPercent(layer) : undefined;
   return undefined;
 }
 
@@ -5644,16 +5658,17 @@ function createGroundDecalLayoutInspectorValue(
   decal: GroundDecalUiConfig,
   context: EditorSceneInspectorContext = {},
 ): Record<string, unknown> {
-  const projectEditableLayers = decal.layers
+  const layoutEditableLayers = decal.layers
     .map((layer, index) => ({ layer, index }))
-    .filter(entry => isProjectEditableGroundDecalLayer(entry.layer));
+    .filter(entry => isGroundDecalLayoutEditableLayer(entry.layer));
   return {
     textureSize: {
       width: decal.rendering?.textureWidth ?? 512,
       height: decal.rendering?.textureHeight ?? 512,
     },
     mask: decal.mask,
-    layers: projectEditableLayers.map(({ layer, index }) => createGroundDecalLayoutInspectorLayer(context, layer, index)),
+    layers: layoutEditableLayers.map(({ layer, index }) => createGroundDecalLayoutInspectorLayer(context, layer, index)),
+    previewLayers: decal.layers.map((layer, index) => createGroundDecalLayoutInspectorLayer(context, layer, index)),
   };
 }
 
@@ -5670,7 +5685,7 @@ function createGroundDecalLayoutInspectorLayer(
     label: createGroundDecalLayerLabel(layer),
     rect: layer.rect,
     enabled: layer.enabled !== false,
-    editable: true,
+    editable: isGroundDecalLayoutEditableLayer(layer),
     zOrder: layer.zOrder,
     ...(typeof layer.opacity === 'number' ? { opacity: layer.opacity } : {}),
     ...(layer.role === 'mainLogo' || layer.role === 'subLogo' ? { scaleMode: 'uniform' } : {}),
@@ -5679,7 +5694,11 @@ function createGroundDecalLayoutInspectorLayer(
 }
 
 function isProjectEditableGroundDecalLayer(layer: GroundDecalUiLayer): boolean {
-  return layer.role !== 'base' && layer.role !== 'border';
+  return layer.role !== 'base';
+}
+
+function isGroundDecalLayoutEditableLayer(layer: GroundDecalUiLayer): boolean {
+  return layer.role === 'mainLogo' || layer.role === 'subLogo' || layer.role === 'amount';
 }
 
 function createGroundDecalLayerLabel(layer: GroundDecalUiLayer): string {
@@ -5712,7 +5731,7 @@ function createGroundDecalLayerPreview(
   if (layer.kind === 'progress') {
     return {
       kind: 'progress',
-      value: layer.value,
+      value: resolveGroundDecalEditorPreviewProgressValue(layer),
       direction: layer.direction,
       color: layer.color,
     };
@@ -5734,10 +5753,21 @@ function createGroundDecalLayerPreview(
   return undefined;
 }
 
+function resolveGroundDecalEditorPreviewProgressPercent(layer: Extract<GroundDecalUiLayer, { kind: 'progress' }>): number {
+  const percent = typeof layer.editorPreviewPercent === 'number' && Number.isFinite(layer.editorPreviewPercent)
+    ? layer.editorPreviewPercent
+    : DEFAULT_GROUND_DECAL_UI_EDITOR_PROGRESS_PERCENT;
+  return Math.round(Math.max(0, Math.min(100, percent)));
+}
+
+function resolveGroundDecalEditorPreviewProgressValue(layer: Extract<GroundDecalUiLayer, { kind: 'progress' }>): number {
+  return resolveGroundDecalEditorPreviewProgressPercent(layer) / 100;
+}
+
 function isGroundDecalEditableTextureLayer(
   layer: GroundDecalUiLayer,
 ): layer is Extract<GroundDecalUiLayer, { kind: 'texture' }> {
-  return layer.kind === 'texture' && (layer.role === 'mainLogo' || layer.role === 'subLogo');
+  return layer.kind === 'texture' && (layer.role === 'mainLogo' || layer.role === 'subLogo' || layer.role === 'border');
 }
 
 function isGroundDecalEditableColorLayer(
@@ -5810,6 +5840,30 @@ function createGroundDecalColorAlphaInspectorProperty(
     max: 1,
     step: 0.01,
     tags: ['GroundDecalUI', 'Color'],
+  });
+}
+
+function createGroundDecalProgressPreviewInspectorProperty(
+  nodeKind: SceneNodeConfig['kind'],
+  layer: Extract<GroundDecalUiLayer, { kind: 'progress' }>,
+  layerIndex: number,
+  label: string,
+  order: number,
+): InspectorProperty<EditorSceneDocument> {
+  const path = `groundDecal.layers.${layerIndex}.editorPreviewPercent`;
+  return createDocumentInspectorProperty(null, nodeKind, {
+    path,
+    label: `${label} Preview %`,
+    valueType: 'number',
+    control: 'number',
+    value: resolveGroundDecalEditorPreviewProgressPercent(layer),
+    commitMode: 'blur',
+    order,
+    min: 0,
+    max: 100,
+    step: 1,
+    tags: ['GroundDecalUI', 'Progress'],
+    coerce: (value: unknown) => normalizeEditorSceneInspectorValue(path, value),
   });
 }
 
@@ -7549,6 +7603,9 @@ function normalizeEditorSceneInspectorValue(path: string, value: unknown): unkno
   if (isGroundDecalLayerColorAlphaPath(path) || isGroundDecalLayerTextureTintAlphaPath(path) || isGroundDecalLayerTextColorAlphaPath(path)) {
     return normalizeGroundDecalAlphaValue(value) ?? value;
   }
+  if (isGroundDecalLayerProgressPreviewPercentPath(path)) {
+    return normalizeGroundDecalProgressPreviewPercentValue(value) ?? value;
+  }
   if (isGroundDecalRenderingTextureDimensionPath(path)) {
     return normalizeGroundDecalTextureDimension(value) ?? value;
   }
@@ -7619,7 +7676,7 @@ function normalizeGroundDecalLayoutPatchValue(value: unknown): GroundDecalLayout
 function normalizeGroundDecalLayoutLayerPatch(value: unknown, index: number): GroundDecalLayoutLayerPatch | null {
   const source = readEditorSceneRecord(value);
   if (!source) return null;
-  if (source.role === 'base' || source.role === 'border' || source.id === 'base' || source.id === 'border') return null;
+  if (source.role !== 'mainLogo' && source.role !== 'subLogo' && source.role !== 'amount') return null;
   const id = readEditorSceneString(source.id) ?? `layer_${index}`;
   const rect = normalizeGroundDecalLayoutRect(source.rect);
   return rect ? { id, rect } : null;
@@ -7673,6 +7730,12 @@ function validateGroundDecalInspectorField(path: string, value: unknown): Inspec
       ? { ok: true, value: alpha }
       : { ok: false, message: `Invalid value for scene node field: ${path}.` };
   }
+  if (isGroundDecalLayerProgressPreviewPercentPath(path)) {
+    const percent = normalizeGroundDecalProgressPreviewPercentValue(value);
+    return percent !== null
+      ? { ok: true, value: percent }
+      : { ok: false, message: `Invalid value for scene node field: ${path}.` };
+  }
   if (isGroundDecalRenderingTextureDimensionPath(path)) {
     const dimension = normalizeGroundDecalTextureDimension(value);
     return dimension !== null
@@ -7691,10 +7754,11 @@ type GroundDecalLayerPatchField =
   | 'tint'
   | 'tint.a'
   | 'text.color'
-  | 'text.color.a';
+  | 'text.color.a'
+  | 'editorPreviewPercent';
 
 function parseGroundDecalLayerPatchPath(path: string): { index: number; field: GroundDecalLayerPatchField } | null {
-  const match = path.match(/^groundDecal\.layers\.(\d+)\.(rect|textureId|text\.value|color|color\.a|tint|tint\.a|text\.color|text\.color\.a)$/);
+  const match = path.match(/^groundDecal\.layers\.(\d+)\.(rect|textureId|text\.value|color|color\.a|tint|tint\.a|text\.color|text\.color\.a|editorPreviewPercent)$/);
   if (!match) return null;
   const index = Number(match[1]);
   if (!Number.isInteger(index) || index < 0) return null;
@@ -7737,6 +7801,10 @@ function isGroundDecalLayerTextColorAlphaPath(path: string): boolean {
   return /^groundDecal\.layers\.\d+\.text\.color\.a$/.test(path);
 }
 
+function isGroundDecalLayerProgressPreviewPercentPath(path: string): boolean {
+  return /^groundDecal\.layers\.\d+\.editorPreviewPercent$/.test(path);
+}
+
 function isGroundDecalRenderingTextureDimensionPath(path: string): boolean {
   return path === 'groundDecal.rendering.textureWidth' || path === 'groundDecal.rendering.textureHeight';
 }
@@ -7773,10 +7841,11 @@ function canPatchGroundDecalLayerField(
   layer: GroundDecalUiLayer,
   field: GroundDecalLayerPatchField,
 ): boolean {
-  if (field === 'rect') return true;
+  if (field === 'rect') return isGroundDecalLayoutEditableLayer(layer);
   if (field === 'textureId' || field === 'tint' || field === 'tint.a') return layer.kind === 'texture';
   if (field === 'text.value' || field === 'text.color' || field === 'text.color.a') return layer.kind === 'text';
   if (field === 'color' || field === 'color.a') return layer.kind === 'color' || layer.kind === 'progress';
+  if (field === 'editorPreviewPercent') return layer.kind === 'progress';
   return false;
 }
 
@@ -7784,7 +7853,7 @@ function isGroundDecalLayoutPatchCompatibleWithDecal(
   decal: GroundDecalUiConfig,
   patches: readonly GroundDecalLayoutLayerPatch[],
 ): boolean {
-  const editableLayers = decal.layers.filter(isProjectEditableGroundDecalLayer);
+  const editableLayers = decal.layers.filter(isGroundDecalLayoutEditableLayer);
   if (patches.length !== editableLayers.length) return false;
   return editableLayers.every((layer, index) => patches[index]?.id === layer.id);
 }
@@ -7808,6 +7877,11 @@ function normalizeGroundDecalColorValue(value: unknown): GroundDecalUiColor | nu
 function normalizeGroundDecalAlphaValue(value: unknown): number | null {
   const numeric = readGroundDecalFiniteNumber(value);
   return numeric == null ? null : roundGroundDecalFieldValue(Math.max(0, Math.min(1, numeric)));
+}
+
+function normalizeGroundDecalProgressPreviewPercentValue(value: unknown): number | null {
+  const numeric = readGroundDecalFiniteNumber(value);
+  return numeric == null ? null : Math.round(Math.max(0, Math.min(100, numeric)));
 }
 
 function normalizeGroundDecalTextureDimension(value: unknown): number | null {
@@ -7851,7 +7925,7 @@ function patchEditorSceneGroundDecalLayoutGameObject(
     groundDecal: {
       ...decal,
       layers: decal.layers.map((layer, index) => {
-        if (!isProjectEditableGroundDecalLayer(layer)) return layer;
+        if (!isGroundDecalLayoutEditableLayer(layer)) return layer;
         const patch = patchById.get(layer.id) ?? patches[index];
         return patch ? { ...layer, rect: patch.rect } : layer;
       }),
@@ -7921,6 +7995,7 @@ function patchEditorSceneGroundDecalInspectorField(
     const decal = mergeGroundDecalDefaults(entry.groundDecal);
     const layer = decal.layers[parsed.index];
     if (!layer || !isProjectEditableGroundDecalLayer(layer)) return entry;
+    if (parsed.field === 'rect' && !isGroundDecalLayoutEditableLayer(layer)) return entry;
     const patchedLayer = patchEditorSceneGroundDecalLayer(layer, parsed.field, normalizedValue);
     if (!patchedLayer || patchedLayer === layer) return entry;
     const layers = [...decal.layers];
@@ -8012,6 +8087,13 @@ function patchEditorSceneGroundDecalLayer(
     const nextColor = { ...layer.color, a: alpha };
     if (groundDecalColorsEqual(layer.color, nextColor)) return layer;
     return { ...layer, color: nextColor } as GroundDecalUiLayer;
+  }
+  if (field === 'editorPreviewPercent') {
+    if (layer.kind !== 'progress') return null;
+    const percent = normalizeGroundDecalProgressPreviewPercentValue(value);
+    if (percent === null) return null;
+    if (layer.editorPreviewPercent === percent) return layer;
+    return { ...layer, editorPreviewPercent: percent } as GroundDecalUiLayer;
   }
   if (field === 'tint') {
     if (layer.kind !== 'texture') return null;
@@ -8650,18 +8732,25 @@ function splitChildMaterialBindingFieldPath(path: string): string[] | null {
 function mergeGroundDecalDefaults(
   groundDecal: EditorSceneGameObject['groundDecal'],
 ): GroundDecalUiConfig {
-  const defaults = createDefaultGroundDecalUiConfig('operation');
-  if (!isGroundDecalUiConfig(groundDecal)) return defaults;
+  const source = groundDecal && typeof groundDecal === 'object' && !Array.isArray(groundDecal)
+    ? groundDecal
+    : null;
+  const uiKind = source?.uiKind === 'delivery' || source?.uiKind === 'operation'
+    ? source.uiKind
+    : 'operation';
+  const defaults = createDefaultGroundDecalUiConfig(uiKind);
+  if (!source) return defaults;
   return {
     ...defaults,
-    ...structuredClone(groundDecal),
+    ...structuredClone(source),
+    uiKind,
     size: {
       ...defaults.size,
-      ...groundDecal.size,
+      ...(source.size && typeof source.size === 'object' ? source.size : {}),
     },
-    layers: groundDecal.layers.length > 0 ? structuredClone(groundDecal.layers) : defaults.layers,
-    mask: groundDecal.mask ? { ...defaults.mask, ...groundDecal.mask } : defaults.mask,
-    rendering: groundDecal.rendering ? { ...defaults.rendering, ...groundDecal.rendering } : defaults.rendering,
+    layers: Array.isArray(source.layers) && source.layers.length > 0 ? structuredClone(source.layers) : defaults.layers,
+    mask: source.mask && typeof source.mask === 'object' ? { ...defaults.mask, ...source.mask } : defaults.mask,
+    rendering: source.rendering && typeof source.rendering === 'object' ? { ...defaults.rendering, ...source.rendering } : defaults.rendering,
   };
 }
 
