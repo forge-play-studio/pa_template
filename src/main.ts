@@ -42,7 +42,6 @@ function disposeRuntimeDebug(): void {
 
 function detachRuntimeDebugForEditor(): void {
   runtimeDebug?.detachForEditor?.();
-  runtimeDebug = null;
 }
 
 function clearLoadingScreen(): void {

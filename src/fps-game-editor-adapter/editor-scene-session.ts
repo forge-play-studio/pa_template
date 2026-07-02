@@ -2014,10 +2014,10 @@ export function createEditorSceneRenamePatch(
 export function createEditorSceneCreateGroupPatch(
   document: EditorSceneDocument,
   intent: SceneGraphCreateGroupIntent,
-): { patch: EditorSceneDocumentPatch; label: string; createdId: string } | null {
+): { patch: EditorSceneDocumentPatch; label: string; createdId: string; changedIds: string[] } | null {
   return coerceEditorSceneHierarchyPatchResult(
     createPlayableEditorSceneCreateGroupPatch(document, intent),
-  ) as { patch: EditorSceneDocumentPatch; label: string; createdId: string } | null;
+  ) as { patch: EditorSceneDocumentPatch; label: string; createdId: string; changedIds: string[] } | null;
 }
 
 export function createEditorSceneCreatePrimitivePatch(
