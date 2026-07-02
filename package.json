@@ -8,6 +8,7 @@
     "dev:editor-local": "vite --host 0.0.0.0 --port 3011 --strictPort",
     "asset:register": "node scripts/register-asset.mjs",
     "asset:unregister": "node scripts/register-asset.mjs --unregister",
+    "vfx:usage": "node scripts/manage-vfx-usage.mjs",
     "asset:migrate-guid": "node scripts/asset-registry/migrate-asset-guid-catalog.mjs",
     "test:asset-guid-migration": "node scripts/check-asset-guid-migration.mjs",
     "test:asset-catalog-generator": "node scripts/check-asset-catalog-generator.mjs",
