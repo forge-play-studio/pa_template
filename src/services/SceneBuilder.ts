@@ -105,6 +105,10 @@ type SceneBuilderMaterialSlotSourceDescriptor = {
   materialNames?: string[];
 };
 
+type SceneBuilderMaterialSlotTarget = {
+  material: any;
+};
+
 export class SceneBuilder {
   private scene: Scene;
   private assetLoader: AssetLoader;
@@ -1458,8 +1462,9 @@ export class SceneBuilder {
 
     const materialSlotDescriptors: SceneBuilderMaterialSlotSourceDescriptor[] = [];
     for (const [slotId, materialBinding] of Object.entries(overrides.materialSlotBindings ?? {})) {
-      const materialSlot = this.resolveSceneAssetMaterialSlot(asset, slotId);
+      const materialSlot = this.resolveSceneAssetMaterialSlot(asset, slotId, materialBinding);
       if (!materialSlot) {
+        if (this.shouldSkipStaleImportedMaterialSlotBinding(asset, slotId, materialBinding)) continue;
         this.logMaterialSlotOwnerResolutionFailure(rootNode, {
           sceneNodeId: nodeConfig.id,
           asset,
@@ -1557,11 +1562,65 @@ export class SceneBuilder {
     if (Object.keys(profile).length === 0) return;
 
     for (const ownerNode of ownerNodes) {
-      if (asset && this.shouldShareAssetMaterials(asset)) {
-        this.detachOverrideMaterial(ownerNode, sceneNodeId, materialSlot.ownerNodePath);
-      }
-      this.applyArtistMaterialProfileToRuntimeMaterial(ownerNode.material, profile);
+      const target = this.resolveMaterialSlotRuntimeMaterialTarget(ownerNode, materialSlot, {
+        sceneNodeId,
+        detachSharedMaterial: !!asset && this.shouldShareAssetMaterials(asset),
+        primitiveSingleMaterialFallbackAllowed:
+          ownerNodes.length === 1 && this.isSinglePrimitiveSceneAssetMaterialSlot(asset, materialSlot, sceneNodeId),
+      });
+      if (!target) continue;
+      this.applyArtistMaterialProfileToRuntimeMaterial(target.material, profile);
     }
+  }
+
+  private resolveMaterialSlotRuntimeMaterialTarget(
+    ownerNode: any,
+    materialSlot: SceneBuilderMaterialSlotSourceDescriptor,
+    context: {
+      sceneNodeId: string;
+      detachSharedMaterial: boolean;
+      primitiveSingleMaterialFallbackAllowed: boolean;
+    },
+  ): SceneBuilderMaterialSlotTarget | null {
+    if (!ownerNode?.material) return null;
+    let material = ownerNode.material;
+    if (materialSlot.primitiveIndex == null) {
+      if (context.detachSharedMaterial) {
+        this.detachOverrideMaterial(ownerNode, context.sceneNodeId, materialSlot.ownerNodePath);
+      }
+      return { material: ownerNode.material };
+    }
+    if (!Array.isArray(material?.subMaterials)) {
+      if (!isSceneBuilderRuntimeSplitPrimitiveOwnerNode(ownerNode, materialSlot)
+        && (materialSlot.primitiveIndex !== 0 || !context.primitiveSingleMaterialFallbackAllowed)) return null;
+      if (context.detachSharedMaterial) {
+        this.detachOverrideMaterial(ownerNode, context.sceneNodeId, materialSlot.ownerNodePath);
+      }
+      return { material: ownerNode.material };
+    }
+    if (context.detachSharedMaterial) {
+      this.detachOverrideMaterial(ownerNode, context.sceneNodeId, materialSlot.ownerNodePath);
+      material = ownerNode.material;
+    }
+    const subMaterial = this.detachMaterialSlotPrimitiveSubMaterial(material, materialSlot, context.sceneNodeId);
+    return subMaterial ? { material: subMaterial } : null;
+  }
+
+  private detachMaterialSlotPrimitiveSubMaterial(
+    material: any,
+    materialSlot: SceneBuilderMaterialSlotSourceDescriptor,
+    sceneNodeId: string,
+  ): any | null {
+    if (!Array.isArray(material?.subMaterials)) return null;
+    const primitiveIndex = materialSlot.primitiveIndex;
+    if (primitiveIndex == null || primitiveIndex < 0 || primitiveIndex >= material.subMaterials.length) return null;
+    const subMaterial = material.subMaterials[primitiveIndex];
+    if (!subMaterial || typeof subMaterial !== 'object' || typeof subMaterial.clone !== 'function') return null;
+    const cloneName = createSceneBuilderMaterialSlotSubMaterialName(subMaterial, materialSlot, sceneNodeId, primitiveIndex);
+    const clonedSubMaterial = subMaterial.clone(cloneName);
+    if (!clonedSubMaterial) return null;
+    material.subMaterials[primitiveIndex] = clonedSubMaterial;
+    return clonedSubMaterial;
   }
 
   private getMaterialAssetCatalog(): { scene: { materialAssets: NonNullable<ReturnType<typeof configService.getSceneDocument>['scene']>['materialAssets'] } } {
@@ -1575,6 +1634,7 @@ export class SceneBuilder {
   private resolveSceneAssetMaterialSlot(
     asset: SceneAssetConfig | undefined,
     slotId: string,
+    binding?: SceneNodeMaterialBindingConfig,
   ): SceneBuilderMaterialSlotSourceDescriptor | null {
     const normalizedSlotId = typeof slotId === 'string' ? slotId.trim() : '';
     if (!asset || !normalizedSlotId) return null;
@@ -1585,7 +1645,75 @@ export class SceneBuilder {
       if (typeof record.slotId !== 'string' || record.slotId.trim() !== normalizedSlotId) continue;
       return readOptionalSceneBuilderMaterialSlotSourceDescriptor(record, normalizedSlotId);
     }
-    return null;
+    const origin = this.readMaterialBindingImportedOrigin(asset, binding);
+    if (!origin) return null;
+    if (origin.sourceSlotId && origin.sourceSlotId !== normalizedSlotId) return null;
+    const candidates: SceneBuilderMaterialSlotSourceDescriptor[] = [];
+    for (const rawSlot of materialSlots) {
+      const candidateSlotId = isRecord(rawSlot) && typeof rawSlot.slotId === 'string' ? rawSlot.slotId.trim() : '';
+      const descriptor = readOptionalSceneBuilderMaterialSlotSourceDescriptor(rawSlot, candidateSlotId);
+      if (!descriptor) continue;
+      if (!collectSceneBuilderMaterialSlotSourceMaterialIndices(descriptor).includes(origin.sourceMaterialIndex)) continue;
+      candidates.push(descriptor);
+    }
+    return candidates.length === 1 ? candidates[0] : null;
+  }
+
+  private shouldSkipStaleImportedMaterialSlotBinding(
+    asset: SceneAssetConfig | undefined,
+    slotId: string,
+    binding: SceneNodeMaterialBindingConfig | undefined,
+  ): boolean {
+    if (!asset) return false;
+    const normalizedSlotId = typeof slotId === 'string' ? slotId.trim() : '';
+    if (!normalizedSlotId) return false;
+    const origin = this.readMaterialBindingImportedOrigin(asset, binding);
+    return !!origin?.sourceSlotId && origin.sourceSlotId !== normalizedSlotId;
+  }
+
+  private readMaterialBindingImportedOrigin(
+    asset: SceneAssetConfig,
+    binding: SceneNodeMaterialBindingConfig | undefined,
+  ): { sourceMaterialIndex: number; sourceSlotId?: string } | null {
+    const materialAssetId = readSceneNodeMaterialBindingAssetId(binding);
+    if (!materialAssetId) return null;
+    const materialAsset = (this.getMaterialAssetCatalog().scene.materialAssets ?? []).find(entry => entry?.id === materialAssetId);
+    if (!isRecord(materialAsset?.origin) || materialAsset.origin.type !== 'imported') return null;
+    const sourceMaterialIndex = materialAsset.origin.sourceMaterialIndex;
+    if (!Number.isInteger(sourceMaterialIndex)) return null;
+    const sourceAssetGuid = typeof materialAsset.origin.sourceAssetGuid === 'string' ? materialAsset.origin.sourceAssetGuid.trim() : '';
+    const sourceAssetId = typeof materialAsset.origin.sourceAssetId === 'string' ? materialAsset.origin.sourceAssetId.trim() : '';
+    const matchesGuid = !!asset.guid && !!sourceAssetGuid && sourceAssetGuid === asset.guid;
+    const matchesId = !!asset.id && !!sourceAssetId && sourceAssetId === asset.id;
+    if ((sourceAssetGuid || sourceAssetId) && !matchesGuid && !matchesId) return null;
+    if (!sourceAssetGuid && !sourceAssetId && (asset.guid || asset.id)) return null;
+    const sourceSlotId = typeof materialAsset.origin.sourceSlotId === 'string' ? materialAsset.origin.sourceSlotId.trim() : '';
+    return {
+      sourceMaterialIndex: sourceMaterialIndex as number,
+      ...(sourceSlotId ? { sourceSlotId } : {}),
+    };
+  }
+
+  private isSinglePrimitiveSceneAssetMaterialSlot(
+    asset: SceneAssetConfig | undefined,
+    materialSlot: SceneBuilderMaterialSlotSourceDescriptor,
+    sceneNodeId: string,
+  ): boolean {
+    if (!asset || materialSlot.primitiveIndex !== 0) return false;
+    const rawSlots = Array.isArray(asset.metadata?.materialSlots) ? asset.metadata.materialSlots : [];
+    if (rawSlots.length === 0) return false;
+    const resolveContext = { projectionNodeId: sceneNodeId };
+    const slotKey = createMaterialSlotOwnerPathMatchKey(materialSlot.ownerNodePath, resolveContext);
+    const matchingPrimitiveSlots: SceneBuilderMaterialSlotSourceDescriptor[] = [];
+    for (const rawSlot of rawSlots) {
+      const slotId = isRecord(rawSlot) && typeof rawSlot.slotId === 'string' ? rawSlot.slotId.trim() : '';
+      const descriptor = readOptionalSceneBuilderMaterialSlotSourceDescriptor(rawSlot, slotId);
+      if (!descriptor || descriptor.primitiveIndex == null) continue;
+      if (createMaterialSlotOwnerPathMatchKey(descriptor.ownerNodePath, resolveContext) !== slotKey) continue;
+      if (!isSceneBuilderMaterialSlotSameMesh(descriptor, materialSlot)) continue;
+      matchingPrimitiveSlots.push(descriptor);
+    }
+    return matchingPrimitiveSlots.length === 1 && matchingPrimitiveSlots[0]?.primitiveIndex === 0;
   }
 
   private resolveMaterialSlotBindingOwnerNodes(
@@ -1603,6 +1731,9 @@ export class SceneBuilder {
       .filter((ownerNode: any) => !!ownerNode?.material);
     if (ownerNodes.length > 0) return ownerNodes;
 
+    const fallbackOwnerNodes = this.resolveMaterialSlotBindingFallbackOwnerNodes(rootNode, materialSlot, context);
+    if (fallbackOwnerNodes.length > 0) return fallbackOwnerNodes;
+
     this.logMaterialSlotOwnerResolutionFailure(rootNode, {
       sceneNodeId: context.sceneNodeId,
       asset: context.asset,
@@ -1612,6 +1743,25 @@ export class SceneBuilder {
       projectionNodeId: context.sceneNodeId,
       reason: 'owner-node-not-found',
     });
+    return [];
+  }
+
+  private resolveMaterialSlotBindingFallbackOwnerNodes(
+    rootNode: TransformNode,
+    materialSlot: SceneBuilderMaterialSlotSourceDescriptor,
+    context: {
+      sceneNodeId: string;
+      asset?: SceneAssetConfig;
+    },
+  ): any[] {
+    const candidates = collectMaterialOwnerCandidateNodes(rootNode);
+    if (candidates.length === 0) return [];
+    const expectedNames = collectSceneBuilderMaterialSlotOwnerFallbackNames(materialSlot, context.asset);
+    const namedMatches = candidates.filter((candidate: any) => {
+      const candidateNames = collectRuntimeNodeMatchNames(candidate);
+      return candidateNames.some(candidateName => expectedNames.has(candidateName));
+    });
+    if (namedMatches.length === 1) return namedMatches;
     return [];
   }
 
@@ -1706,6 +1856,18 @@ function readSceneBuilderMaterialSlotSourceDescriptor(
   };
 }
 
+function createSceneBuilderMaterialSlotSubMaterialName(
+  material: any,
+  materialSlot: SceneBuilderMaterialSlotSourceDescriptor,
+  sceneNodeId: string,
+  primitiveIndex: number,
+): string {
+  const baseName = String(material?.name ?? material?.id ?? 'material');
+  const slotKey = materialSlot.slotId || materialSlot.ownerNodePath || `primitive_${primitiveIndex}`;
+  const suffix = `${sceneNodeId}_${slotKey}`.replace(/[^a-zA-Z0-9_-]+/g, '_');
+  return `${baseName}_slot_${suffix}_sub${primitiveIndex}`;
+}
+
 function isMaterialOwnerPathEqualToSlotDescriptor(
   ownerNodePath: string,
   materialSlots: readonly SceneBuilderMaterialSlotSourceDescriptor[],
@@ -1726,19 +1888,84 @@ function isMaterialOwnerPathCoveredBySlotDescriptors(
   return materialSlots.some(slot => isMaterialSlotOwnerPathMatch(ownerNodePath, slot.ownerNodePath, resolveContext));
 }
 
+function isSceneBuilderMaterialSlotSameMesh(
+  left: SceneBuilderMaterialSlotSourceDescriptor,
+  right: SceneBuilderMaterialSlotSourceDescriptor,
+): boolean {
+  if (left.meshIndex != null || right.meshIndex != null) {
+    return left.meshIndex === right.meshIndex;
+  }
+  return true;
+}
+
+function collectSceneBuilderMaterialSlotSourceMaterialIndices(
+  materialSlot: SceneBuilderMaterialSlotSourceDescriptor,
+): number[] {
+  if (materialSlot.sourceMaterialIndices?.length) {
+    return [...new Set(materialSlot.sourceMaterialIndices.filter((value): value is number => Number.isInteger(value)))];
+  }
+  return Number.isInteger(materialSlot.sourceMaterialIndex) ? [materialSlot.sourceMaterialIndex as number] : [];
+}
+
 function readSceneNodeMaterialBindingAssetId(binding: SceneNodeMaterialBindingConfig | undefined): string | null {
   const materialAssetId = typeof binding?.materialAssetId === 'string' ? binding.materialAssetId.trim() : '';
   return materialAssetId || null;
 }
 
-function collectMaterialOwnerCandidateNames(rootNode: TransformNode): string[] {
+function collectMaterialOwnerCandidateNodes(rootNode: TransformNode): any[] {
   const candidates = typeof (rootNode as any).getChildMeshes === 'function'
     ? (rootNode as any).getChildMeshes(false)
     : [];
-  return candidates
+  return candidates.filter((node: any) => !!node?.material);
+}
+
+function collectMaterialOwnerCandidateNames(rootNode: TransformNode): string[] {
+  return collectMaterialOwnerCandidateNodes(rootNode)
     .map((node: any) => readRuntimeNodeDisplayName(node))
     .filter((name: string | null): name is string => !!name)
     .slice(0, 80);
+}
+
+function collectSceneBuilderMaterialSlotOwnerFallbackNames(
+  materialSlot: SceneBuilderMaterialSlotSourceDescriptor,
+  asset: SceneAssetConfig | undefined,
+): Set<string> {
+  const names = new Set<string>();
+  const baseNames = [
+    materialSlot.ownerNodePath,
+    readMaterialSlotOwnerPathLastSegment(materialSlot.ownerNodePath),
+    stripPrimitiveSuffix(materialSlot.label),
+    materialSlot.label,
+    readSceneBuilderAssetAnalysisMeshName(asset, materialSlot.meshIndex),
+  ];
+  for (const name of baseNames) {
+    addSceneBuilderMaterialSlotFallbackName(names, name);
+    if (materialSlot.primitiveIndex != null) {
+      addSceneBuilderMaterialSlotFallbackName(names, appendPrimitiveOwnerSuffix(name, materialSlot.primitiveIndex));
+    }
+  }
+  return names;
+}
+
+function addSceneBuilderMaterialSlotFallbackName(names: Set<string>, value: string | null | undefined): void {
+  const normalized = normalizeRuntimeMaterialOwnerName(value);
+  if (normalized) names.add(normalized);
+}
+
+function collectRuntimeNodeMatchNames(node: any): string[] {
+  const rawNames = [
+    typeof node?.name === 'string' ? node.name : null,
+    typeof node?.id === 'string' ? node.id : null,
+    readRuntimeNodeDisplayName(node),
+  ];
+  const names = new Set<string>();
+  for (const rawName of rawNames) {
+    addSceneBuilderMaterialSlotFallbackName(names, rawName);
+    for (const tailName of collectRuntimeMaterialOwnerTailNames(rawName)) {
+      addSceneBuilderMaterialSlotFallbackName(names, tailName);
+    }
+  }
+  return [...names];
 }
 
 function readRuntimeNodeDisplayName(node: any): string | null {
@@ -1746,6 +1973,76 @@ function readRuntimeNodeDisplayName(node: any): string | null {
   const id = typeof node?.id === 'string' ? node.id.trim() : '';
   if (name && id && name !== id) return `${name} (${id})`;
   return name || id || null;
+}
+
+function readMaterialSlotOwnerPathLastSegment(ownerNodePath: string): string | null {
+  const segments = ownerNodePath.split('/').map(segment => segment.trim()).filter(Boolean);
+  return segments.length > 0 ? segments[segments.length - 1] ?? null : null;
+}
+
+function stripPrimitiveSuffix(value: string | null | undefined): string | null {
+  if (typeof value !== 'string') return null;
+  const stripped = value.replace(/\s*\/\s*Primitive\s+\d+\s*$/i, '').trim();
+  return stripped || null;
+}
+
+function appendPrimitiveOwnerSuffix(value: string | null | undefined, primitiveIndex: number): string | null {
+  if (typeof value !== 'string') return null;
+  const baseName = stripPrimitiveSuffix(value) ?? value.trim();
+  return baseName ? `${baseName}_primitive${primitiveIndex}` : null;
+}
+
+function isSceneBuilderRuntimeSplitPrimitiveOwnerNode(
+  ownerNode: any,
+  materialSlot: SceneBuilderMaterialSlotSourceDescriptor,
+): boolean {
+  if (materialSlot.primitiveIndex == null) return false;
+  const primitiveNames = new Set<string>();
+  for (const baseName of [
+    materialSlot.ownerNodePath,
+    readMaterialSlotOwnerPathLastSegment(materialSlot.ownerNodePath),
+    stripPrimitiveSuffix(materialSlot.label),
+    materialSlot.label,
+  ]) {
+    addSceneBuilderMaterialSlotFallbackName(
+      primitiveNames,
+      appendPrimitiveOwnerSuffix(baseName, materialSlot.primitiveIndex),
+    );
+  }
+  return collectRuntimeNodeMatchNames(ownerNode).some(name => primitiveNames.has(name));
+}
+
+function collectRuntimeMaterialOwnerTailNames(value: string | null | undefined): string[] {
+  const raw = typeof value === 'string' ? value.trim() : '';
+  if (!raw) return [];
+  const names = new Set<string>();
+  const withoutClonePrefix = raw.replace(/^Clone of\s+/i, '').trim();
+  for (const candidate of [raw, withoutClonePrefix]) {
+    const colonTail = candidate.includes(':') ? candidate.split(':').pop() : '';
+    const dotTail = candidate.includes('.') ? candidate.split('.').pop() : '';
+    if (colonTail) names.add(colonTail);
+    if (dotTail) names.add(dotTail);
+  }
+  return [...names];
+}
+
+function readSceneBuilderAssetAnalysisMeshName(
+  asset: SceneAssetConfig | undefined,
+  meshIndex: number | undefined,
+): string | null {
+  if (!Number.isInteger(meshIndex)) return null;
+  const assetAnalysis = isRecord(asset?.metadata?.assetAnalysis) ? asset.metadata.assetAnalysis : null;
+  const meshes = Array.isArray(assetAnalysis?.meshes) ? assetAnalysis.meshes : [];
+  const mesh = meshes.find((entry): entry is Record<string, unknown> => (
+    isRecord(entry) && entry.meshIndex === meshIndex
+  ));
+  return typeof mesh?.name === 'string' ? mesh.name : null;
+}
+
+function normalizeRuntimeMaterialOwnerName(value: string | null | undefined): string | null {
+  const trimmed = typeof value === 'string' ? value.trim() : '';
+  if (!trimmed) return null;
+  return createMaterialSlotOwnerPathMatchKey(trimmed);
 }
 
 function shouldLogSceneBuilderMaterialDiagnostics(): boolean {

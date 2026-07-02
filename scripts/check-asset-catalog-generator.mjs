@@ -357,71 +357,102 @@ const slotMetadata = await projectAssetCatalogConfig.resolveAssetMetadata({
   },
   payloadMetadata: {},
 });
-assert.deepEqual(slotMetadata.materialSlots, [{
-  slotId: 'slot_existing_body',
-  ownerNodePath: 'Body',
-  label: 'Body',
-  nodeIndex: 1,
-  meshIndex: 0,
-  sourceMaterialIndex: 0,
-  sourceMaterialIndices: [0, 1],
-  materialName: 'Paint',
-  materialNames: ['Paint', 'Frame'],
-  sourceMaterialProfiles: [{
+assert.equal(slotMetadata.materialSlots.length, 2);
+assert.deepEqual(
+  slotMetadata.materialSlots.map(slot => ({
+    ownerNodePath: slot.ownerNodePath,
+    label: slot.label,
+    nodeIndex: slot.nodeIndex,
+    nodeIndexPath: slot.nodeIndexPath,
+    meshIndex: slot.meshIndex,
+    primitiveIndex: slot.primitiveIndex,
+    sourceMaterialIndex: slot.sourceMaterialIndex,
+    sourceMaterialIndices: slot.sourceMaterialIndices,
+    materialName: slot.materialName,
+    materialNames: slot.materialNames,
+  })),
+  [{
+    ownerNodePath: 'Body',
+    label: 'Body / Primitive 0',
+    nodeIndex: 1,
+    nodeIndexPath: [0, 1],
+    meshIndex: 0,
+    primitiveIndex: 0,
     sourceMaterialIndex: 0,
+    sourceMaterialIndices: [0],
     materialName: 'Paint',
-    profile: {
-      baseColor: {
-        color: { r: 0.25, g: 0.5, b: 0.75 },
-        texture: { url: '/src/assets/textures/body-base.png' },
-        brightness: 1,
-        saturation: 1,
-        contrast: 1,
-        hue: 0,
-      },
-      normal: {
-        texture: { url: '/src/assets/textures/body-normal.png' },
-        strength: 0.4,
-      },
-      metallic: 0.3,
-      roughness: 0.6,
-      metallicRoughness: {
-        texture: { url: '/src/assets/textures/body-metal-rough.png' },
-      },
-      occlusion: {
-        texture: { url: '/src/assets/textures/body-ao.png' },
-        strength: 0.7,
-      },
-      emission: {
-        color: { r: 0.1, g: 0.2, b: 0.3 },
-        texture: { url: '/src/assets/textures/body-emissive.png' },
-        intensity: 1,
-      },
-      alpha: {
-        mode: 'mask',
-        texture: { url: '/src/assets/textures/body-base.png' },
-        opacity: 0.8,
-        cutoff: 0.33,
-      },
-    },
+    materialNames: ['Paint'],
   }, {
+    ownerNodePath: 'Body',
+    label: 'Body / Primitive 1',
+    nodeIndex: 1,
+    nodeIndexPath: [0, 1],
+    meshIndex: 0,
+    primitiveIndex: 1,
     sourceMaterialIndex: 1,
+    sourceMaterialIndices: [1],
     materialName: 'Frame',
-    profile: {
-      baseColor: {
-        color: { r: 1, g: 0, b: 0 },
-        brightness: 1,
-        saturation: 1,
-        contrast: 1,
-        hue: 0,
-      },
-      metallic: 1,
-      roughness: 1,
-      emission: {
-        texture: { url: '/src/assets/textures/frame-emissive.png' },
-      },
-    },
+    materialNames: ['Frame'],
   }],
+);
+assert.notEqual(slotMetadata.materialSlots[0].slotId, 'slot_existing_body');
+assert.notEqual(slotMetadata.materialSlots[1].slotId, 'slot_existing_body');
+assert.notEqual(slotMetadata.materialSlots[0].slotId, slotMetadata.materialSlots[1].slotId);
+assert.deepEqual(slotMetadata.materialSlots[0].sourceMaterialProfiles, [{
+  sourceMaterialIndex: 0,
+  materialName: 'Paint',
+  profile: {
+    baseColor: {
+      color: { r: 0.25, g: 0.5, b: 0.75 },
+      texture: { url: '/src/assets/textures/body-base.png' },
+      brightness: 1,
+      saturation: 1,
+      contrast: 1,
+      hue: 0,
+    },
+    normal: {
+      texture: { url: '/src/assets/textures/body-normal.png' },
+      strength: 0.4,
+    },
+    metallic: 0.3,
+    roughness: 0.6,
+    metallicRoughness: {
+      texture: { url: '/src/assets/textures/body-metal-rough.png' },
+    },
+    occlusion: {
+      texture: { url: '/src/assets/textures/body-ao.png' },
+      strength: 0.7,
+    },
+    emission: {
+      color: { r: 0.1, g: 0.2, b: 0.3 },
+      texture: { url: '/src/assets/textures/body-emissive.png' },
+      intensity: 1,
+    },
+    alpha: {
+      mode: 'mask',
+      texture: { url: '/src/assets/textures/body-base.png' },
+      opacity: 0.8,
+      cutoff: 0.33,
+    },
+  },
+}]);
+assert.deepEqual(slotMetadata.materialSlots[1].sourceMaterialProfiles, [{
+  sourceMaterialIndex: 1,
+  materialName: 'Frame',
+  profile: {
+    baseColor: {
+      color: { r: 1, g: 0, b: 0 },
+      brightness: 1,
+      saturation: 1,
+      contrast: 1,
+      hue: 0,
+    },
+    metallic: 1,
+    roughness: 1,
+    emission: {
+      texture: { url: '/src/assets/textures/frame-emissive.png' },
+    },
+  },
 }]);
 
 const duplicateSlotMetadata = await projectAssetCatalogConfig.resolveAssetMetadata({
