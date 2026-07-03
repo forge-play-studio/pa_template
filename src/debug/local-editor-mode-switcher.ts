@@ -919,13 +919,26 @@ async function createGroundDecalUiProjectionResult(
   mesh.receiveShadows = false;
   mesh.alphaIndex = decal.rendering?.alphaIndex ?? 100;
   const mat = new StandardMaterial(`${context.node.id}.groundDecalUiProjectionMaterial`, context.scene);
-  const { texture } = createGroundDecalUiDynamicTexture(`${context.node.id}.groundDecalUiProjectionTexture`, context.scene as any, decal);
+  const { texture, ready } = createGroundDecalUiDynamicTexture(`${context.node.id}.groundDecalUiProjectionTexture`, context.scene as any, decal);
+  await ready;
   mat.diffuseTexture = texture;
   mat.useAlphaFromDiffuseTexture = true;
   mat.diffuseColor = new Color3(1, 1, 1);
+  mat.emissiveColor = new Color3(1, 1, 1);
   mat.specularColor = new Color3(0, 0, 0);
   mat.backFaceCulling = false;
   mat.disableLighting = true;
+  if (typeof decal.rendering?.diffuseTextureLevel === 'number' && Number.isFinite(decal.rendering.diffuseTextureLevel)) {
+    mat.diffuseTexture.level = decal.rendering.diffuseTextureLevel;
+  }
+  if (
+    typeof decal.rendering?.emissiveTextureLevel === 'number'
+    && Number.isFinite(decal.rendering.emissiveTextureLevel)
+    && decal.rendering.emissiveTextureLevel > 0
+  ) {
+    mat.emissiveTexture = texture;
+    mat.emissiveTexture.level = decal.rendering.emissiveTextureLevel;
+  }
   mesh.material = mat;
   return { meshes: [mesh], transformNodes: [], animationGroups: [] };
 }
