@@ -145,6 +145,11 @@ export interface ProjectEditorPlugin {
     oldValue?: unknown;
     newValue?: unknown;
   }): boolean;
+  isMaterialOwnerTraversalBoundary?(args: {
+    node: any;
+    rootNode: any;
+    context: ProjectEditorPluginContext;
+  }): boolean;
   duplicateSelection?(args: {
     binding: ProjectPersistentBinding;
     node: any;

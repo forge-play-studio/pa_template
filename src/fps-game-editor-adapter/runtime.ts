@@ -40,6 +40,14 @@ import type {
   ProjectPersistentBinding,
 } from './types';
 
+type SceneAdapterWithMaterialOwnerBoundary = SceneAdapter & {
+  isMaterialOwnerTraversalBoundary?(args: {
+    node: unknown;
+    rootNode: unknown;
+    context?: EditorAdapterContext;
+  }): boolean;
+};
+
 // Legacy Forge Play bridge entry for runtime-scene editing. The new local
 // EditorWorld path is driven by @fps-games/editor createLocalEditorHarness().
 export interface ProjectFpsGameEditorRuntimeOptions {
@@ -153,7 +161,7 @@ function createDocumentAdapter(options: ProjectFpsGameEditorRuntimeOptions): Edi
 }
 
 function createSceneAdapter(options: ProjectFpsGameEditorRuntimeOptions): SceneAdapter {
-  return {
+  const adapter: SceneAdapterWithMaterialOwnerBoundary = {
     normalizeSelection({ source, rawEntity, context }) {
       return (projectEditorPlugin.normalizeSelection?.({
         source,
@@ -170,7 +178,15 @@ function createSceneAdapter(options: ProjectFpsGameEditorRuntimeOptions): SceneA
         context: resolveProjectPluginContext(options, context),
       }) ?? null;
     },
+    isMaterialOwnerTraversalBoundary({ node, rootNode, context }) {
+      return projectEditorPlugin.isMaterialOwnerTraversalBoundary?.({
+        node,
+        rootNode,
+        context: resolveProjectPluginContext(options, context),
+      }) === true;
+    },
   };
+  return adapter;
 }
 
 export function createProjectFpsGameEditorRuntimeBridge(

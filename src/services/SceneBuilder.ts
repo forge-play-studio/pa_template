@@ -116,6 +116,7 @@ export class SceneBuilder {
 
   private root: TransformNode;
   readonly sceneNodeRuntimes = new Map<string, TransformNode>();
+  private sceneNodeMaterialScopeRoots = new Map<string, TransformNode>();
   private sceneNodeCleanup = new Map<string, (() => void) | null>();
   private sceneNodeAnimationGroups = new Map<string, AnimationGroup[]>();
   private sceneAssetConfigs = new Map<string, SceneAssetConfig>();
@@ -561,6 +562,7 @@ export class SceneBuilder {
     this.root.id = configService.getSceneRootId();
     this.root.setEnabled(true);
     this.sceneNodeRuntimes.set(configService.getSceneRootId(), this.root);
+    this.sceneNodeMaterialScopeRoots.set(configService.getSceneRootId(), this.root);
     this.sceneNodeCleanup.set(configService.getSceneRootId(), null);
 
     const nodes = configService.getSceneNodes();
@@ -571,6 +573,10 @@ export class SceneBuilder {
 
   getSceneNodeRuntime(id: string): TransformNode | undefined {
     return this.sceneNodeRuntimes.get(id);
+  }
+
+  getSceneNodeMaterialScopeRoot(id: string): TransformNode | undefined {
+    return this.sceneNodeMaterialScopeRoots.get(id) ?? this.sceneNodeRuntimes.get(id);
   }
 
   getSceneNodeAnimationGroups(id: string): AnimationGroup[] {
@@ -600,6 +606,7 @@ export class SceneBuilder {
 
     const cleanup = this.sceneNodeCleanup.get(id) ?? null;
     this.sceneNodeRuntimes.delete(id);
+    this.sceneNodeMaterialScopeRoots.delete(id);
     this.sceneNodeCleanup.delete(id);
     this.sceneNodeAnimationGroups.delete(id);
     node.parent = null;
@@ -674,6 +681,7 @@ export class SceneBuilder {
     runtimeNode.parent = parent;
     runtimeNode.setEnabled(nodeConfig.enabled !== false);
     this.sceneNodeRuntimes.set(nodeConfig.id, runtimeNode);
+    this.sceneNodeMaterialScopeRoots.set(nodeConfig.id, runtimeNode);
 
     if (nodeConfig.kind === 'transform') {
       this.attachTransformRuntime(nodeConfig, runtimeNode);
@@ -791,6 +799,7 @@ export class SceneBuilder {
     }
     if (!attached) {
       this.sceneNodeRuntimes.delete(nodeConfig.id);
+      this.sceneNodeMaterialScopeRoots.delete(nodeConfig.id);
       runtimeNode.dispose();
       return null;
     }
@@ -801,9 +810,10 @@ export class SceneBuilder {
     this.applyChildTransforms(attached.modelNode, nodeConfig.overrides?.childTransforms);
     this.applySharedMaterialOverrides(attached.asset, attached.modelNode);
     const restoreRendering = this.applySceneNodeRendering(nodeConfig, runtimeNode, attached.modelNode);
-    this.applyNodeMaterialEntries(nodeConfig, runtimeNode);
+    this.sceneNodeMaterialScopeRoots.set(nodeConfig.id, attached.modelNode);
+    this.applyNodeMaterialEntries(nodeConfig, attached.modelNode);
     this.applySharedOutlineOverrides(attached.asset, attached.modelNode);
-    this.applySceneNodeOverrides(nodeConfig, runtimeNode, attached.asset);
+    this.applySceneNodeOverrides(nodeConfig, runtimeNode, attached.asset, attached.modelNode);
     this.sceneNodeCleanup.set(nodeConfig.id, () => {
       restoreRendering?.();
       attached.cleanup();
@@ -823,6 +833,7 @@ export class SceneBuilder {
     }
     if (!attached) {
       this.sceneNodeRuntimes.delete(nodeConfig.id);
+      this.sceneNodeMaterialScopeRoots.delete(nodeConfig.id);
       runtimeNode.dispose();
       return null;
     }
@@ -833,9 +844,10 @@ export class SceneBuilder {
     this.applyChildTransforms(attached.modelNode, nodeConfig.overrides?.childTransforms);
     this.applySharedMaterialOverrides(attached.asset, attached.modelNode);
     const restoreRendering = this.applySceneNodeRendering(nodeConfig, runtimeNode, attached.modelNode);
-    this.applyNodeMaterialEntries(nodeConfig, runtimeNode);
+    this.sceneNodeMaterialScopeRoots.set(nodeConfig.id, attached.modelNode);
+    this.applyNodeMaterialEntries(nodeConfig, attached.modelNode);
     this.applySharedOutlineOverrides(attached.asset, attached.modelNode);
-    this.applySceneNodeOverrides(nodeConfig, runtimeNode, attached.asset);
+    this.applySceneNodeOverrides(nodeConfig, runtimeNode, attached.asset, attached.modelNode);
     this.sceneNodeCleanup.set(nodeConfig.id, () => {
       restoreRendering?.();
       attached.cleanup();
@@ -1404,6 +1416,7 @@ export class SceneBuilder {
     }
 
     this.sceneNodeRuntimes.clear();
+    this.sceneNodeMaterialScopeRoots.clear();
     this.sceneNodeCleanup.clear();
     this.sceneNodeAnimationGroups.clear();
     this.sceneAssetConfigs.clear();
@@ -1448,6 +1461,7 @@ export class SceneBuilder {
     nodeConfig: SceneInstanceNode | SceneTransformNode | ScenePrimitiveNode,
     rootNode: TransformNode,
     asset?: SceneAssetConfig,
+    materialScopeRoot: TransformNode = rootNode,
   ): void {
     const overrides = nodeConfig.overrides;
     if (!overrides) return;
@@ -1457,7 +1471,7 @@ export class SceneBuilder {
     }
 
     if (overrides.materialBinding) {
-      this.applyMaterialBinding(rootNode, '', overrides.materialBinding, nodeConfig.id, asset);
+      this.applyMaterialBinding(materialScopeRoot, '', overrides.materialBinding, nodeConfig.id, asset);
     }
 
     const materialSlotDescriptors: SceneBuilderMaterialSlotSourceDescriptor[] = [];
@@ -1465,7 +1479,7 @@ export class SceneBuilder {
       const materialSlot = this.resolveSceneAssetMaterialSlot(asset, slotId, materialBinding);
       if (!materialSlot) {
         if (this.shouldSkipStaleImportedMaterialSlotBinding(asset, slotId, materialBinding)) continue;
-        this.logMaterialSlotOwnerResolutionFailure(rootNode, {
+        this.logMaterialSlotOwnerResolutionFailure(materialScopeRoot, {
           sceneNodeId: nodeConfig.id,
           asset,
           slotId,
@@ -1476,22 +1490,22 @@ export class SceneBuilder {
         });
         continue;
       }
-      this.applyMaterialSlotBinding(rootNode, materialSlot, materialBinding, nodeConfig.id, asset);
+      this.applyMaterialSlotBinding(materialScopeRoot, materialSlot, materialBinding, nodeConfig.id, asset);
       materialSlotDescriptors.push(materialSlot);
     }
 
     for (const [ownerNodePath, materialBinding] of Object.entries(overrides.childMaterialBindings ?? {})) {
       if (isMaterialOwnerPathEqualToSlotDescriptor(ownerNodePath, materialSlotDescriptors, nodeConfig.id)) continue;
-      this.applyMaterialBinding(rootNode, ownerNodePath, materialBinding, nodeConfig.id, asset);
+      this.applyMaterialBinding(materialScopeRoot, ownerNodePath, materialBinding, nodeConfig.id, asset);
     }
 
     if (overrides.material) {
-      this.applyMaterialOverride(rootNode, '', overrides.material, nodeConfig.id, asset);
+      this.applyMaterialOverride(materialScopeRoot, '', overrides.material, nodeConfig.id, asset);
     }
 
     for (const [ownerNodePath, materialOverride] of Object.entries(overrides.childMaterials ?? {})) {
       if (isMaterialOwnerPathCoveredBySlotDescriptors(ownerNodePath, materialSlotDescriptors, nodeConfig.id)) continue;
-      this.applyMaterialOverride(rootNode, ownerNodePath, materialOverride, nodeConfig.id, asset);
+      this.applyMaterialOverride(materialScopeRoot, ownerNodePath, materialOverride, nodeConfig.id, asset);
     }
 
     if (overrides.outline) {

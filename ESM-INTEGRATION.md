@@ -41,7 +41,7 @@ npm run dev:pa-template
 - `package.json` uses version numbers:
   ```json
   {
-    "@fps-games/editor": "0.1.3-beta.4"
+    "@fps-games/editor": "0.1.7"
   }
   ```
 - `vite.config.ts` remains unchanged (uses public API)
@@ -128,7 +128,7 @@ npm run dev:pa-template
 ### For User Projects
 ```bash
 # Update package.json
-npm install @fps-games/editor@0.2.0
+npm install @fps-games/editor@0.1.7
 
 # Or use npm update
 npm update @fps-games/editor
