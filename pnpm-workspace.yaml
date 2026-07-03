@@ -1,0 +1,5 @@
+allowBuilds:
+  esbuild: true
+minimumReleaseAgeExclude:
+  - '@fps-games/editor@0.1.7'
+  - '@fps-games/vfx@0.3.9'
