@@ -44,6 +44,24 @@ function resolveSceneNodeRoot(nodeId: string, game: any): any | null {
   return getSceneNodeRuntimeMap(game)?.get(nodeId) ?? null;
 }
 
+function sameRuntimeNode(a: any, b: any): boolean {
+  if (!a || !b) return false;
+  if (a === b) return true;
+  const aUid = a.uniqueId;
+  const bUid = b.uniqueId;
+  return typeof aUid === 'number' && typeof bUid === 'number' && aUid === bUid;
+}
+
+function isSceneNodeMaterialOwnerTraversalBoundary(node: any, rootNode: any, game: any): boolean {
+  const sceneNodeRuntimes = getSceneNodeRuntimeMap(game);
+  if (!node || !rootNode || !sceneNodeRuntimes) return false;
+  for (const registeredNode of sceneNodeRuntimes.values()) {
+    if (!registeredNode || sameRuntimeNode(registeredNode, rootNode)) continue;
+    if (sameRuntimeNode(node, registeredNode)) return true;
+  }
+  return false;
+}
+
 function findSceneNodeBinding(node: any, game: any): Extract<ProjectPersistentBinding, { kind: 'sceneNode' }> | null {
   const sceneNodeRuntimes = getSceneNodeRuntimeMap(game);
   if (!sceneNodeRuntimes) return null;
@@ -110,6 +128,9 @@ export const projectEditorPlugin: ProjectEditorPlugin = {
   applyDocumentChange({ binding, node, prop, oldValue, newValue }) {
     if (!binding || !node) return false;
     return applyProjectDocumentChange(binding, node, prop, oldValue, newValue);
+  },
+  isMaterialOwnerTraversalBoundary({ node, rootNode, context }) {
+    return isSceneNodeMaterialOwnerTraversalBoundary(node, rootNode, context.game);
   },
   duplicateSelection({ binding, node, context }) {
     if (!binding || !node || !canDuplicateSceneNodeBinding(binding)) return null;

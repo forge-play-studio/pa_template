@@ -52,7 +52,7 @@ Use a versioned public dependency:
 ```json
 {
   "dependencies": {
-    "@fps-games/editor": "^0.1.3-beta.4"
+    "@fps-games/editor": "0.1.7"
   }
 }
 ```

@@ -8,7 +8,6 @@ import type {
   CanonicalOutlineChange,
 } from '@fps-games/editor/playable-sdk';
 import {
-  applyMaterialValueToRuntimeMaterial,
   applyMaterialValueToRuntimeNode,
   applyOutlineValueToRuntimeNode,
   resolveMaterialOwnerNode,
@@ -67,6 +66,15 @@ import {
 // EditorSession and project SceneDocument adapters instead.
 export const PROJECT_EDITOR_SCENE_NODE_ERROR_CODES = sceneJsonV2Rules.errorCodes;
 export type ProjectEditorSceneNodeErrorCode = typeof PROJECT_EDITOR_SCENE_NODE_ERROR_CODES[keyof typeof PROJECT_EDITOR_SCENE_NODE_ERROR_CODES];
+
+type ProjectMaterialOwnerTraversalBoundary = (node: any, rootNode: any) => boolean;
+type ResolveMaterialOwnerNodeWithTraversal = (
+  rootNode: any,
+  ownerNodePath: string,
+  options?: { isTraversalBoundary?: ProjectMaterialOwnerTraversalBoundary },
+) => any | null;
+
+const resolveMaterialOwnerNodeWithTraversal = resolveMaterialOwnerNode as ResolveMaterialOwnerNodeWithTraversal;
 
 export class ProjectEditorSceneNodeError extends Error {
   constructor(
@@ -931,6 +939,175 @@ function normalizeSharedOwnerNodePath(ownerNodePath: string): string {
     })
     .filter(Boolean)
     .join('/');
+}
+
+function getProjectSceneBuilder(game: any): any | null {
+  return game?.getSceneBuilder?.() ?? game?.sceneBuilder ?? null;
+}
+
+function getProjectSceneNodeRuntimeMap(game: any): Map<string, any> | null {
+  const sceneBuilder = getProjectSceneBuilder(game);
+  const sceneNodeRuntimes = sceneBuilder?.sceneNodeRuntimes;
+  if (sceneNodeRuntimes && typeof sceneNodeRuntimes.entries === 'function') {
+    return sceneNodeRuntimes as Map<string, any>;
+  }
+  return null;
+}
+
+function resolveProjectSceneNodeRuntimeRoot(
+  context: ProjectEditorPluginContext | undefined,
+  nodeId: string,
+): any | null {
+  const game = context?.game;
+  if (game && typeof game.getSceneNodeRuntime === 'function') {
+    const runtimeNode = game.getSceneNodeRuntime(nodeId);
+    if (runtimeNode) return runtimeNode;
+  }
+  const sceneBuilder = getProjectSceneBuilder(game);
+  if (sceneBuilder && typeof sceneBuilder.getSceneNodeRuntime === 'function') {
+    const runtimeNode = sceneBuilder.getSceneNodeRuntime(nodeId);
+    if (runtimeNode) return runtimeNode;
+  }
+  return getProjectSceneNodeRuntimeMap(game)?.get(nodeId) ?? null;
+}
+
+function resolveProjectSceneNodeMaterialScopeRoot(
+  context: ProjectEditorPluginContext | undefined,
+  nodeId: string,
+): any | null {
+  const game = context?.game;
+  if (game && typeof game.getSceneNodeMaterialScopeRoot === 'function') {
+    const scopeRoot = game.getSceneNodeMaterialScopeRoot(nodeId);
+    if (scopeRoot) return scopeRoot;
+  }
+  const sceneBuilder = getProjectSceneBuilder(game);
+  if (sceneBuilder && typeof sceneBuilder.getSceneNodeMaterialScopeRoot === 'function') {
+    const scopeRoot = sceneBuilder.getSceneNodeMaterialScopeRoot(nodeId);
+    if (scopeRoot) return scopeRoot;
+  }
+  return resolveProjectSceneNodeRuntimeRoot(context, nodeId);
+}
+
+function createProjectSceneNodeTraversalBoundary(
+  context: ProjectEditorPluginContext | undefined,
+  rootNodeId: string,
+): ((node: any, rootNode: any) => boolean) | undefined {
+  const workingCopy = documentState.workingCopy;
+  if (!workingCopy) return undefined;
+  const boundaryRoots = ensureSceneNodes(workingCopy)
+    .filter(node => node.id !== rootNodeId)
+    .map(node => resolveProjectSceneNodeRuntimeRoot(context, node.id))
+    .filter(Boolean);
+  if (boundaryRoots.length === 0) return undefined;
+  return (node: any) => boundaryRoots.some(boundaryRoot => sameRuntimeNode(node, boundaryRoot));
+}
+
+function collectScopedMaterialOwnerNodes(
+  rootNode: any,
+  isTraversalBoundary?: ProjectMaterialOwnerTraversalBoundary,
+): any[] {
+  if (!rootNode) return [];
+  const nodes: any[] = [];
+  const visit = (node: any, isRoot = false): void => {
+    if (!node) return;
+    if (!isRoot && isTraversalBoundary?.(node, rootNode)) return;
+    if (node?.material) nodes.push(node);
+    for (const child of node?.getChildren?.() ?? []) {
+      visit(child, false);
+    }
+  };
+  visit(rootNode, true);
+  return nodes;
+}
+
+function resolveRootMeshAliasOwner(rootNode: any, ownerNodePath: string): any | null {
+  const normalizedTarget = ownerNodePath.trim();
+  if (!normalizedTarget) return null;
+  const rootName = String(rootNode?.name ?? '').trim();
+  const rootId = String(rootNode?.id ?? '').trim();
+  if (normalizedTarget === `${rootName}_mesh` || normalizedTarget === `${rootId}_mesh`) {
+    return rootNode;
+  }
+  return null;
+}
+
+function resolveScopedMaterialOwnerNodes(
+  rootNode: any,
+  ownerNodePath: string,
+  isTraversalBoundary?: ProjectMaterialOwnerTraversalBoundary,
+): any[] {
+  if (!rootNode) return [];
+  const normalizedOwnerNodePath = normalizeSharedOwnerNodePath(ownerNodePath);
+  const resolved = resolveMaterialOwnerNodeWithTraversal(rootNode, normalizedOwnerNodePath || ownerNodePath, {
+    isTraversalBoundary,
+  }) ?? resolveRootMeshAliasOwner(rootNode, normalizedOwnerNodePath || ownerNodePath);
+  if (!resolved) return [];
+  if (resolved.material) return [resolved];
+  return collectScopedMaterialOwnerNodes(resolved, isTraversalBoundary);
+}
+
+function resolveExactScopedMaterialOwnerNodes(
+  rootNode: any,
+  ownerNodePath: string,
+  isTraversalBoundary?: ProjectMaterialOwnerTraversalBoundary,
+): any[] {
+  if (!rootNode) return [];
+  const normalizedOwnerNodePath = normalizeSharedOwnerNodePath(ownerNodePath);
+  const resolved = resolveMaterialOwnerNodeWithTraversal(rootNode, normalizedOwnerNodePath || ownerNodePath, {
+    isTraversalBoundary,
+  }) ?? resolveRootMeshAliasOwner(rootNode, normalizedOwnerNodePath || ownerNodePath);
+  return resolved?.material ? [resolved] : [];
+}
+
+function resolveNamedScopedMaterialOwnerNodes(
+  rootNode: any,
+  ownerNodePath: string,
+  materialName: string,
+  isTraversalBoundary?: ProjectMaterialOwnerTraversalBoundary,
+  options: { fallbackToFirstMaterialOwner?: boolean } = {},
+): any[] {
+  if (!rootNode) return [];
+  if (ownerNodePath) return resolveExactScopedMaterialOwnerNodes(rootNode, ownerNodePath, isTraversalBoundary);
+
+  const candidates = collectScopedMaterialOwnerNodes(rootNode, isTraversalBoundary);
+  const namedMatches = materialName
+    ? candidates.filter(node => node?.material?.name === materialName)
+    : [];
+  if (namedMatches.length > 0) return namedMatches;
+  if (options.fallbackToFirstMaterialOwner) {
+    return candidates.length > 0 ? [candidates[0]] : [];
+  }
+  return [];
+}
+
+function resolveOverrideScopedMaterialOwnerNodes(
+  rootNode: any,
+  target: MaterialTarget,
+  ownerNodePath: string,
+  isTraversalBoundary?: ProjectMaterialOwnerTraversalBoundary,
+): any[] {
+  if (!rootNode) return [];
+  if (target === 'childMaterial' || ownerNodePath) {
+    return resolveScopedMaterialOwnerNodes(rootNode, ownerNodePath, isTraversalBoundary);
+  }
+  return rootNode.material
+    ? [rootNode]
+    : collectScopedMaterialOwnerNodes(rootNode, isTraversalBoundary);
+}
+
+function applyMaterialRuntimeValueToOwners(
+  ownerNodes: any[],
+  scene: any | null | undefined,
+  prop: ProjectMaterialProp,
+  runtimeValue: ProjectMaterialValue,
+): any | null {
+  let firstOwner: any | null = null;
+  for (const ownerNode of ownerNodes) {
+    if (!ownerNode?.material) continue;
+    const changed = applyMaterialValueToRuntimeNode(ownerNode, scene ?? null, prop as any, runtimeValue);
+    if (changed && !firstOwner) firstOwner = ownerNode;
+  }
+  return firstOwner;
 }
 
 function buildSharedMaterialId(assetId: string, materialName: string): string {
@@ -2440,11 +2617,19 @@ function applyMaterialHistoryEntry(
     if (!entry.assetId) return null;
     setSharedMaterialSnapshot(workingCopy, entry.assetId, entry.materialName, entry.materialType, snapshot);
 
-    const runtimeMaterial = typeof context?.scene?.getMaterialByName === 'function'
-      ? context.scene.getMaterialByName(entry.materialName)
-      : null;
-    if (runtimeMaterial) {
-      applyMaterialValueToRuntimeMaterial(runtimeMaterial, context?.scene ?? null, entry.prop as any, runtimeValue);
+    if (context?.game) {
+      for (const node of ensureSceneNodes(workingCopy)) {
+        if (node.kind !== 'instance' || node.instance.assetId !== entry.assetId) continue;
+        const scopeRoot = resolveProjectSceneNodeMaterialScopeRoot(context, node.id);
+        const boundary = createProjectSceneNodeTraversalBoundary(context, node.id);
+        const ownerNodes = resolveNamedScopedMaterialOwnerNodes(
+          scopeRoot,
+          entry.ownerNodePath,
+          entry.materialName,
+          boundary,
+        );
+        applyMaterialRuntimeValueToOwners(ownerNodes, context.scene, entry.prop, runtimeValue);
+      }
     }
 
     return {
@@ -2462,15 +2647,17 @@ function applyMaterialHistoryEntry(
     const nodeId = entry.nodeId ?? entry.binding.nodeId;
     setNodeMaterialSnapshot(workingCopy, nodeId, entry.materialName, entry.ownerNodePath, entry.materialType, snapshot);
 
-    const rootNode =
-      context?.game && typeof context.game.getSceneNodeRuntime === 'function'
-        ? context.game.getSceneNodeRuntime(entry.binding.nodeId)
-        : null;
-    const ownerNode = resolveMaterialOwnerNode(rootNode, entry.ownerNodePath)
-      ?? (!entry.ownerNodePath ? rootNode?.getChildMeshes?.(false)?.find((mesh: any) => !!mesh?.material) ?? null : null);
-    if (ownerNode) {
-      applyMaterialValueToRuntimeNode(ownerNode, context?.scene ?? null, entry.prop as any, runtimeValue);
-    }
+    const selectedRootNode = resolveProjectSceneNodeRuntimeRoot(context, nodeId);
+    const scopeRoot = resolveProjectSceneNodeMaterialScopeRoot(context, nodeId);
+    const boundary = createProjectSceneNodeTraversalBoundary(context, nodeId);
+    const ownerNode = applyMaterialRuntimeValueToOwners(
+      resolveNamedScopedMaterialOwnerNodes(scopeRoot, entry.ownerNodePath, entry.materialName, boundary, {
+        fallbackToFirstMaterialOwner: true,
+      }),
+      context?.scene,
+      entry.prop,
+      runtimeValue,
+    );
 
     return {
       kind: 'material',
@@ -2479,7 +2666,7 @@ function applyMaterialHistoryEntry(
       value: runtimeValue,
       ownerNodePath: entry.ownerNodePath,
       rootNode: ownerNode ?? undefined,
-      selectedRootNode: rootNode ?? null,
+      selectedRootNode: selectedRootNode ?? null,
     };
   }
 
@@ -2493,15 +2680,15 @@ function applyMaterialHistoryEntry(
 
   setMaterialSnapshot(sceneNode, entry.target, entry.ownerNodePath, snapshot);
 
-  const rootNode =
-    context?.game && typeof context.game.getSceneNodeRuntime === 'function'
-      ? context.game.getSceneNodeRuntime(entry.binding.nodeId)
-      : null;
-  const ownerNode = resolveMaterialOwnerNode(rootNode, entry.ownerNodePath)
-    ?? (!entry.ownerNodePath ? rootNode?.getChildMeshes?.(false)?.find((mesh: any) => !!mesh?.material) ?? null : null);
-  if (ownerNode) {
-    applyMaterialValueToRuntimeNode(ownerNode, context?.scene ?? null, entry.prop as any, runtimeValue);
-  }
+  const selectedRootNode = resolveProjectSceneNodeRuntimeRoot(context, entry.binding.nodeId);
+  const scopeRoot = resolveProjectSceneNodeMaterialScopeRoot(context, entry.binding.nodeId);
+  const boundary = createProjectSceneNodeTraversalBoundary(context, entry.binding.nodeId);
+  const ownerNode = applyMaterialRuntimeValueToOwners(
+    resolveOverrideScopedMaterialOwnerNodes(scopeRoot, entry.target, entry.ownerNodePath, boundary),
+    context?.scene,
+    entry.prop,
+    runtimeValue,
+  );
 
   return {
     kind: 'material',
@@ -2510,7 +2697,7 @@ function applyMaterialHistoryEntry(
     value: runtimeValue,
     ownerNodePath: entry.ownerNodePath,
     rootNode: ownerNode ?? undefined,
-    selectedRootNode: rootNode ?? null,
+    selectedRootNode: selectedRootNode ?? null,
   };
 }
 

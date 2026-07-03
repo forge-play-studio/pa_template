@@ -8,10 +8,10 @@
     "generatedFrom": {
       "sourceId": "scene.main",
       "sourceType": "scene",
-      "revision": 66,
+      "revision": 67,
       "compilerId": "@fps-games/editor.playable-sdk.scene-compiler",
       "compilerVersion": "1",
-      "compiledAt": "2026-07-02T10:39:50.884Z"
+      "compiledAt": "2026-07-03T01:24:22.454Z"
     }
   },
   "gameplay": {
@@ -1153,8 +1153,8 @@
           "originalFileName": "工人.glb",
           "relativePath": "../imported/asset_ade25007e0964563b197b21c2759c027.glb",
           "codeKey": "shadow_fixture_worker",
-          "contentHash": "sha256:fee128df48f93449e778e6688aa195277f84864564cb063fe8803b9f4d022a82",
-          "byteSize": 131700,
+          "contentHash": "sha256:5d44ff57ba16dc78c6e7639d29bfe03e468845b35b98a9a480ea3eb60cdeec31",
+          "byteSize": 149020,
           "category": "shadow-fixture/character",
           "shadowFixture": true,
           "sourceProject": "lumber-truck",
@@ -3481,8 +3481,8 @@
           "originalFileName": "松树.glb",
           "relativePath": "../imported/asset_edc2f992438c4450afc1c6354ec21500.glb",
           "codeKey": "shadow_fixture_pine_tree",
-          "contentHash": "sha256:30f4359bf67f78a1279b154228326c6c8dfe0b6da5478734f24ac466a4e44706",
-          "byteSize": 26812,
+          "contentHash": "sha256:20a7c3c942182d3d86d95aabb68327a250357c61ab62ea07d6659855426dde7d",
+          "byteSize": 30440,
           "category": "shadow-fixture/vegetation",
           "shadowFixture": true,
           "sourceProject": "lumber-order-260525",
@@ -4811,8 +4811,8 @@
           "originalFileName": "鸡.glb",
           "relativePath": "../imported/asset_97121f40170c40d1aaf63b8c2cf0bf24.glb",
           "codeKey": "shadow_fixture_chicken",
-          "contentHash": "sha256:db72ad930562c7efaafaf3b2d9183003eaf0280be3c8b2cfa12cc589a024398d",
-          "byteSize": 54424,
+          "contentHash": "sha256:7dbafd9a2546d6b66be7f3db2b74746abcb3f251e16d186613b5d851ffae76b6",
+          "byteSize": 77612,
           "category": "shadow-fixture/animal",
           "shadowFixture": true,
           "sourceProject": "lumber-order-260525",
@@ -5564,8 +5564,8 @@
           "originalFileName": "SM_diban.glb",
           "relativePath": "../imported/asset_07e860eb2bf04e6f9a81e0832cddc014.glb",
           "codeKey": "shadow_receiver_test_floor_tile",
-          "contentHash": "sha256:df91002113be5565813d8a3d9b1da0024b3477de5353ea62d7a4130e96feb282",
-          "byteSize": 10304,
+          "contentHash": "sha256:7c4d80ba441abe4dc907a2440cae4be4408b446a522cb21290a6a143b926f034",
+          "byteSize": 9120,
           "category": "shadow-receiver-test/ground",
           "shadowReceiverFixture": true,
           "sourceProject": "lumber-truck",
@@ -7121,7 +7121,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 66,
+          "revision": 67,
           "objectGuid": "go_2406b122-d63b-4971-bf66-7d78a8776543",
           "objectId": "main_camera",
           "component": "Transform"
@@ -7177,7 +7177,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 66,
+          "revision": 67,
           "objectGuid": "go_environment_light_default",
           "objectId": "environment_light",
           "component": "Transform"
@@ -7223,7 +7223,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 66,
+          "revision": 67,
           "objectGuid": "go_7017d029-9d69-4381-91ac-75093053caa9",
           "objectId": "sun_light",
           "component": "Transform"
@@ -7293,7 +7293,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 66,
+          "revision": 67,
           "objectGuid": "go_20efbb4a-c323-4ea3-911c-23c72827d7b9",
           "objectId": "plane",
           "component": "PrimitiveRenderer"
@@ -7359,7 +7359,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 66,
+          "revision": 67,
           "objectGuid": "go_ac4a2824-3625-468c-aeee-d7c75dedc814",
           "objectId": "cube",
           "component": "PrimitiveRenderer"
@@ -7424,7 +7424,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 66,
+          "revision": 67,
           "objectGuid": "go_cc80f1b1-57b9-4373-baba-eed140d90c8f",
           "objectId": "sphere",
           "component": "PrimitiveRenderer"
@@ -7489,7 +7489,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 66,
+          "revision": 67,
           "objectGuid": "go_68778bee-9b2d-44bb-9a37-cfa42efa2846",
           "objectId": "capsule",
           "component": "PrimitiveRenderer"
@@ -7523,7 +7523,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 66,
+          "revision": 67,
           "objectGuid": "go_shadow_fixture_group",
           "objectId": "shadow_fixture_group",
           "component": "GameObject"
@@ -7582,7 +7582,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 66,
+          "revision": 67,
           "objectGuid": "go_shadow_fixture_player",
           "objectId": "shadow_fixture_player",
           "component": "ModelRenderer"
@@ -7660,7 +7660,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 66,
+          "revision": 67,
           "objectGuid": "go_shadow_fixture_worker",
           "objectId": "shadow_fixture_worker",
           "component": "ModelRenderer"
@@ -7732,7 +7732,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 66,
+          "revision": 67,
           "objectGuid": "go_shadow_fixture_truck",
           "objectId": "shadow_fixture_truck",
           "component": "ModelRenderer"
@@ -7813,7 +7813,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 66,
+          "revision": 67,
           "objectGuid": "go_shadow_fixture_pine_tree",
           "objectId": "shadow_fixture_pine_tree",
           "component": "ModelRenderer"
@@ -7885,7 +7885,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 66,
+          "revision": 67,
           "objectGuid": "go_shadow_fixture_bush",
           "objectId": "shadow_fixture_bush",
           "component": "ModelRenderer"
@@ -7957,7 +7957,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 66,
+          "revision": 67,
           "objectGuid": "go_shadow_fixture_rocks",
           "objectId": "shadow_fixture_rocks",
           "component": "ModelRenderer"
@@ -8029,7 +8029,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 66,
+          "revision": 67,
           "objectGuid": "go_shadow_fixture_fence",
           "objectId": "shadow_fixture_fence",
           "component": "ModelRenderer"
@@ -8101,7 +8101,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 66,
+          "revision": 67,
           "objectGuid": "go_shadow_fixture_log_bundle",
           "objectId": "shadow_fixture_log_bundle",
           "component": "ModelRenderer"
@@ -8176,7 +8176,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 66,
+          "revision": 67,
           "objectGuid": "go_shadow_fixture_crate",
           "objectId": "shadow_fixture_crate",
           "component": "ModelRenderer"
@@ -8248,7 +8248,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 66,
+          "revision": 67,
           "objectGuid": "go_shadow_fixture_barrel",
           "objectId": "shadow_fixture_barrel",
           "component": "ModelRenderer"
@@ -8320,7 +8320,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 66,
+          "revision": 67,
           "objectGuid": "go_shadow_fixture_chicken",
           "objectId": "shadow_fixture_chicken",
           "component": "ModelRenderer"
@@ -8392,7 +8392,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 66,
+          "revision": 67,
           "objectGuid": "go_shadow_fixture_hay_bale",
           "objectId": "shadow_fixture_hay_bale",
           "component": "ModelRenderer"
@@ -8464,7 +8464,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 66,
+          "revision": 67,
           "objectGuid": "go_shadow_fixture_counter",
           "objectId": "shadow_fixture_counter",
           "component": "ModelRenderer"
@@ -8505,7 +8505,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 66,
+          "revision": 67,
           "objectGuid": "go_8c25b316-6074-41ae-a1f2-49f3709453ec",
           "objectId": "asset",
           "component": "ModelRenderer"
@@ -8570,7 +8570,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 66,
+          "revision": 67,
           "objectGuid": "go_1ecaee91-9738-4914-8fc2-5f2b69cc018a",
           "objectId": "asset_2",
           "component": "ModelRenderer"
@@ -8635,7 +8635,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 66,
+          "revision": 67,
           "objectGuid": "go_cd724b70-f492-4014-ac1d-e51ef61cfc0d",
           "objectId": "asset_3",
           "component": "ModelRenderer"
@@ -8676,16 +8676,16 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 66,
+          "revision": 67,
           "objectGuid": "go_cc0008ef-62dc-4a23-ba98-bced26f56a80",
           "objectId": "issue_444__04",
           "component": "ModelRenderer"
         },
         "transform": {
           "position": {
-            "x": -2.8,
-            "y": 0,
-            "z": 4.2
+            "x": -2.799999952316284,
+            "y": 3.138036012649536,
+            "z": 4.199999809265137
           },
           "rotation": {
             "x": 0,
@@ -8723,16 +8723,16 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 66,
+          "revision": 67,
           "objectGuid": "go_22987ad9-9e4b-46ce-9978-1e72c24fbc53",
           "objectId": "issue_444",
           "component": "ModelRenderer"
         },
         "transform": {
           "position": {
-            "x": 2.8,
-            "y": 0,
-            "z": 4.2
+            "x": 0.5069435834884644,
+            "y": -5.329070518200751e-15,
+            "z": 6.379875183105469
           },
           "rotation": {
             "x": 0,
@@ -9623,9 +9623,9 @@
           "lightingModel": "lit",
           "baseColor": {
             "color": {
-              "r": 0.260417014,
-              "g": 0.260417014,
-              "b": 0.260417014
+              "r": 0.9058823529411765,
+              "g": 0.050980392156862744,
+              "b": 0.050980392156862744
             },
             "brightness": 1,
             "saturation": 1,
@@ -9661,9 +9661,9 @@
           "lightingModel": "lit",
           "baseColor": {
             "color": {
-              "r": 0.899999976,
-              "g": 0.899999976,
-              "b": 0.899999976
+              "r": 0.796078431372549,
+              "g": 0.22745098039215686,
+              "b": 0.22745098039215686
             },
             "brightness": 1,
             "saturation": 1,
@@ -9821,9 +9821,9 @@
           "lightingModel": "lit",
           "baseColor": {
             "color": {
-              "r": 0,
-              "g": 0,
-              "b": 0
+              "r": 0.9294117647058824,
+              "g": 0.8705882352941177,
+              "b": 0.8705882352941177
             },
             "brightness": 1,
             "saturation": 1,
@@ -9847,6 +9847,6 @@
     "textures": []
   },
   "render": {},
-  "version": 63,
-  "updatedAt": "2026-07-02T10:39:50.886Z"
+  "version": 64,
+  "updatedAt": "2026-07-03T01:24:22.460Z"
 }

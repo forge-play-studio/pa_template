@@ -6,6 +6,7 @@ import type {
   CompiledArtifactProvenance,
 } from '@fps-games/editor/playable-sdk';
 import {
+  createSceneMainSourceDriver as createPlayableSceneMainSourceDriver,
   loadEditorAssetLibrary as loadPlayableEditorAssetLibrary,
   loadSceneMainSource as loadPlayableSceneMainSource,
   saveSceneMainSource as savePlayableSceneMainSource,
@@ -62,71 +63,266 @@ export interface SceneMainSourceSaveResult extends AuthoringSourceSaveResult<Edi
   sceneJsonText?: string;
 }
 
+type SceneMainSourceSaveContext = {
+  renderingConfig: Record<string, unknown> | null;
+  staticShadowArtifactDirty: boolean;
+  staticShadowArtifact: unknown;
+};
+
+type SceneMainSourceDiagnostic = {
+  severity: 'warning';
+  message: string;
+  source: AuthoringSourceDescriptor['ref'];
+  code: string;
+};
+
+type SceneMainSourceClientRuntimeOptions = {
+  endpointBase?: string;
+  fetchJson: SceneSourceFetchJson;
+};
+
+type SceneMainSourcePreparedSave = {
+  saveOptions?: PlayableSceneMainSourceSaveOptions;
+  context?: unknown;
+};
+
+type SceneMainSourceDriverLifecycleOptions<TDocument extends EditorSceneDocument> = SceneMainSourceDriverOptions & {
+  compile?: (input: {
+    source: AuthoringSourceDescriptor;
+    document: TDocument;
+  }) => CompiledArtifact[] | Promise<CompiledArtifact[]>;
+  afterLoad?: (input: { loaded: PlayableSceneMainSourceDriverLoadResult<TDocument> }) => void | Promise<void>;
+  prepareSave?: (input: {
+    source: AuthoringSourceDescriptor;
+    document: TDocument;
+  }) => SceneMainSourcePreparedSave | PlayableSceneMainSourceSaveOptions | null | undefined
+    | Promise<SceneMainSourcePreparedSave | PlayableSceneMainSourceSaveOptions | null | undefined>;
+  afterSave?: (input: {
+    source: AuthoringSourceDescriptor;
+    document: TDocument;
+    saved: SceneMainSourceSaveResult;
+    context?: unknown;
+  }) => void | Promise<void>;
+  onSaveError?: (input: {
+    source: AuthoringSourceDescriptor;
+    document: TDocument;
+    error: unknown;
+    context?: unknown;
+  }) => void | Promise<void>;
+  onRuntimeSceneArtifact?: (input: {
+    source: AuthoringSourceDescriptor;
+    document: TDocument;
+    artifact: CompiledArtifact;
+    phase: 'save' | 'compile';
+  }) => void | Promise<void>;
+};
+
+type SceneMainSourceDriverLifecycleFactory = {
+  <TDocument extends EditorSceneDocument>(
+    options: SceneMainSourceDriverLifecycleOptions<TDocument>,
+  ): AuthoringSourceDriver<TDocument>;
+  sceneMainSourceDriverLifecycleHooks?: true;
+};
+
 export function createSceneMainSourceDriver(
   options: SceneMainSourceDriverOptions = {},
 ): AuthoringSourceDriver<EditorSceneDocument> {
   const request = options.fetchJson ?? fetchJson;
+  const clientOptions = {
+    endpointBase: options.endpointBase,
+    fetchJson: request,
+  };
+  const lifecycleOptions = createProjectSceneMainSourceDriverLifecycleOptions(clientOptions);
+  const lifecycleFactory = createPlayableSceneMainSourceDriver as unknown as SceneMainSourceDriverLifecycleFactory;
+  if (lifecycleFactory.sceneMainSourceDriverLifecycleHooks === true) {
+    return lifecycleFactory<EditorSceneDocument>(lifecycleOptions);
+  }
+  return createPublishedSceneMainSourceDriverCompatibility(clientOptions);
+}
+
+function createProjectSceneMainSourceDriverLifecycleOptions(
+  clientOptions: SceneMainSourceClientRuntimeOptions,
+): SceneMainSourceDriverLifecycleOptions<EditorSceneDocument> {
+  return {
+    endpointBase: clientOptions.endpointBase,
+    fetchJson: clientOptions.fetchJson,
+    afterLoad: handleProjectSceneMainSourceLoaded,
+    prepareSave: prepareProjectSceneMainSourceSave,
+    onSaveError: handleProjectSceneMainSourceSaveError,
+    afterSave: handleProjectSceneMainSourceSaved,
+    compile({ source, document }) {
+      return [compileSceneMainRuntimeArtifact(source, document)];
+    },
+    onRuntimeSceneArtifact: handleProjectRuntimeSceneArtifact,
+  };
+}
+
+function createPublishedSceneMainSourceDriverCompatibility(
+  clientOptions: SceneMainSourceClientRuntimeOptions,
+): AuthoringSourceDriver<EditorSceneDocument> {
   let lastCompiledArtifact: CompiledArtifact | null = null;
   return {
     sourceType: 'scene',
     async load() {
-      const loaded = await loadSceneMainSource(request);
-      markActiveStaticShadowArtifactSaved(loaded.companionConfigs?.staticShadows ?? null);
+      const loaded = await loadPlayableSceneMainSource<EditorSceneDocument>(clientOptions);
+      await handleProjectSceneMainSourceLoaded({ loaded });
       return {
         source: loaded.source,
         document: loaded.document,
         summary: loaded.summary,
         diagnostics: loaded.drift?.detected
-          ? [{
-              severity: 'warning',
-              message: `runtime input drift detected (${loaded.drift.reason ?? 'unknown'})`,
-              source: loaded.source.ref,
-              code: 'runtime_input_drift',
-            }]
+          ? [createRuntimeInputDriftDiagnostic(loaded.source, loaded.drift)]
           : [],
       };
     },
     validate({ source, document }) {
       return validateSceneMainDocument(document, source);
     },
-    async save({ document }) {
-      const renderingConfig = isRenderingProfileDirty() ? getActiveRenderingConfig() : null;
-      const staticShadowArtifactDirty = isStaticShadowArtifactDirty();
-      const staticShadowArtifact = staticShadowArtifactDirty ? getActiveStaticShadowArtifact() : null;
-      let saved: SceneMainSourceSaveResult;
+    async save({ source, document }) {
+      const prepared = prepareProjectSceneMainSourceSave({ source, document });
+      const saveOptions = createProjectSceneMainSourceSaveOptions(clientOptions, prepared.saveOptions);
+      let saved;
       try {
-        saved = await saveSceneMainSource(request, document, {
-          ...(renderingConfig || staticShadowArtifactDirty
-            ? {
-                companionConfigs: {
-                  ...(renderingConfig ? { rendering: renderingConfig } : {}),
-                  ...(staticShadowArtifactDirty ? { staticShadows: staticShadowArtifact } : {}),
-                },
-              }
-            : {}),
-        });
+        saved = await savePlayableSceneMainSource<EditorSceneDocument>(document, saveOptions);
       } catch (error) {
-        if (renderingConfig) setActiveRenderingConfigError(error);
+        await handleProjectSceneMainSourceSaveError({ source, document, error, context: prepared.context });
         throw error;
       }
-      if (renderingConfig) markActiveRenderingConfigSaved(saved.renderingConfig ?? renderingConfig);
-      if (staticShadowArtifactDirty) markActiveStaticShadowArtifactSaved(saved.companionConfigs?.staticShadows ?? staticShadowArtifact);
+      await handleProjectSceneMainSourceSaved({ source, document, saved, context: prepared.context });
       lastCompiledArtifact = saved.compiledArtifact ?? null;
-      syncRuntimeSceneConfigForCurrentTab(saved.compiledArtifact?.data);
+      await emitProjectRuntimeSceneArtifact({
+        phase: 'save',
+        source: saved.source,
+        document: saved.document,
+        artifact: lastCompiledArtifact,
+      });
       return {
         source: saved.source,
         document: saved.document,
         summary: saved.summary,
       };
     },
-    compile({ source, document }) {
-      if (lastCompiledArtifact) {
+    async compile({ source, document }) {
+      if (lastCompiledArtifact && isCompiledArtifactForSource(lastCompiledArtifact, source)) {
         const artifact = lastCompiledArtifact;
         lastCompiledArtifact = null;
         return [artifact];
       }
-      return [compileSceneMainRuntimeArtifact(source, document)];
+      const artifact = compileSceneMainRuntimeArtifact(source, document);
+      await emitProjectRuntimeSceneArtifact({
+        phase: 'compile',
+        source,
+        document,
+        artifact,
+      });
+      return [artifact];
     },
+  };
+}
+
+function createProjectSceneMainSourceSaveOptions(
+  clientOptions: SceneMainSourceClientRuntimeOptions,
+  saveOptions: PlayableSceneMainSourceSaveOptions | undefined,
+): PlayableSceneMainSourceSaveOptions {
+  return {
+    endpointBase: clientOptions.endpointBase,
+    fetchJson: clientOptions.fetchJson,
+    ...saveOptions,
+  };
+}
+
+function handleProjectSceneMainSourceLoaded(input: {
+  loaded: PlayableSceneMainSourceDriverLoadResult<EditorSceneDocument>;
+}): void {
+  markActiveStaticShadowArtifactSaved(input.loaded.companionConfigs?.staticShadows ?? null);
+}
+
+function prepareProjectSceneMainSourceSave(
+  _input: {
+    source: AuthoringSourceDescriptor;
+    document: EditorSceneDocument;
+  },
+): SceneMainSourcePreparedSave {
+  const renderingConfig = isRenderingProfileDirty() ? getActiveRenderingConfig() : null;
+  const staticShadowArtifactDirty = isStaticShadowArtifactDirty();
+  const staticShadowArtifact = staticShadowArtifactDirty ? getActiveStaticShadowArtifact() : null;
+  const context: SceneMainSourceSaveContext = {
+    renderingConfig,
+    staticShadowArtifactDirty,
+    staticShadowArtifact,
+  };
+  return {
+    saveOptions: renderingConfig || staticShadowArtifactDirty
+      ? {
+          companionConfigs: {
+            ...(renderingConfig ? { rendering: renderingConfig } : {}),
+            ...(staticShadowArtifactDirty ? { staticShadows: staticShadowArtifact } : {}),
+          },
+        }
+      : undefined,
+    context,
+  };
+}
+
+function handleProjectSceneMainSourceSaveError(input: {
+  source?: AuthoringSourceDescriptor;
+  document?: EditorSceneDocument;
+  error: unknown;
+  context?: unknown;
+}): void {
+  const saveContext = input.context as SceneMainSourceSaveContext | undefined;
+  if (saveContext?.renderingConfig) setActiveRenderingConfigError(input.error);
+}
+
+function handleProjectSceneMainSourceSaved(input: {
+  source?: AuthoringSourceDescriptor;
+  document?: EditorSceneDocument;
+  saved: SceneMainSourceSaveResult;
+  context?: unknown;
+}): void {
+  const saveContext = input.context as SceneMainSourceSaveContext | undefined;
+  if (saveContext?.renderingConfig) {
+    markActiveRenderingConfigSaved(input.saved.renderingConfig ?? saveContext.renderingConfig);
+  }
+  if (saveContext?.staticShadowArtifactDirty) {
+    markActiveStaticShadowArtifactSaved(input.saved.companionConfigs?.staticShadows ?? saveContext.staticShadowArtifact);
+  }
+}
+
+function handleProjectRuntimeSceneArtifact(input: {
+  artifact: CompiledArtifact;
+}): void {
+  syncRuntimeSceneConfigForCurrentTab(input.artifact.data);
+}
+
+async function emitProjectRuntimeSceneArtifact(input: {
+  phase: 'save' | 'compile';
+  source: AuthoringSourceDescriptor;
+  document: EditorSceneDocument;
+  artifact: CompiledArtifact | null | undefined;
+}): Promise<void> {
+  if (!input.artifact || input.artifact.artifactType !== 'runtime-scene') return;
+  await handleProjectRuntimeSceneArtifact({ artifact: input.artifact });
+}
+
+function isCompiledArtifactForSource(
+  artifact: CompiledArtifact,
+  source: AuthoringSourceDescriptor,
+): boolean {
+  return artifact.provenance?.sourceId === source.ref.sourceId
+    && artifact.provenance.sourceType === source.ref.sourceType
+    && artifact.provenance.revision === source.ref.revision;
+}
+
+function createRuntimeInputDriftDiagnostic(
+  source: AuthoringSourceDescriptor,
+  drift: EditorSceneRuntimeInputDrift,
+): SceneMainSourceDiagnostic {
+  return {
+    severity: 'warning',
+    message: `runtime input drift detected (${drift.reason ?? 'unknown'})`,
+    source: source.ref,
+    code: 'runtime_input_drift',
   };
 }
 

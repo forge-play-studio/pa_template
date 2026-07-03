@@ -5,7 +5,7 @@
     "authoringSource": {
       "sourceId": "scene.main",
       "sourceType": "scene",
-      "revision": 66
+      "revision": 67
     }
   },
   "assets": [
@@ -1130,8 +1130,8 @@
         "originalFileName": "工人.glb",
         "relativePath": "../imported/asset_ade25007e0964563b197b21c2759c027.glb",
         "codeKey": "shadow_fixture_worker",
-        "contentHash": "sha256:fee128df48f93449e778e6688aa195277f84864564cb063fe8803b9f4d022a82",
-        "byteSize": 131700,
+        "contentHash": "sha256:5d44ff57ba16dc78c6e7639d29bfe03e468845b35b98a9a480ea3eb60cdeec31",
+        "byteSize": 149020,
         "category": "shadow-fixture/character",
         "shadowFixture": true,
         "sourceProject": "lumber-truck",
@@ -3458,8 +3458,8 @@
         "originalFileName": "松树.glb",
         "relativePath": "../imported/asset_edc2f992438c4450afc1c6354ec21500.glb",
         "codeKey": "shadow_fixture_pine_tree",
-        "contentHash": "sha256:30f4359bf67f78a1279b154228326c6c8dfe0b6da5478734f24ac466a4e44706",
-        "byteSize": 26812,
+        "contentHash": "sha256:20a7c3c942182d3d86d95aabb68327a250357c61ab62ea07d6659855426dde7d",
+        "byteSize": 30440,
         "category": "shadow-fixture/vegetation",
         "shadowFixture": true,
         "sourceProject": "lumber-order-260525",
@@ -4788,8 +4788,8 @@
         "originalFileName": "鸡.glb",
         "relativePath": "../imported/asset_97121f40170c40d1aaf63b8c2cf0bf24.glb",
         "codeKey": "shadow_fixture_chicken",
-        "contentHash": "sha256:db72ad930562c7efaafaf3b2d9183003eaf0280be3c8b2cfa12cc589a024398d",
-        "byteSize": 54424,
+        "contentHash": "sha256:7dbafd9a2546d6b66be7f3db2b74746abcb3f251e16d186613b5d851ffae76b6",
+        "byteSize": 77612,
         "category": "shadow-fixture/animal",
         "shadowFixture": true,
         "sourceProject": "lumber-order-260525",
@@ -5541,8 +5541,8 @@
         "originalFileName": "SM_diban.glb",
         "relativePath": "../imported/asset_07e860eb2bf04e6f9a81e0832cddc014.glb",
         "codeKey": "shadow_receiver_test_floor_tile",
-        "contentHash": "sha256:df91002113be5565813d8a3d9b1da0024b3477de5353ea62d7a4130e96feb282",
-        "byteSize": 10304,
+        "contentHash": "sha256:7c4d80ba441abe4dc907a2440cae4be4408b446a522cb21290a6a143b926f034",
+        "byteSize": 9120,
         "category": "shadow-receiver-test/ground",
         "shadowReceiverFixture": true,
         "sourceProject": "lumber-truck",
@@ -8218,9 +8218,9 @@
           {
             "type": "Transform",
             "position": {
-              "x": -2.8,
-              "y": 0,
-              "z": 4.2
+              "x": -2.799999952316284,
+              "y": 3.138036012649536,
+              "z": 4.199999809265137
             },
             "rotation": {
               "x": 0,
@@ -8262,9 +8262,9 @@
           {
             "type": "Transform",
             "position": {
-              "x": 2.8,
-              "y": 0,
-              "z": 4.2
+              "x": 0.5069435834884644,
+              "y": -5.329070518200751e-15,
+              "z": 6.379875183105469
             },
             "rotation": {
               "x": 0,
@@ -9156,9 +9156,9 @@
           "lightingModel": "lit",
           "baseColor": {
             "color": {
-              "r": 0.260417014,
-              "g": 0.260417014,
-              "b": 0.260417014
+              "r": 0.9058823529411765,
+              "g": 0.050980392156862744,
+              "b": 0.050980392156862744
             },
             "brightness": 1,
             "saturation": 1,
@@ -9194,9 +9194,9 @@
           "lightingModel": "lit",
           "baseColor": {
             "color": {
-              "r": 0.899999976,
-              "g": 0.899999976,
-              "b": 0.899999976
+              "r": 0.796078431372549,
+              "g": 0.22745098039215686,
+              "b": 0.22745098039215686
             },
             "brightness": 1,
             "saturation": 1,
@@ -9354,9 +9354,9 @@
           "lightingModel": "lit",
           "baseColor": {
             "color": {
-              "r": 0,
-              "g": 0,
-              "b": 0
+              "r": 0.9294117647058824,
+              "g": 0.8705882352941177,
+              "b": 0.8705882352941177
             },
             "brightness": 1,
             "saturation": 1,

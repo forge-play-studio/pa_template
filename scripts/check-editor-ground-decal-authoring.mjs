@@ -8,7 +8,7 @@ const groundDecalUiService = await readText('src/services/GroundDecalUiService.t
 const assetCatalog = await readText('src/assets/generated/asset-catalog.generated.ts');
 const editorBrowserPanels = await readEditorBrowserPanels();
 
-assert.match(packageJson, /"@fps-games\/editor":\s*"0\.1\.7-beta\.1"/, 'pa_template must consume @fps-games/editor 0.1.7-beta.1');
+assert.match(packageJson, /"@fps-games\/editor":\s*"0\.1\.7"/, 'pa_template must consume @fps-games/editor 0.1.7');
 
 assert.match(localEditorModeSwitcher, /hierarchyActions:\s*{\s*contextActions:/s, 'local editor host must register hierarchy actions');
 assert.match(localEditorModeSwitcher, /id:\s*'ground-decal-ui\.create-operation'/, 'operation GroundDecal UI hierarchy action missing');
