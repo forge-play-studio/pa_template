@@ -15,8 +15,8 @@ importers:
         specifier: 8.52.1
         version: 8.52.1(@babylonjs/core@8.52.1)(babylonjs-gltf2interface@8.56.2)
       '@fps-games/editor':
-        specifier: 0.1.7
-        version: 0.1.7
+        specifier: 0.1.8
+        version: 0.1.8
       '@fps-games/vfx':
         specifier: 0.3.9
         version: 0.3.9(@babylonjs/core@8.52.1)(@babylonjs/loaders@8.52.1(@babylonjs/core@8.52.1)(babylonjs-gltf2interface@8.56.2))
@@ -791,8 +791,8 @@ packages:
   '@fluentui/tokens@1.0.0-alpha.23':
     resolution: {integrity: sha512-uxrzF9Z+J10naP0pGS7zPmzSkspSS+3OJDmYIK3o1nkntQrgBXq3dBob4xSlTDm5aOQ0kw6EvB9wQgtlyy4eKQ==}
 
-  '@fps-games/editor@0.1.7':
-    resolution: {integrity: sha512-tUVZRu0u+UBk2WAsmYtzQCKuiSR9FJv6ASYDVMsHFakZ2PtnvI+pJtnG7aJlSfX8Yt4ItvqOc9lQ8G7LCMnK1g==}
+  '@fps-games/editor@0.1.8':
+    resolution: {integrity: sha512-WQKjO2NZ0LTH/mNS0B5Myr2lOMwoa9s3pOtAiicZsQrle2RmuSdS4uAwcAGvVPxbKllR9U5QmFnyKfVSjCOC3A==}
     bundledDependencies:
       - '@fps-games/babylon-renderer'
       - '@fps-games/editor-babylon'
@@ -2629,7 +2629,7 @@ snapshots:
     dependencies:
       '@swc/helpers': 0.5.23
 
-  '@fps-games/editor@0.1.7': {}
+  '@fps-games/editor@0.1.8': {}
 
   '@fps-games/vfx@0.3.9(@babylonjs/core@8.52.1)(@babylonjs/loaders@8.52.1(@babylonjs/core@8.52.1)(babylonjs-gltf2interface@8.56.2))':
     dependencies:
