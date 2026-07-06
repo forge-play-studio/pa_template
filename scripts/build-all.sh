@@ -79,7 +79,7 @@ build_variant() {
 
   rm -rf "dist/_build"
 
-  if LOCALE="$locale" CHANNEL="$channel" TRACKING="$tracking" BUILD_MATRIX=true FPS_GAME_EDITOR_REPO="${FPS_GAME_EDITOR_REPO:-../..}" npm run typecheck && LOCALE="$locale" CHANNEL="$channel" TRACKING="$tracking" BUILD_MATRIX=true FPS_GAME_EDITOR_REPO="${FPS_GAME_EDITOR_REPO:-../..}" npx vite build && npm run check:prod-debug; then
+  if LOCALE="$locale" CHANNEL="$channel" TRACKING="$tracking" BUILD_MATRIX=true npm run typecheck && LOCALE="$locale" CHANNEL="$channel" TRACKING="$tracking" BUILD_MATRIX=true npx vite build && npm run check:prod-debug; then
     mkdir -p "$out_dir"
     mv "dist/_build/index.html" "${out_dir}/${filename}"
     rm -rf "dist/_build"
