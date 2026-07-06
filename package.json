@@ -19,10 +19,12 @@
     "test:asset-registry-unregister": "node scripts/check-asset-registry-unregister-guard.mjs",
     "build": "./scripts/build-all.sh en applovin",
     "build:all": "./scripts/build-all.sh",
-    "build:single": "cross-env BUILD_MATRIX=false FPS_GAME_EDITOR_REPO=../.. npm run typecheck && cross-env BUILD_MATRIX=false FPS_GAME_EDITOR_REPO=../.. vite build && npm run check:prod-debug",
+    "build:single": "cross-env BUILD_MATRIX=false npm run typecheck && cross-env BUILD_MATRIX=false vite build && npm run check:prod-debug",
+    "build:single:editor-local": "cross-env BUILD_MATRIX=false FPS_GAME_EDITOR_REPO=../.. npm run typecheck:editor-local && cross-env BUILD_MATRIX=false FPS_GAME_EDITOR_REPO=../.. vite build && npm run check:prod-debug",
     "check:prod-debug": "node scripts/check-production-debug-surface.mjs",
     "preview": "vite preview",
-    "typecheck": "tsc -p tsconfig.fps-editor-local.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck:editor-local": "tsc -p tsconfig.fps-editor-local.json --noEmit"
   },
   "keywords": [
     "playable",

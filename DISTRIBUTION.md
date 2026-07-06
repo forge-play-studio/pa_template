@@ -98,7 +98,8 @@ pnpm run build
 For source-linked SDK development only:
 
 ```bash
-pnpm exec tsc -p tsconfig.fps-editor-local.json --noEmit
+pnpm run typecheck:editor-local
+pnpm run build:single:editor-local
 ```
 
 ## Common Issues

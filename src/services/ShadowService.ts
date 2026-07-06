@@ -475,13 +475,13 @@ export class ShadowService {
   /**
    * 检查网格是否为阴影接收者
    */
-  private isShadowReceiver(mesh: AbstractMesh): boolean {
+  isShadowReceiver(mesh: AbstractMesh): boolean {
     const runtimeState = this.resolveShadowRuntimeState();
     return this.findRuntimeReceiverBindings(runtimeState, this.readMeshRuntimeTargetId(mesh))
       .some(binding => binding.receiver.receiveShadows);
   }
 
-  private canRenderShadowCaster(mesh: AbstractMesh, mode: SceneShadowMode): boolean {
+  canRenderShadowCaster(mesh: AbstractMesh, mode: SceneShadowMode): boolean {
     if (mode !== 'blob' && mode !== 'planar' && mode !== 'dynamic') return true;
     const runtimeState = this.resolveShadowRuntimeState();
     const caster = runtimeState.casters.find(entry => entry.targetId === this.readMeshRuntimeTargetId(mesh));
@@ -575,6 +575,7 @@ export class ShadowService {
   private isGeneratedShadowExcluded(mesh: AbstractMesh): boolean {
     if (this.isExcluded(mesh.name)) return true;
     for (const node of this.walkNodeAndParents(mesh)) {
+      if (this.isRuntimeVfxShadowExcludedNode(node)) return true;
       const metadata = this.readMetadata(node);
       if (
         metadata?.blobShadowInternal === true
@@ -596,7 +597,27 @@ export class ShadowService {
     return false;
   }
 
-  private resolveMeshShadowMode(mesh: AbstractMesh): SceneShadowMode {
+  private isRuntimeVfxShadowExcludedNode(node: unknown): boolean {
+    const name = this.readNodeName(node).toLowerCase();
+    if (name.startsWith('vfx_') || name.startsWith('vfx_package_')) return true;
+
+    const metadata = this.readMetadata(node);
+    if (metadata?.runtimeVfx === true || metadata?.effectPackage != null) return true;
+
+    const projection = this.readEditorProjectionMetadata(node);
+    if (
+      projection?.runtimeVfx === true
+      || projection?.effectPackage != null
+      || projection?.runtimeKind === 'vfx'
+      || projection?.runtimeKind === 'effectPackage'
+    ) {
+      return true;
+    }
+
+    return false;
+  }
+
+  resolveMeshShadowMode(mesh: AbstractMesh): SceneShadowMode {
     const runtimeState = this.resolveShadowRuntimeState();
     const caster = runtimeState.casters.find(entry => entry.targetId === this.readMeshRuntimeTargetId(mesh));
     return caster ? this.resolveShadowModeFromRuntimeCaster(caster) : 'none';
@@ -875,6 +896,12 @@ export class ShadowService {
       cursor = (cursor as { parent?: unknown }).parent;
     }
     return nodes;
+  }
+
+  private readNodeName(node: unknown): string {
+    return typeof (node as { name?: unknown })?.name === 'string'
+      ? (node as { name: string }).name
+      : '';
   }
 
   private readEditorProjectionMetadata(node: unknown): Record<string, unknown> | null {
