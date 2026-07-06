@@ -126,6 +126,7 @@ export function mountRuntimeVfxDebugPanel(options: RuntimeVfxDebugPanelOptions):
   let frameHandle = 0;
   let editingParamKey: string | null = null;
   let previewHandle: { dispose(): void } | null = null;
+  let availabilityStatusMessage = '';
   const axisOverlay = new EffectAxisOverlay();
 
   const container = ownerDocument.createElement('div');
@@ -267,8 +268,34 @@ export function mountRuntimeVfxDebugPanel(options: RuntimeVfxDebugPanelOptions):
     const packages = service?.getEffectPackages?.() ?? [];
     const usageTargets = getVfxDirector()?.getVfxUsageTargets?.() ?? [];
     const debugHudVisible = readDebugHudVisible(ownerDocument);
-    container.style.display = service && packages.length > 0 && debugHudVisible ? 'flex' : 'none';
+    container.style.display = debugHudVisible ? 'flex' : 'none';
     if (!debugHudVisible) panel.style.display = 'none';
+    if (!service || packages.length === 0) {
+      const message = service ? '暂无可用 VFX 包' : 'VFX 服务未就绪';
+      if (availabilityStatusMessage !== message) {
+        availabilityStatusMessage = message;
+        status.textContent = message;
+      }
+      if (latestPackages.length > 0 || latestUsageTargets.length > 0 || selectedEffectId || selectedTargetKey || paramsRoot.childElementCount > 0 || savePathHint.textContent) {
+        latestPackages = [];
+        latestUsageTargets = [];
+        selectedEffectId = '';
+        selectedTargetKey = '';
+        effectDropdown.setOptions([]);
+        effectDropdown.setValue('');
+        targetDropdown.setOptions([]);
+        targetDropdown.setValue('');
+        paramsRoot.innerHTML = '';
+        savePathHint.textContent = '';
+      }
+      updateAxisOverlay(false);
+      frameHandle = win.requestAnimationFrame(tick);
+      return;
+    }
+    if (availabilityStatusMessage) {
+      if (status.textContent === availabilityStatusMessage) status.textContent = '';
+      availabilityStatusMessage = '';
+    }
     if ((packagesChanged(latestPackages, packages) || usageTargetsChanged(latestUsageTargets, usageTargets)) && !isEditingParamControl()) {
       latestPackages = packages;
       latestUsageTargets = usageTargets;

@@ -53,7 +53,20 @@ const DEBUG_MANAGER_RIGHT_RAIL_ID = 'runtime-debug-panel-manager-right-rail';
 const DEBUG_PANEL_VISIBILITY_STORAGE_KEY = 'pa-template.debug-panels.visible';
 const DEBUG_PANEL_ORDER_STORAGE_KEY = 'pa-template.debug-panels.order';
 const DEBUG_PANEL_COLLAPSED_STORAGE_PREFIX = 'pa-template.debug-panels.collapsed.';
+const DEBUG_PANEL_OPEN_STORAGE_PREFIX = 'pa-template.debug-panels.open.';
 const DEBUG_PANEL_VISIBLE_ATTRIBUTE = 'data-runtime-debug-panels-visible';
+const MACARON_BUTTON_COLORS = [
+  { background: '#ffe3ef', border: '#ffb3d1', text: '#7a3150' },
+  { background: '#e1f8e8', border: '#aee7c2', text: '#2f6f52' },
+  { background: '#dcf5ff', border: '#a9e4fb', text: '#28677c' },
+  { background: '#fff5c8', border: '#f7dc82', text: '#756020' },
+  { background: '#eee5ff', border: '#d6c5ff', text: '#5a4285' },
+  { background: '#ffe2cd', border: '#ffc49d', text: '#854a25' },
+  { background: '#d9f7fb', border: '#aeeef5', text: '#2b7079' },
+  { background: '#ffe0e4', border: '#f6b9c1', text: '#7c3540' },
+  { background: '#e5facf', border: '#c9ee9b', text: '#4f7328' },
+  { background: '#fae0ff', border: '#edb8f8', text: '#743181' },
+];
 
 let activeManager: RuntimeDebugPanelManagerInternal | null = null;
 let autoManager: AutoManagerState | null = null;
@@ -104,21 +117,57 @@ export function createRuntimeDebugPanelButton(ownerDocument: Document, text: str
   const button = ownerDocument.createElement('button');
   button.type = 'button';
   button.textContent = text;
+  applyRuntimeDebugPanelButtonStyle(button, text);
+  return button;
+}
+
+function applyRuntimeDebugPanelButtonStyle(button: HTMLButtonElement, seed = button.textContent ?? ''): void {
+  const color = MACARON_BUTTON_COLORS[hashString(seed) % MACARON_BUTTON_COLORS.length];
+  button.dataset.runtimeDebugPanelMacaronSeed = seed;
   button.style.cssText = [
     'pointer-events:auto',
+    'display:inline-flex',
+    'align-items:center',
+    'justify-content:center',
     'height:32px',
     'min-width:64px',
     'padding:0 12px',
-    'border:1px solid rgba(148,163,184,.36)',
-    'border-radius:7px',
-    'background:rgba(15,23,42,.88)',
-    'color:#f8fafc',
-    'font:700 12px system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif',
-    'box-shadow:0 10px 26px rgba(0,0,0,.28)',
+    `border:1px solid ${color.border}`,
+    'border-radius:999px',
+    `background:${color.background}`,
+    `color:${color.text}`,
+    'font:800 12px system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif',
+    'box-shadow:0 8px 20px rgba(15, 23, 42, 0.18)',
     'cursor:pointer',
     'white-space:nowrap',
+    'user-select:none',
   ].join(';');
-  return button;
+}
+
+function isRuntimeDebugPanelButtonStyleApplied(button: HTMLButtonElement, seed: string): boolean {
+  const win = button.ownerDocument.defaultView;
+  const color = MACARON_BUTTON_COLORS[hashString(seed) % MACARON_BUTTON_COLORS.length];
+  const expectedBackground = hexToRgbString(color.background);
+  const actualBackground = win?.getComputedStyle(button).backgroundColor;
+  return button.dataset.runtimeDebugPanelMacaronSeed === seed
+    && button.style.borderRadius === '999px'
+    && actualBackground === expectedBackground;
+}
+
+function hexToRgbString(hex: string): string {
+  const value = hex.replace(/^#/, '');
+  const red = Number.parseInt(value.slice(0, 2), 16);
+  const green = Number.parseInt(value.slice(2, 4), 16);
+  const blue = Number.parseInt(value.slice(4, 6), 16);
+  return `rgb(${red}, ${green}, ${blue})`;
+}
+
+function hashString(value: string): number {
+  let hash = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
+  }
+  return hash;
 }
 
 export function readRuntimeDebugPanelsVisible(ownerDocument: Document = document): boolean {
@@ -126,6 +175,114 @@ export function readRuntimeDebugPanelsVisible(ownerDocument: Document = document
   if (visible === 'false') return false;
   if (visible === 'true') return true;
   return readStoredBoolean(ownerDocument.defaultView ?? window, DEBUG_PANEL_VISIBILITY_STORAGE_KEY, true);
+}
+
+function installRuntimeDebugContainerChrome(
+  container: HTMLElement,
+  title: string,
+  placement: RuntimeDebugPanelPlacement,
+): () => void {
+  const ownerDocument = container.ownerDocument;
+  const win = ownerDocument.defaultView;
+  let disposed = false;
+  let frameHandle = 0;
+
+  const styleMatchingButtons = () => {
+    frameHandle = 0;
+    if (disposed) return;
+    const buttons = container.querySelectorAll<HTMLButtonElement>('button');
+    for (const button of buttons) {
+      const label = button.textContent?.trim();
+      if (label !== title) continue;
+      if (isRuntimeDebugPanelButtonStyleApplied(button, title)) continue;
+      applyRuntimeDebugPanelButtonStyle(button, title);
+    }
+    normalizeExternalDebugPanelShell(container, title, placement);
+  };
+
+  const scheduleStyle = () => {
+    if (disposed || frameHandle) return;
+    if (!win) {
+      styleMatchingButtons();
+      return;
+    }
+    frameHandle = win.requestAnimationFrame(styleMatchingButtons);
+  };
+
+  const observer = new MutationObserver(scheduleStyle);
+  observer.observe(container, {
+    attributes: true,
+    attributeFilter: ['aria-label', 'style'],
+    childList: true,
+    subtree: true,
+  });
+  scheduleStyle();
+
+  return () => {
+    disposed = true;
+    observer.disconnect();
+    if (frameHandle && win) win.cancelAnimationFrame(frameHandle);
+    frameHandle = 0;
+  };
+}
+
+function normalizeExternalDebugPanelShell(
+  container: HTMLElement,
+  title: string,
+  placement: RuntimeDebugPanelPlacement,
+): void {
+  const shell = findExternalDebugPanelShell(container, title);
+  if (!shell) return;
+  const toggle = findDirectButtonByText(shell, title);
+  const panel = Array.from(shell.children).find((child): child is HTMLElement => child instanceof HTMLElement && child.tagName === 'SECTION');
+  if (!toggle || !panel) return;
+
+  shell.style.position = 'relative';
+  shell.style.right = '';
+  shell.style.bottom = '';
+  shell.style.zIndex = '';
+  shell.style.display = 'flex';
+  shell.style.width = placement === 'right-rail' ? 'fit-content' : '100%';
+  shell.style.maxWidth = '100%';
+  shell.style.flexDirection = placement === 'bottom-dock' || placement === 'modal' ? 'column-reverse' : 'column';
+  shell.style.alignItems = placement === 'right-rail' ? 'flex-end' : 'flex-start';
+  shell.style.gap = '8px';
+  shell.style.overflow = 'visible';
+  shell.style.pointerEvents = 'none';
+  shell.style.fontFamily = 'system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif';
+
+  toggle.style.alignSelf = placement === 'right-rail' ? 'flex-end' : 'flex-start';
+
+  panel.style.width = placement === 'right-rail' ? '100%' : '320px';
+  panel.style.maxWidth = 'calc(100vw - 32px)';
+  panel.style.marginBottom = '0';
+  if (placement === 'right-rail') {
+    panel.style.position = 'absolute';
+    panel.style.right = '0';
+    panel.style.bottom = '40px';
+    panel.style.width = '344px';
+  } else {
+    panel.style.position = '';
+    panel.style.right = '';
+    panel.style.bottom = '';
+  }
+}
+
+function findExternalDebugPanelShell(container: HTMLElement, title: string): HTMLElement | null {
+  for (const child of Array.from(container.children)) {
+    if (!(child instanceof HTMLElement)) continue;
+    if (findDirectButtonByText(child, title) && Array.from(child.children).some((entry) => entry instanceof HTMLElement && entry.tagName === 'SECTION')) {
+      return child;
+    }
+  }
+  return null;
+}
+
+function findDirectButtonByText(container: HTMLElement, text: string): HTMLButtonElement | null {
+  for (const child of Array.from(container.children)) {
+    if (child instanceof HTMLButtonElement && child.textContent?.trim() === text) return child;
+  }
+  return null;
 }
 
 class RuntimeDebugPanelManagerImpl implements RuntimeDebugPanelManagerInternal {
@@ -200,15 +357,16 @@ class RuntimeDebugPanelManagerImpl implements RuntimeDebugPanelManagerInternal {
     this.rightRail.id = DEBUG_MANAGER_RIGHT_RAIL_ID;
     this.rightRail.style.cssText = [
       'position:fixed',
-      'top:54px',
       'right:16px',
       'bottom:16px',
-      'width:344px',
+      'max-width:calc(100vw - 32px)',
+      'max-height:calc(100vh - 32px)',
       'display:flex',
-      'flex-direction:column',
-      'align-items:stretch',
+      'flex-direction:row',
+      'justify-content:flex-end',
+      'align-items:flex-end',
       'gap:8px',
-      'overflow:auto',
+      'overflow:visible',
       'pointer-events:none',
     ].join(';');
 
@@ -245,6 +403,7 @@ class RuntimeDebugPanelManagerImpl implements RuntimeDebugPanelManagerInternal {
   registerContainer(options: RuntimeDebugPanelContainerOptions): Disposable {
     const placement = options.placement ?? 'bottom-dock';
     const container = options.container;
+    const cleanupContainerChrome = installRuntimeDebugContainerChrome(container, options.title, placement);
     container.setAttribute('data-runtime-debug-panel-container', '');
     container.setAttribute('data-runtime-debug-panel-id', options.id);
     container.setAttribute('data-runtime-debug-panel-title', options.title);
@@ -254,7 +413,10 @@ class RuntimeDebugPanelManagerImpl implements RuntimeDebugPanelManagerInternal {
     this.makeItemDraggable(container, options.id);
     this.registerItem({ id: options.id, placement, element: container });
     return {
-      dispose: () => this.unregisterItem(options.id),
+      dispose: () => {
+        cleanupContainerChrome();
+        this.unregisterItem(options.id);
+      },
     };
   }
 
@@ -271,6 +433,111 @@ class RuntimeDebugPanelManagerImpl implements RuntimeDebugPanelManagerInternal {
   }
 
   private createPanelElement(options: RuntimeDebugPanelRegistrationOptions): HTMLElement {
+    const placement = options.placement ?? 'bottom-dock';
+    if (placement !== 'right-rail') return this.createDockPanelElement(options);
+    return this.createRailPanelElement(options);
+  }
+
+  private createDockPanelElement(options: RuntimeDebugPanelRegistrationOptions): HTMLElement {
+    const panel = this.ownerDocument.createElement('section');
+    const toggleButton = createRuntimeDebugPanelButton(this.ownerDocument, options.title);
+    const shell = this.ownerDocument.createElement('section');
+    const header = this.ownerDocument.createElement('header');
+    const title = this.ownerDocument.createElement('div');
+    const meta = this.ownerDocument.createElement('span');
+    const closeButton = createRuntimeDebugPanelButton(this.ownerDocument, 'x');
+    const body = this.ownerDocument.createElement('div');
+
+    panel.dataset.runtimeDebugPanelId = options.id;
+    panel.draggable = true;
+    panel.style.cssText = [
+      'position:relative',
+      'display:flex',
+      'flex-direction:column-reverse',
+      'align-items:flex-start',
+      'gap:8px',
+      'width:fit-content',
+      'max-width:calc(100vw - 32px)',
+      'pointer-events:none',
+      'user-select:none',
+    ].join(';');
+
+    toggleButton.setAttribute('aria-controls', `${options.id}-debug-panel`);
+    toggleButton.title = options.phase ? `${options.title} P${options.phase}` : options.title;
+
+    shell.id = `${options.id}-debug-panel`;
+    shell.setAttribute('data-input-layer', '');
+    shell.style.cssText = [
+      'pointer-events:auto',
+      'width:320px',
+      'max-width:calc(100vw - 32px)',
+      'max-height:min(74vh, 720px)',
+      'overflow:auto',
+      'box-sizing:border-box',
+      'border:1px solid rgba(148,163,184,.28)',
+      'border-radius:8px',
+      'background:rgba(13,18,28,.95)',
+      'box-shadow:0 18px 44px rgba(0,0,0,.34)',
+      'backdrop-filter:blur(8px)',
+      'color:#f8fafc',
+      'font:12px system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif',
+      'display:none',
+    ].join(';');
+
+    header.style.cssText = [
+      'display:flex',
+      'align-items:center',
+      'justify-content:space-between',
+      'gap:8px',
+      'min-height:34px',
+      'box-sizing:border-box',
+      'padding:6px 8px 6px 10px',
+      'border-bottom:1px solid rgba(148,163,184,.22)',
+      'background:rgba(30,41,59,.72)',
+      'cursor:grab',
+    ].join(';');
+
+    title.textContent = options.title;
+    title.style.cssText = 'min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:800;';
+    meta.textContent = options.phase ? `P${options.phase}` : '';
+    meta.style.cssText = 'color:#94a3b8;font-weight:800;font-size:10px';
+    closeButton.title = 'Close panel';
+    closeButton.style.height = '24px';
+    closeButton.style.minWidth = '28px';
+    closeButton.style.padding = '0 8px';
+
+    const titleWrap = this.ownerDocument.createElement('div');
+    titleWrap.style.cssText = 'display:flex;align-items:center;gap:6px;min-width:0';
+    titleWrap.append(title, meta);
+    header.append(titleWrap, closeButton);
+
+    body.setAttribute('data-runtime-debug-panel-body', '');
+    body.style.cssText = 'display:block';
+    shell.append(header, body);
+    panel.append(toggleButton, shell);
+
+    const openKey = `${DEBUG_PANEL_OPEN_STORAGE_PREFIX}${options.id}`;
+    let open = readStoredBoolean(this.ownerDocument.defaultView ?? window, openKey, false);
+    const renderOpenState = () => {
+      shell.style.display = open ? 'block' : 'none';
+      toggleButton.setAttribute('aria-expanded', String(open));
+      toggleButton.style.outline = open ? '2px solid rgba(255,255,255,.62)' : '';
+      toggleButton.style.outlineOffset = open ? '2px' : '';
+      toggleButton.style.transform = open ? 'translateY(-1px)' : '';
+    };
+    const setOpen = (nextOpen: boolean) => {
+      open = nextOpen;
+      writeStoredBoolean(this.ownerDocument.defaultView ?? window, openKey, open);
+      renderOpenState();
+    };
+    toggleButton.addEventListener('click', () => setOpen(!open));
+    closeButton.addEventListener('click', () => setOpen(false));
+    renderOpenState();
+    this.makeItemDraggable(panel, options.id, toggleButton);
+    return panel;
+  }
+
+  private createRailPanelElement(options: RuntimeDebugPanelRegistrationOptions): HTMLElement {
     const panel = this.ownerDocument.createElement('section');
     const header = this.ownerDocument.createElement('header');
     const title = this.ownerDocument.createElement('div');
