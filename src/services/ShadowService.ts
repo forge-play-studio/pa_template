@@ -1,8 +1,7 @@
 /**
  * ShadowService - 阴影管理服务
  *
- * 职责：管理场景阴影系统，包括 CSM 阴影和阴影投射/接收配置
- * 移植自旧系统的 ShadowManager
+ * 职责：桥接 SDK Shadow V2 runtime resolver 与项目阴影系统生命周期
  */
 
 import { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh';
@@ -10,20 +9,28 @@ import { Camera } from '@babylonjs/core/Cameras/camera';
 import { DirectionalLight } from '@babylonjs/core/Lights/directionalLight';
 import { Observer } from '@babylonjs/core/Misc/observable';
 import { Scene } from '@babylonjs/core/scene';
-import { ShadowGenerator } from '@babylonjs/core/Lights/Shadows/shadowGenerator';
-import { CascadedShadowGenerator } from '@babylonjs/core/Lights/Shadows/cascadedShadowGenerator';
 import {
   createBlobShadowSystem,
+  createDynamicShadowSystem,
   createPlanarShadowSystem,
   createStaticProjectedShadowBakeHashes,
   createStaticProjectedShadowArtifactSystem,
+  readEditorShadowRuntimePlan,
+  readEditorShadowSettings,
+  resolveEditorShadowRuntimeState,
   type BlobShadowOptions,
+  type DynamicShadowParams,
   type PlanarShadowOptions,
   type StaticProjectedShadowArtifact,
   type StaticProjectedShadowArtifactHashInput,
   type StaticProjectedShadowArtifactOptions,
   type StaticProjectedShadowArtifactSystem,
   type StaticProjectedShadowOptions,
+  type EditorShadowRuntimeCasterState,
+  type EditorShadowRuntimeMaterialLightingModel,
+  type EditorShadowRuntimeReceiverState,
+  type EditorShadowRuntimeState,
+  type EditorShadowRuntimeTarget,
   type EditorShadowResolvedPlan,
   type EditorShadowSettings,
 } from '@fps-games/editor/playable-sdk';
@@ -34,9 +41,6 @@ import {
   normalizeRenderingProfile,
   type NormalizedRenderingProfile,
 } from '../rendering/rendering-profile';
-
-// 副作用导入：注册阴影场景组件
-import '@babylonjs/core/Lights/Shadows/shadowGeneratorSceneComponent';
 
 // 导入配置
 import renderingConfig from '../config/rendering.json';
@@ -131,9 +135,44 @@ type RuntimeStaticProjectedShadowArtifactSystem = Pick<
   StaticProjectedShadowArtifactSystem,
   'initialize' | 'setArtifact' | 'setOptions' | 'refreshBindings' | 'dispose'
 >;
+interface RuntimeDynamicShadowSystem {
+  initialize(): void;
+  addCaster(mesh: unknown): boolean;
+  removeCaster(mesh: unknown): void;
+  addReceiver(mesh: unknown): void;
+  removeReceiver(mesh: unknown): void;
+  setCamera(camera: unknown): void;
+  setOptions(options: {
+    enabled?: boolean;
+    camera?: unknown;
+    params?: DynamicShadowParams;
+  }): void;
+  refresh(): void;
+  getShadowGenerator(): RuntimeDynamicShadowGenerator;
+  getDiagnostics(): unknown;
+  dispose(): void;
+}
 
 type SceneShadowMode = 'none' | 'blob' | 'static' | 'planar' | 'dynamic';
-type ShadowServiceMode = 'none' | 'blob' | 'static' | 'legacy' | 'planar' | 'mixed';
+type RuntimeDynamicShadowSystemFactory = (
+  scene: unknown,
+  directionalLight: unknown,
+  options: {
+    enabled: boolean;
+    camera?: unknown;
+    params: DynamicShadowParams;
+  },
+) => RuntimeDynamicShadowSystem;
+type RuntimeDynamicShadowGenerator = {
+  getClassName?: () => string;
+  getShadowMap?: () => { getSize?: () => unknown; renderList?: AbstractMesh[] } | null;
+  getDarkness?: () => number;
+  bias?: number;
+  normalBias?: number;
+  useBlurExponentialShadowMap?: boolean;
+  blurKernel?: number;
+} | null;
+type ShadowServiceMode = 'none' | 'blob' | 'static' | 'dynamic' | 'planar' | 'mixed';
 const SHADOW_DEBUG_STORAGE_KEY = 'fps.shadow.debug';
 
 // ============================================================
@@ -149,10 +188,11 @@ export class ShadowService {
   private scene: Scene;
   private camera: Camera | null;
   private light: DirectionalLight;
-  private shadowGenerator: ShadowGenerator | null = null;
+  private dynamicShadowSystem: RuntimeDynamicShadowSystem | null = null;
   private blobShadowSystem: RuntimeBlobShadowSystem | null = null;
   private staticProjectedShadowArtifactSystem: RuntimeStaticProjectedShadowArtifactSystem | null = null;
   private planarShadowSystem: RuntimePlanarShadowSystem | null = null;
+  private readonly dynamicReceiverMeshes = new Set<AbstractMesh>();
   private renderingProfile: NormalizedRenderingProfile;
   private config: ShadowsConfig;
   private meshConfig: ShadowMeshesConfig;
@@ -191,8 +231,7 @@ export class ShadowService {
     if (this.config.blob.enabled) this.initializeBlobShadows();
     if (this.config.staticProjected.enabled) this.initializeStaticProjectedShadows();
     if (this.isPlanarEnabled()) this.initializePlanarShadows();
-    if (this.config.enabled) this.initializeLegacyShadows();
-    else this.scene.shadowsEnabled = false;
+    if (!this.config.enabled) this.scene.shadowsEnabled = false;
 
     this.mode = this.resolveServiceMode();
     this.applyShadowMeshes();
@@ -201,83 +240,6 @@ export class ShadowService {
       mode: this.mode,
       shadowsEnabled: this.scene.shadowsEnabled,
       shadowGenerator: this.describeShadowGenerator(),
-    });
-  }
-
-  private initializeLegacyShadows(): void {
-    this.scene.shadowsEnabled = true;
-
-    // 确保光源不被父节点影响（对阴影关键）
-    this.light.parent = null;
-    this.light.shadowEnabled = true;
-
-    const settings = this.config.settings;
-    const csm = this.config.csm;
-    const useCsm = this.config.useCsm ?? true;
-    const useBlur = settings.useBlurExponentialShadowMap;
-
-    // 创建阴影生成器（优先 CSM，不支持时回退）
-    if (useCsm && CascadedShadowGenerator.IsSupported) {
-      const csmGenerator = new CascadedShadowGenerator(
-        settings.mapSize,
-        this.light,
-        undefined,
-        this.camera || undefined
-      );
-
-      csmGenerator.shadowMaxZ = settings.shadowMaxZ;
-
-      if (csm.numCascades !== undefined) {
-        csmGenerator.numCascades = csm.numCascades;
-      }
-      if (csm.lambda !== undefined) {
-        csmGenerator.lambda = csm.lambda;
-      }
-      if (csm.cascadeBlendPercentage !== undefined) {
-        csmGenerator.cascadeBlendPercentage = csm.cascadeBlendPercentage;
-      }
-      if (csm.stabilizeCascades !== undefined) {
-        csmGenerator.stabilizeCascades = csm.stabilizeCascades;
-      }
-
-      csmGenerator.usePercentageCloserFiltering = true;
-      csmGenerator.filteringQuality = ShadowGenerator.QUALITY_HIGH;
-
-      this.shadowGenerator = csmGenerator;
-    } else {
-      this.shadowGenerator = new ShadowGenerator(settings.mapSize, this.light);
-    }
-
-    if (!this.shadowGenerator) {
-      return;
-    }
-
-    // 应用模糊设置
-    if (useBlur) {
-      this.shadowGenerator.useBlurExponentialShadowMap = true;
-      this.shadowGenerator.blurKernel = settings.blurKernel;
-    }
-
-    // 应用其他设置
-    this.shadowGenerator.setDarkness(settings.darkness);
-    this.shadowGenerator.bias = settings.bias;
-    this.shadowGenerator.normalBias = settings.normalBias;
-
-    // 设置光源阴影范围
-    this.light.shadowMinZ = settings.shadowMinZ;
-    this.light.shadowMaxZ = settings.shadowMaxZ;
-
-    // 配置方向光的正交投影边界
-    this.light.orthoLeft = this.config.shadowOrtho.left;
-    this.light.orthoRight = this.config.shadowOrtho.right;
-    this.light.orthoTop = this.config.shadowOrtho.top;
-    this.light.orthoBottom = this.config.shadowOrtho.bottom;
-
-    this.logShadowDebug('service.legacyGenerator.ready', {
-      useCsm: this.shadowGenerator instanceof CascadedShadowGenerator,
-      settings,
-      light: this.describeDirectionalLight(),
-      generator: this.describeShadowGenerator(),
     });
   }
 
@@ -305,8 +267,8 @@ export class ShadowService {
   /**
    * 获取阴影生成器实例
    */
-  getShadowGenerator(): ShadowGenerator | null {
-    return this.shadowGenerator;
+  getShadowGenerator(): RuntimeDynamicShadowGenerator {
+    return this.dynamicShadowSystem?.getShadowGenerator() ?? null;
   }
 
   getShadowMode(): ShadowServiceMode {
@@ -330,6 +292,7 @@ export class ShadowService {
    */
   removeShadowCaster(mesh: AbstractMesh): void {
     this.removeMeshFromShadowSystems(mesh);
+    this.reconcileDynamicReceivers(this.resolveShadowRuntimeState(), new Set([this.readMeshRuntimeTargetId(mesh)]));
   }
 
   /**
@@ -339,6 +302,10 @@ export class ShadowService {
     if (this.planarShadowSystem) {
       if (receive) this.planarShadowSystem.addReceiver(mesh);
       else this.planarShadowSystem.removeReceiver(mesh);
+    }
+    if (this.dynamicShadowSystem?.getShadowGenerator()) {
+      if (receive) this.dynamicShadowSystem.addReceiver(mesh);
+      else this.dynamicShadowSystem.removeReceiver(mesh);
     }
     mesh.receiveShadows = receive;
   }
@@ -391,15 +358,27 @@ export class ShadowService {
    * 应用阴影配置到所有网格
    */
   private applyShadowMeshes(): void {
+    const runtimeState = this.resolveShadowRuntimeState();
     for (const mesh of this.scene.meshes) {
-      this.applyShadowToMesh(mesh);
+      this.applyShadowToMeshWithRuntimeState(mesh, runtimeState);
     }
+    this.reconcileDynamicReceivers(runtimeState);
+    this.dynamicShadowSystem?.refresh();
+    this.logRuntimeDiagnostics(runtimeState);
   }
 
   /**
    * 应用阴影配置到单个网格
    */
   private applyShadowToMesh(mesh: AbstractMesh): void {
+    const runtimeState = this.resolveShadowRuntimeState();
+    this.applyShadowToMeshWithRuntimeState(mesh, runtimeState);
+    this.reconcileDynamicReceivers(runtimeState);
+    this.dynamicShadowSystem?.refresh();
+    this.logRuntimeDiagnostics(runtimeState);
+  }
+
+  private applyShadowToMeshWithRuntimeState(mesh: AbstractMesh, runtimeState: EditorShadowRuntimeState): void {
     this.removeMeshFromShadowSystems(mesh);
     if (this.isGeneratedShadowExcluded(mesh)) {
       mesh.receiveShadows = false;
@@ -411,22 +390,21 @@ export class ShadowService {
       return;
     }
 
-    const mode = this.resolveMeshShadowMode(mesh);
-    const canRenderCaster = this.canRenderShadowCaster(mesh, mode);
+    const targetId = this.readMeshRuntimeTargetId(mesh);
+    const caster = runtimeState.casters.find(entry => entry.targetId === targetId) ?? null;
+    const mode = caster ? this.resolveShadowModeFromRuntimeCaster(caster) : 'none';
+    const receiverBindings = this.findRuntimeReceiverBindings(runtimeState, targetId);
+    const receiveShadows = this.applyRuntimeReceiverBindings(mesh, receiverBindings);
+    const canRenderCaster = !!caster && this.canRenderRuntimeCaster(caster);
     const dynamicReady = mode === 'dynamic'
-      ? canRenderCaster && this.ensureDynamicShadowGenerator()
-      : !!this.shadowGenerator;
-    const receiveShadows = this.isShadowReceiver(mesh);
-    mesh.receiveShadows = receiveShadows && dynamicReady;
+      ? canRenderCaster && this.ensureDynamicShadowSystem(caster.params)
+      : this.dynamicShadowSystem?.getShadowGenerator() != null;
+
     this.logShadowDebug('service.mesh.apply', this.describeMeshShadowDecision(mesh, {
       mode,
       receiveShadows,
       dynamicReady,
     }));
-    if (this.planarShadowSystem) {
-      if (receiveShadows) this.planarShadowSystem.addReceiver(mesh);
-      else this.planarShadowSystem.removeReceiver(mesh);
-    }
 
     if (!canRenderCaster) {
       this.logShadowDebug('service.caster.skippedNoReceiver', this.describeMeshShadowDecision(mesh, {
@@ -437,6 +415,7 @@ export class ShadowService {
       return;
     }
 
+    if (!caster) return;
     if (mode === 'blob') {
       this.blobShadowSystem?.addCaster(mesh);
       return;
@@ -448,65 +427,142 @@ export class ShadowService {
       this.planarShadowSystem?.addCaster(mesh);
       return;
     }
-    if (mode === 'dynamic' && this.shadowGenerator) {
-      this.applyDynamicShadowGeneratorPlan(mesh);
-      this.shadowGenerator.addShadowCaster(mesh, true);
-      this.refreshDynamicShadowReceivers();
+    if (mode === 'dynamic' && this.dynamicShadowSystem) {
+      this.dynamicShadowSystem.addCaster(mesh);
+      this.logShadowDebug('service.dynamicPlan.apply', {
+        mesh: this.describeMesh(mesh),
+        plan: this.describeResolvedPlan(caster.plan),
+        diagnostics: caster.diagnostics,
+        generator: this.describeShadowGenerator(),
+      });
     }
+  }
+
+  private reconcileDynamicReceivers(
+    runtimeState: EditorShadowRuntimeState,
+    excludedCasterTargetIds: ReadonlySet<string> = new Set(),
+  ): void {
+    if (!this.dynamicShadowSystem?.getShadowGenerator()) return;
+    const nextReceivers = new Set<AbstractMesh>();
+    for (const caster of runtimeState.casters) {
+      if (excludedCasterTargetIds.has(caster.targetId)) continue;
+      if (caster.backend !== 'dynamic-map') continue;
+      for (const receiver of caster.receivers) {
+        if (!receiver.receiveDynamicShadows) continue;
+        const receiverMesh = this.findMeshByRuntimeTargetId(receiver.targetId);
+        if (receiverMesh) nextReceivers.add(receiverMesh);
+      }
+    }
+    for (const mesh of this.dynamicReceiverMeshes) {
+      if (!nextReceivers.has(mesh)) this.dynamicShadowSystem.removeReceiver(mesh);
+    }
+    for (const mesh of nextReceivers) {
+      this.dynamicShadowSystem.addReceiver(mesh);
+    }
+    this.dynamicReceiverMeshes.clear();
+    for (const mesh of nextReceivers) this.dynamicReceiverMeshes.add(mesh);
   }
 
   private removeMeshFromShadowSystems(mesh: AbstractMesh): void {
     this.blobShadowSystem?.removeCaster(mesh);
     this.planarShadowSystem?.removeCaster(mesh);
     this.planarShadowSystem?.removeReceiver(mesh);
-    this.shadowGenerator?.removeShadowCaster(mesh, true);
+    this.dynamicShadowSystem?.removeCaster(mesh);
+    this.dynamicShadowSystem?.removeReceiver(mesh);
+    this.dynamicReceiverMeshes.delete(mesh);
   }
 
   /**
    * 检查网格是否为阴影接收者
    */
   private isShadowReceiver(mesh: AbstractMesh): boolean {
-    const receive = this.readMeshShadowReceive(mesh);
-    if (receive === 'none') return false;
-    if (receive === 'enabled' || receive === 'auto') return true;
-    const nodeIds = this.readMeshProjectionNodeIds(mesh);
-    if (nodeIds.length > 0 && this.scene.meshes.some(candidate => {
-      const plan = this.readMeshShadowPlan(candidate);
-      if (!plan || plan.backend === 'none') return false;
-      return nodeIds.some(nodeId => plan.receiverIds.includes(nodeId));
-    })) {
-      return true;
-    }
-    return this.isNameMatched(mesh.name, this.shadowReceivers);
+    const runtimeState = this.resolveShadowRuntimeState();
+    return this.findRuntimeReceiverBindings(runtimeState, this.readMeshRuntimeTargetId(mesh))
+      .some(binding => binding.receiver.receiveShadows);
   }
 
   private canRenderShadowCaster(mesh: AbstractMesh, mode: SceneShadowMode): boolean {
     if (mode !== 'blob' && mode !== 'planar' && mode !== 'dynamic') return true;
-    const plan = this.readMeshShadowPlan(mesh);
-    const hasReceiver = plan
-      ? this.hasRenderableReceiverForPlan(plan)
-      : this.hasAnyRenderableReceiver();
-    return hasReceiver;
+    const runtimeState = this.resolveShadowRuntimeState();
+    const caster = runtimeState.casters.find(entry => entry.targetId === this.readMeshRuntimeTargetId(mesh));
+    return !!caster && this.canRenderRuntimeCaster(caster);
   }
 
-  private hasRenderableReceiverForPlan(plan: EditorShadowResolvedPlan): boolean {
-    if (plan.backend === 'none' || plan.mode === 'none') return false;
-    if (plan.receiverIds.length === 0) return false;
-    const receiverIds = new Set(plan.receiverIds);
-    return this.scene.meshes.some(candidate => {
-      if (!this.isRuntimeReceiverCandidate(candidate)) return false;
-      return this.readMeshProjectionNodeIds(candidate).some(nodeId => receiverIds.has(nodeId));
+  private resolveShadowRuntimeState(): EditorShadowRuntimeState {
+    return resolveEditorShadowRuntimeState({
+      targets: this.scene.meshes.map(mesh => this.createShadowRuntimeTarget(mesh)),
+      fallbackMode: this.config.defaultMode === 'planar' ? 'projected' : this.config.defaultMode,
+      legacyReceiverPatterns: this.shadowReceivers,
     });
   }
 
-  private hasAnyRenderableReceiver(): boolean {
-    return this.scene.meshes.some(candidate => this.isRuntimeReceiverCandidate(candidate));
+  private createShadowRuntimeTarget(mesh: AbstractMesh): EditorShadowRuntimeTarget {
+    const projection = this.readEditorProjectionMetadata(mesh);
+    const nodeIds = this.readMeshProjectionNodeIds(mesh);
+    return {
+      id: this.readMeshRuntimeTargetId(mesh),
+      name: mesh.name,
+      nodeIds,
+      ...(typeof projection?.rootNodeId === 'string' ? { rootNodeId: projection.rootNodeId } : {}),
+      active: !(typeof mesh.isDisposed === 'function' && mesh.isDisposed()) && !this.isGeneratedShadowExcluded(mesh),
+      visible: mesh.isVisible !== false,
+      shadowMode: this.readMeshShadowMode(mesh),
+      shadow: this.readMeshShadowReceiveSettings(mesh),
+      shadowPlan: this.readMeshShadowPlan(mesh),
+      materialLightingModel: this.readMeshMaterialLightingModel(mesh),
+    };
   }
 
-  private isRuntimeReceiverCandidate(mesh: AbstractMesh): boolean {
-    if (typeof mesh.isDisposed === 'function' && mesh.isDisposed()) return false;
-    if (this.isGeneratedShadowExcluded(mesh)) return false;
-    return this.isShadowReceiver(mesh);
+  private readMeshRuntimeTargetId(mesh: AbstractMesh): string {
+    const projection = this.readEditorProjectionMetadata(mesh);
+    const nodeId = projection?.nodeId;
+    if (typeof nodeId === 'string' && nodeId.trim()) return nodeId.trim();
+    const id = (mesh as { id?: unknown }).id;
+    if (typeof id === 'string' && id.trim()) return id.trim();
+    return mesh.name;
+  }
+
+  private findRuntimeReceiverBindings(
+    runtimeState: EditorShadowRuntimeState,
+    targetId: string,
+  ): Array<{ caster: EditorShadowRuntimeCasterState; receiver: EditorShadowRuntimeReceiverState }> {
+    const bindings: Array<{ caster: EditorShadowRuntimeCasterState; receiver: EditorShadowRuntimeReceiverState }> = [];
+    const seen = new Set<string>();
+    for (const caster of runtimeState.casters) {
+      for (const receiver of caster.receivers) {
+        if (receiver.targetId !== targetId) continue;
+        const key = `${caster.targetId}:${receiver.targetId}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        bindings.push({ caster, receiver });
+      }
+    }
+    return bindings;
+  }
+
+  private applyRuntimeReceiverBindings(
+    mesh: AbstractMesh,
+    bindings: Array<{ caster: EditorShadowRuntimeCasterState; receiver: EditorShadowRuntimeReceiverState }>,
+  ): boolean {
+    let dynamicReceiveShadows = false;
+    let planarReceiveShadows = false;
+    for (const binding of bindings) {
+      if (!binding.receiver.receiveShadows) continue;
+      if (binding.caster.backend === 'dynamic-map') {
+        if (binding.receiver.receiveDynamicShadows) dynamicReceiveShadows = true;
+        continue;
+      }
+      if (binding.caster.backend === 'projected') planarReceiveShadows = true;
+    }
+    if (this.planarShadowSystem) {
+      if (planarReceiveShadows) this.planarShadowSystem.addReceiver(mesh);
+      else this.planarShadowSystem.removeReceiver(mesh);
+    }
+    if (this.dynamicShadowSystem?.getShadowGenerator()) {
+      if (dynamicReceiveShadows) this.dynamicShadowSystem.addReceiver(mesh);
+      else this.dynamicShadowSystem.removeReceiver(mesh);
+    }
+    return planarReceiveShadows || dynamicReceiveShadows;
   }
 
   /**
@@ -541,79 +597,130 @@ export class ShadowService {
   }
 
   private resolveMeshShadowMode(mesh: AbstractMesh): SceneShadowMode {
-    const plan = this.readMeshShadowPlan(mesh);
-    if (plan) return this.resolveShadowModeFromPlan(plan);
-    const mode = this.readMeshShadowMode(mesh);
-    if (!mode || mode === 'default') return this.config.defaultMode ?? 'none';
-    return mode;
+    const runtimeState = this.resolveShadowRuntimeState();
+    const caster = runtimeState.casters.find(entry => entry.targetId === this.readMeshRuntimeTargetId(mesh));
+    return caster ? this.resolveShadowModeFromRuntimeCaster(caster) : 'none';
   }
 
-  private resolveShadowModeFromPlan(plan: EditorShadowResolvedPlan): SceneShadowMode {
-    if (plan.backend === 'none' || plan.mode === 'none') return 'none';
-    if (plan.mode === 'projected' || plan.backend === 'projected') return 'planar';
-    if (plan.mode === 'dynamic' || plan.backend === 'dynamic-map') return 'dynamic';
-    if (plan.mode === 'static' || plan.backend === 'static-baked') return 'static';
-    if (plan.mode === 'blob' || plan.backend === 'blob') return 'blob';
+  private resolveShadowModeFromRuntimeCaster(caster: EditorShadowRuntimeCasterState): SceneShadowMode {
+    if (caster.backend === 'none' || caster.mode === 'none') return 'none';
+    if (caster.backend === 'projected' || caster.mode === 'projected') return 'planar';
+    if (caster.backend === 'dynamic-map' || caster.mode === 'dynamic') return 'dynamic';
+    if (caster.backend === 'static-baked' || caster.mode === 'static') return 'static';
+    if (caster.backend === 'blob' || caster.mode === 'blob') return 'blob';
     return 'none';
   }
 
-  private ensureDynamicShadowGenerator(): boolean {
-    if (this.shadowGenerator) return true;
-    this.initializeLegacyShadows();
+  private canRenderRuntimeCaster(caster: EditorShadowRuntimeCasterState): boolean {
+    const mode = this.resolveShadowModeFromRuntimeCaster(caster);
+    if (mode !== 'blob' && mode !== 'planar' && mode !== 'dynamic') return true;
+    return caster.receiverTargetIds.length > 0;
+  }
+
+  private ensureDynamicShadowSystem(params?: Partial<DynamicShadowParams>): boolean {
+    const resolvedParams = this.createDynamicShadowParams(params);
+    if (!this.dynamicShadowSystem) {
+      const createRuntimeDynamicShadowSystem = createDynamicShadowSystem as unknown as RuntimeDynamicShadowSystemFactory;
+      this.dynamicShadowSystem = createRuntimeDynamicShadowSystem(
+        this.scene,
+        this.light,
+        {
+          enabled: true,
+          camera: this.camera,
+          params: resolvedParams,
+        },
+      ) as unknown as RuntimeDynamicShadowSystem;
+      this.dynamicShadowSystem.initialize();
+    } else {
+      this.dynamicShadowSystem.setCamera(this.camera);
+      this.dynamicShadowSystem.setOptions({
+        enabled: true,
+        params: resolvedParams,
+      });
+    }
     this.mode = this.resolveServiceMode();
-    if (!this.shadowGenerator) {
-      this.logShadowDebug('service.dynamicGenerator.unavailable', {
+    const ready = this.dynamicShadowSystem.getShadowGenerator() != null;
+    if (!ready) {
+      this.logShadowDebug('service.dynamicSystem.unavailable', {
         mode: this.mode,
         shadowsEnabled: this.scene.shadowsEnabled,
       });
       return false;
     }
-    this.refreshDynamicShadowReceivers();
-    this.logShadowDebug('service.dynamicGenerator.ready', {
+    this.logShadowDebug('service.dynamicSystem.ready', {
       mode: this.mode,
       light: this.describeDirectionalLight(),
       generator: this.describeShadowGenerator(),
+      diagnostics: this.dynamicShadowSystem.getDiagnostics(),
     });
     return true;
   }
 
-  private refreshDynamicShadowReceivers(): void {
-    if (!this.shadowGenerator) return;
-    for (const mesh of this.scene.meshes) {
-      if (typeof mesh.isDisposed === 'function' && mesh.isDisposed()) continue;
-      if (this.isGeneratedShadowExcluded(mesh)) continue;
-      mesh.receiveShadows = this.isShadowReceiver(mesh);
-    }
+  private createDynamicShadowParams(params?: Partial<DynamicShadowParams>): DynamicShadowParams {
+    const settings = this.config.settings;
+    return {
+      opacity: this.clamp01(params?.opacity ?? 1 - settings.darkness),
+      softness: this.clamp01(params?.softness ?? 0.4),
+      bias: this.readFiniteNumber(params?.bias, settings.bias),
+      normalBias: this.readFiniteNumber(params?.normalBias, settings.normalBias),
+      maxDistance: this.readPositiveNumber(params?.maxDistance, settings.shadowMaxZ),
+      resolution: this.readDynamicShadowResolution(params?.resolution ?? settings.mapSize),
+      cascadeCount: this.readDynamicShadowCascadeCount(params?.cascadeCount ?? this.config.csm.numCascades),
+      blurKernel: Math.max(0, Math.round(this.readFiniteNumber(params?.blurKernel, settings.blurKernel))),
+    };
   }
 
-  private applyDynamicShadowGeneratorPlan(mesh: AbstractMesh): void {
-    if (!this.shadowGenerator) return;
-    const plan = this.readMeshShadowPlan(mesh);
-    const params = plan?.params;
-    this.configureDynamicShadowGeneratorFilter();
-    if (params) {
-      if (typeof this.shadowGenerator.setDarkness === 'function') {
-        this.shadowGenerator.setDarkness(this.clamp01(1 - params.opacity));
-      }
-      this.shadowGenerator.bias = params.bias;
-      this.shadowGenerator.normalBias = params.normalBias;
-      if (Number.isFinite(params.blurKernel)) {
-        this.shadowGenerator.blurKernel = params.blurKernel;
+  private findMeshByRuntimeTargetId(targetId: string): AbstractMesh | null {
+    return this.scene.meshes.find(mesh => this.readMeshRuntimeTargetId(mesh) === targetId) ?? null;
+  }
+
+  private readMeshMaterialLightingModel(mesh: AbstractMesh): EditorShadowRuntimeMaterialLightingModel {
+    const material = (mesh as { material?: unknown }).material as {
+      unlit?: unknown;
+      disableLighting?: unknown;
+    } | null | undefined;
+    if (material?.unlit === true || material?.disableLighting === true) return 'unlit';
+    if (material?.unlit === false || material?.disableLighting === false) return 'lit';
+    for (const node of this.walkNodeAndParents(mesh)) {
+      const metadata = this.readMetadata(node);
+      const projection = this.readEditorProjectionMetadata(node);
+      const candidates = [
+        metadata?.lightingModel,
+        this.readObject(metadata?.material)?.lightingModel,
+        this.readObject(this.readObject(metadata?.material)?.profile)?.lightingModel,
+        projection?.lightingModel,
+        this.readObject(projection?.material)?.lightingModel,
+        this.readObject(projection?.materialProfile)?.lightingModel,
+      ];
+      for (const value of candidates) {
+        if (value === 'lit' || value === 'unlit') return value;
       }
     }
-    this.logShadowDebug('service.dynamicPlan.apply', {
-      mesh: this.describeMesh(mesh),
-      plan: this.describeResolvedPlan(plan),
-      generator: this.describeShadowGenerator(),
+    return 'unknown';
+  }
+
+  private logRuntimeDiagnostics(runtimeState: EditorShadowRuntimeState): void {
+    if (runtimeState.diagnostics.length === 0) return;
+    this.logShadowDebug('service.runtimeDiagnostics', {
+      diagnostics: runtimeState.diagnostics,
     });
   }
 
-  private configureDynamicShadowGeneratorFilter(): void {
-    if (!this.shadowGenerator) return;
-    this.shadowGenerator.useBlurExponentialShadowMap = false;
-    this.shadowGenerator.useKernelBlur = false;
-    this.shadowGenerator.usePercentageCloserFiltering = true;
-    this.shadowGenerator.filteringQuality = ShadowGenerator.QUALITY_HIGH;
+  private readFiniteNumber(value: unknown, fallback: number): number {
+    return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+  }
+
+  private readPositiveNumber(value: unknown, fallback: number): number {
+    const number = this.readFiniteNumber(value, fallback);
+    return number > 0 ? number : fallback;
+  }
+
+  private readDynamicShadowResolution(value: unknown): DynamicShadowParams['resolution'] {
+    return value === 512 || value === 1024 || value === 2048 || value === 4096 ? value : 1024;
+  }
+
+  private readDynamicShadowCascadeCount(value: unknown): DynamicShadowParams['cascadeCount'] {
+    return value === 1 || value === 2 || value === 4 ? value : 1;
   }
 
   private clamp01(value: number): number {
@@ -681,16 +788,18 @@ export class ShadowService {
   }
 
   private describeShadowGenerator(): Record<string, unknown> | null {
-    if (!this.shadowGenerator) return null;
+    const shadowGenerator = this.getShadowGenerator();
+    if (!shadowGenerator) return null;
     return {
-      className: this.shadowGenerator.getClassName?.(),
-      mapSize: this.shadowGenerator.getShadowMap?.()?.getSize?.(),
-      darkness: this.shadowGenerator.getDarkness?.(),
-      bias: this.shadowGenerator.bias,
-      normalBias: this.shadowGenerator.normalBias,
-      useBlurExponentialShadowMap: this.shadowGenerator.useBlurExponentialShadowMap,
-      blurKernel: this.shadowGenerator.blurKernel,
-      renderList: (this.shadowGenerator.getShadowMap?.()?.renderList ?? []).map(mesh => this.describeMesh(mesh)),
+      className: shadowGenerator.getClassName?.(),
+      mapSize: shadowGenerator.getShadowMap?.()?.getSize?.(),
+      darkness: shadowGenerator.getDarkness?.(),
+      bias: shadowGenerator.bias,
+      normalBias: shadowGenerator.normalBias,
+      useBlurExponentialShadowMap: shadowGenerator.useBlurExponentialShadowMap,
+      blurKernel: shadowGenerator.blurKernel,
+      renderList: (shadowGenerator.getShadowMap?.()?.renderList ?? []).map(mesh => this.describeMesh(mesh)),
+      dynamicDiagnostics: this.dynamicShadowSystem?.getDiagnostics(),
     };
   }
 
@@ -724,61 +833,24 @@ export class ShadowService {
     return null;
   }
 
-  private readMeshShadowSettingsFromProjection(node: unknown): EditorShadowSettings | null {
-    const shadow = this.readObject(this.readEditorProjectionMetadata(node)?.shadow);
-    if (!shadow) return null;
-    const settings: EditorShadowSettings = {};
-    if (shadow.cast === 'inherit' || shadow.cast === 'none' || shadow.cast === 'enabled' || shadow.cast === 'auto') {
-      settings.cast = shadow.cast;
-    }
-    if (shadow.receive === 'inherit' || shadow.receive === 'none' || shadow.receive === 'enabled' || shadow.receive === 'auto') {
-      settings.receive = shadow.receive;
-    }
-    if (
-      shadow.mode === 'inherit'
-      || shadow.mode === 'none'
-      || shadow.mode === 'dynamic'
-      || shadow.mode === 'static'
-      || shadow.mode === 'blob'
-      || shadow.mode === 'projected'
-      || shadow.mode === 'auto'
-    ) {
-      settings.mode = shadow.mode;
-    }
-    return Object.keys(settings).length > 0 ? settings : null;
-  }
-
-  private readMeshShadowPlan(mesh: AbstractMesh): EditorShadowResolvedPlan | null {
+  private readMeshShadowReceiveSettings(mesh: AbstractMesh): EditorShadowSettings | null {
     for (const node of this.walkNodeAndParents(mesh)) {
-      const plan = this.readShadowPlan(this.readEditorProjectionMetadata(node)?.shadowPlan);
-      if (plan) return plan;
+      const settings = this.readMeshShadowSettingsFromProjection(node);
+      if (settings) return settings;
     }
     return null;
   }
 
-  private readShadowPlan(value: unknown): EditorShadowResolvedPlan | null {
-    const plan = this.readObject(value);
-    if (!plan) return null;
-    if (typeof plan.casterId !== 'string') return null;
-    if (!Array.isArray(plan.receiverIds) || !plan.receiverIds.every(entry => typeof entry === 'string')) return null;
-    if (
-      plan.backend !== 'none'
-      && plan.backend !== 'dynamic-map'
-      && plan.backend !== 'static-baked'
-      && plan.backend !== 'blob'
-      && plan.backend !== 'projected'
-    ) return null;
-    if (
-      plan.mode !== 'none'
-      && plan.mode !== 'dynamic'
-      && plan.mode !== 'static'
-      && plan.mode !== 'blob'
-      && plan.mode !== 'projected'
-    ) return null;
-    if (plan.quality !== 'low' && plan.quality !== 'medium' && plan.quality !== 'high' && plan.quality !== 'ultra') return null;
-    if (!this.readObject(plan.params)) return null;
-    if (!Array.isArray(plan.diagnostics)) return null;
-    return plan as unknown as EditorShadowResolvedPlan;
+  private readMeshShadowSettingsFromProjection(node: unknown): EditorShadowSettings | null {
+    return readEditorShadowSettings(this.readEditorProjectionMetadata(node)?.shadow) ?? null;
+  }
+
+  private readMeshShadowPlan(mesh: AbstractMesh): EditorShadowResolvedPlan | null {
+    for (const node of this.walkNodeAndParents(mesh)) {
+      const plan = readEditorShadowRuntimePlan(this.readEditorProjectionMetadata(node)?.shadowPlan);
+      if (plan) return plan;
+    }
+    return null;
   }
 
   private readMeshProjectionNodeIds(mesh: AbstractMesh): string[] {
@@ -904,7 +976,7 @@ export class ShadowService {
     if (this.blobShadowSystem) modes.push('blob');
     if (this.staticProjectedShadowArtifactSystem) modes.push('static');
     if (this.planarShadowSystem) modes.push('planar');
-    if (this.shadowGenerator) modes.push('legacy');
+    if (this.dynamicShadowSystem?.getShadowGenerator()) modes.push('dynamic');
     if (modes.length === 0) return 'none';
     if (modes.length === 1) return modes[0];
     return 'mixed';
@@ -923,10 +995,11 @@ export class ShadowService {
       this.newMeshObserver = null;
     }
 
-    if (this.shadowGenerator) {
-      this.shadowGenerator.dispose();
-      this.shadowGenerator = null;
+    if (this.dynamicShadowSystem) {
+      this.dynamicShadowSystem.dispose();
+      this.dynamicShadowSystem = null;
     }
+    this.dynamicReceiverMeshes.clear();
 
     if (this.blobShadowSystem) {
       this.blobShadowSystem.dispose();
