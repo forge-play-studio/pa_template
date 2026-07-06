@@ -95,7 +95,8 @@ function readSnapshot(game: Game | null): LightingDebugSnapshot | null {
 
 function readRuntimeShadowMode(game: Game | null): RuntimeShadowMode {
   const mode = game?.getShadowService()?.getShadowMode?.();
-  return mode === 'planar' || mode === 'legacy' || mode === 'none' ? mode : 'unknown';
+  if (mode === 'dynamic') return 'legacy';
+  return mode === 'planar' || mode === 'none' ? mode : 'unknown';
 }
 
 function color3ToColor(value: unknown, fallback: ColorRGB): ColorRGB {
