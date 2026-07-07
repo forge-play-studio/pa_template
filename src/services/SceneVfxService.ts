@@ -25,6 +25,7 @@ import {
   type VfxParamValues,
   type VfxSpawnTransform,
 } from '../assets/vfx';
+import usagesDocument from '../assets/vfx/usages.json';
 import { EffectPackageService } from '@fps-games/vfx';
 
 export interface SceneVfxWarmupEntry {
@@ -35,6 +36,15 @@ export interface SceneVfxWarmupEntry {
 
 export interface SceneVfxServiceOptions {
   getDebugAnchorPosition?: (anchor: VfxDebugAnchor) => Vector3 | null;
+}
+
+interface SceneVfxWarmupUsageConfig {
+  effect?: unknown;
+  params?: unknown;
+}
+
+interface SceneVfxWarmupUsagesDocument {
+  usages?: SceneVfxWarmupUsageConfig[];
 }
 
 export class SceneVfxService {
@@ -73,6 +83,12 @@ export class SceneVfxService {
 
   async warmupEffectPackages(entries: SceneVfxWarmupEntry[]): Promise<void> {
     await Promise.all(entries.map((entry) => this.warmupEffectPackage(entry)));
+  }
+
+  async warmupRegisteredEffectPackages(): Promise<void> {
+    const entries = this.createRegisteredEffectWarmupEntries();
+    if (entries.length === 0) return;
+    await this.warmupEffectPackages(entries);
   }
 
   /** 从配置初始化所有场景特效 */
@@ -164,6 +180,17 @@ export class SceneVfxService {
     }
   }
 
+  private createRegisteredEffectWarmupEntries(): SceneVfxWarmupEntry[] {
+    const usageParamsByEffect = readUsageWarmupParams();
+    return this.getEffectPackages()
+      .filter(shouldWarmupEffectPackage)
+      .map((effectPackage) => ({
+        effectId: effectPackage.id,
+        params: usageParamsByEffect.get(effectPackage.id) ?? {},
+        spawnTransform: createVfxWarmupSpawnTransform(),
+      }));
+  }
+
   private async waitForAnimationFrames(frameCount: number): Promise<void> {
     for (let i = 0; i < frameCount; i += 1) {
       await new Promise<void>((resolve) => {
@@ -190,4 +217,49 @@ export class SceneVfxService {
     }
     this.emitters = [];
   }
+}
+
+function readUsageWarmupParams(): Map<string, Partial<VfxParamValues>> {
+  const result = new Map<string, Partial<VfxParamValues>>();
+  const usages = (usagesDocument as SceneVfxWarmupUsagesDocument).usages ?? [];
+  for (const usage of usages) {
+    if (typeof usage.effect !== 'string' || result.has(usage.effect)) continue;
+    result.set(usage.effect, cloneVfxParams(usage.params));
+  }
+  return result;
+}
+
+function cloneVfxParams(value: unknown): Partial<VfxParamValues> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  return { ...(value as Partial<VfxParamValues>) };
+}
+
+function shouldWarmupEffectPackage(effectPackage: VfxEffectPackage): boolean {
+  if (effectPackage.placement === 'target') return false;
+  return !(effectPackage.requiredInputs ?? []).includes('target');
+}
+
+function createVfxWarmupSpawnTransform(): VfxSpawnTransform {
+  const position = createVfxWarmupPosition();
+  const aim = position.add(new Vector3(0, 0, 2));
+  return {
+    position,
+    rotation: { x: 0, y: 0, z: 0 },
+    scale: 1,
+    renderingGroupId: 3,
+    offsetIsLocal: false,
+    inputs: {
+      reference: () => position.clone(),
+      aim: () => aim.clone(),
+      normal: () => Vector3.Up(),
+      endpoints: [
+        () => position.clone(),
+        () => aim.clone(),
+      ],
+    },
+  };
+}
+
+function createVfxWarmupPosition(): Vector3 {
+  return new Vector3(100000, -1000, 100000);
 }

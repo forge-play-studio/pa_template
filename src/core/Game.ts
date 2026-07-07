@@ -203,6 +203,9 @@ export class Game {
     // 15) Project gameplay modules
     await this.initGameplayModules();
 
+    // 16) First-use warmups
+    await this.warmupVfxFirstUsePaths();
+
   }
 
   private async preloadModelsFromConfig(): Promise<void> {
@@ -223,6 +226,29 @@ export class Game {
   private warmupModelsFromConfig(): void {
     if (!this.modelPool) return;
     this.modelPool.warmupFromSceneAssets(configService.getSceneAssets());
+  }
+
+  private async warmupVfxFirstUsePaths(): Promise<void> {
+    if (!this.sceneVfxService) return;
+    try {
+      await this.sceneVfxService.warmupRegisteredEffectPackages();
+      await this.scene.whenReadyAsync(false);
+      await this.renderWarmupFrame();
+      await this.renderWarmupFrame();
+    } catch (error) {
+      console.warn('[Game] VFX first-use warmup skipped:', error);
+    }
+  }
+
+  private async renderWarmupFrame(): Promise<void> {
+    await new Promise<void>((resolve) => {
+      if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(() => resolve());
+        return;
+      }
+      window.setTimeout(resolve, 0);
+    });
+    this.scene.render();
   }
 
   private initInput(): void {

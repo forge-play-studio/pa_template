@@ -37,7 +37,7 @@
 16. dev-only runtime debug bootstrap：`src/debug/runtime-debug-bootstrap.ts`，统一挂载模板基础调试工具和玩法阶段面板
 17. 默认运行时节点查询封装：`RuntimeNodeService`，用于从 gameplay binding / scene node 稳定拿 runtime node
 18. 默认 debug 面板基础设施：`src/debug/framework/*`、`src/debug/panel-manifest.ts` 和 `src/debug/runtime-gameplay-debug-panels.ts`
-19. 默认 loading 链路：`Game.init` 在 gameplay modules 初始化前 preload `scene.assets`，并按 `warmupCount` 通过 `ModelPool` 做 runtime asset warmup
+19. 默认 loading 链路：`Game.init` 在 gameplay modules 初始化前 preload `scene.assets`，按 `warmupCount` 通过 `ModelPool` 做 runtime asset warmup，并在 loading 结束前按 VFX registry / `assets/vfx/usages.json` 预热可 spawn 的特效首用路径
 20. 基础输入抽象：`InputService` / `MovementInputSource`，供项目按 `gameplay.md` 接入 joystick、键盘、点击移动或其他控制 UI
 
 当前不应默认假设已经完整包含：
@@ -125,10 +125,11 @@ LoadingScreen 显示
 -> SceneBuilder 构建场景
 -> ModelPool 按 warmupCount warmup
 -> gameplay modules init
+-> VFX registry/usages 首用预热
 -> LoadingScreen 隐藏
 ```
 
-因此，QueueSystem、BackpackSystem、AreaSystem、ResourcesSystem 等业务系统不应临时拼路径加载模型来绕过 loading。缺少 asset id/file、loading path、runtime parent/spawn root、placement root、layout 或 warmup/max-active 假设时，先按 Asset Gap 或 Gameplay Doc Gap 处理。
+因此，QueueSystem、BackpackSystem、AreaSystem、ResourcesSystem 等业务系统不应临时拼路径加载模型来绕过 loading；VFX 调用也应优先通过项目 VFX registry / usages 接入，让模板 loading 阶段能覆盖首用预热。缺少 asset id/file、loading path、runtime parent/spawn root、placement root、layout、VFX usage 或 warmup/max-active 假设时，先按 Asset Gap 或 Gameplay Doc Gap 处理。
 
 ### Analytics / CTA Contract
 
