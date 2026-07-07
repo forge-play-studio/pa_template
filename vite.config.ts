@@ -81,6 +81,7 @@ const analyticsConfig = appConfig.analytics;
 const i18nConfig = appConfig.i18n;
 const liteBuild = process.env.LITE_BUILD === 'true';
 const isProduction = process.env.NODE_ENV === 'production';
+const enableDevDebugTooling = !isProduction;
 const VFX_USAGES_SCHEMA_REF = './usages.schema.json';
 const VFX_USAGES_SCHEMA_VERSION = 'project-vfx-usages/1.0';
 const VFX_USAGE_TARGET_KINDS = new Set(['socket', 'node']);
@@ -1181,11 +1182,13 @@ export default defineConfig({
       delay: 2000,
       enabled: bridgeEnabled,
     }),
-    // 新版 fps-game-editor 不注入 Babylon Inspector UI。
-    inspectorPlugin(),
-    debugPanelConfigApiPlugin(),
-    vfxDebugOverridesApiPlugin(),
-    vfxUsageOverridesApiPlugin(),
+    // Debug panel / inspector preload tooling is dev-only. Keep it out of package builds.
+    ...(enableDevDebugTooling ? [
+      inspectorPlugin(),
+      debugPanelConfigApiPlugin(),
+      vfxDebugOverridesApiPlugin(),
+      vfxUsageOverridesApiPlugin(),
+    ] : []),
     projectAuthoringApiPlugin(),
     // 开发模式模型强缓存 + URL 版本化（mtime）
     modelCachePlugin({
@@ -1255,17 +1258,19 @@ export default defineConfig({
     dedupe: [
       '@babylonjs/core',
       '@babylonjs/loaders',
-      '@babylonjs/inspector',
+      ...(enableDevDebugTooling ? ['@babylonjs/inspector'] : []),
     ],
   },
   optimizeDeps: {
     exclude: localFpsGameEditorRepo ? [...editorPackageIds] : [],
     include: [
       '@babylonjs/core',
-      '@babylonjs/core/Layers/effectLayerSceneComponent',
-      '@babylonjs/inspector',
-      '@babylonjs/core/Rendering/depthRendererSceneComponent',
-      '@babylonjs/core/Gizmos/gizmoManager',
+      ...(enableDevDebugTooling ? [
+        '@babylonjs/core/Layers/effectLayerSceneComponent',
+        '@babylonjs/inspector',
+        '@babylonjs/core/Rendering/depthRendererSceneComponent',
+        '@babylonjs/core/Gizmos/gizmoManager',
+      ] : []),
     ],
   },
   assetsInclude: ['**/*.env'],
