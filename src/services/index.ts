@@ -4,6 +4,10 @@
 
 export { AssetLoader } from './AssetLoader';
 export type { LoadProgress } from './AssetLoader';
+export {
+  importGlbMeshesFromUrlAsync,
+  loadGlbContainerFromUrlAsync,
+} from './glbUrlLoader';
 
 export { ModelPool } from './ModelPool';
 export type { PooledInstance, ModelConfig, ModelWarmupAssetConfig, ModelWarmupResult } from './ModelPool';
