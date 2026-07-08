@@ -301,6 +301,32 @@ debug 面板职责边界：
 5. 面板必须由 `src/main.ts` 的 dev-only dynamic import 链路加载，不要在 production-owned 文件里静态 import debug module 的值。
 6. production / package build 不得 mount runtime debug panel、注册 `window.__paDebugActions`、暴露 debug HUD / tuning UI，正式 gameplay 逻辑也不得依赖 debug-only API。
 
+#### Record Replay
+
+模板在 dev 模式默认挂载 `Record Replay` debug 面板，并暴露 `window.__rr` 给 agent 或浏览器控制台使用。production build 会通过 `check:prod-debug` 校验，不允许 `record-replay`、`runtime-record-replay-panel` 或 `__rr` token 进入 `dist/`。
+
+常用 API：
+
+1. `window.__rr.startRec()`：开始录制当前 movement source，每帧记录输入、实际消费的 `dt` 和 gameplay state hash。
+2. `window.__rr.stopRec('label')`：停止录制并返回 `DemoRecording` envelope。
+3. `await window.__rr.replay(recording)`：重启到初始态，按录制帧逐帧调用 `Game.stepFrame(recordedDt)`，首个 state hash 不一致时立即停在发散帧。
+4. `await window.__rr.stepTo(recording, n)`：重启后只推进前 `n` 帧，用于定位发散。
+5. `await window.__rr.selfTest()`：使用模板内置的 dev-only scripted drag source 录制并回放 180 帧，验证逐帧 state hash 和 recorded dt。
+6. `window.__rr.export()` / `window.__rr.import(json)`：导出或导入 JSON recording。
+
+新项目接入 checklist：
+
+1. 项目自己的触摸、摇杆或 AI 输入必须实现 `MovementInputSource`，并通过 `InputService.setMovementSource()` 接入。
+2. 接入输入后先跑 `await window.__rr.selfTest()`，再录制真人操作。
+3. 回放必须从同 seed 的干净初始态开始；录制 envelope 的 `seed` 和 `startStateHash` 不匹配时会 loud fail。
+4. 如果新增 gameplay module 有影响回放判定的状态，实现 `getSnapshot()`，让 `record-replay` 的 L1 state hash 覆盖它。
+
+#### Determinism Contract
+
+gameplay runtime 代码禁止直接使用 `Math.random()`、`Date.now()` 或 `performance.now()` 推进游戏状态。随机数统一通过 `GameplayRuntimeContext.determinism.random` 注入；时间统一使用 `update(deltaTime)` 传入的 `dt` 累计。直接读取 wall-clock 或全局随机源会破坏 record-replay 的确定性。
+
+dev/editor/VFX/audio 工具代码不受这条 gameplay determinism contract 约束；但只要某段代码会改变 gameplay state hash 或影响玩家位置、资源、队列、升级等可回放状态，就必须走注入的 deterministic source。
+
 ### `entities/`
 
 放单体对象行为封装。

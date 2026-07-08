@@ -63,6 +63,8 @@ import { SimplePlayer } from '../entities';
 
 import { configService, PROJECT_GAMEPLAY_CONFIG } from '../config';
 import type { SceneConfig } from '../config';
+import { createDeterminismContext } from './determinism';
+import type { DeterminismContext } from './determinism';
 import { createProjectGameplayRuntime } from '../gameplay';
 import type { GameplayModule, ProjectGameplayRuntime } from '../gameplay';
 import type { EffectPackageService } from '@fps-games/vfx';
@@ -110,7 +112,12 @@ export class Game {
   private isRunning = false;
   private isPaused = false;
   private lastTime = 0;
+  private frame = 0;
+  private currentFrameDeltaTime: number | null = null;
+  private lastFrameDeltaTime = 0;
+  private dtOverride: (() => number) | null = null;
   private enableAudio: boolean;
+  private determinism: DeterminismContext;
 
   constructor(options: GameOptions) {
     const el = document.getElementById(options.canvasId);
@@ -120,6 +127,7 @@ export class Game {
     this.canvas = el;
 
     this.enableAudio = options.enableAudio ?? false;
+    this.determinism = createDeterminismContext(resolveSeedFromUrl(window.location.search));
 
     this.engine = new Engine(this.canvas, true, {
       preserveDrawingBuffer: true,
@@ -310,6 +318,7 @@ export class Game {
       cta: this.ctaService,
       player: this.player,
       zoneSystem: this.zoneSystem,
+      determinism: this.determinism,
     });
     this.gameplayModules = this.projectGameplayRuntime.modules;
 
@@ -352,14 +361,65 @@ export class Game {
     if (!this.isRunning) return;
 
     const now = performance.now();
-    const deltaTime = (now - this.lastTime) / 1000;
+    const deltaTime = this.dtOverride?.() ?? (now - this.lastTime) / 1000;
     this.lastTime = now;
 
     if (!this.isPaused) {
-      this.update(deltaTime);
+      this.advanceFrame(deltaTime, true);
+    } else {
+      this.lastFrameDeltaTime = deltaTime;
+      this.frame++;
     }
 
     this.scene.render();
+  }
+
+  stepFrame(deltaTime: number): void {
+    if (!this.isPaused) {
+      throw new Error('Game.stepFrame(dt) requires the game to be paused.');
+    }
+    if (!Number.isFinite(deltaTime) || deltaTime < 0) {
+      throw new Error(`Game.stepFrame(dt) requires a finite non-negative dt, got ${deltaTime}.`);
+    }
+    this.advanceFrame(deltaTime, true);
+    this.scene.render();
+  }
+
+  setDtOverride(override: (() => number) | null): void {
+    this.dtOverride = override;
+  }
+
+  getFrameCount(): number {
+    return this.frame;
+  }
+
+  getCurrentFrameDeltaTime(): number | null {
+    return this.currentFrameDeltaTime;
+  }
+
+  getLastFrameDeltaTime(): number {
+    return this.lastFrameDeltaTime;
+  }
+
+  getPaused(): boolean {
+    return this.isPaused;
+  }
+
+  getDeterminismContext(): DeterminismContext {
+    return this.determinism;
+  }
+
+  private advanceFrame(deltaTime: number, shouldUpdate: boolean): void {
+    this.currentFrameDeltaTime = deltaTime;
+    try {
+      if (shouldUpdate) {
+        this.update(deltaTime);
+      }
+    } finally {
+      this.lastFrameDeltaTime = deltaTime;
+      this.currentFrameDeltaTime = null;
+      this.frame++;
+    }
   }
 
   private update(deltaTime: number): void {
@@ -464,6 +524,7 @@ export class Game {
 
   dispose(): void {
     this.stop();
+    this.dtOverride = null;
 
     for (let i = this.gameplayModules.length - 1; i >= 0; i--) {
       this.gameplayModules[i].dispose?.();
@@ -507,4 +568,18 @@ export class Game {
     this.scene.dispose();
     this.engine.dispose();
   }
+}
+
+function resolveSeedFromUrl(search: string): number {
+  const params = new URLSearchParams(search);
+  const raw = params.get('seed');
+  if (raw == null || raw.trim() === '') return 1;
+  const numeric = Number(raw);
+  if (Number.isFinite(numeric)) return numeric >>> 0;
+  let hash = 2166136261;
+  for (let index = 0; index < raw.length; index += 1) {
+    hash ^= raw.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
 }

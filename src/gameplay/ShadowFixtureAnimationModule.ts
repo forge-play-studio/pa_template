@@ -47,7 +47,7 @@ export class ShadowFixtureAnimationModule implements GameplayModule {
   private workerAnimations: AnimationGroup[] = [];
 
   constructor(
-    private readonly context: Pick<GameplayRuntimeContext, 'sceneBuilder' | 'animationService'>,
+    private readonly context: Pick<GameplayRuntimeContext, 'sceneBuilder' | 'animationService'> & Partial<Pick<GameplayRuntimeContext, 'determinism'>>,
     options: ShadowFixtureAnimationModuleOptions = {},
   ) {
     this.playerNodeId = options.playerNodeId ?? DEFAULT_PLAYER_NODE_ID;
@@ -56,7 +56,7 @@ export class ShadowFixtureAnimationModule implements GameplayModule {
     this.moveSpeed = Math.max(0.1, options.playerMoveSpeed ?? DEFAULT_MOVE_SPEED);
     this.idleMinSec = Math.max(0, options.playerIdleMinSec ?? DEFAULT_IDLE_MIN_SEC);
     this.idleMaxSec = Math.max(this.idleMinSec, options.playerIdleMaxSec ?? DEFAULT_IDLE_MAX_SEC);
-    this.random = options.random ?? Math.random;
+    this.random = options.random ?? context.determinism?.random ?? Math.random;
   }
 
   init(): void {

@@ -4,6 +4,7 @@ import { mountCameraDebugPanel } from './camera-debug-panel';
 import { mountLocalEditorModeSwitcher } from './local-editor-mode-switcher';
 import { mountRuntimeGameplayDebugPanels } from './runtime-gameplay-debug-panels';
 import { mountRuntimeLightingDebugPanel } from './runtime-lighting-debug-panel';
+import { mountRuntimeRecordReplayPanel } from './runtime-record-replay-panel';
 import { mountRuntimeVfxDebugPanel } from './runtime-vfx-debug-panel';
 import { DisposableStack, type Disposable } from './framework/disposables';
 import { createRuntimeDebugPanelManager } from './framework/panel-manager';
@@ -36,6 +37,14 @@ export function mountRuntimeDebug(options: RuntimeDebugBootstrapOptions): Runtim
   runtimePanels.use(mountRuntimeVfxDebugPanel({
     root,
     getGame: options.getGame,
+  }));
+  runtimePanels.use(mountRuntimeRecordReplayPanel({
+    root,
+    getGame: options.getGame,
+    restartGame: async (context) => {
+      if (!window.__restartProjectGame) throw new Error('__restartProjectGame is not available.');
+      await window.__restartProjectGame(context);
+    },
   }));
   runtimePanels.use(mountRuntimeGameplayDebugPanels({
     root,

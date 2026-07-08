@@ -24,12 +24,20 @@ export class InputService implements MovementInputSource {
     this.movementSource = source;
   }
 
+  getMovementSource(): MovementInputSource | null {
+    return this.movementSource;
+  }
+
   clearMovementSource(): void {
     this.movementSource = null;
   }
 
   setEnabled(enabled: boolean): void {
     this.enabled = enabled;
+  }
+
+  isEnabled(): boolean {
+    return this.enabled;
   }
 
   getInput(): Readonly<MovementInputState> {

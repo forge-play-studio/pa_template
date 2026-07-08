@@ -9,6 +9,7 @@ const ignoredReportFiles = new Set([
 const forbiddenTokens = [
   '__paDebugActions',
   '__paDebugActionRegistry',
+  '__rr',
   '__debug_panel_config',
   '__vfx_debug_overrides',
   '__vfx_usage_overrides',
@@ -21,8 +22,10 @@ const forbiddenTokens = [
   'vfx-usage-overrides-api',
   'runtime-debug-panel',
   'runtime-vfx-debug-panel',
+  'runtime-record-replay-panel',
   'runtime-debug-bootstrap',
   'debug-panel-layout',
+  'record-replay',
   'RuntimeDebugActionRegistry',
 ];
 

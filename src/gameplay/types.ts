@@ -16,6 +16,7 @@ import type {
   ShadowService,
 } from '../services';
 import type { ZoneSystem } from '../systems';
+import type { DeterminismContext } from '../core/determinism';
 
 export interface GameplayModule {
   init?(): void | Promise<void>;
@@ -40,4 +41,5 @@ export interface GameplayRuntimeContext {
   cta: PlayableCtaService;
   player: SimplePlayer;
   zoneSystem: ZoneSystem;
+  determinism: DeterminismContext;
 }
