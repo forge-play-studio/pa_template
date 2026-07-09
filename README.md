@@ -307,19 +307,32 @@ debug 面板职责边界：
 
 常用 API：
 
-1. `window.__rr.startRec()`：开始录制当前 movement source，每帧记录输入、实际消费的 `dt` 和 gameplay state hash。
-2. `window.__rr.stopRec('label')`：停止录制并返回 `DemoRecording` envelope。
-3. `await window.__rr.replay(recording)`：重启到初始态，按录制帧逐帧调用 `Game.stepFrame(recordedDt)`，首个 state hash 不一致时立即停在发散帧。
-4. `await window.__rr.stepTo(recording, n)`：重启后只推进前 `n` 帧，用于定位发散。
-5. `await window.__rr.selfTest()`：使用模板内置的 dev-only scripted drag source 录制并回放 180 帧，验证逐帧 state hash 和 recorded dt。
-6. `window.__rr.export()` / `window.__rr.import(json)`：导出或导入 JSON recording。
+1. `window.__rr.startRec()`：开始录制当前 movement source，每个 `Game.update` 后 dense 记录输入、实际消费的 `dt`、state hash、稀疏 `stateSamples` 和玩家 `trail`。
+2. `window.__rr.stopRec('label')`：停止录制并返回 `DemoRecording`，新 tape 默认 `hashVersion: 4`、`anchorFrame` 和 `settledMarker`。
+3. `await window.__rr.replay(recording)`：Mode A 诊断回放；按录制帧逐帧 `stepFrame(recordedDt)`，首个 state hash 不一致时停在发散帧。
+4. `await window.__rr.replayValidateSamples(recording)`：用稀疏 `stateSamples` 做字段级采样验证。
+5. `await window.__rr.reconstructTrail(recording)`：只重建玩家轨迹，避免全量 hash 的重序列化成本。
+6. `window.__rr.extractSemantic(recording)` / `await window.__rr.semanticReplay(script)`：Mode B 语义回放；运行时输入校准后按 waypoint 和 detector milestone 闭环推进。
+7. `await window.__rr.playback(recording)`、`await window.__rr.stepTo(recording, n)`、`await window.__rr.selfTest()`、`window.__rr.export()` / `window.__rr.import(json)`。
 
-新项目接入 checklist：
+游戏接入 checklist：
 
 1. 项目自己的触摸、摇杆或 AI 输入必须实现 `MovementInputSource`，并通过 `InputService.setMovementSource()` 接入。
-2. 接入输入后先跑 `await window.__rr.selfTest()`，再录制真人操作。
-3. 回放必须从同 seed 的干净初始态开始；录制 envelope 的 `seed` 和 `startStateHash` 不匹配时会 loud fail。
-4. 如果新增 gameplay module 有影响回放判定的状态，实现 `getSnapshot()`，让 `record-replay` 的 L1 state hash 覆盖它。
+2. 在 dev-only 代码里调用 `registerRecordReplayProviders({ snapshotProviders, milestoneDetectors, playerPosition })`。不要在正式 gameplay 文件里静态 import debug 模块。
+3. `playerPosition` 返回语义回放要控制的主角世界坐标 `{ x, z }`；模板默认注册 `SimplePlayer`，真实项目替换或追加自己的 player provider。
+4. 每个影响 replay 判定的系统显式注册 `RecordReplaySnapshotProvider`，`name` 必须稳定且会进入 hash；`getSnapshot()` 返回可 JSON 化数据。
+5. 如果 Mode B 要验证解锁、雇佣、订单完成、阶段切换等因果事件，实现 `MilestoneDetector.detect(prev, next)`；detector 可以读取 `Observation.snapshots`、`Observation.facts` 和 `Observation.economy`。
+6. Provider snapshot 若包含通用经济或 facts，使用 `{ recordReplay: { economy: { cash, totalEarned, totalSpent }, facts: { ... } } }`；facts 会以 `providerName.key` 进入 observation，milestone `detail.id` 应使用同一稳定 id。
+7. 对需要“已触发事件后继续等经济阈值”的 gate，在 milestone 上填 `economyAtGate`；semantic replay 会在 detector gate 达成后继续循环本 stage，直到经济阈值通过或超时。
+8. 新项目先跑 `pnpm test:record-replay` 和 `await window.__rr.selfTest()`；再录 30s demo，验证 `replay()`、`extractSemantic()` 和 `semanticReplay()`。
+
+v1 → v2 破坏性变更：
+
+1. 旧 tape 没有 `hashVersion`、`anchorFrame`、`settledMarker`、`stateSamples` 或 `trail`；可以导入，但不保证与 v4 hash 逐帧兼容，推荐重录。
+2. 框架不再自动扫描 `ProjectGameplayRuntime.systems` 或任何固定 scene node id；游戏状态必须通过 Provider 注册。
+3. Mode B 的 milestone 不再由模板内置业务字段推导；项目必须提供 Detector，模板只带 `SimplePlayer` provider 和一个 facts detector 示例。
+4. 录制从 post-update/pre-finalizer 单一路径 dense 捕获；依赖“输入被轮询才记录”的旧行为会被视为非 dense tape。
+5. Replay 期间会 pin Babylon engine dt，并在 paused step replay 时抑制额外 RAF render；调试代码不要依赖 paused RAF render 的副作用。
 
 #### Determinism Contract
 

@@ -65,6 +65,7 @@ import { configService, PROJECT_GAMEPLAY_CONFIG } from '../config';
 import type { SceneConfig } from '../config';
 import { createDeterminismContext } from './determinism';
 import type { DeterminismContext } from './determinism';
+import { DEFAULT_ENGINE_RENDER_DELTA_TIME_SECONDS, pinEngineDeltaTimeForFrame } from './engine-clock';
 import { createProjectGameplayRuntime } from '../gameplay';
 import type { GameplayModule, ProjectGameplayRuntime } from '../gameplay';
 import type { EffectPackageService } from '@fps-games/vfx';
@@ -116,6 +117,7 @@ export class Game {
   private currentFrameDeltaTime: number | null = null;
   private lastFrameDeltaTime = 0;
   private dtOverride: (() => number) | null = null;
+  private suppressPausedRender = false;
   private enableAudio: boolean;
   private determinism: DeterminismContext;
 
@@ -256,7 +258,7 @@ export class Game {
       }
       window.setTimeout(resolve, 0);
     });
-    this.scene.render();
+    this.renderWithPinnedEngineDelta(this.lastFrameDeltaTime || DEFAULT_ENGINE_RENDER_DELTA_TIME_SECONDS);
   }
 
   private initInput(): void {
@@ -367,11 +369,12 @@ export class Game {
     if (!this.isPaused) {
       this.advanceFrame(deltaTime, true);
     } else {
-      this.lastFrameDeltaTime = deltaTime;
-      this.frame++;
+      this.currentFrameDeltaTime = null;
     }
 
-    this.scene.render();
+    if (!(this.isPaused && this.suppressPausedRender)) {
+      this.renderWithPinnedEngineDelta(deltaTime);
+    }
   }
 
   stepFrame(deltaTime: number): void {
@@ -382,11 +385,15 @@ export class Game {
       throw new Error(`Game.stepFrame(dt) requires a finite non-negative dt, got ${deltaTime}.`);
     }
     this.advanceFrame(deltaTime, true);
-    this.scene.render();
+    this.renderWithPinnedEngineDelta(deltaTime);
   }
 
   setDtOverride(override: (() => number) | null): void {
     this.dtOverride = override;
+  }
+
+  setSuppressPausedRender(flag: boolean): void {
+    this.suppressPausedRender = flag;
   }
 
   getFrameCount(): number {
@@ -405,6 +412,10 @@ export class Game {
     return this.isPaused;
   }
 
+  isGameplaySettled(): boolean {
+    return this.gameplayModules.every((module) => module.isBootSettled?.() !== false);
+  }
+
   getDeterminismContext(): DeterminismContext {
     return this.determinism;
   }
@@ -413,6 +424,7 @@ export class Game {
     this.currentFrameDeltaTime = deltaTime;
     try {
       if (shouldUpdate) {
+        this.determinism.advance(deltaTime);
         this.update(deltaTime);
       }
     } finally {
@@ -434,6 +446,11 @@ export class Game {
   // ============================================================
   // Utilities
   // ============================================================
+
+  private renderWithPinnedEngineDelta(deltaTime: number): void {
+    pinEngineDeltaTimeForFrame(this.engine, deltaTime || DEFAULT_ENGINE_RENDER_DELTA_TIME_SECONDS);
+    this.scene.render();
+  }
 
   private handleDevicePixelRatio(): void {
     const ratio = window.devicePixelRatio || 1;

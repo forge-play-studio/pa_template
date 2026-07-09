@@ -11,10 +11,17 @@ export interface RecorderSourceOptions {
   maxFrames?: number;
 }
 
+export interface RecorderUpdateRecord {
+  frame: DemoRecordingFrame;
+  index: number;
+  droppedFrames: number;
+}
+
 export class RecorderSource implements MovementInputSource {
   private readonly maxFrames: number;
   private readonly frames: DemoRecordingFrame[] = [];
-  private lastRecordedFrame: number | null = null;
+  private polledInputFrame: number | null = null;
+  private polledInput: MovementInputState | null = null;
   private droppedFrames = 0;
 
   constructor(
@@ -28,22 +35,52 @@ export class RecorderSource implements MovementInputSource {
   getInput(): Readonly<MovementInputState> {
     const input = normalizeMovementInput(this.inner?.getInput() ?? IDLE_MOVEMENT_INPUT);
     const frame = this.game.getFrameCount();
-    if (frame !== this.lastRecordedFrame) {
-      this.frames.push({
-        frame,
-        dt: normalizeRecordedDt(this.game.getCurrentFrameDeltaTime() ?? this.game.getLastFrameDeltaTime()),
-        input,
-      });
-      this.lastRecordedFrame = frame;
-      while (this.frames.length > this.maxFrames) {
-        this.frames.shift();
-        this.droppedFrames += 1;
-      }
-    } else {
-      const latest = this.frames[this.frames.length - 1];
-      if (latest) latest.input = input;
-    }
+    this.polledInputFrame = frame;
+    this.polledInput = input;
     return input;
+  }
+
+  recordUpdate(frame = this.game.getFrameCount(), dt = this.game.getCurrentFrameDeltaTime() ?? this.game.getLastFrameDeltaTime()): RecorderUpdateRecord {
+    const normalizedFrame = Math.max(0, Math.floor(frame));
+    const input = this.polledInputFrame === normalizedFrame
+      ? normalizeMovementInput(this.polledInput)
+      : { ...IDLE_MOVEMENT_INPUT };
+    const latest = this.frames[this.frames.length - 1];
+
+    if (latest && latest.frame === normalizedFrame) {
+      latest.dt = normalizeRecordedDt(dt);
+      latest.input = input;
+      return {
+        frame: {
+          frame: latest.frame,
+          dt: latest.dt,
+          input: { ...latest.input },
+        },
+        index: this.frames.length - 1,
+        droppedFrames: this.droppedFrames,
+      };
+    }
+
+    const recorded: DemoRecordingFrame = {
+      frame: normalizedFrame,
+      dt: normalizeRecordedDt(dt),
+      input,
+    };
+    this.frames.push(recorded);
+    while (this.frames.length > this.maxFrames) {
+      this.frames.shift();
+      this.droppedFrames += 1;
+    }
+    const index = this.frames.findIndex((item) => item.frame === normalizedFrame);
+    return {
+      frame: {
+        frame: recorded.frame,
+        dt: recorded.dt,
+        input: { ...recorded.input },
+      },
+      index: index >= 0 ? index : this.frames.length - 1,
+      droppedFrames: this.droppedFrames,
+    };
   }
 
   getFrames(): DemoRecordingFrame[] {

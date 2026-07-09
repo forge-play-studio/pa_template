@@ -10,6 +10,7 @@ const forbiddenTokens = [
   '__paDebugActions',
   '__paDebugActionRegistry',
   '__rr',
+  '__rrChopperTrace',
   '__debug_panel_config',
   '__vfx_debug_overrides',
   '__vfx_usage_overrides',

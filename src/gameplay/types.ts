@@ -21,6 +21,7 @@ import type { DeterminismContext } from '../core/determinism';
 export interface GameplayModule {
   init?(): void | Promise<void>;
   update?(deltaTime: number): void;
+  isBootSettled?(): boolean;
   dispose?(): void;
 }
 

@@ -30,6 +30,22 @@ type ProjectGameRestartContext = {
   reason?: string;
 };
 
+interface RecordReplayStartupControl {
+  autoStart: boolean;
+  autoReplay: boolean;
+  tapeKey: string;
+}
+
+interface RecordReplayAgentApiLike {
+  startRec(options?: { label?: string; maxFrames?: number }): unknown;
+  import(json: string): unknown;
+  replay(recording?: unknown, options?: { restart?: boolean; resumeOnComplete?: boolean }): Promise<unknown>;
+}
+
+const RECORD_REPLAY_AUTO_RECORD_MAX_FRAMES = 200_000;
+const RECORD_REPLAY_DEFAULT_AUTO_REPLAY_TAPE_KEY = 'pa-template.record-replay.autoReplayTape';
+const RECORD_REPLAY_SETTLED_TIMEOUT_MS = 10_000;
+
 async function registerRuntimeEditorBridge(): Promise<void> {
   const editorModule = await import('./fps-game-editor-adapter/runtime');
   editorModule.registerProjectFpsGameEditorRuntimeBridge();
@@ -69,6 +85,94 @@ async function mountRuntimeDebugForDev(): Promise<void> {
   } catch (error) {
     console.warn('[runtime-debug-bootstrap] mount failed', error);
   }
+}
+
+function readRecordReplayStartupControl(): RecordReplayStartupControl {
+  const params = new URLSearchParams(window.location.search);
+  return {
+    autoStart: isTruthyQueryParam(params.get('rrAutoStart')),
+    autoReplay: isTruthyQueryParam(params.get('rrAutoReplay')),
+    tapeKey: params.get('rrTapeKey')?.trim() || RECORD_REPLAY_DEFAULT_AUTO_REPLAY_TAPE_KEY,
+  };
+}
+
+function isTruthyQueryParam(value: string | null): boolean {
+  if (value === null) return false;
+  const normalized = value.trim().toLowerCase();
+  return normalized === '' || normalized === '1' || normalized === 'true' || normalized === 'yes';
+}
+
+async function prepareRecordReplayStartupControl(): Promise<RecordReplayStartupControl | null> {
+  const control = readRecordReplayStartupControl();
+  if (!control.autoStart && !control.autoReplay) return null;
+  if (control.autoStart && control.autoReplay) {
+    throw new Error('rrAutoStart and rrAutoReplay cannot be enabled at the same time.');
+  }
+  await mountRuntimeDebugForDev();
+  game?.pause();
+  return control;
+}
+
+async function runRecordReplayStartupControl(control: RecordReplayStartupControl): Promise<void> {
+  if (control.autoStart) {
+    await runRecordReplayAutoStart();
+    return;
+  }
+  await runRecordReplayAutoReplay(control);
+}
+
+async function runRecordReplayAutoStart(): Promise<void> {
+  const currentGame = game;
+  if (!currentGame) throw new Error('Game is not ready for rrAutoStart.');
+  currentGame.pause();
+  await waitForRecordReplayGameplaySettled(currentGame, 'rrAutoStart');
+  const result = readRecordReplayApi()?.startRec({
+    label: 'rrAutoStart',
+    maxFrames: RECORD_REPLAY_AUTO_RECORD_MAX_FRAMES,
+  });
+  console.info('[record-replay] rrAutoStart armed', result);
+  currentGame.resume();
+}
+
+async function runRecordReplayAutoReplay(control: RecordReplayStartupControl): Promise<void> {
+  const api = readRecordReplayApi();
+  if (!api) throw new Error('record-replay API is not mounted.');
+  const tapeJson = window.localStorage.getItem(control.tapeKey);
+  if (!tapeJson) {
+    console.warn(`[record-replay] rrAutoReplay paused at frame 0; localStorage key "${control.tapeKey}" has no tape.`);
+    return;
+  }
+  const recording = api.import(tapeJson);
+  await api.replay(recording, { restart: false, resumeOnComplete: false });
+}
+
+function readRecordReplayApi(): RecordReplayAgentApiLike | undefined {
+  return (window as unknown as { __rr?: RecordReplayAgentApiLike }).__rr;
+}
+
+function waitForRecordReplayGameplaySettled(currentGame: Game, label: string): Promise<Game> {
+  if (currentGame.isGameplaySettled()) return Promise.resolve(currentGame);
+  const startedAt = performance.now();
+  const anchorFrame = currentGame.getFrameCount();
+  return new Promise((resolve, reject) => {
+    const poll = () => {
+      if (currentGame.getFrameCount() !== anchorFrame) {
+        reject(new Error(`Gameplay frame advanced before ${label} settled: anchor=${anchorFrame}, current=${currentGame.getFrameCount()}`));
+        return;
+      }
+      if (currentGame.isGameplaySettled()) {
+        resolve(currentGame);
+        return;
+      }
+      if (performance.now() - startedAt > RECORD_REPLAY_SETTLED_TIMEOUT_MS) {
+        reject(new Error(`Timed out waiting for gameplay settled before ${label}.`));
+        return;
+      }
+      if (typeof requestAnimationFrame === 'function') requestAnimationFrame(poll);
+      else window.setTimeout(poll, 16);
+    };
+    poll();
+  });
 }
 
 function delay(ms: number): Promise<void> {
@@ -164,6 +268,14 @@ async function init(): Promise<void> {
     await game.init();
     playableAnalyticsService.reportLoaded();
 
+    // 暴露给调试。record-replay auto 模式需要在 start() 前拿到 frame-0 game。
+    window.gameInstance = game;
+    window.game = game;
+
+    const recordReplayStartupControl = import.meta.env.DEV
+      ? await prepareRecordReplayStartupControl()
+      : null;
+
     if (import.meta.env.VITE_ENABLE_LEGACY_RUNTIME_EDITOR === 'true') {
       await registerRuntimeEditorBridge();
     }
@@ -178,12 +290,12 @@ async function init(): Promise<void> {
       playableAnalyticsService.reportProgressMilestone(0);
     });
 
-    // 暴露给调试
-    window.gameInstance = game;
-    window.game = game;
-
     if (import.meta.env.DEV) {
-      await mountRuntimeDebugForDev();
+      if (recordReplayStartupControl) {
+        await runRecordReplayStartupControl(recordReplayStartupControl);
+      } else {
+        await mountRuntimeDebugForDev();
+      }
     }
 
   } catch (error) {

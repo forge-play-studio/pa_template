@@ -1,4 +1,12 @@
-import type { Game } from '../../core/Game';
+import {
+  LATEST_RECORD_REPLAY_HASH_VERSION,
+  normalizeHashVersion,
+  type RecordReplayHashVersion,
+} from './schema';
+import {
+  collectRecordReplaySnapshotEntries,
+  readRecordReplayPlayerPosition,
+} from './providers';
 
 export type JsonSnapshot =
   | null
@@ -20,12 +28,26 @@ export interface StateDiff {
   actual: JsonSnapshot | undefined;
 }
 
-interface SnapshotProvider {
-  getSnapshot(): unknown;
+interface RecordReplayHashGame {
+  getPlayer(): { position: { x: number; y: number; z: number }; radius: number } | null;
+  getInputService(): { isEnabled(): boolean } | null;
+  getCamera(): {
+    position: { x: number; y: number; z: number };
+    target: { x: number; y: number; z: number };
+    alpha: number;
+    beta: number;
+    radius: number;
+  } | null;
+  getFrameCount(): number;
+  getLastFrameDeltaTime(): number;
+  getDeterminismContext(): { elapsedTimeSec: number };
 }
 
-export function stateHash(game: Game): StateHashResult {
-  const snapshot = captureStateSnapshot(game);
+export function stateHash(
+  game: RecordReplayHashGame,
+  hashVersion: RecordReplayHashVersion = LATEST_RECORD_REPLAY_HASH_VERSION,
+): StateHashResult {
+  const snapshot = captureStateSnapshot(game, hashVersion);
   const stableJson = stableStringify(snapshot);
   return {
     hash: hashString(stableJson),
@@ -34,23 +56,20 @@ export function stateHash(game: Game): StateHashResult {
   };
 }
 
-export function captureStateSnapshot(game: Game): JsonSnapshot {
+export function captureStateSnapshot(
+  game: RecordReplayHashGame,
+  hashVersion: RecordReplayHashVersion = LATEST_RECORD_REPLAY_HASH_VERSION,
+): JsonSnapshot {
+  const normalizedHashVersion = normalizeHashVersion(hashVersion);
   const player = game.getPlayer();
-  const runtime = game.getProjectGameplayRuntime();
   const inputService = game.getInputService();
-  const moduleSnapshots: JsonSnapshot[] = [];
+  const camera = game.getCamera();
+  const registeredPlayerPosition = readRecordReplayPlayerPosition();
+  const providerSnapshots = normalizedHashVersion >= 2
+    ? captureRegisteredProviderSnapshots(normalizedHashVersion)
+    : [];
 
-  if (runtime) {
-    for (const [name, system] of Object.entries(runtime.systems)) {
-      if (!hasSnapshot(system)) continue;
-      moduleSnapshots.push(normalizeSnapshotValue({
-        name,
-        snapshot: safeGetSnapshot(system),
-      }));
-    }
-  }
-
-  return normalizeSnapshotValue({
+  const snapshot = {
     input: {
       enabled: inputService?.isEnabled() ?? false,
     },
@@ -64,14 +83,49 @@ export function captureStateSnapshot(game: Game): JsonSnapshot {
           radius: player.radius,
         }
       : null,
-    modules: moduleSnapshots,
-  });
+    playerPosition: registeredPlayerPosition
+      ? readVectorSnapshot({
+          x: registeredPlayerPosition.x,
+          y: registeredPlayerPosition.y ?? 0,
+          z: registeredPlayerPosition.z,
+        }, normalizedHashVersion)
+      : null,
+    camera: camera
+      ? {
+          position: readVectorSnapshot(camera.position, normalizedHashVersion),
+          target: readVectorSnapshot(camera.target, normalizedHashVersion),
+          alpha: camera.alpha,
+          beta: camera.beta,
+          radius: camera.radius,
+        }
+      : null,
+    providers: providerSnapshots,
+  };
+
+  if (normalizedHashVersion >= 2) {
+    return normalizeSnapshotValue({
+      ...snapshot,
+      hashVersion: normalizedHashVersion,
+      frame: game.getFrameCount(),
+      dt: game.getLastFrameDeltaTime(),
+      time: game.getDeterminismContext().elapsedTimeSec,
+    }, normalizedHashVersion);
+  }
+
+  return normalizeSnapshotValue(snapshot, normalizedHashVersion);
 }
 
 export function diffSnapshots(expected: JsonSnapshot, actual: JsonSnapshot, maxDiffs = 16): StateDiff[] {
   const diffs: StateDiff[] = [];
   collectDiffs(expected, actual, '$', diffs, maxDiffs);
   return diffs;
+}
+
+export function normalizeSnapshotForComparison(
+  value: unknown,
+  hashVersion: RecordReplayHashVersion = LATEST_RECORD_REPLAY_HASH_VERSION,
+): JsonSnapshot {
+  return normalizeSnapshotValue(value, normalizeHashVersion(hashVersion));
 }
 
 export function stableStringify(value: JsonSnapshot): string {
@@ -84,28 +138,40 @@ export function stableStringify(value: JsonSnapshot): string {
   return `{${keys.map((key) => `${JSON.stringify(key)}:${stableStringify(value[key] ?? null)}`).join(',')}}`;
 }
 
-function hasSnapshot(value: unknown): value is SnapshotProvider {
-  return !!value && typeof value === 'object' && typeof (value as SnapshotProvider).getSnapshot === 'function';
+function captureRegisteredProviderSnapshots(
+  hashVersion: RecordReplayHashVersion,
+): JsonSnapshot[] {
+  return collectRecordReplaySnapshotEntries().map((entry, index) => normalizeSnapshotValue({
+    index,
+    name: entry.name,
+    snapshot: entry.snapshot,
+  }, hashVersion));
 }
 
-function safeGetSnapshot(provider: SnapshotProvider): unknown {
-  try {
-    return provider.getSnapshot();
-  } catch (error) {
-    return { error: error instanceof Error ? error.message : String(error) };
-  }
+function readVectorSnapshot(
+  value: { x: number; y: number; z: number },
+  hashVersion: RecordReplayHashVersion,
+): JsonSnapshot {
+  return normalizeSnapshotValue({
+    x: value.x,
+    y: value.y,
+    z: value.z,
+  }, hashVersion);
 }
 
-function normalizeSnapshotValue(value: unknown, depth = 0): JsonSnapshot {
+function normalizeSnapshotValue(
+  value: unknown,
+  hashVersion: RecordReplayHashVersion,
+  depth = 0,
+): JsonSnapshot {
   if (depth > 8) return '[MaxDepth]';
   if (value === null) return null;
   if (typeof value === 'boolean' || typeof value === 'string') return value;
   if (typeof value === 'number') {
-    if (!Number.isFinite(value)) return 0;
-    return roundTo(value, 6);
+    return normalizeSnapshotNumber(value, hashVersion);
   }
   if (Array.isArray(value)) {
-    return value.map((item) => normalizeSnapshotValue(item, depth + 1));
+    return value.map((item) => normalizeSnapshotValue(item, hashVersion, depth + 1));
   }
   if (typeof value !== 'object') return null;
 
@@ -113,7 +179,7 @@ function normalizeSnapshotValue(value: unknown, depth = 0): JsonSnapshot {
   for (const key of Object.keys(value).sort()) {
     const item = (value as Record<string, unknown>)[key];
     if (typeof item === 'function' || typeof item === 'symbol' || typeof item === 'undefined') continue;
-    record[key] = normalizeSnapshotValue(item, depth + 1);
+    record[key] = normalizeSnapshotValue(item, hashVersion, depth + 1);
   }
   return record;
 }
@@ -126,7 +192,7 @@ function collectDiffs(
   maxDiffs: number,
 ): void {
   if (diffs.length >= maxDiffs) return;
-  if (Object.is(expected, actual)) return;
+  if (snapshotScalarsEqual(expected, actual)) return;
   if (expected === undefined || actual === undefined) {
     diffs.push({ path, expected, actual });
     return;
@@ -162,6 +228,26 @@ function hashString(value: string): string {
     hash = Math.imul(hash, 16777619);
   }
   return `fnv1a32:${(hash >>> 0).toString(16).padStart(8, '0')}`;
+}
+
+function snapshotScalarsEqual(expected: JsonSnapshot | undefined, actual: JsonSnapshot | undefined): boolean {
+  if (expected === actual) return true;
+  return typeof expected === 'number'
+    && typeof actual === 'number'
+    && Number.isNaN(expected)
+    && Number.isNaN(actual);
+}
+
+function normalizeSnapshotNumber(value: number, hashVersion: RecordReplayHashVersion): JsonSnapshot {
+  if (Number.isNaN(value)) return hashVersion >= 3 ? '[NaN]' : 0;
+  if (value === Infinity) return hashVersion >= 3 ? '[Infinity]' : 0;
+  if (value === -Infinity) return hashVersion >= 3 ? '[-Infinity]' : 0;
+  return normalizeFiniteSnapshotNumber(value, hashVersion >= 4 ? 6 : hashVersion >= 3 ? 9 : 6);
+}
+
+function normalizeFiniteSnapshotNumber(value: number, digits: number): number {
+  const rounded = roundTo(value, digits);
+  return Object.is(rounded, -0) ? 0 : rounded;
 }
 
 function roundTo(value: number, digits: number): number {
