@@ -75,12 +75,17 @@ function clearProjectRuntimeGlobals(): void {
 async function mountRuntimeDebugForDev(): Promise<void> {
   try {
     const { mountRuntimeDebug } = await import('./debug/runtime-debug-bootstrap');
+    const { createTemplateRecordingBanner } = await import('./debug/record-replay/template-providers');
     disposeRuntimeDebug();
+    const flags = readRecordReplayPanelFlags();
     runtimeDebug = mountRuntimeDebug({
       root: document.body,
       getGame: () => game,
       getGameplayRuntime: () => game?.getProjectGameplayRuntime() ?? null,
       disposeGameWorld: disposeProjectGameWorldForEditor,
+      humanRecording: flags.humanRecording,
+      forceShowPanels: flags.panelsForced,
+      recordingBanner: createTemplateRecordingBanner(() => game),
     });
   } catch (error) {
     console.warn('[runtime-debug-bootstrap] mount failed', error);
@@ -121,16 +126,35 @@ async function runRecordReplayStartupControl(control: RecordReplayStartupControl
   await runRecordReplayAutoReplay(control);
 }
 
+/**
+ * `?rrPanels=1` 是逃生口:强制显示面板(agent 调试回放时要看)。
+ * `?rrAutoStart=1` 且没带它 ⇒ 真人示教模式,面板全隐藏。
+ */
+function readRecordReplayPanelFlags(): { panelsForced: boolean; humanRecording: boolean } {
+  const params = new URLSearchParams(window.location.search);
+  const panelsForced = isTruthyQueryParam(params.get('rrPanels'));
+  const autoStart = isTruthyQueryParam(params.get('rrAutoStart'));
+  return { panelsForced, humanRecording: autoStart && !panelsForced };
+}
+
 async function runRecordReplayAutoStart(): Promise<void> {
   const currentGame = game;
   if (!currentGame) throw new Error('Game is not ready for rrAutoStart.');
   currentGame.pause();
   await waitForRecordReplayGameplaySettled(currentGame, 'rrAutoStart');
-  const result = readRecordReplayApi()?.startRec({
-    label: 'rrAutoStart',
-    maxFrames: RECORD_REPLAY_AUTO_RECORD_MAX_FRAMES,
-  });
-  console.info('[record-replay] rrAutoStart armed', result);
+  // 走 controller 而不是裸 startRec:这条 session 归 controller 所有,会走增量落盘 /
+  // pagehide flush / CTA finalize。controller 不在(挂载失败)时退回裸 startRec。
+  const controller = window.__demoRec;
+  if (controller) {
+    await controller.start('rrAutoStart');
+    console.info('[record-replay] rrAutoStart armed', controller.getStatus());
+  } else {
+    const result = readRecordReplayApi()?.startRec({
+      label: 'rrAutoStart',
+      maxFrames: RECORD_REPLAY_AUTO_RECORD_MAX_FRAMES,
+    });
+    console.info('[record-replay] rrAutoStart armed (no sink)', result);
+  }
   currentGame.resume();
 }
 

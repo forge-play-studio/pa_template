@@ -27,6 +27,37 @@ function getRuntimeAnalytics(): CtaAnalyticsLike | undefined {
   return (window as unknown as { playableAnalytics?: CtaAnalyticsLike }).playableAnalytics;
 }
 
+/**
+ * Hooks that must run before the page navigates away to the CTA target.
+ *
+ * The record-replay recording lifeline registers here: a CTA click destroys the page, and with it
+ * any in-memory tape that was never flushed to disk. `openUrlLikePlayable()` below is the single
+ * funnel every CTA path goes through (`handleCtaClick` and `openCtaUrlInNewPage`), so one hook site
+ * covers them all. Hooks must be **synchronous and fast** — `sendBeacon`, not `fetch`.
+ *
+ * No-op in production: only DEV bootstrap ever registers a hook.
+ */
+type BeforeCtaHook = () => void;
+
+const beforeCtaHooks = new Set<BeforeCtaHook>();
+
+export function registerBeforeCta(hook: BeforeCtaHook): () => void {
+  beforeCtaHooks.add(hook);
+  return () => {
+    beforeCtaHooks.delete(hook);
+  };
+}
+
+export function runBeforeCtaHooks(): void {
+  for (const hook of [...beforeCtaHooks]) {
+    try {
+      hook();
+    } catch (error) {
+      console.warn('[cta] before-navigate hook failed:', error);
+    }
+  }
+}
+
 export class PlayableCtaService {
   private readonly getAnalytics: () => CtaAnalyticsLike | undefined;
   private readonly getUrl: () => string;
@@ -59,6 +90,9 @@ export class PlayableCtaService {
   }
 
   private openUrlLikePlayable(url: string): void {
+    // 页面即将被导航掉 —— 先给所有 before-navigate 钩子一次同步落盘的机会。
+    runBeforeCtaHooks();
+
     const runtime = window as unknown as {
       mraid?: { open?: (target: string) => void };
       super_html?: { download?: (target: string) => void };

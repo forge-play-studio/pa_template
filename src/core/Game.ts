@@ -116,6 +116,8 @@ export class Game {
   private frame = 0;
   private currentFrameDeltaTime: number | null = null;
   private lastFrameDeltaTime = 0;
+  /** Simulated dt (ms) handed to Babylon's animation clock each render. See installDeterministicAnimationClock(). */
+  private animationDeltaMs = DEFAULT_ENGINE_RENDER_DELTA_TIME_SECONDS * 1000;
   private dtOverride: (() => number) | null = null;
   private suppressPausedRender = false;
   private enableAudio: boolean;
@@ -138,6 +140,10 @@ export class Game {
     });
 
     this.scene = new Scene(this.engine);
+    this.installDeterministicAnimationClock();
+    // 动画时钟从构造起就冻结,直到 start()/resume()。init() 期间的 VFX warmup / 阴影预热 render
+    // 同样会推进 Scene._animate(),而它们的次数与真实时间挂钩 → frame-0 的动画相位不可复现。
+    this.scene.animationsEnabled = false;
     // 强制使用右手坐标系：项目默认接入 glb/glTF 模型，不要改成左手系。
     this.scene.useRightHandedSystem = true;
     this.scene.clearColor = new Color4(0.06, 0.06, 0.08, 1);
@@ -338,6 +344,7 @@ export class Game {
 
     (window as any).game = this;
     this.isRunning = true;
+    this.scene.animationsEnabled = !this.isPaused;
     this.lastTime = performance.now();
 
     this.engine.runRenderLoop(() => {
@@ -347,10 +354,12 @@ export class Game {
 
   pause(): void {
     this.isPaused = true;
+    this.scene.animationsEnabled = false;
   }
 
   resume(): void {
     this.isPaused = false;
+    this.scene.animationsEnabled = true;
     this.lastTime = performance.now();
   }
 
@@ -385,7 +394,7 @@ export class Game {
       throw new Error(`Game.stepFrame(dt) requires a finite non-negative dt, got ${deltaTime}.`);
     }
     this.advanceFrame(deltaTime, true);
-    this.renderWithPinnedEngineDelta(deltaTime);
+    this.renderSteppedFrame(deltaTime);
   }
 
   setDtOverride(override: (() => number) | null): void {
@@ -448,8 +457,42 @@ export class Game {
   // ============================================================
 
   private renderWithPinnedEngineDelta(deltaTime: number): void {
-    pinEngineDeltaTimeForFrame(this.engine, deltaTime || DEFAULT_ENGINE_RENDER_DELTA_TIME_SECONDS);
+    this.animationDeltaMs = pinEngineDeltaTimeForFrame(
+      this.engine,
+      deltaTime || DEFAULT_ENGINE_RENDER_DELTA_TIME_SECONDS,
+    );
     this.scene.render();
+  }
+
+  /**
+   * Babylon 的 `Scene._animate()` 用 `PrecisionDate.Now` 自己算 dt(见 8.52.1
+   * `Animations/animatable.core.js`),`engine._deltaTime` 根本够不着它 —— 于是动画组按机器
+   * 实际帧率老化,而不是按模拟时钟。任何**由动画驱动的玩法事件**(动画播完 →
+   * `onAnimationGroupEndObservable` → 结算)因此不可复现。
+   *
+   * 实例级 shim:`_animate()` 未显式传参时喂入本帧的模拟 dt。正常游玩时 sim dt == 真实 dt,
+   * 画面无差别;stepFrame 回放时它就是录制的那一帧 dt。
+   */
+  private installDeterministicAnimationClock(): void {
+    const scene = this.scene as unknown as { _animate(customDeltaTime?: number): void };
+    const originalAnimate = scene._animate.bind(this.scene);
+    scene._animate = (customDeltaTime?: number): void => {
+      originalAnimate(customDeltaTime ?? this.animationDeltaMs);
+    };
+  }
+
+  /**
+   * stepFrame 的那一帧必须按录制 dt 老化动画组,但 `pause()` 已经把 `scene.animationsEnabled`
+   * 冻住了。只为这一帧解冻,渲染完立刻恢复 —— 暂停态的其余 render 不得推进动画。
+   */
+  private renderSteppedFrame(deltaTime: number): void {
+    const animationsEnabled = this.scene.animationsEnabled;
+    this.scene.animationsEnabled = true;
+    try {
+      this.renderWithPinnedEngineDelta(deltaTime);
+    } finally {
+      this.scene.animationsEnabled = animationsEnabled;
+    }
   }
 
   private handleDevicePixelRatio(): void {

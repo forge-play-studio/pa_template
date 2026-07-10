@@ -7,3 +7,6 @@ dist
 .env.local
 .idea
 .opencode
+
+# record-replay 落盘的示教 tape(本地产物，不入库）
+.rr-tapes

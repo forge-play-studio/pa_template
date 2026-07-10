@@ -39,6 +39,7 @@ import {
   molocoCtaPlugin,
   optimizePngPlugin,
   stripBabylonPlugin,
+  tapeServerPlugin,
   thirdPartyWhitelistPlugin,
 } from './vite-plugins';
 
@@ -1188,6 +1189,8 @@ export default defineConfig({
       debugPanelConfigApiPlugin(),
       vfxDebugOverridesApiPlugin(),
       vfxUsageOverridesApiPlugin(),
+      // 录制生命线:dev server 收 tape 增量落盘到 .rr-tapes/(见 src/debug/record-replay/tape-sink.ts)
+      tapeServerPlugin({ outDir: '.rr-tapes', projectRoot: __dirname }),
     ] : []),
     projectAuthoringApiPlugin(),
     // 开发模式模型强缓存 + URL 版本化（mtime）
