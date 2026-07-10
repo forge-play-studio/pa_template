@@ -135,7 +135,7 @@
     "naming": {
       "projectCode": "SSD",
       "materialId": "00000P00",
-      "creator": "PY",
+      "creator": "CREATOR",
       "vendor": "DLCX",
       "materialName": "PA_Template"
     }
