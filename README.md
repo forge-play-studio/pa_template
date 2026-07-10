@@ -315,7 +315,9 @@ debug 面板职责边界：
 
 ##### 常用 API
 
-1. `window.__rr.startRec()` / `stopRec('label')`：录制。dense 记录输入、实际消费的 `dt`、state hash、稀疏 `stateSamples` 和玩家 `trail`。
+1. `window.__rr.startRec()` / `stopRec('label')`：录制。dense 记录输入、实际消费的 `dt`、state hash、稀疏 `stateSamples`、玩家 `trail`，以及**逐帧跑 detector 得到的 `events`**。
+   - `stateSamples` 每 60 帧一份；一个完整发生在两次采样之间的 `false → true → false`（短命事件）**只有 `events` 看得见**。语义提取优先用 `events`，老 tape 没有它才退回基于采样的提取。
+   - 录制超过 `maxFrames` 会环形丢弃最早的帧，此时 `envelope.truncated = true`：**Mode A 直接拒绝**（起点已不在 tape 里，逐帧比对必然从第 0 帧就发散），Mode B 仍可用但会带一条 warning。
 2. `window.__rr.peekRec(fromIndex)`：非破坏性增量读取，录制生命线用它做增量落盘。
 3. `await window.__rr.replay(recording)`：Mode A。
 4. `window.__rr.extractSemantic(recording)` / `await window.__rr.semanticReplay(script, opts)`：Mode B。
@@ -356,13 +358,23 @@ tape 不再只活在内存里：
 4. ⚠️ **必须注册终局态里程碑**（`kind: 'outcome'`，通关 / 死亡）。没有它，失败表现为一堆莫名超时；有了它，示教中不存在的终局态 = terminal divergence，立即判负。
 5. **里程碑分层**：`MilestoneDetector.critical` 决定它在不在主线因果链上。不写就走默认表 `['outcome', 'stage'] = critical`，其余 optional。
 6. ⚠️ **`inputAuthority` 必须是所有输入夺权路径的合取**。过场动画、剧情自动移动、输入锁往往是**互相独立**的几条路径，只查一条会让标定矩阵在过场期间被投毒。
-7. ⚠️ **布尔 fact 必须 latch（一旦 true 永远 true），数值 fact 必须单调**。随走位翻转的 `gatePassed` 会产出一串伪里程碑；回落的 `stageOrdinal` 会让 `>=` 门被误判已满足。
+7. ⚠️ **布尔 fact 必须 latch（一旦 true 永远 true），数值 fact 必须单调**。随走位翻转的 `gatePassed` 会产出一串伪里程碑；回落的 `stageOrdinal` 会让 `>=` 门被误判已满足。**录制期会逐帧校验并 `console.warn`**。天生来回翻转的状态观测（「此刻在罩内吗」）在快照里用 `recordReplay.observationOnlyFacts: [...]` 报备豁免——否则告警天天响，等于没有告警。
 8. Provider snapshot 的通用经济 / facts 用 `{ recordReplay: { economy: { cash, totalEarned, totalSpent }, facts: { ... } } }`；facts 以 `providerName.key` 进入 observation，milestone `detail.id` 用同一稳定 id。
 9. 需要「事件已触发、继续等经济阈值」的 gate，在 milestone 上填 `economyAtGate`。
 10. 快照走 O(1) getter；连续量放在不产 milestone 的 provider 里（防刷屏）。
 11. 游戏自己的 DEV 浮层（FPS 计、stats 面板、编辑器工具条）用 `registerDebugUiSelectors()` 报备，否则真人示教时它们会留在画面里。**只登记你在 live DOM 里验证过的选择器** —— `findUnmatchedDebugUiSelectors()` 可以体检。
 12. 录制 HUD 的游戏专属警告条用 `createTemplateRecordingBanner()` 那个形状实现（例：「快死了，死后点重试会 reload」）。
 13. 新项目先跑 `pnpm test:record-replay` 和 `await window.__rr.selfTest()`；再录 30s demo，验证 `replay()`、`extractSemantic()` 和 `semanticReplayMajority()`。
+
+##### 可复现的 baseline / CI
+
+- **基线中心库**:`fps-3d-harness/benchmarks/` —— 每条基线指向「某游戏 × 某 commit」,
+  语义剧本与认证 verdict 入仓,原始 tape 外置 GCS(meta 记 URI)。生命周期与录制 SOP 见该目录 README。
+- **跑基线**:`fps-3d-harness/tools/run-benchmark.py`(Playwright 驱动 → 读 verdict → 退出码)。
+- **判读契约**:`fps-3d-harness/docs/06-record-replay-dual-mode.md`(Mode A horizon / Mode B 四档 grade)。
+- **登记门槛**:Mode B `grade ≥ good`;Mode A 记 horizon 即可,不作准入门槛。
+
+> 本仓的实现细节与验收证据不再另写报告 —— 活文档就是这一节 + 上面的契约。
 
 ##### 确定性接缝（模板内建）
 

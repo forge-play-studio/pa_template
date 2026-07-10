@@ -42,16 +42,31 @@ export function registerTemplateRecordReplayProviders(getGame: () => Game | null
       {
         name: 'template.exampleFacts',
         getSnapshot() {
+          const player = getGame()?.getPlayer();
+          // ⚠️ 快照里的每一个字段都进 state hash,所以它只能是**仿真状态的函数**。
+          // 绝不能读 `game.getPaused()` 之类的**宿主状态** —— Mode A 是在暂停态下用
+          // `stepFrame()` 逐帧驱动的,录制时 paused=false、回放时 paused=true,
+          // 于是每一帧的 hash 都对不上(实测 `firstDivergence: 0`)。
+          const nearOrigin = !!player && Math.hypot(player.position.x, player.position.z) < 5;
           return {
             recordReplay: {
               facts: {
                 // 布尔 fact **必须 latch**(一旦 true 永远 true),数值 fact 必须单调。
-                // 反例:一个随走位来回翻转的 `gatePassed` 会产出一串伪里程碑。
+                // 反例:一个随走位来回翻转的 `gatePassed` 会产出一串伪里程碑;而如果一次完整的
+                // `false → true → false` 恰好落在两次 stateSample 之间,逐帧 detector 会把这串噪声
+                // 全录进 tape。录制期的契约校验器会当场 console.warn。
                 ready: true,
+                // 状态观测型 fact:随走位来回翻转,但没有任何 detector 拿它产里程碑
+                // (qy 的 `insideBoundary` 就是这类)。必须报备豁免,见下方 `observationOnlyFacts`。
+                nearOrigin,
               },
             },
           };
         },
+        // ⚠️ 豁免声明放在**注册面**,绝不能塞进 `getSnapshot()` 的返回值 ——
+        // 快照逐帧进 state hash,往里加一个字段就会改掉 `startStateHash`,
+        // 所有已录 tape 的 Mode A 当场失配。(qy 实测踩过:593582e0 → f9c22e44。)
+        observationOnlyFacts: ['nearOrigin'],
       },
     ],
 
@@ -101,8 +116,11 @@ function createTemplateExampleMilestoneDetector(): MilestoneDetector {
     kind: 'custom',
     // critical 不写 = 走 kind 默认表(RECORD_REPLAY_DEFAULT_CRITICAL_KINDS = ['outcome','stage'])
     detect(previous, next) {
+      // ⚠️ 只对**进度型** fact 产里程碑。`template.exampleFacts.paused` 是状态观测(会来回翻转),
+      // 把它也算进来会在每次暂停/继续时凭空多出两个里程碑 —— 这正是 `observationOnlyFacts` 想避免的事,
+      // 而豁免只让契约校验器闭嘴,**不会**替你把它从 detector 里筛掉。
       return diffFactChanges(previous, next, 'custom')
-        .filter((event) => String(event.detail.id).startsWith('template.exampleFacts.'));
+        .filter((event) => String(event.detail.id) === 'template.exampleFacts.ready');
     },
     isSatisfied(milestone, observation) {
       const id = typeof milestone.detail.id === 'string' ? milestone.detail.id : null;
