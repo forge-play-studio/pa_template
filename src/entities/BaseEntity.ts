@@ -135,6 +135,12 @@ export abstract class BaseEntity {
   /**
    * 获取世界坐标位置
    * 如果有 parent 节点，会考虑 parent 的变换
+   *
+   * ⚠️ **确定性**:如果本节点的**祖先**在同一 tick 里被写过 transform,而你在 `update()` 里读它的世界
+   * 坐标,读到的值取决于 Babylon 的渲染缓存(`_currentRenderId`),实时循环与 `Game.stepFrame()` 会
+   * 给出不同结果 —— record-replay 因此分歧。这种情况下**先调 `refreshWorldMatrixChain(this.rootNode)`**
+   * (`src/core/world-matrix.ts`);只对节点自身 `computeWorldMatrix(true)` 是不够的。
+   * 本 scaffold 的 rootNode 没有会被同 tick 移动的祖先,所以这里直接读。
    */
   getWorldPosition(): Vector3 {
     if (this.rootNode) {

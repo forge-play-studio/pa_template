@@ -383,6 +383,17 @@ gameplay runtime 代码禁止直接使用 `Math.random()`、`Date.now()` 或 `pe
 
 dev/editor/VFX/audio 工具代码不受这条 gameplay determinism contract 约束；但只要某段代码会改变 gameplay state hash 或影响玩家位置、资源、队列、升级等可回放状态，就必须走注入的 deterministic source。
 
+**世界矩阵缓存(第 9 类非确定源)。** 在 `update()` 里读某节点的 `getAbsolutePosition()` /
+`getWorldMatrix()` / `getBoundingInfo().boundingBox.minimumWorld`，而它的**祖先**在同一 tick 里刚被写过
+local transform —— 读到的值取决于 Babylon 的 `_currentRenderId` 渲染缓存，也就是「自上次以来跑过几趟渲染」。
+实时 render loop 与 `Game.stepFrame()` 落在这个缓存判断的两侧，于是同一 tick 在录制与回放里给出**不同的世界坐标**。
+
+- **读之前必须调 `refreshWorldMatrixChain(node)`**（`src/core/world-matrix.ts`）。
+- ⚠️ **只对节点自身 `computeWorldMatrix(true)` 不够** —— 它内部仍通过 `parent.getWorldMatrix()` 取缓存父矩阵，
+  必须自根向下逐级 force。这是 qy-last-stand 用一条 8895 帧 tape 换来的教训：弹丸出生点（挂在炮管下的炮口）
+  在回放里滞后整整一帧，一直是纯视觉偏移，直到撞上一个 `dt=98.9ms` 的卡顿帧，`0.356` 的 y 偏移翻转了命中判定。
+- 纯视觉的读也建议调：今天纯视觉的偏移，明天就可能被一个卡顿帧喂进命中判定。
+
 ### `entities/`
 
 放单体对象行为封装。

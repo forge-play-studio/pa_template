@@ -393,8 +393,16 @@ export class Game {
     if (!Number.isFinite(deltaTime) || deltaTime < 0) {
       throw new Error(`Game.stepFrame(dt) requires a finite non-negative dt, got ${deltaTime}.`);
     }
-    this.advanceFrame(deltaTime, true);
-    this.renderSteppedFrame(deltaTime);
+    // 让 `scene.animationsEnabled` 覆盖 update **和** render 全程,与实时循环完全一致。
+    // update() 期间保持 false 会让系统在回放里观察到与录制时不同的场景状态。
+    const animationsEnabled = this.scene.animationsEnabled;
+    this.scene.animationsEnabled = true;
+    try {
+      this.advanceFrame(deltaTime, true);
+      this.renderWithPinnedEngineDelta(deltaTime);
+    } finally {
+      this.scene.animationsEnabled = animationsEnabled;
+    }
   }
 
   setDtOverride(override: (() => number) | null): void {
@@ -433,6 +441,14 @@ export class Game {
     this.currentFrameDeltaTime = deltaTime;
     try {
       if (shouldUpdate) {
+        // Babylon 的 render loop 会在我们的回调**之前**调 `engine.beginFrame()`,把 `engine._deltaTime`
+        // 覆写成**真实**瞬时帧时长。而 `stepFrame()` 由普通 JS 循环驱动,没有 beginFrame(),
+        // `_deltaTime` 还留着上一帧钉进去的值。任何读 `engine.getDeltaTime()` 的代码(直接或经 Babylon)
+        // 因此在录制与回放里读到不同的数。update 期间也钉住,不只渲染时钉。
+        this.animationDeltaMs = pinEngineDeltaTimeForFrame(
+          this.engine,
+          deltaTime || DEFAULT_ENGINE_RENDER_DELTA_TIME_SECONDS,
+        );
         this.determinism.advance(deltaTime);
         this.update(deltaTime);
       }
@@ -481,19 +497,6 @@ export class Game {
     };
   }
 
-  /**
-   * stepFrame 的那一帧必须按录制 dt 老化动画组,但 `pause()` 已经把 `scene.animationsEnabled`
-   * 冻住了。只为这一帧解冻,渲染完立刻恢复 —— 暂停态的其余 render 不得推进动画。
-   */
-  private renderSteppedFrame(deltaTime: number): void {
-    const animationsEnabled = this.scene.animationsEnabled;
-    this.scene.animationsEnabled = true;
-    try {
-      this.renderWithPinnedEngineDelta(deltaTime);
-    } finally {
-      this.scene.animationsEnabled = animationsEnabled;
-    }
-  }
 
   private handleDevicePixelRatio(): void {
     const ratio = window.devicePixelRatio || 1;
