@@ -545,6 +545,10 @@ export class Game {
     return this.inputService;
   }
 
+  getAudioService(): AudioService | null {
+    return this.audioService;
+  }
+
   getZoneSystem(): ZoneSystem | null {
     return this.zoneSystem;
   }

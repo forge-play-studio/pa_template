@@ -16,5 +16,14 @@
   "queues": [],
   "upgrades": [],
   "guideTargets": [],
-  "endConditions": []
+  "endConditions": [],
+  "audio": {
+    "enabled": true,
+    "masterVolume": 1,
+    "bgm": {
+      "assetId": "",
+      "volume": 0.45
+    },
+    "sounds": []
+  }
 }

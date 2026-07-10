@@ -21,9 +21,12 @@
     "test:record-replay-logic": "node scripts/check-record-replay-logic.mjs",
     "build": "./scripts/build-all.sh en applovin",
     "build:all": "./scripts/build-all.sh",
-    "build:single": "cross-env BUILD_MATRIX=false npm run typecheck && cross-env BUILD_MATRIX=false vite build && npm run check:prod-debug",
-    "build:single:editor-local": "cross-env BUILD_MATRIX=false FPS_GAME_EDITOR_REPO=../.. npm run typecheck:editor-local && cross-env BUILD_MATRIX=false FPS_GAME_EDITOR_REPO=../.. vite build && npm run check:prod-debug",
+    "build:single": "cross-env BUILD_MATRIX=false npm run typecheck && cross-env BUILD_MATRIX=false vite build && npm run check:scene-walkthrough-disabled && npm run check:prod-debug",
+    "build:single:editor-local": "cross-env BUILD_MATRIX=false FPS_GAME_EDITOR_REPO=../.. npm run typecheck:editor-local && cross-env BUILD_MATRIX=false FPS_GAME_EDITOR_REPO=../.. vite build && npm run check:scene-walkthrough-disabled && npm run check:prod-debug",
+    "build:scene-walkthrough": "cross-env NODE_ENV=production BUILD_MATRIX=false SCENE_WALKTHROUGH_BUILD=true npm run typecheck && cross-env NODE_ENV=production BUILD_MATRIX=false SCENE_WALKTHROUGH_BUILD=true vite build && npm run check:scene-walkthrough && npm run check:prod-debug",
     "check:prod-debug": "node scripts/check-production-debug-surface.mjs",
+    "check:scene-walkthrough": "node scripts/check-scene-walkthrough-build.mjs",
+    "check:scene-walkthrough-disabled": "node scripts/check-scene-walkthrough-build.mjs --disabled",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "typecheck:editor-local": "tsc -p tsconfig.fps-editor-local.json --noEmit"
@@ -50,7 +53,7 @@
     "@babylonjs/core": "8.52.1",
     "@babylonjs/loaders": "8.52.1",
     "@fps-games/editor": "0.1.8-beta.2",
-    "@fps-games/vfx": "0.3.11",
+    "@fps-games/vfx": "0.3.17",
     "brotli-dec-wasm": "^2.3.2"
   },
   "appConfig": {
@@ -135,9 +138,9 @@
       }
     },
     "naming": {
-      "projectCode": "SSD",
+      "projectCode": "TMP",
       "materialId": "00000P00",
-      "creator": "PY",
+      "creator": "CREATOR",
       "vendor": "DLCX",
       "materialName": "PA_Template"
     }

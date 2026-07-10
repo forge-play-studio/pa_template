@@ -82,6 +82,8 @@ const analyticsConfig = appConfig.analytics;
 const i18nConfig = appConfig.i18n;
 const liteBuild = process.env.LITE_BUILD === 'true';
 const isProduction = process.env.NODE_ENV === 'production';
+// This is deliberately production-only: normal dev and release builds must not mount the test controls.
+const sceneWalkthroughBuild = isProduction && process.env.SCENE_WALKTHROUGH_BUILD === 'true';
 const enableDevDebugTooling = !isProduction;
 const VFX_USAGES_SCHEMA_REF = './usages.schema.json';
 const VFX_USAGES_SCHEMA_VERSION = 'project-vfx-usages/1.0';
@@ -272,15 +274,20 @@ function resolveDebugPanelConfigFile(file: string | null): string | null {
 function setNestedValue(target: Record<string, any>, path: string, value: unknown): void {
   const parts = path.split('.').filter(Boolean);
   if (parts.length === 0) return;
-  let cursor = target;
-  for (const part of parts.slice(0, -1)) {
-    const next = cursor[part];
-    if (!next || typeof next !== 'object' || Array.isArray(next)) {
-      cursor[part] = {};
+  let cursor: any = target;
+  for (let index = 0; index < parts.length - 1; index += 1) {
+    const part = parts[index]!;
+    const nextPart = parts[index + 1]!;
+    const key = Array.isArray(cursor) && /^\d+$/.test(part) ? Number(part) : part;
+    const next = cursor[key];
+    if (!next || typeof next !== 'object') {
+      cursor[key] = /^\d+$/.test(nextPart) ? [] : {};
     }
-    cursor = cursor[part];
+    cursor = cursor[key];
   }
-  cursor[parts[parts.length - 1]!] = value;
+  const leaf = parts[parts.length - 1]!;
+  const key = Array.isArray(cursor) && /^\d+$/.test(leaf) ? Number(leaf) : leaf;
+  cursor[key] = value;
 }
 
 function debugPanelConfigApiPlugin() {
@@ -1169,6 +1176,7 @@ export default defineConfig({
     __LITE_BUILD__: JSON.stringify(liteBuild),
     // 在生产构建时完全移除开发功能
     __PROD_BUILD__: JSON.stringify(isProduction),
+    __SCENE_WALKTHROUGH_BUILD__: JSON.stringify(sceneWalkthroughBuild),
     __LOCALE__: JSON.stringify(locale),
     __CHANNEL__: JSON.stringify(channel),
     __RTL__: JSON.stringify(localeMeta.isRTL),
@@ -1279,7 +1287,7 @@ export default defineConfig({
   assetsInclude: ['**/*.env'],
   build: {
     target: 'esnext',
-    outDir: buildMatrix ? 'dist/_build' : 'dist',
+    outDir: buildMatrix ? 'dist/_build' : sceneWalkthroughBuild ? 'dist/scene-walkthrough' : 'dist',
     // 临时降低内联阈值：查看文件大小分布
     assetsInlineLimit: 100000000, // 内联所有资源
     chunkSizeWarningLimit: 1000000,
