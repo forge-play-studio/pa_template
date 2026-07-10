@@ -181,6 +181,7 @@ try {
   assertEconomyFinalCashTolerance({ clearRecordReplayProviders, registerRecordReplayProviders, SemanticReplayController });
   assertTruncatedTapeRefusal(semanticExtract);
   assertScriptedGateRelease({ ...providers, ...semanticReplay });
+  assertEarlyDeathReachesFailed({ ...providers, ...semanticReplay });
 
   console.log('[check-record-replay-logic] OK');
 } finally {
@@ -1506,56 +1507,134 @@ function assertTruncatedTapeRefusal({ extractSemanticScript }) {
  * 而剧情把角色带走 —— 解禁后再也追不回来。
  */
 function assertScriptedGateRelease({ clearRecordReplayProviders, registerRecordReplayProviders, SemanticReplayController }) {
-  let authoritative = true;
+  // 复现 qy-last-stand 的真实签名(final_cert.json):
+  //   · 闸门 swordPicked t=0.62 **落在** 3.78s 的剧情段之内
+  //   · 剧情把角色拖离航迹约 6 个单位
+  //   · 剧情结束、输入恢复授权时 crossError≈5.85 → gain=0 → 示教时钟冻住
+  // 旧行为:时钟被 cap 钉死在 0.62,里程碑 1/N,stage 判负,scheduleSec 恒 ~0.71。
+  const CUTSCENE_SEC = 3.8;
+  const GATE_T = 0.62;
+
+  const run = () => {
+    let authoritative = true;
+    let verdict = null;
+    withSemanticMockGame({
+      clearRecordReplayProviders,
+      registerRecordReplayProviders,
+      inputAuthority: () => authoritative,
+    }, (game) => {
+      game.addFactRule('gate.open', () => false);   // 这个闸门永远不会被满足
+      const trail = Array.from({ length: 121 }, (_, index) => ({ t: index * 0.1, x: index * 0.3, z: 0 }));
+      const script = createSemanticControllerScript({
+        durationSec: 12,
+        waypoints: [{ t: 0, x: 0, z: 0 }, { t: 12, x: 36, z: 0 }],
+        trail,
+        milestones: [{ t: GATE_T, kind: 'custom', detail: { id: 'mock.state.gate.open', to: 'true' } }],
+      });
+      const controller = new SemanticReplayController(game, script, {
+        waypointToleranceBand: 0.5,
+        maxDurationSec: 40,
+        calibrationPulseSec: 0.1,
+        calibrationSettleSec: 0.1,
+        gateHoldPatienceSec: 100,   // 排除混淆变量:授权态的"耐心耗尽"放行绝不会触发
+        gateStallTimeoutSec: 6,     // 与实战同量级
+      });
+
+      // 1) 有权限:跑完标定,进入 navigating(此处不能调 getVerdict —— 它会缓存 finalVerdict)
+      stepSemanticController(controller, game, { steps: 20, dt: 0.1, speed: 1 });
+
+      // 2) 剧情段:输入不算数,游戏把角色**拖离航迹**(z 方向偏 6 个单位)
+      authoritative = false;
+      const cutsceneSteps = Math.round(CUTSCENE_SEC / 0.1);
+      for (let index = 0; index < cutsceneSteps; index += 1) {
+        if (controller.isDone()) break;
+        controller.getInput();
+        game.scriptedMoveTo(index * 0.3, Math.min(8, index * 0.25));
+        game.applyInput({ x: 0, y: 0, magnitude: 0, isActive: false }, 0.1, 0);
+        controller.afterUpdate(0.1);
+      }
+
+      // 3) 输入恢复授权:actor 远离航迹,gain=0,时钟冻住 —— 旧代码在这里 6 秒后判负
+      // 走回航迹需要 ~8s > gateStallTimeoutSec(6s):旧行为会在半路把还在恢复的运行判负
+      authoritative = true;
+      stepSemanticController(controller, game, { steps: 150, dt: 0.1, speed: 1 });
+      verdict = controller.getVerdict();
+    });
+    return verdict;
+  };
+
+  const verdict = run();
+  const tracking = verdict.trailTracking;
+
+  assert.equal(tracking.enabled, true, 'trail tracking is on');
+  assert.equal(verdict.calibration.status, 'ok', 'calibration ran while input was authoritative');
+  assert.equal(tracking.scriptedGateReleases >= 1, true,
+    `a gate inside the cutscene must be released, got ${tracking.scriptedGateReleases}`);
+
+  // 核心之一:示教时钟必须跟着剧情走完,而不是被钉死在闸门时刻
+  assert.equal(tracking.scheduleSec > GATE_T + CUTSCENE_SEC * 0.5, true,
+    `teach clock must follow the cutscene, got scheduleSec=${tracking.scheduleSec} (gate at ${GATE_T})`);
+  assert.equal(tracking.maxCrossError > 4, true,
+    `the cutscene must actually drag the actor off-trail, got maxCrossError=${tracking.maxCrossError}`);
+
+  // 核心之二:剧情结束后 gain=0、时钟冻住,但 actor 正在走回航迹 —— 那**就是**进展,
+  // 不能被 6 秒停滞超时杀掉。走回来之后时钟必须继续推进。
+  // 时钟若被冻在剧情结束那一刻(≈ GATE_T + CUTSCENE_SEC ≈ 4.4)就说明恢复期被判负了
+  assert.equal(tracking.scheduleSec > 6.5, true,
+    `after recovering to the path the teach clock must resume, got scheduleSec=${tracking.scheduleSec}`);
+  assert.equal(tracking.scriptedSec > CUTSCENE_SEC * 0.9, true,
+    `the whole cutscene counts as scripted, got ${tracking.scriptedSec}`);
+
+  // 放行 ≠ 匹配:里程碑没被满足,仍然算 missing
+  assert.equal(verdict.milestones.matched, 0, 'releasing a gate does NOT match its milestone');
+  assert.equal(verdict.milestones.missing.length >= 1, true, 'the unmatched gate is still reported missing');
+}
+
+/**
+ * 分级 v2 的地板:早死的运行必须判得了 `failed`。
+ *
+ * 回归来自 last-stand `final_cert.json`:matched 1/55、经济全灭、stage 判负的运行,
+ * 声明了 criticality 之后**仍然**只判 `degraded` —— 因为 `missing[]` 每个被放弃的 stage
+ * 只 push 一条,后面 53 个从没被尝试过的里程碑根本不进列表,`criticalMissing` 恒为 0,
+ * 而 `criticalMissing > 0` 是里程碑通往 `failed` 的唯一判据。
+ */
+function assertEarlyDeathReachesFailed({ clearRecordReplayProviders, registerRecordReplayProviders, SemanticReplayController }) {
+  const detectors = [
+    createFactMilestoneDetector('custom', (id) => !id.includes('.stage.')),
+    createFactMilestoneDetector('stage', (id) => id.includes('.stage.')),
+  ];
   let verdict = null;
-  withSemanticMockGame({
-    clearRecordReplayProviders,
-    registerRecordReplayProviders,
-    inputAuthority: () => authoritative,
-  }, (game) => {
-    // 闸门里程碑永远不会被满足 —— 它是否被「放行」只取决于剧情段的处理。
-    game.addFactRule('gate.open', () => false);
-    const trail = Array.from({ length: 61 }, (_, index) => ({ t: index * 0.1, x: index * 0.5, z: 0 }));
+  withSemanticMockGame({ clearRecordReplayProviders, registerRecordReplayProviders, milestoneDetectors: detectors }, (game) => {
+    game.addFactRule('stage.one', () => false);   // 第一个闸门就过不去 ⇒ 运行提前结束
     const script = createSemanticControllerScript({
       durationSec: 6,
-      waypoints: [{ t: 0, x: 0, z: 0 }, { t: 6, x: 30, z: 0 }],
-      trail,
-      milestones: [{ t: 0.4, kind: 'custom', detail: { id: 'mock.state.gate.open', to: 'true' } }],
+      waypoints: [{ t: 0, x: 0, z: 0 }, { t: 1, x: 1, z: 0 }],
+      milestones: [
+        { t: 1, kind: 'stage', detail: { id: 'mock.state.stage.one', to: 'true' } },   // critical
+        { t: 2, kind: 'stage', detail: { id: 'mock.state.stage.two', to: 'true' } },   // critical,从没被尝试
+        { t: 3, kind: 'custom', detail: { id: 'mock.state.extra', to: 'true' } },      // optional,从没被尝试
+      ],
     });
     const controller = new SemanticReplayController(game, script, {
-      waypointToleranceBand: 0.5,
-      maxDurationSec: 20,
-      calibrationPulseSec: 0.1,
-      calibrationSettleSec: 0.1,
-      gateHoldPatienceSec: 100,   // 授权态下绝不会因"耐心耗尽"放行,排除混淆变量
-      gateStallTimeoutSec: 100,
+      waypointToleranceBand: 0.12, maxDurationSec: 8, maxLoopsPerStage: 1, stageTimeoutSlackSec: 0.5,
     });
-
-    // 1) 有权限:跑完标定,进入 navigating。
-    //    ⚠️ 这里**不能**调 getVerdict() —— 它会把 finalVerdict 缓存下来,后面的断言就读到旧快照了。
-    stepSemanticController(controller, game, { steps: 20, dt: 0.1, speed: 1 });
-
-    // 2) 剧情段:输入不算数,游戏自己把角色搬走 28 个单位
-    authoritative = false;
-    for (let index = 0; index < 25; index += 1) {
-      if (controller.isDone()) break;
-      controller.getInput();
-      game.scriptedMoveTo(index * 1.2, 0);
-      game.applyInput({ x: 0, y: 0, magnitude: 0, isActive: false }, 0.1, 0);
-      controller.afterUpdate(0.1);
-    }
+    stepSemanticController(controller, game, { steps: 120, dt: 0.1, speed: 1 });
     verdict = controller.getVerdict();
   });
 
-  const tracking = verdict.trailTracking;
-  assert.equal(tracking.enabled, true, 'trail tracking is on');
-  assert.equal(tracking.scriptedGateReleases >= 1, true,
-    `a gate inside the cutscene must be released immediately, got ${tracking.scriptedGateReleases}`);
-  assert.equal(tracking.scheduleSec > 0.4 + 1e-6, true,
-    `the teach clock must move past the pinned gate, got scheduleSec=${tracking.scheduleSec}`);
-  assert.equal(tracking.scriptedSec > 1, true, 'the whole cutscene counts as scripted time');
-  assert.equal(verdict.milestones.matched, 0, 'releasing a gate does NOT match its milestone');
-  assert.equal(verdict.calibration.status, 'ok', 'calibration ran while input was still authoritative');
+  assert.equal(verdict.milestones.matched, 0, 'the run never got past the first gate');
+  assert.equal(verdict.milestones.missing.length, 3,
+    `every unmatched milestone is reported missing, got ${verdict.milestones.missing.length}`);
+  assert.equal(verdict.milestones.criticalMissing, 2,
+    `both critical milestones count as missing, got ${verdict.milestones.criticalMissing}`);
+  assert.equal(verdict.milestones.optionalMissing, 1, 'the never-attempted optional milestone counts too');
+  assert.equal(verdict.grade, 'failed',
+    `an early-death run must be reachable as failed, got ${verdict.grade} (${verdict.grading.reason})`);
+  assert.match(verdict.grading.reason, /critical/, 'the reason names the critical miss');
+
+  // 未尝试的里程碑要有可读的理由,不能和"超时"混为一谈
+  const neverAttempted = verdict.milestones.missing.filter((diff) => /ended before/.test(diff.reason));
+  assert.equal(neverAttempted.length >= 2, true, 'never-attempted milestones carry their own reason');
 }
 
 /**

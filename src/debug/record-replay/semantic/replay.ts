@@ -341,6 +341,10 @@ export class SemanticReplayController implements MovementInputSource {
   private trackScriptedSec = 0;
   private inputAuthoritative = true;
   private scheduleAdvancedThisFrame = false;
+  /** 上一帧的横向偏离,用来判断「正在往航迹上走回去」。 */
+  private previousCrossError = Number.POSITIVE_INFINITY;
+  /** 本帧:示教时钟被跟踪误差按死(gain=0),但 actor 正在收敛回航迹。 */
+  private recoveringToPath = false;
   /** 示教时钟是否已经被推进过(标定期的剧情段也会推)。用于避免进入 navigating 时把它清零。 */
   private trackerStarted = false;
   private terminalDivergence: string | null = null;
@@ -484,10 +488,12 @@ export class SemanticReplayController implements MovementInputSource {
   /** 推进示教时钟,算出本帧的追踪目标(在 post-update 里做,getInput 读缓存)。 */
   private updatePathTracking(deltaTime: number): void {
     if (!this.tracker) return;
-    const capSec = this.getScheduleCapSec();
     const previousScheduleSec = this.tracker.scheduleSec;
     const authoritative = readRecordReplayInputAuthority();
     this.inputAuthoritative = authoritative;
+    // **推进之前**放行剧情段里的闸门,否则 cap 会在本帧就把时钟钳住(见下)。
+    if (!authoritative) this.releaseGatesBlockingScriptedSchedule(deltaTime);
+    const capSec = this.getScheduleCapSec();
 
     const step = this.tracker.advance(deltaTime, this.readCurrentPosition(), capSec, {
       inputAuthoritative: authoritative,
@@ -496,6 +502,16 @@ export class SemanticReplayController implements MovementInputSource {
     this.pursuitTarget = step.target;
     this.pursuitScheduleSec = step.scheduleSec;
     this.scheduleAdvancedThisFrame = step.scheduleSec > previousScheduleSec + 1e-6;
+    // 剧情把 actor 拖离航迹后,crossError 会让 gain 归零、示教时钟冻住。
+    //
+    // 这时**授权态的耐心放行救不了**:`gateHoldPatienceSec` 那条路要求 `isHoldingAt(cap)`,
+    // 而时钟停在 cap **之前**(last-stand:0.71 < 下一个闸门 3.1255),「顶在闸门上」永远为假。
+    // 真正缺的判据是:actor 正在往航迹上走回去 —— 那**就是**进展,不能被 6 秒停滞超时杀掉。
+    // (实测:去掉这一条,恢复中的运行在半路被判负,scheduleSec 冻在 4.42。)
+    this.recoveringToPath = authoritative
+      && step.gain === 0
+      && step.crossError < this.previousCrossError - 1e-3;
+    this.previousCrossError = step.crossError;
 
     if (authoritative) {
       // 只有「输入说了算」时,跟踪误差才是真实的保真度指标。
@@ -511,6 +527,36 @@ export class SemanticReplayController implements MovementInputSource {
   }
 
   /**
+   * 剧情段(输入不算数)里,任何**落在示教时钟当前位置或身后**的闸门立即放行。
+   *
+   * 剧情段里回放注入的输入根本不起作用,「停在闸门等进展」是死等 —— 能不能满足这个里程碑
+   * 完全由游戏自己决定。上游原行为是在非授权时直接 early-return,**连放行路径都没有**,
+   * 于是 cap 把示教时钟钉死在闸门时刻,而剧情正把角色拖走。
+   *
+   * last-stand 的真实签名(`final_cert.json`):`swordPicked` 闸门 `t=0.62` 落在 3.78s 剧情段**之内**,
+   * 剧情把角色拖离航迹约 6 个单位,`scheduleSec` 恒 0.71,里程碑 1/55,stage 判负。
+   *
+   * 放行只前移 schedule cap,**不跳过里程碑**:`matchedMilestones` 不变,该里程碑之后照样要被
+   * detector 命中,漏了仍会判 missing。
+   *
+   * > 判据取「闸门相对时钟的位置」而不是 `tracker.isHoldingAt(cap)`,是为了在**推进之前**就放行,
+   * > 少一帧钳制。两者在剧情段里等价(时钟被 cap 钳住后下一帧就 holding),不是行为差异。
+   * > 剧情**结束之后**的那段冻结,靠的是另一条修复:见 `recoveringToPath`。
+   */
+  private releaseGatesBlockingScriptedSchedule(deltaTime: number): void {
+    if (!this.tracker) return;
+    // 本帧时钟最远能走到哪:闸门只要不在这之后,就会挡路。
+    const horizon = this.tracker.scheduleSec + Math.max(0, deltaTime);
+    for (let guard = this.script.milestones.length; guard > 0; guard -= 1) {
+      const gate = this.script.milestones[this.matchedMilestones + this.releasedGates];
+      if (!gate || gate.t > horizon + 1e-6) return;
+      this.releasedGates += 1;
+      this.scriptedGateReleases += 1;
+      this.gateHoldStalledSec = 0;
+    }
+  }
+
+  /**
    * 闸门处的耐心 / 放行。
    *
    * 停在闸门等,是为了让 actor 在人类当时所站的位置上把进度攒够(交付闸门 → 站在盒里继续交付)。
@@ -521,28 +567,15 @@ export class SemanticReplayController implements MovementInputSource {
   private updateGateHold(deltaTime: number, capSec: number): void {
     if (!this.tracker) return;
     const signature = this.computeProgressSignature();
-    const madeProgress = signature !== this.progressSignature;
+    const madeProgress = signature !== this.progressSignature || this.recoveringToPath;
     this.progressSignature = signature;
 
     if (!this.inputAuthoritative) {
-      // 游戏在自己驱动角色。这段时间不算停滞(活性由全局 maxDurationSec 兜底),
-      // 但**闸门必须立刻放行** —— 回放注入的输入此刻根本不起作用,「停在闸门等进展」
-      // 是死等:能不能满足这个里程碑完全由游戏自己决定,回放做什么都改变不了。
-      //
-      // 不放行的后果(last-stand 实测,2 tape × 2 次完全一致):示教时钟被钉死在剧情开始
-      // 那一刻的闸门时刻(swordPicked t=0.058),而剧情把角色带走 28 个单位;解禁后
-      // 投影窗口跨不过这个缺口 ⇒ 永久 stall,scheduleSec 恒 0.7294,里程碑停在 1/59。
-      //
-      // 放行只前移 schedule cap,**不跳过里程碑**(matchedMilestones 不变),
-      // 该里程碑之后照样要被 detector 命中,漏了仍会判 missing。
-      if (
-        this.tracker.isHoldingAt(capSec)
-        && this.matchedMilestones + this.releasedGates < this.script.milestones.length
-      ) {
-        this.releasedGates += 1;
-        this.scriptedGateReleases += 1;
-        this.gateHoldStalledSec = 0;
-      }
+      // 游戏在自己驱动角色:这段时间既不算停滞(活性由全局 maxDurationSec 兜底),
+      // 也不该由「有没有进展」来决定闸门去留 —— 闸门已在推进之前放行过了
+      // (见 releaseGatesBlockingScriptedSchedule)。
+      this.gateHoldStalledSec = 0;
+      this.stageNoProgressSec = 0;
       return;
     }
 
@@ -1370,6 +1403,36 @@ export class SemanticReplayController implements MovementInputSource {
     return true;
   }
 
+  /**
+   * 收尾时把**所有还没匹配上的里程碑**补进 missing。
+   *
+   * 原来 `missingMilestones` 只在「某个 stage 被判负 / 超时 / 循环上限」时 push 一条:
+   * 一个早死的运行(matched 1/55)只会留下 **1** 条 missing,后面 53 个从没被尝试过的里程碑
+   * 根本不进列表 ⇒ `criticalMissing` 恒为 0 ⇒ **通往 `failed` 的唯一里程碑判据永不触发**。
+   * 实测(last-stand):matched 1/55、经济全灭、两个 stage 一个 failed 的运行,
+   * 声明了 criticality 之后**仍然**判成 `degraded`。分级 v2 的地板是坏的。
+   *
+   * 现在:凡是 `index >= matchedMilestones` 的里程碑都算 missing(理由写明「运行提前结束」)。
+   * 已经有 missing 记录的下标不重复添加(terminal divergence / stage 超时各记过一次)。
+   * 全部匹配的运行(matched == length)这里什么都不加,行为不变。
+   */
+  private buildMissingMilestones(): MilestoneDiff[] {
+    const missing = [...this.missingMilestones];
+    const seen = new Set(missing.map((diff) => diff.index));
+    for (let index = this.matchedMilestones; index < this.script.milestones.length; index += 1) {
+      if (seen.has(index)) continue;
+      seen.add(index);
+      const expected = this.script.milestones[index];
+      if (!expected) continue;
+      missing.push({
+        index,
+        expected,
+        reason: 'run ended before this milestone was attempted',
+      });
+    }
+    return missing.sort((left, right) => left.index - right.index);
+  }
+
   private buildDeterminismStamp(): SemanticDeterminismStamp | null {
     const horizon = this.determinismHorizon;
     if (horizon === null) return null;
@@ -1410,7 +1473,8 @@ export class SemanticReplayController implements MovementInputSource {
       || this.stageVerdicts.some((stage) => stage.recoveries > 0 || stage.loops > 1 || stage.status === 'skipped');
     const quality: SemanticVerdict['quality'] = ok ? (recovered ? 'recovered' : 'clean') : 'failed';
 
-    const layered = countLayeredMilestones(this.script.milestones, this.missingMilestones, isRecordReplayMilestoneCritical);
+    const missingMilestones = this.buildMissingMilestones();
+    const layered = countLayeredMilestones(this.script.milestones, missingMilestones, isRecordReplayMilestoneCritical);
     // 绕路分:每一次卡死恢复 / 跳过的航点 / 整段重跑 / 多出来的事件都算一笔。
     // orderViolations 不单独计 —— 乱序事件已经进了 extraMilestones,再加就是重复计分。
     const detourScore = this.stuckEvents.length
@@ -1444,7 +1508,7 @@ export class SemanticReplayController implements MovementInputSource {
       determinism: this.buildDeterminismStamp(),
       milestones: {
         matched: this.matchedMilestones,
-        missing: [...this.missingMilestones],
+        missing: missingMilestones,
         extra: [...this.extraMilestones],
         orderViolations: this.orderViolations,
         criticalMissing: layered.criticalMissing,
