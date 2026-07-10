@@ -48,6 +48,8 @@ export interface SemanticReplayOptions {
   gateHoldPatienceSec?: number;
   /** 轨迹跟踪:示教时钟与游戏状态双双静止多久判负(秒)。 */
   gateStallTimeoutSec?: number;
+  /** 示教时钟自锁(gain=0 且误差不再改善且游戏无进展)多久后尝试重锚逃逸(秒)。 */
+  clockLockTimeoutSec?: number;
   /** 四档 verdict 的阈值覆盖(默认见 grade.ts)。 */
   gradeThresholds?: Partial<SemanticGradeThresholds>;
   /**
@@ -153,6 +155,10 @@ export interface SemanticTrailTrackingVerdict {
   scriptedGateReleases: number;
   /** 剧情段结束时把示教时钟重锚到 actor 最近点的次数。 */
   scriptedReanchors: number;
+  /** 示教时钟自锁(gain=0 的不动点)被检测到并重锚逃逸的次数。 */
+  clockLockEscapes: number;
+  /** 重锚总次数(剧情段边界 + 自锁逃逸)。 */
+  reanchors: number;
 }
 
 export interface SemanticEconomyGateVerdict {
@@ -281,6 +287,13 @@ const PURSUIT_STOP_DISTANCE = 0.05;
 const PURSUIT_FULL_SPEED_DISTANCE = 0.6;
 /** 有输入时的最小 magnitude 比例,保证低速段也能真的挪动。 */
 const PURSUIT_MIN_MAGNITUDE_RATIO = 0.15;
+/** crossError 要比历史最好值好这么多才算「在改善」。 */
+const CLOCK_LOCK_CROSS_ERROR_EPSILON = 1e-3;
+/** 两次自锁的示教时刻相差小于此值 ⇒ 视为「在同一位置又锁住了」。 */
+const CLOCK_LOCK_SAME_ANCHOR_EPSILON_SEC = 0.05;
+const DEFAULT_CLOCK_LOCK_TIMEOUT_SEC = 1.5;
+/** actor 本帧位移小于此值才算「停住」。自锁是不动点:时钟、世界、actor 三者都不动。 */
+const CLOCK_LOCK_ACTOR_TRAVEL_EPSILON = 1e-3;
 
 export class SemanticReplayController implements MovementInputSource {
   private readonly waypointToleranceBand: number;
@@ -343,10 +356,23 @@ export class SemanticReplayController implements MovementInputSource {
   private trackScriptedSec = 0;
   private inputAuthoritative = true;
   private scheduleAdvancedThisFrame = false;
-  /** 上一帧的横向偏离,用来判断「正在往航迹上走回去」。 */
+  /** 上一帧的横向偏离。 */
   private previousCrossError = Number.POSITIVE_INFINITY;
-  /** 本帧:示教时钟被跟踪误差按死(gain=0),但 actor 正在收敛回航迹。 */
-  private recoveringToPath = false;
+  /** 本帧 crossError 是否创了新低(= actor 正在收敛回航迹)。 */
+  private crossErrorImproving = false;
+  private lastGain = 1;
+  private lastCrossError = 0;
+  /** 示教时钟自锁已持续多久。 */
+  private clockLockSec = 0;
+  /** 自锁逃逸(重锚)次数。 */
+  private clockLockEscapes = 0;
+  /** 上次自锁逃逸时的示教时刻;同一位置再锁 ⇒ 重锚无效,快速判负。 */
+  private lastLockEscapeScheduleSec: number | null = null;
+  /** 重锚总次数(剧情段边界 + 自锁逃逸)。 */
+  private reanchors = 0;
+  /** actor 本帧走了多远。自锁要求它**停住**。 */
+  private lastActorTravel = Number.POSITIVE_INFINITY;
+  private previousActorPosition: { x: number; z: number } | null = null;
   /** 示教时钟是否已经被推进过(标定期的剧情段也会推)。用于避免进入 navigating 时把它清零。 */
   private trackerStarted = false;
   private terminalDivergence: string | null = null;
@@ -357,6 +383,7 @@ export class SemanticReplayController implements MovementInputSource {
   private readonly determinismHorizon: number | 'green-full' | null;
   private readonly gateHoldPatienceSec: number;
   private readonly gateStallTimeoutSec: number;
+  private readonly clockLockTimeoutSec: number;
   /** 已经放行了几个闸门(闸门处久等无进展时逐个前移 cap)。命中里程碑后清零。 */
   private releasedGates = 0;
   /** 其中有多少个是在「输入不算数」的剧情段里立即放行的(诊断用)。 */
@@ -391,6 +418,11 @@ export class SemanticReplayController implements MovementInputSource {
     this.calibrationMinDisplacement = Math.max(0.0001, options.calibrationMinDisplacement ?? 0.02);
     this.gateHoldPatienceSec = Math.max(0.1, options.gateHoldPatienceSec ?? 1.5);
     this.gateStallTimeoutSec = Math.max(0.5, options.gateStallTimeoutSec ?? 6);
+    // 自锁检测必须**早于**停滞判负触发,否则永远轮不到它逃逸。
+    this.clockLockTimeoutSec = Math.min(
+      Math.max(0.2, options.clockLockTimeoutSec ?? DEFAULT_CLOCK_LOCK_TIMEOUT_SEC),
+      this.gateStallTimeoutSec * 0.5,
+    );
     this.gradeThresholds = { ...options.gradeThresholds };
     this.determinismHorizon = normalizeDeterminismHorizon(options.determinismHorizon);
     this.replayStartFrame = game.getFrameCount();
@@ -508,16 +540,21 @@ export class SemanticReplayController implements MovementInputSource {
     this.pursuitTarget = step.target;
     this.pursuitScheduleSec = step.scheduleSec;
     this.scheduleAdvancedThisFrame = step.scheduleSec > previousScheduleSec + 1e-6;
-    // 剧情把 actor 拖离航迹后,crossError 会让 gain 归零、示教时钟冻住。
-    //
-    // 这时**授权态的耐心放行救不了**:`gateHoldPatienceSec` 那条路要求 `isHoldingAt(cap)`,
-    // 而时钟停在 cap **之前**(last-stand:0.71 < 下一个闸门 3.1255),「顶在闸门上」永远为假。
-    // 真正缺的判据是:actor 正在往航迹上走回去 —— 那**就是**进展,不能被 6 秒停滞超时杀掉。
-    // (实测:去掉这一条,恢复中的运行在半路被判负,scheduleSec 冻在 4.42。)
-    this.recoveringToPath = authoritative
+    this.lastGain = step.gain;
+    this.lastCrossError = step.crossError;
+    const actor = this.readCurrentPosition();
+    this.lastActorTravel = this.previousActorPosition
+      ? Math.hypot(actor.x - this.previousActorPosition.x, actor.z - this.previousActorPosition.z)
+      : Number.POSITIVE_INFINITY;
+    this.previousActorPosition = actor;
+    // 「actor 正在收敛回航迹」—— 这是一个**活性**信号,故意宽松:与**上一帧**比,
+    // 归航途中的来回抖动照样算进展。(用「历史/episode 最优」会把抖动中的归航判成停滞:
+    // 实测 Page 的通关 tape 因此在第 4 个里程碑处 6 秒停滞判负。)
+    this.crossErrorImproving = authoritative
       && step.gain === 0
-      && step.crossError < this.previousCrossError - 1e-3;
+      && step.crossError < this.previousCrossError - CLOCK_LOCK_CROSS_ERROR_EPSILON;
     this.previousCrossError = step.crossError;
+    if (!authoritative) this.clockLockSec = 0;   // 剧情段里跟踪误差无意义
 
     if (authoritative) {
       // 只有「输入说了算」时,跟踪误差才是真实的保真度指标。
@@ -573,7 +610,7 @@ export class SemanticReplayController implements MovementInputSource {
   private updateGateHold(deltaTime: number, capSec: number): void {
     if (!this.tracker) return;
     const signature = this.computeProgressSignature();
-    const madeProgress = signature !== this.progressSignature || this.recoveringToPath;
+    const gameProgressed = signature !== this.progressSignature;
     this.progressSignature = signature;
 
     if (!this.inputAuthoritative) {
@@ -584,6 +621,13 @@ export class SemanticReplayController implements MovementInputSource {
       this.stageNoProgressSec = 0;
       return;
     }
+
+    // 自锁检测必须在停滞计账之前:它要么把时钟救活,要么快速判负并写明原因。
+    // 它同时算出 `crossErrorImproving`(= actor 正在收敛回航迹),下面的停滞计账复用这个信号。
+    this.updateClockSelfLock(deltaTime, gameProgressed);
+    if (this.failed || this.done) return;
+    // 「归航中」也算进展 —— 与自锁检测共用同一个信号,不再是独立逃生口。
+    const madeProgress = gameProgressed || this.crossErrorImproving;
 
     if (madeProgress) {
       this.gateHoldStalledSec = 0;
@@ -1458,12 +1502,93 @@ export class SemanticReplayController implements MovementInputSource {
    */
   private reanchorAfterScriptedSegment(): void {
     if (!this.tracker || !this.trackerStarted) return;
+    this.reanchorTeachClock();
+    this.scriptedReanchors += 1;
+    // 剧情段边界是**新的一次**机会:允许自锁检测在这里再逃逸一次。
+    this.lastLockEscapeScheduleSec = null;
+  }
+
+  /**
+   * ── 示教时钟为什么会被钉住?只有三个正交原因,各有**一个**处理者 ──
+   *
+   * | 原因 | 症状 | 处理者 |
+   * |---|---|---|
+   * | **A. cap 钳制**(下一个里程碑的闸门没匹配) | `isHoldingAt(cap)`,gain 可以 > 0 | 剧情段:`releaseGatesBlockingScriptedSchedule()`;授权态:`gateHoldPatienceSec` 耐心放行 |
+   * | **B. anchor 脏**(剧情刚把 actor 搬走) | 边界**已知** | `reanchorAfterScriptedSegment()` —— 立刻重锚 |
+   * | **C. gain 归零**(跟踪误差 / 落后过大) | 时钟停在 cap **之前**,靠自身永远出不来 | **本机制**:自锁检测 → 重锚逃逸 → 无效则快速判负 |
+   *
+   * C 是一个**不动点**:`gain=0` ⇒ 目标点不再前移 ⇒ actor 到达后停住 ⇒ `crossError` 恒定 ⇒ `gain` 仍为 0。
+   * 它三次以不同面目出现(剧情后 6 单位偏离 / 甩出 13 单位 / stage 7 的 crossError 恒 1.369 微超阈值 1.2),
+   * 前两次我各打了一个专用补丁 —— 那是错的。**统一判据**:
+   *
+   *   `gain === 0` 且 连续 `clockLockTimeoutSec` 秒「crossError 没创新低 且 游戏态无进展 且 时钟没前移」
+   *
+   * ⇒ 判定自锁 ⇒ 用 `reanchorToActor()` 把时钟挪到 actor 在航迹上的**全程**最近点(与 B 共用原语)。
+   * **同一位置再次自锁 ⇒ 重锚救不了它** ⇒ 立即判负并写明 reason,而不是干耗到停滞超时/`maxDurationSec`
+   * —— 后者给出的失败现象是「莫名超时」,前者给出的是「时钟在 t=… 自锁,crossError=…,重锚无效」。
+   *
+   * 原先的 `recoveringToPath` 被收编成本机制的一个子句(`crossErrorImproving` ⇒ 未自锁,也不计停滞)。
+   */
+  private updateClockSelfLock(deltaTime: number, gameProgressed: boolean): void {
+    if (!this.tracker) return;
+
+    // 自锁是一个**不动点**:四件事同时成立才算 —— 时钟被 gain 按住、时钟没前移、
+    // 世界没进展、**actor 也不动**。少任何一条都不是不动点:
+    //
+    //   · actor 还在走(哪怕这一帧误差没变小)⇒ 它在挣扎,交给 6 秒停滞超时兜底,
+    //     不该把示教时钟瞬移走。少了这一条,Page 的通关 tape 会在 crossError 短暂越过
+    //     阈值 1.2(她的 maxCrossError 1.72)时被误判自锁。
+    //   · crossError 正在变小 ⇒ 归航中(见 `crossErrorImproving`,它同时喂给停滞计账)。
+    const clockFrozen = this.lastGain === 0 && !this.scheduleAdvancedThisFrame;
+    const actorStationary = this.lastActorTravel <= CLOCK_LOCK_ACTOR_TRAVEL_EPSILON;
+    // 注意这里**不必**再查 `crossErrorImproving`:actor 不动 ⇒ 它到航迹投影的距离不变 ⇒ 误差不可能在改善。
+    // 那个信号的职责是喂停滞计账(归航算进展),不是判自锁。多写一条会得到一个永远测不到的分支。
+    const locked = clockFrozen && !gameProgressed && actorStationary;
+    if (!locked) {
+      this.clockLockSec = 0;
+      return;
+    }
+
+    this.clockLockSec += Math.max(0, deltaTime);
+    if (this.clockLockSec < this.clockLockTimeoutSec) return;
+    this.escapeClockSelfLock();
+  }
+
+  private escapeClockSelfLock(): void {
+    if (!this.tracker) return;
+    const lockedAt = this.tracker.scheduleSec;
+    const sameSpot = this.lastLockEscapeScheduleSec !== null
+      && Math.abs(lockedAt - this.lastLockEscapeScheduleSec) < CLOCK_LOCK_SAME_ANCHOR_EPSILON_SEC;
+
+    if (sameSpot) {
+      const reason = `clock self-lock at schedule ${roundTo(lockedAt, 4)}s: gain=0, `
+        + `crossError=${roundTo(this.lastCrossError, 4)} never improved, no game progress, `
+        + 'and re-anchoring here already failed once — the actor cannot reach the taught path from where it is';
+      const expected = this.script.milestones[this.matchedMilestones];
+      if (expected) this.recordMissingMilestone({ index: this.matchedMilestones, expected, reason });
+      this.failCurrentStage(reason);
+      return;
+    }
+
+    this.lastLockEscapeScheduleSec = lockedAt;
+    this.clockLockEscapes += 1;
+    this.reanchorTeachClock();
+  }
+
+  /**
+   * 把示教时钟重锚到 actor 在航迹上的全程最近点。B(边界已知)与 C(运行时发现)共用这一原语,
+   * 差别只在**触发时机**,不在动作。
+   */
+  private reanchorTeachClock(): void {
+    if (!this.tracker || !this.trackerStarted) return;
     this.tracker.reanchorToActor(this.readCurrentPosition(), this.getScheduleCapSec());
     this.pursuitScheduleSec = this.tracker.scheduleSec;
     this.previousCrossError = Number.POSITIVE_INFINITY;
+    this.crossErrorImproving = false;
+    this.clockLockSec = 0;
     this.gateHoldStalledSec = 0;
     this.stageNoProgressSec = 0;
-    this.scriptedReanchors += 1;
+    this.reanchors += 1;
   }
 
   private buildDeterminismStamp(): SemanticDeterminismStamp | null {
@@ -1585,6 +1710,8 @@ export class SemanticReplayController implements MovementInputSource {
             scriptedSec: roundTo(this.trackScriptedSec, 4),
             scriptedGateReleases: this.scriptedGateReleases,
             scriptedReanchors: this.scriptedReanchors,
+            clockLockEscapes: this.clockLockEscapes,
+            reanchors: this.reanchors,
           }
         : null,
       calibration: cloneCalibrationVerdict(this.calibrationVerdict),

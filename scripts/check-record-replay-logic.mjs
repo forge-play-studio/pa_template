@@ -183,6 +183,7 @@ try {
   assertScriptedGateRelease({ ...providers, ...semanticReplay });
   assertEarlyDeathReachesFailed({ ...providers, ...semanticReplay });
   assertScriptedSegmentDuringCalibration({ ...providers, ...semanticReplay });
+  assertTeachClockSelfLock({ ...providers, ...semanticReplay });
 
   console.log('[check-record-replay-logic] OK');
 } finally {
@@ -1682,6 +1683,227 @@ function assertScriptedSegmentDuringCalibration({
 
   // 放行 ≠ 匹配
   assert.equal(verdict.milestones.matched, 0, 'releasing a gate does NOT match its milestone');
+}
+
+/**
+ * 示教时钟自锁 —— 统一机制(取代前两轮的两个专用逃生口)。
+ *
+ * 自锁是一个**不动点**:`gain=0` ⇒ 目标点不再前移 ⇒ actor 到达后停住 ⇒ `crossError` 恒定 ⇒ `gain` 仍为 0。
+ * last-stand 第三次撞上它:stage 7,`scheduleSec` 冻在 12.84(远小于 `scriptDurationSec` 33.02),
+ * `crossError` 恒 **1.369**(仅比 `crossErrorStall` 阈值 1.2 高 14%),actor 停住,游戏态无进展。
+ *   · 逃生口 1(闸门放行)要求 `isHoldingAt(cap)` —— 时钟停在 cap 之前,假
+ *   · 逃生口 2(收敛回航迹)要求 crossError 严格递减 —— actor 停住,恒定,假
+ *   · ⇒ 6 秒停滞判负,失败现象是「莫名超时」
+ *
+ * 两条分支都要验:
+ *   A. 重锚**有效** ⇒ 时钟恢复推进
+ *   B. 同一位置重锚**无效** ⇒ 立即判负并写明 reason(而不是干耗到停滞超时)
+ */
+function assertTeachClockSelfLock({ clearRecordReplayProviders, registerRecordReplayProviders, SemanticReplayController }) {
+  const straightTrail = Array.from({ length: 121 }, (_, index) => ({ t: index * 0.1, x: index * 0.3, z: 0 }));
+  const makeScript = (milestones) => createSemanticControllerScript({
+    durationSec: 12,
+    waypoints: [{ t: 0, x: 0, z: 0 }, { t: 12, x: 36, z: 0 }],
+    trail: straightTrail,
+    milestones,
+  });
+  const options = {
+    waypointToleranceBand: 0.5,
+    maxDurationSec: 40,
+    calibrationPulseSec: 0.1,
+    calibrationSettleSec: 0.1,
+    gateStallTimeoutSec: 6,
+    clockLockTimeoutSec: 1.5,
+  };
+
+  // ── A. 时钟自锁,但重锚有效(actor 其实就在航迹上,只是窗口投影够不着)
+  let escapeVerdict = null;
+  withSemanticMockGame({ clearRecordReplayProviders, registerRecordReplayProviders }, (game) => {
+    game.addFactRule('stage.done', () => false);
+    const controller = new SemanticReplayController(game, makeScript([
+      { t: 11, kind: 'custom', detail: { id: 'mock.state.stage.done', to: 'true' } },
+    ]), options);
+
+    stepSemanticController(controller, game, { steps: 20, dt: 0.1, speed: 1 });   // 标定
+    // 把 actor 瞬移到航迹**前方远处**(x=13 ⇒ t≈4.33),并短暂锁住移动:
+    // 窗口投影(schedule ± 0.6/1.2s)够不着它 ⇒ crossError 虚高 ⇒ gain=0 ⇒ 自锁。
+    game.scriptedMoveTo(13, 0);
+    game.setMovementBlockedRange(0, 1e9);
+    for (let index = 0; index < 20; index += 1) {   // 2s > clockLockTimeoutSec 1.5s
+      if (controller.isDone()) break;
+      const input = controller.getInput();
+      game.applyInput(input, 0.1, 3);
+      controller.afterUpdate(0.1);
+    }
+    game.setMovementBlockedRange(1e9, 1e9);         // 解锁,让它正常跟
+    stepSemanticController(controller, game, { steps: 120, dt: 0.1, speed: 3 });
+    escapeVerdict = controller.getVerdict();
+  });
+
+  const escape = escapeVerdict.trailTracking;
+  assert.equal(escape.clockLockEscapes >= 1, true,
+    `a frozen teach clock must be detected as self-locked, got clockLockEscapes=${escape.clockLockEscapes}`);
+  assert.equal(escape.reanchors >= 1, true, 'the escape re-uses the re-anchor primitive');
+  assert.equal(escape.scheduleSec > 6, true,
+    `re-anchoring must unfreeze the clock, got scheduleSec=${escape.scheduleSec}`);
+  assert.equal(
+    escapeVerdict.milestones.missing.some((diff) => /self-lock/.test(diff.reason)),
+    false,
+    'a successful escape must not report a self-lock failure',
+  );
+
+  // ── B. 同一位置重锚无效(actor 被卡在离航迹 1.369 的地方,永远走不回来)⇒ 快速判负
+  let stuckVerdict = null;
+  withSemanticMockGame({ clearRecordReplayProviders, registerRecordReplayProviders }, (game) => {
+    game.addFactRule('stage.done', () => false);
+    const controller = new SemanticReplayController(game, makeScript([
+      { t: 11, kind: 'custom', detail: { id: 'mock.state.stage.done', to: 'true' } },
+    ]), options);
+
+    stepSemanticController(controller, game, { steps: 20, dt: 0.1, speed: 1 });   // 标定
+    // last-stand 的真实数字:crossError 恒 1.369,仅比 crossErrorStall(1.2)高 14%。
+    game.scriptedMoveTo(0.3, 1.369);
+    game.setMovementBlockedRange(0, 1e9);           // actor 再也动不了 ⇒ crossError 恒定
+    for (let index = 0; index < 200; index += 1) {
+      if (controller.isDone()) break;
+      const input = controller.getInput();
+      game.applyInput(input, 0.1, 3);
+      controller.afterUpdate(0.1);
+    }
+    stuckVerdict = controller.getVerdict();
+  });
+
+  const stuck = stuckVerdict.trailTracking;
+  assert.equal(stuck.clockLockEscapes >= 1, true, 'the lock is detected before giving up');
+  assert.equal(stuckVerdict.ok, false, 'an unrecoverable self-lock fails the run');
+  const selfLockMiss = stuckVerdict.milestones.missing.find((diff) => /self-lock/.test(diff.reason));
+  assert.equal(!!selfLockMiss, true,
+    `an unrecoverable self-lock must say so, got reasons: ${stuckVerdict.milestones.missing.map((d) => d.reason).join(' | ')}`);
+  assert.match(selfLockMiss.reason, /crossError=1\.369/, 'the reason carries the measured crossError');
+  assert.match(selfLockMiss.reason, /re-anchoring here already failed once/, 'the reason says why we gave up');
+
+  // 快速判负:必须**早于**停滞超时(6s),否则失败现象仍是「莫名超时」
+  assert.equal(stuck.stalledSec < 6, true,
+    `self-lock must fail fast, not wait for the ${options.gateStallTimeoutSec}s stall timeout (stalledSec=${stuck.stalledSec})`);
+
+  // ── C. 纯授权态的横向位移,actor 能自己走回来 ⇒ 归航,**不是**自锁
+  //
+  // 这一条守住「改善判据必须按 episode 计」:若拿全局历史最优比较,跟得好的时候 best 会降到 ~0,
+  // 之后任何真实归航(5 → 4.9 → …)都永远不比历史最好更好 ⇒ 改善恒假 ⇒ 正在走回来的运行被判自锁。
+  let recoverVerdict = null;
+  withSemanticMockGame({ clearRecordReplayProviders, registerRecordReplayProviders }, (game) => {
+    game.addFactRule('stage.done', () => false);
+    const controller = new SemanticReplayController(game, makeScript([
+      { t: 11, kind: 'custom', detail: { id: 'mock.state.stage.done', to: 'true' } },
+    ]), options);
+
+    stepSemanticController(controller, game, { steps: 30, dt: 0.1, speed: 3 });
+
+    // 第一次横向甩开 2 个单位:进入一个自锁 episode,走回来把 episode best 压到 ~0.1
+    const first = game.getPosition();
+    game.scriptedMoveTo(first.x, 2);
+    stepSemanticController(controller, game, { steps: 60, dt: 0.1, speed: 1 });
+
+    // 第二次甩开 5 个单位:**新的 episode**。若 episode best 没在上一次结束时清空,
+    // 它还留着 ~0.1,于是 5 → 4.9 → … 永远「不比 0.1 更好」⇒ 归航被误判为自锁。
+    const second = game.getPosition();
+    game.scriptedMoveTo(second.x, 5);
+    stepSemanticController(controller, game, { steps: 150, dt: 0.1, speed: 1 });
+    recoverVerdict = controller.getVerdict();
+  });
+
+  assert.equal(
+    recoverVerdict.milestones.missing.some((diff) => /self-lock/.test(diff.reason)),
+    false,
+    'an actor that is walking back to the path must not be declared self-locked',
+  );
+  assert.equal(recoverVerdict.trailTracking.scheduleSec > 4, true,
+    `the clock must resume once the actor is back on the path, got ${recoverVerdict.trailTracking.scheduleSec}`);
+  // 自己走得回来的运行**一次逃逸都不该有** —— 逃逸是最后手段,不是常规操作。
+  assert.equal(recoverVerdict.trailTracking.clockLockEscapes, 0,
+    `a self-recovering run needs no escape, got clockLockEscapes=${recoverVerdict.trailTracking.clockLockEscapes}`);
+
+  // ── D. actor 一直在动(误差不减小,但也不是不动点)⇒ **不是**自锁
+  //
+  // 自锁必须四条件齐备:时钟被 gain 按住、时钟没前移、世界没进展、**actor 也不动**。
+  // 少了「actor 不动」这一条,Page 的通关 tape 会在 crossError 短暂越过阈值 1.2 时被误判
+  // 自锁,示教时钟被瞬移走(实测双跑 failed)。actor 还在挣扎就交给停滞超时兜底。
+  let movingVerdict = null;
+  withSemanticMockGame({ clearRecordReplayProviders, registerRecordReplayProviders }, (game) => {
+    game.addFactRule('stage.done', () => false);
+    const controller = new SemanticReplayController(game, makeScript([
+      { t: 11, kind: 'custom', detail: { id: 'mock.state.stage.done', to: 'true' } },
+    ]), options);
+
+    stepSemanticController(controller, game, { steps: 30, dt: 0.1, speed: 3 });
+    game.setMovementBlockedRange(0, 1e9);   // 只有 scriptedMoveTo 能挪它
+    const start = game.getPosition();
+    // 平行于航迹侧移 1.5(> crossErrorStall 1.2 ⇒ gain=0),并且**一直在走**
+    for (let index = 0; index < 60; index += 1) {
+      if (controller.isDone()) break;
+      const input = controller.getInput();
+      game.scriptedMoveTo(start.x + index * 0.1, 1.5);
+      game.applyInput(input, 0.1, 0);
+      controller.afterUpdate(0.1);
+    }
+    movingVerdict = controller.getVerdict();
+  });
+
+  assert.equal(movingVerdict.trailTracking.clockLockEscapes, 0,
+    `a moving actor is not a fixed point — no self-lock, got clockLockEscapes=${movingVerdict.trailTracking.clockLockEscapes}`);
+  assert.equal(
+    movingVerdict.milestones.missing.some((diff) => /self-lock/.test(diff.reason)),
+    false,
+    'a moving actor must never be declared self-locked',
+  );
+
+  // ── E. 闸门等待:actor 站在闸门位不动,示教时钟被 **cap** 钳住(不是被 gain 按住)⇒ 不是自锁
+  //
+  // 这一条守住 `gain === 0` 子句。闸门等待是逃生口 A 的职责(耐心放行),自锁检测不该插手 ——
+  // 插手的后果是把示教时钟从闸门上瞬移走,交付/攒进度的语义当场破坏。
+  let gateHoldVerdict = null;
+  withSemanticMockGame({ clearRecordReplayProviders, registerRecordReplayProviders }, (game) => {
+    game.addFactRule('stage.done', () => false);   // 闸门永远不满足 ⇒ 时钟一直钉在 cap
+    const controller = new SemanticReplayController(game, makeScript([
+      { t: 1, kind: 'custom', detail: { id: 'mock.state.stage.done', to: 'true' } },
+    ]), { ...options, gateHoldPatienceSec: 100, gateStallTimeoutSec: 100 });
+    stepSemanticController(controller, game, { steps: 80, dt: 0.1, speed: 3 });
+    gateHoldVerdict = controller.getVerdict();
+  });
+
+  assert.equal(gateHoldVerdict.trailTracking.clockLockEscapes, 0,
+    `a clock pinned by the gate cap (gain > 0) is not self-locked, got clockLockEscapes=${gateHoldVerdict.trailTracking.clockLockEscapes}`);
+  assert.equal(gateHoldVerdict.trailTracking.scheduleSec <= 1 + 1e-6, true,
+    `the teach clock must stay parked at the gate, got scheduleSec=${gateHoldVerdict.trailTracking.scheduleSec}`);
+
+  // ── F. actor 站着不动、时钟被 gain 按住,但**世界在动**(经济在涨)⇒ 不是自锁
+  //
+  // 这一条守住 `!gameProgressed` 子句。真实形态:站在交付盒里一边不动一边攒进度;
+  // 此时把示教时钟瞬移走会直接毁掉交付语义。
+  let progressingVerdict = null;
+  withSemanticMockGame({ clearRecordReplayProviders, registerRecordReplayProviders }, (game) => {
+    game.addFactRule('stage.done', () => false);
+    game.addEconomyRule(({ economy }) => { economy.totalEarned += 1; });   // 世界一直在动
+    const controller = new SemanticReplayController(game, makeScript([
+      { t: 11, kind: 'custom', detail: { id: 'mock.state.stage.done', to: 'true' } },
+    ]), options);
+
+    stepSemanticController(controller, game, { steps: 30, dt: 0.1, speed: 3 });
+    const at = game.getPosition();
+    game.scriptedMoveTo(at.x, 1.5);        // 离航迹 1.5 ⇒ gain=0
+    game.setMovementBlockedRange(0, 1e9);  // actor 彻底不动
+    for (let index = 0; index < 60; index += 1) {
+      if (controller.isDone()) break;
+      const input = controller.getInput();
+      game.applyInput(input, 0.1, 0);
+      controller.afterUpdate(0.1);
+    }
+    progressingVerdict = controller.getVerdict();
+  });
+
+  assert.equal(progressingVerdict.trailTracking.clockLockEscapes, 0,
+    `a stationary actor is not self-locked while the world still progresses, got `
+    + `clockLockEscapes=${progressingVerdict.trailTracking.clockLockEscapes}`);
 }
 
 /**
