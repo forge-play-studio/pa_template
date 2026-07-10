@@ -2,6 +2,7 @@ import type { Game } from '../core/Game';
 import type { ProjectGameplayRuntime } from '../gameplay';
 import { mountCameraDebugPanel } from './camera-debug-panel';
 import { mountLocalEditorModeSwitcher } from './local-editor-mode-switcher';
+import { mountRuntimeAudioDebugPanel } from './runtime-audio-debug-panel';
 import { mountRuntimeGameplayDebugPanels } from './runtime-gameplay-debug-panels';
 import { mountRuntimeLightingDebugPanel } from './runtime-lighting-debug-panel';
 import { mountRuntimeVfxDebugPanel } from './runtime-vfx-debug-panel';
@@ -34,6 +35,10 @@ export function mountRuntimeDebug(options: RuntimeDebugBootstrapOptions): Runtim
     getGame: options.getGame,
   }));
   runtimePanels.use(mountRuntimeVfxDebugPanel({
+    root,
+    getGame: options.getGame,
+  }));
+  runtimePanels.use(mountRuntimeAudioDebugPanel({
     root,
     getGame: options.getGame,
   }));

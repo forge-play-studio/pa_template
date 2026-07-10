@@ -16,7 +16,7 @@ export { AnimationService } from './AnimationService';
 export type { PlayOptions } from './AnimationService';
 
 export { AudioService } from './AudioService';
-export type { SfxId } from './AudioService';
+export type { AudioDebugState, AudioPlayOptions, AudioSoundId } from './AudioService';
 
 export { InputService } from './InputService';
 export type { MovementInputSource, MovementInputState } from './InputService';

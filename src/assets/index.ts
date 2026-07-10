@@ -17,7 +17,6 @@ import {
   type GeneratedAssetCatalogKind,
 } from './generated/asset-catalog.generated';
 import blankPng from './placeholders/blank.png?url';
-import silentWav from './placeholders/silent.wav?url';
 import { isCompressedGlb, getUsableGlbUrl } from '../utils/glbDecompress';
 
 export type AssetCatalogKind = GeneratedAssetCatalogKind;
@@ -97,14 +96,6 @@ export const UIImages: Record<string, string> = {
   gameLogo: blankPng,
   particleSpark: blankPng,
   particleSoft: blankPng,
-};
-
-export const SoundAssets: {
-  bgm: string;
-  sfx: Record<string, string>;
-} = {
-  bgm: silentWav,
-  sfx: {},
 };
 
 export const TextureAssets = {

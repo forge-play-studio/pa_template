@@ -12,7 +12,8 @@
  */
 
 import { configService } from '../config';
-import { isModelAssetRegistered } from '../assets';
+import { PROJECT_AUDIO_SOUND_MODES, PROJECT_AUDIO_CONFIG } from '../config/projectGameplayConfig';
+import { isModelAssetRegistered, isSoundAssetRegistered } from '../assets';
 
 interface ValidationResult {
   warnings: string[];
@@ -184,6 +185,9 @@ class ConfigValidator {
     // 6) gameplay.zones 基础校验
     this.validateZones(result);
 
+    // 7) gameplay.json audio 基础校验
+    this.validateAudio(result);
+
     // 输出
     if (result.errors.length > 0) {
       console.error('[ConfigValidator] Errors:\n' + result.errors.map(e => `- ${e}`).join('\n'));
@@ -237,6 +241,47 @@ class ConfigValidator {
 
       if (zone.meta != null && typeof zone.meta !== 'string') {
         result.errors.push(`gameplay.zones[${id}] meta 必须是字符串`);
+      }
+    }
+  }
+
+  private validateAudio(result: ValidationResult): void {
+    const audio = PROJECT_AUDIO_CONFIG;
+    if (audio.bgm.assetId && !isSoundAssetRegistered(audio.bgm.assetId)) {
+      result.warnings.push(`audio.bgm.assetId "${audio.bgm.assetId}" 未在 sound asset catalog 中找到`);
+    }
+
+    const soundIds = new Set<string>();
+    for (const sound of audio.sounds) {
+      if (!sound.id) {
+        result.errors.push('audio.sounds[*].id 不能为空');
+        continue;
+      }
+      if (soundIds.has(sound.id)) {
+        result.errors.push(`audio.sounds[${sound.id}] 存在重复 id`);
+      }
+      soundIds.add(sound.id);
+
+      if (!sound.assetId) {
+        result.warnings.push(`audio.sounds[${sound.id}].assetId 为空`);
+      } else if (!isSoundAssetRegistered(sound.assetId)) {
+        result.warnings.push(`audio.sounds[${sound.id}].assetId "${sound.assetId}" 未在 sound asset catalog 中找到`);
+      }
+
+      if (!(PROJECT_AUDIO_SOUND_MODES as readonly string[]).includes(sound.mode)) {
+        result.errors.push(`audio.sounds[${sound.id}].mode "${String(sound.mode)}" 非法`);
+      }
+      if (!isFiniteNumber(sound.volume) || sound.volume < 0 || sound.volume > 1) {
+        result.errors.push(`audio.sounds[${sound.id}].volume 必须在 0-1 之间`);
+      }
+      if (!Number.isInteger(sound.cooldownMs) || sound.cooldownMs < 0) {
+        result.errors.push(`audio.sounds[${sound.id}].cooldownMs 必须是非负整数`);
+      }
+      if (!Number.isInteger(sound.maxVoices) || sound.maxVoices < 1) {
+        result.errors.push(`audio.sounds[${sound.id}].maxVoices 必须是 >= 1 的整数`);
+      }
+      if (sound.mode === 'activeLoop' && (!Number.isInteger(sound.intervalMs) || sound.intervalMs < 16)) {
+        result.errors.push(`audio.sounds[${sound.id}].intervalMs 必须是 >= 16 的整数`);
       }
     }
   }

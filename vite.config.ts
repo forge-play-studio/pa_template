@@ -271,15 +271,20 @@ function resolveDebugPanelConfigFile(file: string | null): string | null {
 function setNestedValue(target: Record<string, any>, path: string, value: unknown): void {
   const parts = path.split('.').filter(Boolean);
   if (parts.length === 0) return;
-  let cursor = target;
-  for (const part of parts.slice(0, -1)) {
-    const next = cursor[part];
-    if (!next || typeof next !== 'object' || Array.isArray(next)) {
-      cursor[part] = {};
+  let cursor: any = target;
+  for (let index = 0; index < parts.length - 1; index += 1) {
+    const part = parts[index]!;
+    const nextPart = parts[index + 1]!;
+    const key = Array.isArray(cursor) && /^\d+$/.test(part) ? Number(part) : part;
+    const next = cursor[key];
+    if (!next || typeof next !== 'object') {
+      cursor[key] = /^\d+$/.test(nextPart) ? [] : {};
     }
-    cursor = cursor[part];
+    cursor = cursor[key];
   }
-  cursor[parts[parts.length - 1]!] = value;
+  const leaf = parts[parts.length - 1]!;
+  const key = Array.isArray(cursor) && /^\d+$/.test(leaf) ? Number(leaf) : leaf;
+  cursor[key] = value;
 }
 
 function debugPanelConfigApiPlugin() {
