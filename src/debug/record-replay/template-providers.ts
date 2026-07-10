@@ -114,7 +114,11 @@ export function registerTemplateRecordReplayProviders(getGame: () => Game | null
 function createTemplateExampleMilestoneDetector(): MilestoneDetector {
   return {
     kind: 'custom',
-    // critical 不写 = 走 kind 默认表(RECORD_REPLAY_DEFAULT_CRITICAL_KINDS = ['outcome','stage'])
+    // ⚠️ **非默认 kind 必须显式声明 critical**(harness docs/06 §6.3 规则 7)。
+    // 不声明就靠默认表兜底,而默认表只认 outcome/stage —— 一个只产 custom 的游戏会
+    // criticalTotal=0,于是**档位无声塌缩**:上不去 clean(§6.2 裁决③),也下不来 failed
+    // (criticalMissing 恒 0),1/55 匹配的运行照样得 degraded,且没有任何报错。
+    critical: false,
     detect(previous, next) {
       // ⚠️ 只对**进度型** fact 产里程碑。`template.exampleFacts.paused` 是状态观测(会来回翻转),
       // 把它也算进来会在每次暂停/继续时凭空多出两个里程碑 —— 这正是 `observationOnlyFacts` 想避免的事,
