@@ -50,6 +50,8 @@ export interface SemanticReplayOptions {
   gateStallTimeoutSec?: number;
   /** 示教时钟自锁(gain=0 且误差不再改善且游戏无进展)多久后尝试重锚逃逸(秒)。 */
   clockLockTimeoutSec?: number;
+  /** 障碍协商阶梯的最后一级:沿航迹向前跳锚多少秒(受当前闸门 cap 约束)。 */
+  trailSkipSec?: number;
   /** 四档 verdict 的阈值覆盖(默认见 grade.ts)。 */
   gradeThresholds?: Partial<SemanticGradeThresholds>;
   /**
@@ -159,6 +161,8 @@ export interface SemanticTrailTrackingVerdict {
   clockLockEscapes: number;
   /** 重锚总次数(剧情段边界 + 自锁逃逸)。 */
   reanchors: number;
+  /** 障碍协商阶梯耗尽 deflect/backtrack 后,沿航迹向前跳锚的次数(每次都计入 detour)。 */
+  trailSkips: number;
 }
 
 export interface SemanticEconomyGateVerdict {
@@ -294,6 +298,10 @@ const CLOCK_LOCK_SAME_ANCHOR_EPSILON_SEC = 0.05;
 const DEFAULT_CLOCK_LOCK_TIMEOUT_SEC = 1.5;
 /** actor 本帧位移小于此值才算「停住」。自锁是不动点:时钟、世界、actor 三者都不动。 */
 const CLOCK_LOCK_ACTOR_TRAVEL_EPSILON = 1e-3;
+/** 障碍协商阶梯最后一级:沿航迹向前跳锚的默认步长(秒)。 */
+const DEFAULT_TRAIL_SKIP_SEC = 2;
+/** 跳锚至少要能前进这么多秒才有意义;不足(闸门就在眼前)⇒ 阶梯耗尽。 */
+const TRAIL_SKIP_MIN_GAIN_SEC = 0.1;
 
 export class SemanticReplayController implements MovementInputSource {
   private readonly waypointToleranceBand: number;
@@ -366,8 +374,10 @@ export class SemanticReplayController implements MovementInputSource {
   private clockLockSec = 0;
   /** 自锁逃逸(重锚)次数。 */
   private clockLockEscapes = 0;
-  /** 上次自锁逃逸时的示教时刻;同一位置再锁 ⇒ 重锚无效,快速判负。 */
+  /** 上次自锁逃逸时的示教时刻;同一位置再锁 ⇒ 重锚救不了,移交障碍协商阶梯。 */
   private lastLockEscapeScheduleSec: number | null = null;
+  /** 障碍协商阶梯最后一级:沿航迹向前跳锚的次数。 */
+  private trailSkips = 0;
   /** 重锚总次数(剧情段边界 + 自锁逃逸)。 */
   private reanchors = 0;
   /** actor 本帧走了多远。自锁要求它**停住**。 */
@@ -384,6 +394,7 @@ export class SemanticReplayController implements MovementInputSource {
   private readonly gateHoldPatienceSec: number;
   private readonly gateStallTimeoutSec: number;
   private readonly clockLockTimeoutSec: number;
+  private readonly trailSkipSec: number;
   /** 已经放行了几个闸门(闸门处久等无进展时逐个前移 cap)。命中里程碑后清零。 */
   private releasedGates = 0;
   /** 其中有多少个是在「输入不算数」的剧情段里立即放行的(诊断用)。 */
@@ -423,6 +434,7 @@ export class SemanticReplayController implements MovementInputSource {
       Math.max(0.2, options.clockLockTimeoutSec ?? DEFAULT_CLOCK_LOCK_TIMEOUT_SEC),
       this.gateStallTimeoutSec * 0.5,
     );
+    this.trailSkipSec = Math.max(TRAIL_SKIP_MIN_GAIN_SEC, options.trailSkipSec ?? DEFAULT_TRAIL_SKIP_SEC);
     this.gradeThresholds = { ...options.gradeThresholds };
     this.determinismHorizon = normalizeDeterminismHorizon(options.determinismHorizon);
     this.replayStartFrame = game.getFrameCount();
@@ -622,10 +634,16 @@ export class SemanticReplayController implements MovementInputSource {
       return;
     }
 
-    // 自锁检测必须在停滞计账之前:它要么把时钟救活,要么快速判负并写明原因。
+    // 自锁检测必须在停滞计账之前:它要么把时钟救活,要么移交障碍协商阶梯。
     // 它同时算出 `crossErrorImproving`(= actor 正在收敛回航迹),下面的停滞计账复用这个信号。
     this.updateClockSelfLock(deltaTime, gameProgressed);
     if (this.failed || this.done) return;
+    // 障碍协商(deflect/backtrack)进行中 = 有界的活性窗口(每级 ≤1.5s,级数有上限):
+    // 这段时间 actor 在按计划脱困,停滞计账暂停。
+    // 注:默认配置下这是**等价变异**(阶梯每级入口都重置了停滞计数,单靠重置已够);
+    // 保留是因为脱困窗口(1.5s/1s)不随 gateStallTimeoutSec 缩放 —— 若某游戏把停滞阈值
+    // 调到 ≤3s,没有这行,停滞判负会在阶梯中途杀掉正在爬墙的运行。
+    if (this.recovery) return;
     // 「归航中」也算进展 —— 与自锁检测共用同一个信号,不再是独立逃生口。
     const madeProgress = gameProgressed || this.crossErrorImproving;
 
@@ -856,6 +874,19 @@ export class SemanticReplayController implements MovementInputSource {
         resolvedBy: 'backtrack',
       });
       this.watchdog.reset();
+      return;
+    }
+
+    if (this.tracker) {
+      // 轨迹跟踪模式:阶梯最后一级不是「跳 waypoint」(它在此模式下只是统计口径,跳了
+      // 也不改变追踪目标),而是**沿航迹向前跳锚**,把目标点挪到障碍另一侧的航迹上。
+      // 跳锚不动(闸门就在眼前)或已跳过仍再次锁死(attempt ≥ 4)⇒ 阶梯耗尽,判负。
+      if (attempt === 3 && this.performTrailSkip(position)) return;
+      this.failSelfLockLadderExhausted(
+        attempt === 3
+          ? 'deflect ×2, backtrack; trail-skip impossible — the gate cap is immediately ahead'
+          : 'deflect ×2, backtrack, trail-skip all tried',
+      );
       return;
     }
 
@@ -1515,7 +1546,7 @@ export class SemanticReplayController implements MovementInputSource {
    * |---|---|---|
    * | **A. cap 钳制**(下一个里程碑的闸门没匹配) | `isHoldingAt(cap)`,gain 可以 > 0 | 剧情段:`releaseGatesBlockingScriptedSchedule()`;授权态:`gateHoldPatienceSec` 耐心放行 |
    * | **B. anchor 脏**(剧情刚把 actor 搬走) | 边界**已知** | `reanchorAfterScriptedSegment()` —— 立刻重锚 |
-   * | **C. gain 归零**(跟踪误差 / 落后过大) | 时钟停在 cap **之前**,靠自身永远出不来 | **本机制**:自锁检测 → 重锚逃逸 → 无效则快速判负 |
+   * | **C. gain 归零**(跟踪误差 / 落后过大) | 时钟停在 cap **之前**,靠自身永远出不来 | **本机制**:自锁检测 → 重锚逃逸 → 无效则移交障碍协商阶梯(deflect ×2 → backtrack → 沿航迹跳锚)→ 阶梯耗尽才判负 |
    *
    * C 是一个**不动点**:`gain=0` ⇒ 目标点不再前移 ⇒ actor 到达后停住 ⇒ `crossError` 恒定 ⇒ `gain` 仍为 0。
    * 它三次以不同面目出现(剧情后 6 单位偏离 / 甩出 13 单位 / stage 7 的 crossError 恒 1.369 微超阈值 1.2),
@@ -1524,13 +1555,20 @@ export class SemanticReplayController implements MovementInputSource {
    *   `gain === 0` 且 连续 `clockLockTimeoutSec` 秒「crossError 没创新低 且 游戏态无进展 且 时钟没前移」
    *
    * ⇒ 判定自锁 ⇒ 用 `reanchorToActor()` 把时钟挪到 actor 在航迹上的**全程**最近点(与 B 共用原语)。
-   * **同一位置再次自锁 ⇒ 重锚救不了它** ⇒ 立即判负并写明 reason,而不是干耗到停滞超时/`maxDurationSec`
-   * —— 后者给出的失败现象是「莫名超时」,前者给出的是「时钟在 t=… 自锁,crossError=…,重锚无效」。
+   * **同一位置再次自锁 ⇒ 重锚救不了它** ⇒ 移交障碍协商阶梯(deflect ±45° → backtrack → 沿航迹跳锚;
+   * 实证:last-stand 的碰撞墙,人绕行而 agent 直线推杆 —— 重锚无效不等于「到不了」,先协商)。
+   * 阶梯每级有界、跳锚受 cap 约束 ⇒ 必然终止;**阶梯耗尽才判负**并写明完整 reason,
+   * 而不是干耗到停滞超时/`maxDurationSec` —— 后者给出的失败现象是「莫名超时」。
    *
    * 原先的 `recoveringToPath` 被收编成本机制的一个子句(`crossErrorImproving` ⇒ 未自锁,也不计停滞)。
    */
   private updateClockSelfLock(deltaTime: number, gameProgressed: boolean): void {
     if (!this.tracker) return;
+    // 障碍协商进行中:deflect/backtrack 正在按计划移动 actor,这不是不动点,别跟阶梯抢。
+    if (this.recovery) {
+      this.clockLockSec = 0;
+      return;
+    }
 
     // 自锁是一个**不动点**:四件事同时成立才算 —— 时钟被 gain 按住、时钟没前移、
     // 世界没进展、**actor 也不动**。少任何一条都不是不动点:
@@ -1561,18 +1599,75 @@ export class SemanticReplayController implements MovementInputSource {
       && Math.abs(lockedAt - this.lastLockEscapeScheduleSec) < CLOCK_LOCK_SAME_ANCHOR_EPSILON_SEC;
 
     if (sameSpot) {
-      const reason = `clock self-lock at schedule ${roundTo(lockedAt, 4)}s: gain=0, `
-        + `crossError=${roundTo(this.lastCrossError, 4)} never improved, no game progress, `
-        + 'and re-anchoring here already failed once — the actor cannot reach the taught path from where it is';
-      const expected = this.script.milestones[this.matchedMilestones];
-      if (expected) this.recordMissingMilestone({ index: this.matchedMilestones, expected, reason });
-      this.failCurrentStage(reason);
+      // 重锚救不了 = actor 被什么东西**物理挡住**了(实证:last-stand 的碰撞墙,x 钉死在 61.9,
+      // 人当时绕行,agent 直线推杆)。这不是「到不了」的终局,是障碍协商的开始:
+      // 移交既有脱困阶梯(deflect ±45° → backtrack → 沿航迹跳锚),阶梯耗尽才判负。
+      // 每级阶梯都是有界的主动动作,停滞计账在阶梯期间暂停(见 updateGateHold)。
+      this.clockLockSec = 0;
+      this.gateHoldStalledSec = 0;
+      this.stageNoProgressSec = 0;
+      this.startRecovery(this.readCurrentPosition());
       return;
     }
 
     this.lastLockEscapeScheduleSec = lockedAt;
     this.clockLockEscapes += 1;
     this.reanchorTeachClock();
+  }
+
+  /** 阶梯全部耗尽(deflect ×2 + backtrack + 跳锚仍锁死)—— 这才是「真的到不了」。 */
+  private failSelfLockLadderExhausted(detail: string): void {
+    const lockedAt = this.tracker ? this.tracker.scheduleSec : 0;
+    const reason = `clock self-lock at schedule ${roundTo(lockedAt, 4)}s: gain=0, `
+      + `crossError=${roundTo(this.lastCrossError, 4)} never improved, no game progress, `
+      + `re-anchoring failed and the obstacle ladder is exhausted (${detail}) `
+      + '— the actor cannot reach the taught path from where it is';
+    const expected = this.script.milestones[this.matchedMilestones];
+    if (expected) this.recordMissingMilestone({ index: this.matchedMilestones, expected, reason });
+    this.failCurrentStage(reason);
+  }
+
+  /**
+   * 障碍协商阶梯的最后一级(仅轨迹跟踪模式):沿航迹**向前**跳锚,绕过挡路的障碍段。
+   *
+   * 依据:人的航迹本身就是一条已被证明可通行的绕行路线 —— 跳过被墙挡住的那一小段,
+   * 让目标点落到障碍另一侧的航迹上,新的追踪方位就是「绕过去」的方向。
+   * 语义代价:这一段没按人的走法走 —— 跳过的 waypoint 记 skipped(不记 reached),
+   * 计入 detourScore;里程碑闸门不受影响(cap 约束跳锚永不越过未匹配的闸门)。
+   */
+  private performTrailSkip(position: { x: number; z: number }): boolean {
+    if (!this.tracker) return false;
+    const capSec = this.getScheduleCapSec();
+    const fromSec = this.tracker.scheduleSec;
+    const toSec = Math.min(fromSec + this.trailSkipSec, capSec);
+    if (toSec - fromSec < TRAIL_SKIP_MIN_GAIN_SEC) return false;
+
+    // 被跳过的 waypoint 如实记 skipped,不让 schedule 越过它们时被误记为 reached。
+    let target = this.getCurrentWaypoint();
+    while (target && target.t <= toSec + 1e-6) {
+      this.skippedWaypoints += 1;
+      this.waypointIndex += 1;
+      target = this.getCurrentWaypoint();
+    }
+
+    this.tracker.resetTo(toSec);
+    this.pursuitScheduleSec = this.tracker.scheduleSec;
+    this.previousCrossError = Number.POSITIVE_INFINITY;
+    this.crossErrorImproving = false;
+    this.clockLockSec = 0;
+    this.gateHoldStalledSec = 0;
+    this.stageNoProgressSec = 0;
+    this.trailSkips += 1;
+    // 新锚点是新的机会:自锁逃逸预算重置(termination 由 cap + 阶梯计数共同保证)。
+    this.lastLockEscapeScheduleSec = null;
+    this.stuckEvents.push({
+      t: this.elapsedSec,
+      pos: { ...position },
+      targetWaypoint: this.waypointIndex,
+      resolvedBy: 'skip-trail',
+    });
+    this.watchdog.reset();
+    return true;
   }
 
   /**
@@ -1712,6 +1807,7 @@ export class SemanticReplayController implements MovementInputSource {
             scriptedReanchors: this.scriptedReanchors,
             clockLockEscapes: this.clockLockEscapes,
             reanchors: this.reanchors,
+            trailSkips: this.trailSkips,
           }
         : null,
       calibration: cloneCalibrationVerdict(this.calibrationVerdict),

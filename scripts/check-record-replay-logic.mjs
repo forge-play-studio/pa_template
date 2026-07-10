@@ -1242,6 +1242,8 @@ function createSemanticControllerMockGame(options = {}) {
   let elapsedTimeSec = 0;
   let movementBlockedFrom = Number.POSITIVE_INFINITY;
   let movementBlockedUntil = 0;
+  /** 单向碰撞墙:从 -x 侧越过 x=maxX 且 |z|<halfWidthZ(门洞外)时被挡住。 */
+  let wall = null;
   const initial = () => ({
     position: { x: 0, z: 0 },
     economy: { cash: 0, totalEarned: 0, totalSpent: 0 },
@@ -1260,7 +1262,12 @@ function createSemanticControllerMockGame(options = {}) {
       elapsedTimeSec = 0;
       movementBlockedFrom = Number.POSITIVE_INFINITY;
       movementBlockedUntil = 0;
+      wall = null;
       state = initial();
+    },
+    /** 竖一面单向碰撞墙(模拟 last-stand 的 x=61.9:人绕行,agent 直线推杆被钉死)。 */
+    setWall(config) {
+      wall = config;   // { maxX, halfWidthZ } —— halfWidthZ 之外是可绕行的墙沿
     },
     addFactRule(id, rule) {
       state.facts[id] = false;
@@ -1296,8 +1303,17 @@ function createSemanticControllerMockGame(options = {}) {
       const blocked = elapsedTimeSec >= movementBlockedFrom && elapsedTimeSec < movementBlockedUntil;
       if (input.isActive && !blocked) {
         const world = inputToWorld(input);
+        const previousX = state.position.x;
         state.position.x += world.x * input.magnitude * speed * deltaTime;
         state.position.z += world.z * input.magnitude * speed * deltaTime;
+        if (
+          wall
+          && previousX <= wall.maxX
+          && state.position.x > wall.maxX
+          && Math.abs(state.position.z) < wall.halfWidthZ
+        ) {
+          state.position.x = wall.maxX;   // 撞墙:x 被钉住,侧向(z)不受影响
+        }
       }
       for (const rule of state.factRules) {
         state.facts[rule.id] = !!rule.rule({ position: state.position, economy: state.economy, elapsedTimeSec });
@@ -1752,7 +1768,11 @@ function assertTeachClockSelfLock({ clearRecordReplayProviders, registerRecordRe
     'a successful escape must not report a self-lock failure',
   );
 
-  // ── B. 同一位置重锚无效(actor 被卡在离航迹 1.369 的地方,永远走不回来)⇒ 快速判负
+  // ── B. 同一位置重锚无效(actor 再也动不了)⇒ 移交障碍协商阶梯,阶梯耗尽才判负
+  //
+  // 语义更新(2026-07-10):重锚无效 ≠「到不了」—— 实证 last-stand 的碰撞墙,人绕行而
+  // agent 直线推杆。所以先走完 deflect ×2 → backtrack → 沿航迹跳锚;全部无效才判负,
+  // 且 reason 必须写明「阶梯耗尽」而不是留下一个「莫名超时」。
   let stuckVerdict = null;
   withSemanticMockGame({ clearRecordReplayProviders, registerRecordReplayProviders }, (game) => {
     game.addFactRule('stage.done', () => false);
@@ -1764,7 +1784,7 @@ function assertTeachClockSelfLock({ clearRecordReplayProviders, registerRecordRe
     // last-stand 的真实数字:crossError 恒 1.369,仅比 crossErrorStall(1.2)高 14%。
     game.scriptedMoveTo(0.3, 1.369);
     game.setMovementBlockedRange(0, 1e9);           // actor 再也动不了 ⇒ crossError 恒定
-    for (let index = 0; index < 200; index += 1) {
+    for (let index = 0; index < 350; index += 1) {  // 阶梯全程 ≈ 20s,给足时间
       if (controller.isDone()) break;
       const input = controller.getInput();
       game.applyInput(input, 0.1, 3);
@@ -1779,12 +1799,48 @@ function assertTeachClockSelfLock({ clearRecordReplayProviders, registerRecordRe
   const selfLockMiss = stuckVerdict.milestones.missing.find((diff) => /self-lock/.test(diff.reason));
   assert.equal(!!selfLockMiss, true,
     `an unrecoverable self-lock must say so, got reasons: ${stuckVerdict.milestones.missing.map((d) => d.reason).join(' | ')}`);
-  assert.match(selfLockMiss.reason, /crossError=1\.369/, 'the reason carries the measured crossError');
-  assert.match(selfLockMiss.reason, /re-anchoring here already failed once/, 'the reason says why we gave up');
+  assert.match(selfLockMiss.reason, /obstacle ladder is exhausted/, 'the reason says the ladder was tried and exhausted');
+  assert.match(selfLockMiss.reason, /cannot reach the taught path/, 'the reason states the conclusion');
+  // 阶梯的每一级都必须真的被尝试过(否则「耗尽」是空话):
+  const resolvedKinds = stuckVerdict.stuckEvents.map((event) => event.resolvedBy);
+  for (const kind of ['deflect-left', 'deflect-right', 'backtrack', 'skip-trail']) {
+    assert.equal(resolvedKinds.includes(kind), true,
+      `the ladder must actually try "${kind}" before giving up, got: ${resolvedKinds.join(', ') || '(none)'}`);
+  }
+  assert.equal(stuck.trailSkips >= 1, true, 'the trail-skip rung must have fired');
+  // 判负必须来自阶梯耗尽,不是 6s 停滞超时兜底 —— 否则失败现象仍是「莫名超时」
+  assert.equal(
+    stuckVerdict.milestones.missing.some((diff) => /no teach-clock or game-state progress/.test(diff.reason)),
+    false,
+    'the failure must be attributed to the exhausted ladder, not the generic stall timeout',
+  );
 
-  // 快速判负:必须**早于**停滞超时(6s),否则失败现象仍是「莫名超时」
-  assert.equal(stuck.stalledSec < 6, true,
-    `self-lock must fail fast, not wait for the ${options.gateStallTimeoutSec}s stall timeout (stalledSec=${stuck.stalledSec})`);
+  // ── B2. 碰撞墙 + 可绕行的墙沿(last-stand 真实场景)⇒ 阶梯脱困,运行**成功**
+  let wallVerdict = null;
+  withSemanticMockGame({ clearRecordReplayProviders, registerRecordReplayProviders }, (game) => {
+    game.addFactRule('stage.done', ({ position }) => position.x > 30);
+    const controller = new SemanticReplayController(game, makeScript([
+      { t: 11, kind: 'custom', detail: { id: 'mock.state.stage.done', to: 'true' } },
+    ]), options);
+
+    stepSemanticController(controller, game, { steps: 20, dt: 0.1, speed: 1 });   // 标定
+    // 航迹沿 x 轴直行;x=6 处一面墙,门洞在 |z| ≥ 1.2 —— 人当时从墙沿绕过去了,
+    // 纯追踪的 agent 会直线推杆钉死在墙面上。deflect ±45° 的侧滑正是绕行动作。
+    game.setWall({ maxX: 6, halfWidthZ: 1.2 });
+    stepSemanticController(controller, game, { steps: 400, dt: 0.1, speed: 3 });
+    wallVerdict = controller.getVerdict();
+  });
+
+  assert.equal(wallVerdict.ok, true,
+    `the obstacle ladder must negotiate a wall the human walked around, got: ${JSON.stringify({
+      ok: wallVerdict.ok,
+      missing: wallVerdict.milestones.missing.map((d) => d.reason),
+    })}`);
+  assert.equal(
+    wallVerdict.stuckEvents.some((event) => /deflect|backtrack|skip-trail/.test(event.resolvedBy)),
+    true,
+    'the wall must have engaged the ladder (otherwise this test asserts nothing)',
+  );
 
   // ── C. 纯授权态的横向位移,actor 能自己走回来 ⇒ 归航,**不是**自锁
   //
