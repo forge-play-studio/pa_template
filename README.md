@@ -303,35 +303,78 @@ debug 面板职责边界：
 
 #### Record Replay
 
-模板在 dev 模式默认挂载 `Record Replay` debug 面板，并暴露 `window.__rr` 给 agent 或浏览器控制台使用。production build 会通过 `check:prod-debug` 校验，不允许 `record-replay`、`runtime-record-replay-panel` 或 `__rr` token 进入 `dist/`。
+模板在 dev 模式默认挂载 `Record Replay` debug 面板，并暴露 `window.__rr` 给 agent 或浏览器控制台使用。production build 会通过 `check:prod-debug` 校验，不允许 `record-replay`、`__rr`、`__demoRec`、`tape-sink` 等 token 进入 `dist/`。
 
-常用 API：
+方法论与判读契约在 `fps-3d-harness/docs/06-record-replay-dual-mode.md`（本节只讲模板怎么用）。
 
-1. `window.__rr.startRec()`：开始录制当前 movement source，每个 `Game.update` 后 dense 记录输入、实际消费的 `dt`、state hash、稀疏 `stateSamples` 和玩家 `trail`。
-2. `window.__rr.stopRec('label')`：停止录制并返回 `DemoRecording`，新 tape 默认 `hashVersion: 4`、`anchorFrame` 和 `settledMarker`。
-3. `await window.__rr.replay(recording)`：Mode A 诊断回放；按录制帧逐帧 `stepFrame(recordedDt)`，首个 state hash 不一致时停在发散帧。
-4. `await window.__rr.replayValidateSamples(recording)`：用稀疏 `stateSamples` 做字段级采样验证。
-5. `await window.__rr.reconstructTrail(recording)`：只重建玩家轨迹，避免全量 hash 的重序列化成本。
-6. `window.__rr.extractSemantic(recording)` / `await window.__rr.semanticReplay(script)`：Mode B 语义回放；运行时输入校准后按 waypoint 和 detector milestone 闭环推进。
-7. `await window.__rr.playback(recording)`、`await window.__rr.stepTo(recording, n)`、`await window.__rr.selfTest()`、`window.__rr.export()` / `window.__rr.import(json)`。
+##### 两种回放
 
-游戏接入 checklist：
+- **Mode A（逐帧）**：按录制 dt 逐帧 `stepFrame()`，比对每帧 state hash。它是**诊断仪器与回归探测器，不是准入门槛**——新游戏必有未收编的非确定源。输出 `firstDivergence = N` 即「前 N 帧逐帧可信」（determinism horizon）。
+- **Mode B（语义）**：沿录制航迹跟踪 + 里程碑闭环推进。业务真正的达标线。
+
+##### 常用 API
+
+1. `window.__rr.startRec()` / `stopRec('label')`：录制。dense 记录输入、实际消费的 `dt`、state hash、稀疏 `stateSamples` 和玩家 `trail`。
+2. `window.__rr.peekRec(fromIndex)`：非破坏性增量读取，录制生命线用它做增量落盘。
+3. `await window.__rr.replay(recording)`：Mode A。
+4. `window.__rr.extractSemantic(recording)` / `await window.__rr.semanticReplay(script, opts)`：Mode B。
+5. `await window.__rr.semanticReplayMajority(script, opts)`：**双跑定档**；档位分裂自动第三跑取多数，抖动结果标 `flaky`。
+6. `await window.__rr.runBenchmark(opts)` / `runBenchmarkMajority(opts)`：语义回放 + 性能采样。
+7. `await window.__rr.replayValidateSamples()`、`reconstructTrail()`、`playback()`、`stepTo(rec, n)`、`selfTest()`、`export()` / `import(json)`。
+
+##### 读 verdict：四档 grade
+
+`SemanticVerdict` 保留原有的 `ok` / `quality`，另加一维 `grade`：
+
+| grade | 判据 | 用途门槛 |
+|---|---|---|
+| `clean` | 全部里程碑 matched + 无 extra 终局态 + 经济全过 + 零绕路 + **至少 1 个 critical 里程碑** | 正本基线 / 素材生成 |
+| `good` | critical 全中，optional 缺失 ≤ 20%，无 terminal divergence | 回归门禁默认门槛 |
+| `degraded` | critical 全中，但绕路/重试显著、经济超容差、或 stage 没走完 | 冒烟可接受，提示排查 |
+| `failed` | critical 缺失 / terminal divergence / 标定失败 / 空剧本拒绝 | 真失败 |
+
+- **登记基线的必要条件是 `grade ≥ good`**；判档细节读 `verdict.grading.reason`。
+- 一条**不断言任何 critical 里程碑**的剧本（纯导航 tape）最高只能拿 `good` —— 它的 clean 判据全是空真，不能当正本基线。
+- 传 `semanticReplay(script, { determinismHorizon })`（帧号或 `'green-full'`）会得到 `verdict.determinism`：失败点落在 horizon 内 = 高置信真失败；落在 horizon 外 = 先怀疑世界漂移，回头跑 Mode A 定性。不传则该字段为 `null`。
+
+##### 录制生命线（真人示教）
+
+`?rrAutoStart=1` 进入真人示教模式：boot 到 settled 后自动 arm 录制，隐藏全部 debug 面板，只留一个浮动 HUD（`⇧S` 停止）。`?rrPanels=1` 是逃生口，强制显示面板。
+
+tape 不再只活在内存里：
+
+- dev server 插件 `tapeServerPlugin` 提供 `/__demo-tape/*`，录制中**增量落盘**到 `.rr-tapes/`（已 gitignore）。
+- CTA 跳转、页面卸载都有钩子（`registerBeforeCta` / `pagehide`）做 best-effort 尾部 flush（`sendBeacon`）。
+- 浏览器一崩、玩家一点 CTA，最坏只丢一个 checkpoint 间隔，不是整条 tape。
+
+##### 游戏接入 checklist
 
 1. 项目自己的触摸、摇杆或 AI 输入必须实现 `MovementInputSource`，并通过 `InputService.setMovementSource()` 接入。
-2. 在 dev-only 代码里调用 `registerRecordReplayProviders({ snapshotProviders, milestoneDetectors, playerPosition })`。不要在正式 gameplay 文件里静态 import debug 模块。
-3. `playerPosition` 返回语义回放要控制的主角世界坐标 `{ x, z }`；模板默认注册 `SimplePlayer`，真实项目替换或追加自己的 player provider。
-4. 每个影响 replay 判定的系统显式注册 `RecordReplaySnapshotProvider`，`name` 必须稳定且会进入 hash；`getSnapshot()` 返回可 JSON 化数据。
-5. 如果 Mode B 要验证解锁、雇佣、订单完成、阶段切换等因果事件，实现 `MilestoneDetector.detect(prev, next)`；detector 可以读取 `Observation.snapshots`、`Observation.facts` 和 `Observation.economy`。
-6. Provider snapshot 若包含通用经济或 facts，使用 `{ recordReplay: { economy: { cash, totalEarned, totalSpent }, facts: { ... } } }`；facts 会以 `providerName.key` 进入 observation，milestone `detail.id` 应使用同一稳定 id。
-7. 对需要“已触发事件后继续等经济阈值”的 gate，在 milestone 上填 `economyAtGate`；semantic replay 会在 detector gate 达成后继续循环本 stage，直到经济阈值通过或超时。
-8. 新项目先跑 `pnpm test:record-replay` 和 `await window.__rr.selfTest()`；再录 30s demo，验证 `replay()`、`extractSemantic()` 和 `semanticReplay()`。
+2. 在 dev-only 代码里调用 `registerRecordReplayProviders({ snapshotProviders, milestoneDetectors, playerPosition, inputAuthority })`。不要在正式 gameplay 文件里静态 import debug 模块。示例见 `src/debug/record-replay/template-providers.ts`。
+3. ⚠️ **`playerPosition` 必须指向玩法真正消费的实体**。模板默认注册 scaffold 的 `SimplePlayer`；真实项目往往另有角色控制器，指错了 Mode B 会驾着一个「幽灵身体」跑，里程碑一个都碰不到，而且不报错。
+4. ⚠️ **必须注册终局态里程碑**（`kind: 'outcome'`，通关 / 死亡）。没有它，失败表现为一堆莫名超时；有了它，示教中不存在的终局态 = terminal divergence，立即判负。
+5. **里程碑分层**：`MilestoneDetector.critical` 决定它在不在主线因果链上。不写就走默认表 `['outcome', 'stage'] = critical`，其余 optional。
+6. ⚠️ **`inputAuthority` 必须是所有输入夺权路径的合取**。过场动画、剧情自动移动、输入锁往往是**互相独立**的几条路径，只查一条会让标定矩阵在过场期间被投毒。
+7. ⚠️ **布尔 fact 必须 latch（一旦 true 永远 true），数值 fact 必须单调**。随走位翻转的 `gatePassed` 会产出一串伪里程碑；回落的 `stageOrdinal` 会让 `>=` 门被误判已满足。
+8. Provider snapshot 的通用经济 / facts 用 `{ recordReplay: { economy: { cash, totalEarned, totalSpent }, facts: { ... } } }`；facts 以 `providerName.key` 进入 observation，milestone `detail.id` 用同一稳定 id。
+9. 需要「事件已触发、继续等经济阈值」的 gate，在 milestone 上填 `economyAtGate`。
+10. 快照走 O(1) getter；连续量放在不产 milestone 的 provider 里（防刷屏）。
+11. 游戏自己的 DEV 浮层（FPS 计、stats 面板、编辑器工具条）用 `registerDebugUiSelectors()` 报备，否则真人示教时它们会留在画面里。**只登记你在 live DOM 里验证过的选择器** —— `findUnmatchedDebugUiSelectors()` 可以体检。
+12. 录制 HUD 的游戏专属警告条用 `createTemplateRecordingBanner()` 那个形状实现（例：「快死了，死后点重试会 reload」）。
+13. 新项目先跑 `pnpm test:record-replay` 和 `await window.__rr.selfTest()`；再录 30s demo，验证 `replay()`、`extractSemantic()` 和 `semanticReplayMajority()`。
+
+##### 确定性接缝（模板内建）
+
+- `stepFrame(dt)` + `pinEngineDeltaTimeForFrame()`：引擎 dt 被钉在录制值上。
+- **Babylon 动画时钟**：`Scene._animate()` 自己读 `PrecisionDate.Now`，`engine._deltaTime` 够不着它。模板装了 `installDeterministicAnimationClock()` 把模拟 dt 喂进去，并让动画时钟**从构造起冻结**到 `start()/resume()`——否则 boot 期的 VFX warmup / 阴影预热 render 会按墙钟老化动画组，`frame-0` 的动画相位不可复现。**任何由动画驱动的玩法事件**（动画播完 → 结算）都依赖这两件事。
+- `isBootSettled()`：settled 屏障必须在**不推进帧**的前提下变 true，否则 `waitForGameplaySettled` 死锁。
 
 v1 → v2 破坏性变更：
 
 1. 旧 tape 没有 `hashVersion`、`anchorFrame`、`settledMarker`、`stateSamples` 或 `trail`；可以导入，但不保证与 v4 hash 逐帧兼容，推荐重录。
 2. 框架不再自动扫描 `ProjectGameplayRuntime.systems` 或任何固定 scene node id；游戏状态必须通过 Provider 注册。
-3. Mode B 的 milestone 不再由模板内置业务字段推导；项目必须提供 Detector，模板只带 `SimplePlayer` provider 和一个 facts detector 示例。
-4. 录制从 post-update/pre-finalizer 单一路径 dense 捕获；依赖“输入被轮询才记录”的旧行为会被视为非 dense tape。
+3. Mode B 的 milestone 不再由模板内置业务字段推导；项目必须提供 Detector。
+4. 录制从 post-update/pre-finalizer 单一路径 dense 捕获；依赖「输入被轮询才记录」的旧行为会被视为非 dense tape。
 5. Replay 期间会 pin Babylon engine dt，并在 paused step replay 时抑制额外 RAF render；调试代码不要依赖 paused RAF render 的副作用。
 
 #### Determinism Contract

@@ -28,6 +28,15 @@ const forbiddenTokens = [
   'debug-panel-layout',
   'record-replay',
   'RuntimeDebugActionRegistry',
+  // 录制生命线(DEV-only)。前三个是**运行时字面量** —— 压缩后模块名会消失,但这些不会,
+  // 所以它们才是真正能抓到泄漏的 token。
+  '__demoRec',
+  '__demo-tape',
+  'rr-human-demo-hidden-debug-ui',
+  'demo-recording-controller',
+  'recording-hud',
+  'tape-sink',
+  'debug-ui-visibility',
 ];
 
 if (!existsSync(distRoot)) {
