@@ -151,6 +151,8 @@ export interface SemanticTrailTrackingVerdict {
   scriptedSec: number;
   /** 剧情段里被立即放行的闸门数(>0 说明示教剧本的里程碑落在了过场窗口内)。 */
   scriptedGateReleases: number;
+  /** 剧情段结束时把示教时钟重锚到 actor 最近点的次数。 */
+  scriptedReanchors: number;
 }
 
 export interface SemanticEconomyGateVerdict {
@@ -359,6 +361,8 @@ export class SemanticReplayController implements MovementInputSource {
   private releasedGates = 0;
   /** 其中有多少个是在「输入不算数」的剧情段里立即放行的(诊断用)。 */
   private scriptedGateReleases = 0;
+  /** 剧情段结束时把示教时钟重锚到 actor 最近点的次数(诊断用)。 */
+  private scriptedReanchors = 0;
   private gateHoldStalledSec = 0;
   private stageNoProgressSec = 0;
   private progressSignature = '';
@@ -489,10 +493,12 @@ export class SemanticReplayController implements MovementInputSource {
   private updatePathTracking(deltaTime: number): void {
     if (!this.tracker) return;
     const previousScheduleSec = this.tracker.scheduleSec;
+    const wasAuthoritative = this.inputAuthoritative;
     const authoritative = readRecordReplayInputAuthority();
     this.inputAuthoritative = authoritative;
     // **推进之前**放行剧情段里的闸门,否则 cap 会在本帧就把时钟钳住(见下)。
     if (!authoritative) this.releaseGatesBlockingScriptedSchedule(deltaTime);
+    else if (!wasAuthoritative) this.reanchorAfterScriptedSegment();
     const capSec = this.getScheduleCapSec();
 
     const step = this.tracker.advance(deltaTime, this.readCurrentPosition(), capSec, {
@@ -1104,6 +1110,8 @@ export class SemanticReplayController implements MovementInputSource {
 
     if (!wasAuthoritative) {
       // 刚拿回控制权:角色已被剧情带走,`calibrationAttemptStart` 等 anchor 全是脏的。
+      // 示教时钟的 anchor 同样脏 —— 一并重锚到 actor 在航迹上的最近点(见 reanchorAfterScriptedSegment)。
+      this.reanchorAfterScriptedSegment();
       this.beginCalibrationAttempt();
       return;
     }
@@ -1114,6 +1122,11 @@ export class SemanticReplayController implements MovementInputSource {
   /** 剧情段:示教时钟按录制节奏推进(不做误差门控),但不碰标定状态机。 */
   private advanceScriptedSchedule(deltaTime: number): void {
     if (!this.tracker) return;
+    // ⚠️ 剧情段不只发生在 navigating 相 —— qy 的过场就整段落在**标定相**里,走的是这条路径。
+    // 漏了这一行,`releaseGatesBlockingScriptedSchedule()` 永远不会被调,闸门照样把时钟钉死。
+    // 判据要看 `scriptedGateReleases`:两条 scripted 路径都会累加 `scriptedSec`,
+    // 所以 `scriptedSec > 0` **不能**当作「放行生效」的证据。
+    this.releaseGatesBlockingScriptedSchedule(deltaTime);
     const capSec = this.getScheduleCapSec();
     const step = this.tracker.advance(deltaTime, this.readCurrentPosition(), capSec, {
       inputAuthoritative: false,
@@ -1433,6 +1446,26 @@ export class SemanticReplayController implements MovementInputSource {
     return missing.sort((left, right) => left.index - right.index);
   }
 
+  /**
+   * 剧情段结束、输入恢复授权的那一刻,把示教时钟重锚到 actor 在航迹上的最近点。
+   *
+   * 剧情可以把角色甩出容差带很远(last-stand 实测 13.36 个单位)。带窗口的投影只在
+   * 旧时钟附近找,跨不过这个缺口 ⇒ `crossError` 虚高 ⇒ `gain=0` ⇒ 时钟冻死 ⇒ 判负。
+   * `recoveringToPath` 只改停滞计账,不改 `gain`,救不了这一条。
+   *
+   * 旧 anchor 已经被剧情弄脏了 —— 与标定重开(`beginCalibrationAttempt()`)同一哲学:
+   * 与其抱着一个错的锚点归航,不如重新找。
+   */
+  private reanchorAfterScriptedSegment(): void {
+    if (!this.tracker || !this.trackerStarted) return;
+    this.tracker.reanchorToActor(this.readCurrentPosition(), this.getScheduleCapSec());
+    this.pursuitScheduleSec = this.tracker.scheduleSec;
+    this.previousCrossError = Number.POSITIVE_INFINITY;
+    this.gateHoldStalledSec = 0;
+    this.stageNoProgressSec = 0;
+    this.scriptedReanchors += 1;
+  }
+
   private buildDeterminismStamp(): SemanticDeterminismStamp | null {
     const horizon = this.determinismHorizon;
     if (horizon === null) return null;
@@ -1551,6 +1584,7 @@ export class SemanticReplayController implements MovementInputSource {
             stalledSec: roundTo(this.trackStalledSec, 4),
             scriptedSec: roundTo(this.trackScriptedSec, 4),
             scriptedGateReleases: this.scriptedGateReleases,
+            scriptedReanchors: this.scriptedReanchors,
           }
         : null,
       calibration: cloneCalibrationVerdict(this.calibrationVerdict),

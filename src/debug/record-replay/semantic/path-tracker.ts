@@ -191,6 +191,37 @@ export class SemanticPathTracker {
   }
 
   /**
+   * **全程**投影,把示教时钟重锚到 actor 在航迹上的最近点。
+   *
+   * 剧情段(输入不算数)结束时必须调一次:剧情把 actor 搬到时间窗够不着的地方,
+   * 而 `projectOntoPath()` 只在 `schedule ± (projectBackSec, projectAheadSec)` 里找
+   * —— 它会返回一个毫无意义的近端点,`crossError` 因此虚高(last-stand 实测 13.36),
+   * `gain` 归零,时钟再也走不动,归航永远跨不过这个缺口。
+   *
+   * 全程搜索在自交航迹上可能跳段 —— 这是**刻意的取舍**:剧情段结束时旧 anchor 已经脏了
+   * (与标定重开 `beginCalibrationAttempt()` 同一哲学),宁可重新找,也不要抱着一个错锚点。
+   * 上界仍受 cap 约束,不会越过尚未匹配的闸门。
+   */
+  reanchorToActor(actor: { x: number; z: number }, maxScheduleSec?: number): number {
+    const cap = clamp(maxScheduleSec ?? this.endSec, this.startSec, this.endSec);
+    let bestSec = this.schedule;
+    let bestDistanceSq = Infinity;
+    const lastIndex = this.points.length - 2;
+    for (let index = 0; index <= lastIndex; index += 1) {
+      const a = this.points[index]!;
+      const b = this.points[index + 1]!;
+      if (a.t > cap) break;
+      const { ratio, distanceSq } = closestPointOnSegment(actor, a, b);
+      if (distanceSq < bestDistanceSq) {
+        bestDistanceSq = distanceSq;
+        bestSec = a.t + (b.t - a.t) * ratio;
+      }
+    }
+    this.schedule = clamp(Math.min(bestSec, cap), this.startSec, this.endSec);
+    return this.schedule;
+  }
+
+  /**
    * 在示教时钟附近的时间窗里,找 actor 到航迹折线的最近点,返回该点的示教时刻。
    * 用时间窗而不是全局搜索,避免航迹自交时跳到很远的另一段上。
    */

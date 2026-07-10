@@ -182,6 +182,7 @@ try {
   assertTruncatedTapeRefusal(semanticExtract);
   assertScriptedGateRelease({ ...providers, ...semanticReplay });
   assertEarlyDeathReachesFailed({ ...providers, ...semanticReplay });
+  assertScriptedSegmentDuringCalibration({ ...providers, ...semanticReplay });
 
   console.log('[check-record-replay-logic] OK');
 } finally {
@@ -1588,6 +1589,99 @@ function assertScriptedGateRelease({ clearRecordReplayProviders, registerRecordR
   // 放行 ≠ 匹配:里程碑没被满足,仍然算 missing
   assert.equal(verdict.milestones.matched, 0, 'releasing a gate does NOT match its milestone');
   assert.equal(verdict.milestones.missing.length >= 1, true, 'the unmatched gate is still reported missing');
+}
+
+/**
+ * 剧情段发生在**标定相**(qy 的真实形态):过场整段在 calibration 里播完。
+ *
+ * 两条回归,都来自 last-stand 的终局验收:
+ *   ① `releaseGatesBlockingScriptedSchedule()` 原本只在 navigating 相被调,标定相走
+ *      `advanceScriptedSchedule()` —— 闸门从不放行,时钟钉死。
+ *   ② 剧情把角色甩出容差带十几个单位;带窗口的投影跨不过这个缺口 ⇒ crossError 虚高 ⇒
+ *      gain=0 ⇒ 时钟冻死。必须在授权恢复那一刻**全程重锚**到 actor 的最近点。
+ *
+ * ⚠️ 判据看 `scriptedGateReleases`,**不能**看 `scriptedSec`:
+ *    标定相与 navigating 相两条 scripted 路径都会累加 scriptedSec,它 >0 什么也不证明。
+ */
+function assertScriptedSegmentDuringCalibration({
+  clearRecordReplayProviders,
+  registerRecordReplayProviders,
+  SemanticReplayController,
+}) {
+  const GATE_T = 0.62;
+  // 剧情**跑得比示教时钟快**:1 秒把角色沿航迹甩到 x=13(示教时钟同期只走 1 秒 ⇒ x=3)。
+  // 这正是 last-stand 的形态:重锚之前 crossError 高达 13.36,窗口投影(±0.6/1.2s)够不着。
+  const CUTSCENE_SEC = 1.0;
+  const FLUNG_X = 13;
+
+  let authoritative = false;   // 过场从第 0 帧就开始,整段落在标定相里
+  let verdict = null;
+  withSemanticMockGame({
+    clearRecordReplayProviders,
+    registerRecordReplayProviders,
+    inputAuthority: () => authoritative,
+  }, (game) => {
+    game.addFactRule('gate.open', () => false);
+    // 航迹:x = 3 * t(直线),剧情把角色沿它甩到 x=13 ⇒ 真实最近点在 t≈4.33
+    const trail = Array.from({ length: 121 }, (_, index) => ({ t: index * 0.1, x: index * 0.3, z: 0 }));
+    const script = createSemanticControllerScript({
+      durationSec: 12,
+      waypoints: [{ t: 0, x: 0, z: 0 }, { t: 12, x: 36, z: 0 }],
+      trail,
+      milestones: [{ t: GATE_T, kind: 'custom', detail: { id: 'mock.state.gate.open', to: 'true' } }],
+    });
+    const controller = new SemanticReplayController(game, script, {
+      waypointToleranceBand: 0.5,
+      maxDurationSec: 40,
+      calibrationPulseSec: 0.1,
+      calibrationSettleSec: 0.1,
+      gateHoldPatienceSec: 100,
+      gateStallTimeoutSec: 6,
+    });
+
+    // 1) 剧情段(标定相):游戏自己把角色沿航迹甩到 x=13
+    const steps = Math.round(CUTSCENE_SEC / 0.1);
+    for (let index = 0; index < steps; index += 1) {
+      if (controller.isDone()) break;
+      controller.getInput();
+      game.scriptedMoveTo((FLUNG_X * (index + 1)) / steps, 0);
+      game.applyInput({ x: 0, y: 0, magnitude: 0, isActive: false }, 0.1, 0);
+      controller.afterUpdate(0.1);
+    }
+
+    // 2) 输入恢复授权:标定重开 + 示教时钟重锚,然后正常跑
+    authoritative = true;
+    stepSemanticController(controller, game, { steps: 150, dt: 0.1, speed: 2 });
+    verdict = controller.getVerdict();
+  });
+
+  const tracking = verdict.trailTracking;
+
+  // ① 标定相的剧情段必须放行闸门 —— 看 releases,不看 scriptedSec
+  assert.equal(tracking.scriptedSec > 0, true, 'the cutscene was recognised as scripted (necessary, NOT sufficient)');
+  assert.equal(tracking.scriptedGateReleases >= 1, true,
+    `a gate inside a CALIBRATION-phase cutscene must be released, got ${tracking.scriptedGateReleases} `
+    + '(scriptedSec > 0 proves nothing — both scripted paths accumulate it)');
+
+  // ② 授权恢复时必须重锚,否则窗口投影跨不过 13 个单位的缺口
+  assert.equal(tracking.scriptedReanchors, 1, `exactly one re-anchor on authority restore, got ${tracking.scriptedReanchors}`);
+
+  // 重锚把时钟带到 actor 真正所在的航迹位置(x=13 ⇒ t≈4.33),而不是留在剧情开始处
+  assert.equal(tracking.scheduleSec > 4, true,
+    `teach clock must re-anchor to where the cutscene left the actor, got scheduleSec=${tracking.scheduleSec}`);
+
+  // **核心判据**:重锚之后,授权期观测到的横向偏离必须一直很小。
+  // 没有重锚(或重锚仍受时间窗限制)时,第一帧授权就会读到 ~10 个单位的虚高 crossError
+  // —— 那正是 last-stand 的 13.36,它让 gain 归零、时钟冻死。
+  assert.equal(tracking.maxCrossError < 2, true,
+    `re-anchoring must collapse the phantom crossError, got maxCrossError=${tracking.maxCrossError}`);
+
+  // 归航之后时钟必须继续推进,而不是被 gain=0 冻死
+  assert.equal(tracking.scheduleSec > 8, true,
+    `after re-anchoring the clock must keep advancing, got scheduleSec=${tracking.scheduleSec}`);
+
+  // 放行 ≠ 匹配
+  assert.equal(verdict.milestones.matched, 0, 'releasing a gate does NOT match its milestone');
 }
 
 /**
