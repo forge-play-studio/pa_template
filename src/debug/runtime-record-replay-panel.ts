@@ -25,6 +25,8 @@ import {
   normalizeHashVersion,
   parseDemoRecordingJson,
   type DemoRecording,
+  type DemoRecordingEnvelope,
+  type DemoRecordingFrame,
   type DemoRecordingStateSample,
   type RecordReplayHashVersion,
   type RecordReplayStatus,
@@ -33,9 +35,16 @@ import { runRecordReplaySelfTest, type RecordReplaySelfTestResult } from './reco
 import {
   createRecordReplayBenchmarkResult,
   formatBenchmarkConclusion,
+  runRecordReplayBenchmarkMajority,
   type BenchmarkPerfSample,
+  type RecordReplayBenchmarkMajorityResult,
   type RecordReplayBenchmarkResult,
 } from './record-replay/benchmark';
+import {
+  runSemanticGradeMajority,
+  type SemanticMajorityDecision,
+  type SemanticMajorityOptions,
+} from './record-replay/semantic/grade';
 import {
   extractSemanticScript,
   type SemanticScript,
@@ -55,6 +64,7 @@ import {
   type StateHashResult,
 } from './record-replay/verify';
 import { readRecordReplayPlayerPosition } from './record-replay/providers';
+import { collapseDebugUiForRecording } from './record-replay/debug-ui-visibility';
 import { registerTemplateRecordReplayProviders } from './record-replay/template-providers';
 
 export interface RuntimeRecordReplayPanelOptions {
@@ -142,6 +152,8 @@ export interface RecordReplayAgentApi {
     warning: string | null;
   };
   stopRec(label?: string): DemoRecording;
+  /** Non-destructive incremental read of the active recording; null when not recording. */
+  peekRec(fromIndex?: number): RecordReplayRecordingPeek | null;
   replay(recording?: DemoRecording | string, options?: RecordReplayRunOptions): Promise<RecordReplayRunResult>;
   playback(recording?: DemoRecording | string, options?: RecordReplayPlaybackOptions): Promise<RecordReplayPlaybackResult>;
   reconstructTrail(recording?: DemoRecording | string, options?: RecordReplayRunOptions): Promise<RecordReplayTrailResult>;
@@ -154,7 +166,13 @@ export interface RecordReplayAgentApi {
     script?: SemanticScript | DemoRecording | string,
     options?: SemanticReplayOptions & { restart?: boolean },
   ): Promise<SemanticVerdict>;
+  /** 双跑一致定档;分裂自动第三跑取多数(契约 §6.2)。每跑都 restart。 */
+  semanticReplayMajority(
+    script?: SemanticScript | DemoRecording | string,
+    options?: SemanticReplayMajorityOptions,
+  ): Promise<SemanticReplayMajorityResult>;
   runBenchmark(options?: RecordReplayBenchmarkOptions): Promise<RecordReplayBenchmarkResult>;
+  runBenchmarkMajority(options?: RecordReplayBenchmarkMajorityOptions): Promise<RecordReplayBenchmarkMajorityResult>;
   stepTo(recording: DemoRecording | string, frameCount: number): Promise<RecordReplayRunResult>;
   selfTest(): Promise<RecordReplaySelfTestResult>;
   snapshot(hashVersion?: RecordReplayHashVersion): StateHashResult;
@@ -162,6 +180,26 @@ export interface RecordReplayAgentApi {
   export(): string;
   import(json: string): DemoRecording;
   abort(): { status: RecordReplayStatus };
+}
+
+/** Live, incremental view of an in-flight recording. Used by the disk-checkpoint controller. */
+export interface RecordReplayRecordingPeek {
+  envelope: DemoRecordingEnvelope;
+  /** Index the returned slice starts at. */
+  fromIndex: number;
+  /** Total frames captured so far (== envelope.frames). */
+  totalFrames: number;
+  frames: DemoRecordingFrame[];
+  stateHashes: string[];
+  /**
+   * Per-frame player [x, z] for `[fromIndex, totalFrames)`, or null if any frame lacked a position.
+   * Streamed alongside the frames so a tape assembled from checkpoints still yields waypoints.
+   */
+  trail: Array<[number, number]> | null;
+  /** State samples whose `frame` falls inside the returned slice. Feed the semantic extractor. */
+  stateSamples: DemoRecordingStateSample[];
+  /** >0 means RecorderSource ring-buffered and absolute indices shifted — checkpointing must stop. */
+  droppedFrames: number;
 }
 
 export interface RecordReplayPanelState {
@@ -183,6 +221,17 @@ export interface RecordReplayBenchmarkOptions extends SemanticReplayOptions {
   url?: string;
   restart?: boolean;
   sampleIntervalMs?: number;
+}
+
+export interface RecordReplayBenchmarkMajorityOptions extends RecordReplayBenchmarkOptions, SemanticMajorityOptions {}
+
+export interface SemanticReplayMajorityOptions extends SemanticReplayOptions, SemanticMajorityOptions {}
+
+export interface SemanticReplayMajorityResult {
+  decision: SemanticMajorityDecision;
+  /** 定档那一档里最先出现的 verdict;抖动时已盖 `flaky` 章。 */
+  verdict: SemanticVerdict;
+  verdicts: readonly SemanticVerdict[];
 }
 
 interface RecordingSession {
@@ -226,16 +275,6 @@ const RECORD_REPLAY_BENCHMARK_SAMPLE_INTERVAL_MS = 1000;
 const STATE_SAMPLE_INTERVAL_FRAMES = 60;
 const GAMEPLAY_SETTLED_TIMEOUT_MS = 10_000;
 const NON_FRAME_ZERO_ANCHOR_WARNING = 'WARNING: non-frame-0 anchored tape; replay requires the same frame offset.';
-const DEBUG_UI_COLLAPSE_SELECTORS = [
-  '[data-runtime-debug-panel-dock]',
-  '[data-runtime-debug-panel-master-toggle]',
-  '[data-runtime-debug-panel-manager-toggle]',
-  '[data-runtime-debug-panel-manager]',
-  '[data-editor-workbench="true"]',
-  '[data-runtime-perf-overlay-debug]',
-  '[data-runtime-perf-hud]',
-] as const;
-
 export function mountRuntimeRecordReplayPanel(options: RuntimeRecordReplayPanelOptions): Disposable {
   const root = options.root ?? document.body;
   const state: MutablePanelState = {
@@ -373,13 +412,61 @@ function createRecordReplayApi(options: RuntimeRecordReplayPanelOptions, state: 
       }).script;
     },
 
+    peekRec(fromIndex = 0) {
+      const session = state.recordingSession;
+      if (!session || state.status !== 'recording') return null;
+      const totalFrames = session.recorder.getRecordedFrameCount();
+      const start = Math.max(0, Math.min(Math.floor(fromIndex), totalFrames));
+      const frames = session.recorder.getFrameSlice(start);
+      // stateHashes are appended post-update, so they can lag frames by at most one entry.
+      const usable = Math.min(frames.length, Math.max(0, session.stateHashes.length - start));
+      const end = start + usable;
+      return {
+        envelope: createRecordingEnvelope(session, end, session.label),
+        fromIndex: start,
+        totalFrames: end,
+        frames: frames.slice(0, usable),
+        stateHashes: session.stateHashes.slice(start, end),
+        trail: buildTrailFromSnapshots(session.snapshots.slice(start, end), usable),
+        stateSamples: session.stateSamples.filter((sample) => sample.frame >= start && sample.frame < end),
+        droppedFrames: session.recorder.getDroppedFrameCount(),
+      };
+    },
+
     async semanticReplay(scriptInput, semanticOptions = {}) {
       const script = resolveSemanticScript(scriptInput, state);
       return semanticReplayScript(options, state, script, semanticOptions);
     },
 
+    async semanticReplayMajority(scriptInput, majorityOptions = {}) {
+      const script = resolveSemanticScript(scriptInput, state);
+      const { minRuns, maxRuns, ...replayOptions } = majorityOptions;
+      const { decision, runs } = await runSemanticGradeMajority(
+        // 每一跑都必须 restart —— 否则第二跑从上一跑的终局态起步,档位毫无意义。
+        () => semanticReplayScript(options, state, script, { ...replayOptions, restart: true }),
+        (verdict) => verdict.grade,
+        { minRuns, maxRuns },
+      );
+      const verdicts = runs.map((run) => run.verdict);
+      const matching = verdicts.filter((verdict) => verdict.grade === decision.grade);
+      const representative = (matching.length > 0 ? matching : verdicts)[0]!;
+      return {
+        decision,
+        verdict: decision.flaky ? { ...representative, flaky: true } : representative,
+        verdicts,
+      };
+    },
+
     async runBenchmark(benchmarkOptions = {}) {
       return runRecordReplayBenchmark(options, state, benchmarkOptions);
+    },
+
+    async runBenchmarkMajority(benchmarkOptions = {}) {
+      const { minRuns, maxRuns, ...rest } = benchmarkOptions;
+      return runRecordReplayBenchmarkMajority(
+        () => runRecordReplayBenchmark(options, state, { ...rest, restart: true }),
+        { minRuns, maxRuns },
+      );
     },
 
     async stepTo(recordingInput, frameCount) {
@@ -525,42 +612,6 @@ function createActionButton(doc: Document, label: string, onClick: () => void): 
   return button;
 }
 
-function collapseDebugUiForRecording(doc: Document): () => void {
-  const hidden = new Map<HTMLElement, {
-    display: string;
-    visibility: string;
-    pointerEvents: string;
-    ariaHidden: string | null;
-  }>();
-  for (const selector of DEBUG_UI_COLLAPSE_SELECTORS) {
-    for (const element of doc.querySelectorAll<HTMLElement>(selector)) {
-      if (hidden.has(element)) continue;
-      hidden.set(element, {
-        display: element.style.display,
-        visibility: element.style.visibility,
-        pointerEvents: element.style.pointerEvents,
-        ariaHidden: element.getAttribute('aria-hidden'),
-      });
-      element.style.setProperty('display', 'none', 'important');
-      element.style.setProperty('visibility', 'hidden', 'important');
-      element.style.setProperty('pointer-events', 'none', 'important');
-      element.setAttribute('aria-hidden', 'true');
-    }
-  }
-  let restored = false;
-  return () => {
-    if (restored) return;
-    restored = true;
-    for (const [element, previous] of hidden) {
-      element.style.display = previous.display;
-      element.style.visibility = previous.visibility;
-      element.style.pointerEvents = previous.pointerEvents;
-      if (previous.ariaHidden === null) element.removeAttribute('aria-hidden');
-      else element.setAttribute('aria-hidden', previous.ariaHidden);
-    }
-    hidden.clear();
-  };
-}
 
 function installRecordingUpdateHook(session: RecordingSession): () => void {
   return installPostUpdateStateCapture(session.game, session.hashVersion, (result, update) => {
@@ -648,6 +699,24 @@ function upsertStateSample(
   else session.stateSamples.push(sample);
 }
 
+/** Envelope for a recording slice. Shared by `stopRec()` and the incremental `peekRec()`. */
+function createRecordingEnvelope(session: RecordingSession, frameCount: number, label: string): DemoRecordingEnvelope {
+  return {
+    schemaVersion: RECORD_REPLAY_SCHEMA_VERSION,
+    hashVersion: session.hashVersion,
+    templateVersion: packageInfo.version ?? '0.0.0',
+    projectId: packageInfo.name ?? 'pa_template',
+    createdAt: new Date().toISOString(),
+    seed: session.game.getDeterminismContext().seed,
+    settledMarker: RECORD_REPLAY_SETTLED_MARKER,
+    anchorFrame: session.anchorFrame,
+    startFrame: session.startFrame,
+    startStateHash: session.startStateHash,
+    frames: frameCount,
+    label,
+  };
+}
+
 function finishRecordingSession(session: RecordingSession, label: string): DemoRecording {
   session.restoreUpdate();
   session.inputService.setMovementSource(session.originalSource);
@@ -676,20 +745,7 @@ function finishRecordingSession(session: RecordingSession, label: string): DemoR
   const droppedFrames = session.recorder.getDroppedFrameCount();
   const trail = buildTrailFromSnapshots(session.snapshots, frames.length);
   const recording: DemoRecording = {
-    envelope: {
-      schemaVersion: RECORD_REPLAY_SCHEMA_VERSION,
-      hashVersion: session.hashVersion,
-      templateVersion: packageInfo.version ?? '0.0.0',
-      projectId: packageInfo.name ?? 'pa_template',
-      createdAt: new Date().toISOString(),
-      seed: session.game.getDeterminismContext().seed,
-      settledMarker: RECORD_REPLAY_SETTLED_MARKER,
-      anchorFrame: session.anchorFrame,
-      startFrame: session.startFrame,
-      startStateHash: session.startStateHash,
-      frames: frames.length,
-      label,
-    },
+    envelope: createRecordingEnvelope(session, frames.length, label),
     frames,
     stateHashes,
     events: [

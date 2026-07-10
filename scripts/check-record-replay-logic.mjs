@@ -27,6 +27,7 @@ try {
     'src/debug/record-replay/verify.ts',
     'src/debug/record-replay/semantic/extract.ts',
     'src/debug/record-replay/semantic/replay.ts',
+    'src/debug/record-replay/semantic/grade.ts',
     'src/debug/record-replay/benchmark.ts',
     'src/core/determinism.ts',
     'src/core/engine-clock.ts',
@@ -47,6 +48,8 @@ try {
   const verify = require(join(outDir, 'debug/record-replay/verify.js'));
   const semanticExtract = require(join(outDir, 'debug/record-replay/semantic/extract.js'));
   const semanticReplay = require(join(outDir, 'debug/record-replay/semantic/replay.js'));
+  const pathTracker = require(join(outDir, 'debug/record-replay/semantic/path-tracker.js'));
+  const semanticGrade = require(join(outDir, 'debug/record-replay/semantic/grade.js'));
   const benchmark = require(join(outDir, 'debug/record-replay/benchmark.js'));
   const { createDeterminismContext } = require(join(outDir, 'core/determinism.js'));
   const { pinEngineDeltaTimeForFrame } = require(join(outDir, 'core/engine-clock.js'));
@@ -159,6 +162,17 @@ try {
   assertSemanticCascadeAndOrder({ clearRecordReplayProviders, registerRecordReplayProviders, SemanticReplayController });
   assertSemanticStuckRecovery({ clearRecordReplayProviders, registerRecordReplayProviders, SemanticReplayController });
   assertBenchmarkAggregation(benchmark);
+  assertSemanticPathTracker(pathTracker);
+  assertSemanticTrailDecimation(semanticExtract);
+  assertSemanticEmptyScriptRefusal({ ...semanticExtract, ...semanticReplay });
+  assertRecordReplayInputAuthority(providers);
+  assertSemanticCalibrationUnderScriptedMovement({ ...providers, ...semanticReplay });
+  assertSemanticPathTrackerScriptedSegment(pathTracker);
+  assertSemanticGradeLadder(semanticGrade);
+  assertLayeredMilestoneCounts(semanticGrade);
+  await assertSemanticGradeMajority(semanticGrade);
+  assertMilestoneCriticality(providers);
+  assertSemanticGradeFromController({ ...providers, ...semanticReplay });
 
   console.log('[check-record-replay-logic] OK');
 } finally {
@@ -1055,18 +1069,24 @@ function createFrameInputSource(getFrameCount) {
   };
 }
 
-function createFactMilestoneDetector() {
+/**
+ * `kind` 决定该检测器发出的里程碑类型(进而决定 critical/optional 默认分层);
+ * `accept` 过滤它负责哪些 fact —— 多个检测器共存时靠它避免同一 fact 被重复发两次。
+ */
+function createFactMilestoneDetector(kind = 'custom', accept = () => true, critical = undefined) {
   return {
-    kind: 'custom',
+    kind,
+    ...(typeof critical === 'boolean' ? { critical } : {}),
     detect(previous, next) {
       const events = [];
       const keys = new Set([...Object.keys(previous.facts), ...Object.keys(next.facts)]);
       for (const key of [...keys].sort()) {
+        if (!accept(key)) continue;
         const before = previous.facts[key];
         const after = next.facts[key];
         if (before === after || after === undefined) continue;
         events.push({
-          kind: 'custom',
+          kind,
           detail: {
             id: key,
             from: before === undefined ? '[missing]' : String(before),
@@ -1161,6 +1181,7 @@ function createSemanticControllerScript({
   inputSegments = [{ tStart: 0, tEnd: durationSec, kind: 'drag', keypoints: [{ t: 0, x: 1, y: 0, magnitude: 1 }] }],
   milestones = [],
   waypoints = [],
+  trail = null,
   economyFinal = { cash: 0, totalEarned: 0, totalSpent: 0 },
 }) {
   return {
@@ -1174,6 +1195,7 @@ function createSemanticControllerScript({
     inputSegments,
     milestones,
     waypoints,
+    ...(trail ? { trail } : {}),
     economyFinal,
   };
 }
@@ -1193,8 +1215,9 @@ function withSemanticMockGame(options, callback) {
         }),
       },
     ],
-    milestoneDetectors: [createFactMilestoneDetector()],
+    milestoneDetectors: options.milestoneDetectors ?? [createFactMilestoneDetector()],
     playerPosition: () => ({ x: game.position.x, y: 0, z: game.position.z }),
+    ...(options.inputAuthority ? { inputAuthority: options.inputAuthority } : {}),
   });
   try {
     callback(game);
@@ -1243,6 +1266,11 @@ function createSemanticControllerMockGame(options = {}) {
       movementBlockedFrom = from;
       movementBlockedUntil = until;
     },
+    /** 剧情自动移动:游戏自己把角色搬走,与玩家输入无关。 */
+    scriptedMoveTo(x, z) {
+      state.position.x = x;
+      state.position.z = z;
+    },
     getFrameCount: () => Math.floor(elapsedTimeSec * 10),
     getLastFrameDeltaTime: () => 0.1,
     getDeterminismContext: () => ({ seed: 42, elapsedTimeSec }),
@@ -1277,4 +1305,570 @@ function stepSemanticController(controller, game, { steps, dt, speed }) {
     game.applyInput(input, dt, speed);
     controller.afterUpdate(dt);
   }
+}
+
+/**
+ * 认证分级 v2 —— 四档判据(契约 harness docs/06 §6.2)。
+ * 纯函数,逐条走判据优先级;边界值(恰好等于阈值)必须落在**宽松**一侧。
+ */
+function assertSemanticGradeLadder({
+  gradeSemanticVerdict,
+  isSemanticGradeAtLeast,
+  worstSemanticGrade,
+  SEMANTIC_GRADE_ORDER,
+}) {
+  const base = {
+    refused: false,
+    calibrationFailed: false,
+    terminalDivergence: null,
+    criticalMissing: 0,
+    optionalMissing: 0,
+    optionalTotal: 4,
+    criticalTotal: 2,
+    economyPass: true,
+    stageDisrupted: false,
+    detourScore: 0,
+    ok: true,
+    quality: 'clean',
+  };
+  const gradeOf = (overrides, thresholds) => gradeSemanticVerdict({ ...base, ...overrides }, thresholds).grade;
+
+  assert.deepEqual([...SEMANTIC_GRADE_ORDER], ['failed', 'degraded', 'good', 'clean'], 'grade order is worst→best');
+  assert.equal(gradeOf({}), 'clean', 'all-green run grades clean');
+
+  // ---- failed:四条硬失败,任何一条命中都压过下面所有判据
+  assert.equal(gradeOf({ refused: true }), 'failed', 'refused run is failed');
+  assert.equal(
+    gradeOf({ terminalDivergence: 'outcome:death' }),
+    'failed',
+    'terminal divergence is failed even with everything else green',
+  );
+  assert.equal(gradeOf({ criticalMissing: 1, ok: false, quality: 'failed' }), 'failed', 'missing critical is failed');
+  assert.equal(
+    gradeOf({ calibrationFailed: true }),
+    'failed',
+    'calibration failure is failed even when ok=true — the replay never drove anything',
+  );
+
+  // ---- good:critical 全中,轻微绕路 / 少量 optional 缺失
+  assert.equal(gradeOf({ quality: 'recovered', detourScore: 1 }), 'good', 'mild recovery grades good (old recovered)');
+  assert.equal(
+    gradeOf({ optionalMissing: 1, optionalTotal: 5, ok: false, quality: 'failed' }),
+    'good',
+    'optional missing exactly at 20% stays good (boundary is inclusive)',
+  );
+  assert.equal(gradeOf({ quality: 'recovered', detourScore: 2 }), 'good', 'detour below threshold stays good');
+  assert.equal(gradeOf({ optionalMissing: 0, optionalTotal: 0, quality: 'recovered', detourScore: 1 }), 'good',
+    'zero optional milestones ⇒ ratio 0, not NaN');
+
+  // ---- 空绿护栏:一条 critical 都不断言的剧本(纯导航 tape)拿不到 clean
+  assert.equal(
+    gradeOf({ criticalTotal: 0 }),
+    'good',
+    'a script asserting no critical milestone is replayable (good) but never a canonical baseline (clean)',
+  );
+  assert.match(
+    gradeSemanticVerdict({ ...base, criticalTotal: 0 }).reason,
+    /no critical milestone/,
+    'grading says why clean was withheld',
+  );
+  assert.equal(gradeOf({ criticalTotal: 1 }), 'clean', 'one critical milestone is enough to earn clean');
+
+  // ---- degraded:critical 全中,但明显不干净
+  assert.equal(
+    gradeOf({ optionalMissing: 1, optionalTotal: 4, ok: false, quality: 'failed' }),
+    'degraded',
+    'optional missing 25% > 20% drops to degraded',
+  );
+  assert.equal(gradeOf({ economyPass: false, ok: false, quality: 'failed' }), 'degraded', 'economy out of tolerance ⇒ degraded');
+  assert.equal(gradeOf({ stageDisrupted: true, ok: false, quality: 'failed' }), 'degraded', 'disrupted stage ⇒ degraded');
+  assert.equal(gradeOf({ quality: 'recovered', detourScore: 3 }), 'degraded', 'detour at threshold ⇒ degraded');
+
+  // ---- 阈值可覆盖
+  assert.equal(
+    gradeOf({ optionalMissing: 1, optionalTotal: 4, ok: false, quality: 'failed' }, { optionalMissingRatio: 0.5 }),
+    'good',
+    'loosened optional threshold promotes degraded→good',
+  );
+  assert.equal(
+    gradeOf({ quality: 'recovered', detourScore: 2 }, { detourScore: 2 }),
+    'degraded',
+    'tightened detour threshold demotes good→degraded',
+  );
+
+  // ---- 定档理由与指标必须落盘(排查时不重跑)
+  const detail = gradeSemanticVerdict({ ...base, optionalMissing: 1, optionalTotal: 4, ok: false, quality: 'failed' });
+  assert.equal(detail.optionalMissingRatio, 0.25, 'grading reports the optional missing ratio');
+  assert.equal(detail.thresholds.optionalMissingRatio, 0.2, 'grading reports the thresholds actually applied');
+  assert.match(detail.reason, /optional/, 'grading explains why');
+
+  // ---- 档位序关系
+  assert.equal(isSemanticGradeAtLeast('good', 'good'), true, 'baseline bar: good meets good');
+  assert.equal(isSemanticGradeAtLeast('clean', 'good'), true, 'clean meets good');
+  assert.equal(isSemanticGradeAtLeast('degraded', 'good'), false, 'degraded misses the baseline bar');
+  assert.equal(worstSemanticGrade(['clean', 'degraded', 'good']), 'degraded', 'worst grade wins a tie');
+}
+
+/** 分层计数:分母取剧本总数;缺失按剧本下标去重(一次失败不能计两笔)。 */
+function assertLayeredMilestoneCounts({ countLayeredMilestones }) {
+  const isCritical = (milestone) => milestone.kind === 'stage' || milestone.kind === 'outcome';
+  const script = [{ kind: 'stage' }, { kind: 'deposit' }, { kind: 'deposit' }, { kind: 'outcome' }];
+
+  const none = countLayeredMilestones(script, [], isCritical);
+  assert.deepEqual(none, { criticalMissing: 0, optionalMissing: 0, criticalTotal: 2, optionalTotal: 2 }, 'totals split by kind');
+
+  const mixed = countLayeredMilestones(
+    script,
+    [{ index: 0, expected: { kind: 'stage' } }, { index: 1, expected: { kind: 'deposit' } }],
+    isCritical,
+  );
+  assert.equal(mixed.criticalMissing, 1, 'missing stage counts critical');
+  assert.equal(mixed.optionalMissing, 1, 'missing deposit counts optional');
+
+  // 同一个里程碑被记两次(terminal divergence + stage timeout)只能算一笔
+  const duplicated = countLayeredMilestones(
+    script,
+    [
+      { index: 0, expected: { kind: 'stage' } },
+      { index: 0, expected: { kind: 'stage' } },
+      { index: 1, expected: { kind: 'deposit' } },
+      { index: 1, expected: { kind: 'deposit' } },
+    ],
+    isCritical,
+  );
+  assert.equal(duplicated.criticalMissing, 1, 'duplicate missing entries for one milestone count once');
+  assert.equal(duplicated.optionalMissing, 1, 'duplicate optional missing entries count once');
+
+  // expected 缺席(terminal divergence 发生在最后一个里程碑之后)不参与计数
+  const headless = countLayeredMilestones(script, [{ index: 4, reason: 'terminal divergence' }], isCritical);
+  assert.equal(headless.criticalMissing + headless.optionalMissing, 0, 'missing entries without `expected` are skipped');
+}
+
+/** 多数决:双跑同档定档;分裂第三跑取多数;平票取最差档 + flaky。 */
+async function assertSemanticGradeMajority({ decideSemanticGradeMajority, runSemanticGradeMajority }) {
+  assert.equal(decideSemanticGradeMajority(['clean']), null, 'one run is never enough');
+  const unanimous = decideSemanticGradeMajority(['clean', 'clean']);
+  assert.equal(unanimous.grade, 'clean', 'two agreeing runs settle');
+  assert.equal(unanimous.flaky, false, 'agreement is not flaky');
+  assert.equal(unanimous.decidedBy, 'unanimous');
+
+  assert.equal(decideSemanticGradeMajority(['clean', 'good']), null, 'a 1/2 split needs a third run');
+  const majority = decideSemanticGradeMajority(['clean', 'good', 'good']);
+  assert.equal(majority.grade, 'good', 'third run breaks the split by majority');
+  assert.equal(majority.flaky, true, 'a split is flaky even after the majority settles it');
+  assert.equal(majority.decidedBy, 'majority');
+
+  const tie = decideSemanticGradeMajority(['clean', 'good', 'degraded']);
+  assert.equal(tie.grade, 'degraded', 'a three-way tie takes the WORST grade, never the best');
+  assert.equal(tie.flaky, true);
+  assert.equal(tie.decidedBy, 'tie');
+
+  // runner:跑够就停,分裂才加跑
+  let calls = 0;
+  const clean = await runSemanticGradeMajority(() => { calls += 1; return { grade: 'clean' }; }, (v) => v.grade);
+  assert.equal(calls, 2, 'unanimous stops at two runs');
+  assert.equal(clean.decision.flaky, false);
+  assert.equal(clean.runs.length, 2);
+
+  calls = 0;
+  const split = await runSemanticGradeMajority(
+    () => { calls += 1; return { grade: calls === 1 ? 'clean' : 'good' }; },
+    (v) => v.grade,
+  );
+  assert.equal(calls, 3, 'a split triggers exactly one extra run');
+  assert.equal(split.decision.grade, 'good', 'majority of {clean, good, good}');
+  assert.equal(split.decision.flaky, true, 'verdict is stamped flaky');
+  assert.deepEqual(split.decision.tally, { clean: 1, good: 2, degraded: 0, failed: 0 }, 'tally is reported');
+}
+
+/** 里程碑分层:kind 默认表 + 游戏侧 critical 覆盖(向上/向下)。 */
+function assertMilestoneCriticality({
+  clearRecordReplayProviders,
+  registerRecordReplayProviders,
+  isRecordReplayMilestoneCritical,
+  getDefaultRecordReplayMilestoneCriticality,
+  RECORD_REPLAY_DEFAULT_CRITICAL_KINDS,
+}) {
+  clearRecordReplayProviders();
+  assert.deepEqual([...RECORD_REPLAY_DEFAULT_CRITICAL_KINDS], ['outcome', 'stage'], 'default critical kinds');
+  for (const kind of ['outcome', 'stage']) {
+    assert.equal(getDefaultRecordReplayMilestoneCriticality(kind), true, `${kind} defaults critical`);
+    assert.equal(isRecordReplayMilestoneCritical({ kind }), true, `${kind} critical with no detector registered`);
+  }
+  for (const kind of ['deposit', 'equip', 'custom', 'something-new']) {
+    assert.equal(getDefaultRecordReplayMilestoneCriticality(kind), false, `${kind} defaults optional`);
+    assert.equal(isRecordReplayMilestoneCritical({ kind }), false, `${kind} optional with no detector registered`);
+  }
+
+  // 游戏侧向上覆盖:deposit 在某个游戏里就是主线
+  let unregister = registerRecordReplayProviders({
+    milestoneDetectors: [createFactMilestoneDetector('deposit', () => true, true)],
+  });
+  assert.equal(isRecordReplayMilestoneCritical({ kind: 'deposit' }), true, 'game can promote deposit to critical');
+  unregister();
+
+  // 向下覆盖:某个游戏的 outcome 只是过场
+  unregister = registerRecordReplayProviders({
+    milestoneDetectors: [createFactMilestoneDetector('outcome', () => true, false)],
+  });
+  assert.equal(isRecordReplayMilestoneCritical({ kind: 'outcome' }), false, 'game can demote outcome to optional');
+  unregister();
+
+  // 同 kind 多个检测器,有一个说 critical 就是 critical(保守合并)。
+  // **两种注册顺序都要验** —— 只验一种的话,「最后一个说了算」的实现也能蒙混过关。
+  for (const [first, second] of [[false, true], [true, false]]) {
+    unregister = registerRecordReplayProviders({
+      milestoneDetectors: [
+        createFactMilestoneDetector('equip', () => true, first),
+        createFactMilestoneDetector('equip', () => true, second),
+      ],
+    });
+    assert.equal(
+      isRecordReplayMilestoneCritical({ kind: 'equip' }),
+      true,
+      `any critical declaration wins (registered ${first} then ${second})`,
+    );
+    unregister();
+  }
+  clearRecordReplayProviders();
+}
+
+/**
+ * 端到端:**同一种失败形状**,里程碑 kind 不同 ⇒ 档位不同。
+ * 这条是分层真正接进 verdict 的证据(不是纯函数自说自话),顺带验 determinism 戳。
+ */
+function assertSemanticGradeFromController({
+  clearRecordReplayProviders,
+  registerRecordReplayProviders,
+  SemanticReplayController,
+}) {
+  const detectors = [
+    createFactMilestoneDetector('custom', (id) => !id.includes('.stage.')),
+    createFactMilestoneDetector('stage', (id) => id.includes('.stage.')),
+  ];
+  const runUnreachableMilestone = (factId, kind, replayOptions = {}) => {
+    let verdict = null;
+    withSemanticMockGame({ clearRecordReplayProviders, registerRecordReplayProviders, milestoneDetectors: detectors }, (game) => {
+      game.addFactRule(factId.replace(/^mock\.state\./, ''), () => false);
+      const script = createSemanticControllerScript({
+        durationSec: 2,
+        waypoints: [{ t: 0, x: 0, z: 0 }, { t: 1, x: 1, z: 0 }],
+        milestones: [{ t: 1, kind, detail: { id: factId, to: 'true' } }],
+      });
+      const controller = new SemanticReplayController(game, script, {
+        waypointToleranceBand: 0.12,
+        maxDurationSec: 8,
+        maxLoopsPerStage: 1,
+        stageTimeoutSlackSec: 0.5,
+        ...replayOptions,
+      });
+      stepSemanticController(controller, game, { steps: 120, dt: 0.1, speed: 1 });
+      verdict = controller.getVerdict();
+    });
+    return verdict;
+  };
+
+  const optional = runUnreachableMilestone('mock.state.progress.ready', 'custom');
+  assert.equal(optional.milestones.optionalTotal, 1, 'custom milestone counts as optional');
+  assert.equal(optional.milestones.criticalTotal, 0);
+  assert.equal(optional.milestones.optionalMissing, 1, 'the missed optional milestone is layered');
+  assert.equal(optional.milestones.criticalMissing, 0);
+  assert.equal(optional.grade, 'degraded', 'missing 100% of optional milestones ⇒ degraded, not failed');
+
+  const critical = runUnreachableMilestone('mock.state.stage.cleared', 'stage');
+  assert.equal(critical.milestones.criticalTotal, 1, 'stage milestone counts as critical');
+  assert.equal(critical.milestones.criticalMissing, 1);
+  assert.equal(critical.grade, 'failed', 'the SAME failure on a critical milestone ⇒ failed');
+  assert.match(critical.grading.reason, /critical/, 'grading names the critical miss');
+
+  // determinism 戳:不传 horizon 就没有这个字段(行为不变)
+  assert.equal(critical.determinism, null, 'no determinismHorizon ⇒ determinism is null');
+
+  const inHorizon = runUnreachableMilestone('mock.state.stage.cleared', 'stage', { determinismHorizon: 100000 });
+  assert.equal(inHorizon.determinism.horizon, 100000);
+  assert.equal(typeof inHorizon.determinism.failurePointFrame, 'number', 'failure point is recorded in frames');
+  assert.equal(inHorizon.determinism.failureWithinHorizon, true);
+  assert.equal(inHorizon.determinism.confidence, 'high', 'failure inside the horizon ⇒ high confidence');
+
+  const outOfHorizon = runUnreachableMilestone('mock.state.stage.cleared', 'stage', { determinismHorizon: 1 });
+  assert.equal(outOfHorizon.determinism.failureWithinHorizon, false);
+  assert.equal(outOfHorizon.determinism.confidence, 'low', 'failure past the horizon ⇒ low confidence (suspect drift)');
+  assert.equal(
+    outOfHorizon.determinism.failurePointFrame,
+    inHorizon.determinism.failurePointFrame,
+    'the failure point itself does not depend on the horizon',
+  );
+
+  const greenFull = runUnreachableMilestone('mock.state.stage.cleared', 'stage', { determinismHorizon: 'green-full' });
+  assert.equal(greenFull.determinism.failureWithinHorizon, true, 'green-full horizon contains every failure point');
+  assert.equal(greenFull.determinism.confidence, 'high');
+
+  // 失败点必须是**最早**那次,不能被后面的级联覆盖。
+  // 场景:开局位移被锁 ⇒ 标定失败(很早);之后里程碑永远不满足 ⇒ stage timeout(很晚)。
+  let blockedVerdict = null;
+  withSemanticMockGame({ clearRecordReplayProviders, registerRecordReplayProviders, milestoneDetectors: detectors }, (game) => {
+    game.setMovementBlockedUntil(60);
+    game.addFactRule('stage.cleared', () => false);
+    const script = createSemanticControllerScript({
+      durationSec: 2,
+      waypoints: [{ t: 0, x: 0, z: 0 }, { t: 1, x: 1, z: 0 }],
+      milestones: [{ t: 1, kind: 'stage', detail: { id: 'mock.state.stage.cleared', to: 'true' } }],
+    });
+    const controller = new SemanticReplayController(game, script, {
+      waypointToleranceBand: 0.12,
+      maxDurationSec: 8,
+      maxLoopsPerStage: 1,
+      stageTimeoutSlackSec: 0.5,
+      determinismHorizon: 'green-full',
+    });
+    stepSemanticController(controller, game, { steps: 120, dt: 0.1, speed: 1 });
+    blockedVerdict = controller.getVerdict();
+  });
+  assert.equal(blockedVerdict.calibration.status, 'failed', 'blocked movement fails calibration');
+  assert.equal(blockedVerdict.grade, 'failed', 'a run that never established an input basis is failed');
+  // 这一跑里有两次失败:标定失败(早)+ 随后里程碑永不满足的 stage timeout(晚,发生在 run 结束那一刻)。
+  // 失败点必须停在第一次。若实现允许覆盖,failurePointFrame 会滑到 run 末尾(≈ durationSec*10)。
+  assert.equal(
+    blockedVerdict.determinism.failurePointFrame < blockedVerdict.durationSec * 10 - 10,
+    true,
+    'the earliest failure (calibration) wins — the later stage timeout must not overwrite it',
+  );
+}
+
+/**
+ * 轨迹跟踪器:时间参数化插值、dwell 保留、闸门 cap 钳制、跟踪误差调制示教时钟。
+ */
+function assertSemanticPathTracker({ SemanticPathTracker }) {
+  // 一条直线:0s(0,0) -> 1s(5,0),然后在 (5,0) 站 2 秒(dwell),再走到 3s(10,0)。
+  const trail = [
+    { t: 0, x: 0, z: 0 },
+    { t: 1, x: 5, z: 0 },
+    { t: 3, x: 5, z: 0 },
+    { t: 4, x: 10, z: 0 },
+  ];
+  const tracker = new SemanticPathTracker(trail, { lookaheadSec: 0.2 });
+  assert.equal(tracker.startSec, 0);
+  assert.equal(tracker.endSec, 4);
+
+  // 时间插值
+  assert.deepEqual(tracker.positionAt(0.5), { x: 2.5, z: 0 });
+  // dwell 段:1s..3s 位置恒定
+  assert.deepEqual(tracker.positionAt(2), { x: 5, z: 0 });
+
+  // actor 完美贴合 -> 示教时钟全速前进
+  let step = tracker.advance(0.1, { x: 0, z: 0 });
+  assert.ok(step.gain > 0.99, `perfect tracking should run the clock at full gain, got ${step.gain}`);
+  assert.ok(step.scheduleSec > 0.09 && step.scheduleSec <= 0.1001, `schedule=${step.scheduleSec}`);
+  assert.ok(step.target.x > 0, 'target should lead the actor along the path');
+
+  // actor 被远远甩下 -> 示教时钟停住(crossError 增益归零)
+  const stalled = new SemanticPathTracker(trail);
+  stalled.resetTo(0.5);
+  const before = stalled.scheduleSec;
+  const stalledStep = stalled.advance(0.2, { x: 2.5, z: 9 });
+  assert.equal(stalledStep.gain, 0, 'far off-path actor must stall the teach clock');
+  assert.equal(stalled.scheduleSec, before, 'stalled clock must not advance');
+
+  // cap 钳制:示教时钟与 lookahead 都不许越过闸门时刻
+  const capped = new SemanticPathTracker(trail, { lookaheadSec: 0.5 });
+  capped.resetTo(0.9);
+  const cappedStep = capped.advance(0.5, capped.positionAt(0.9), 1.0);
+  assert.ok(capped.scheduleSec <= 1.0 + 1e-9, `schedule must clamp at cap, got ${capped.scheduleSec}`);
+  assert.ok(cappedStep.target.x <= 5 + 1e-9, `lookahead must clamp at cap, got ${cappedStep.target.x}`);
+  assert.ok(capped.isHoldingAt(1.0), 'tracker should report holding at the cap');
+
+  // dwell:时钟走过 1s..3s 时目标点原地不动 -> actor 自然停住
+  const dwelling = new SemanticPathTracker(trail, { lookaheadSec: 0.2 });
+  dwelling.resetTo(1.5);
+  const dwellStep = dwelling.advance(0.1, { x: 5, z: 0 });
+  assert.deepEqual(dwellStep.target, { x: 5, z: 0 }, 'dwell target must stay put');
+}
+
+/** trail 抽稀必须保住形状(空间)与节奏(时间间隔,dwell 靠它活下来)。 */
+function assertSemanticTrailDecimation({ decimateSemanticTrail }) {
+  const points = [];
+  for (let index = 0; index <= 100; index += 1) points.push({ t: index * 0.01, x: index * 0.01, z: 0 });
+  // 再站 1 秒不动
+  for (let index = 1; index <= 100; index += 1) points.push({ t: 1 + index * 0.01, x: 1, z: 0 });
+
+  const decimated = decimateSemanticTrail(points, 0.08, 0.2);
+  assert.ok(decimated.length >= 8, `expected shape to survive, got ${decimated.length}`);
+  assert.ok(decimated.length < points.length, 'decimation must actually drop points');
+  assert.equal(decimated[0].t, 0);
+  assert.equal(decimated[decimated.length - 1].t, points[points.length - 1].t);
+  // dwell 段(x 恒为 1)必须靠 maxTimeGap 保留至少两个点,否则回放会把「站着」压成一瞬
+  const dwellPoints = decimated.filter((point) => Math.abs(point.x - 1) < 1e-9);
+  assert.ok(dwellPoints.length >= 3, `dwell must keep time resolution, got ${dwellPoints.length}`);
+  // 单调
+  for (let index = 1; index < decimated.length; index += 1) {
+    assert.ok(decimated[index].t > decimated[index - 1].t, 'trail times must be strictly increasing');
+  }
+}
+
+/**
+ * 空剧本必须被拒绝。一条 0 milestone + 0 waypoint 的剧本什么都不断言,
+ * 驱动它会在 1 秒内返回 ok:true —— **假绿基线比红灯危险得多**。
+ */
+function assertSemanticEmptyScriptRefusal({
+  isSemanticScriptCertifiable,
+  describeSemanticScriptGaps,
+  createRefusedSemanticVerdict,
+}) {
+  const emptyScript = {
+    meta: { schemaVersion: 1, sourceTape: 't', seed: 1, durationSec: 0, extractedAt: '' },
+    inputSegments: [],
+    milestones: [],
+    waypoints: [],
+    economyFinal: { cash: 0, totalEarned: 0, totalSpent: 0 },
+  };
+  assert.equal(isSemanticScriptCertifiable(emptyScript), false, 'empty script must not be certifiable');
+  assert.equal(isSemanticScriptCertifiable({ ...emptyScript, waypoints: [{ t: 0, x: 0, z: 0 }] }), true);
+  assert.equal(isSemanticScriptCertifiable({ ...emptyScript, milestones: [{ t: 0, kind: 'k', detail: {} }] }), true);
+
+  const gaps = describeSemanticScriptGaps({ stateSamples: [], trail: [] }, emptyScript);
+  assert.equal(gaps.length, 3, `expected 3 gap warnings, got ${JSON.stringify(gaps)}`);
+  assert.equal(describeSemanticScriptGaps(
+    { stateSamples: [{ frame: 0 }], trail: [[0, 0]] },
+    { ...emptyScript, waypoints: [{ t: 0, x: 0, z: 0 }] },
+  ).length, 0, 'a script with samples + trail + waypoints must be clean');
+
+  const verdict = createRefusedSemanticVerdict(emptyScript);
+  assert.equal(verdict.ok, false);
+  assert.equal(verdict.quality, 'failed');
+  assert.ok(verdict.refused, 'refused verdict must carry a `refused` block');
+  assert.equal(verdict.refused.milestones, 0);
+  assert.equal(verdict.refused.waypoints, 0);
+  // 与 trail 跟随合并后的字段:回放从未发生,必须是 null 而不是缺失
+  assert.equal(verdict.trailTracking, null, 'refused verdict must expose trailTracking: null');
+}
+
+/** inputAuthority 注册制:不注册恒 true;任一注册方说 false 就是 false;注销 / clear 复位。 */
+function assertRecordReplayInputAuthority({
+  registerRecordReplayProviders,
+  clearRecordReplayProviders,
+  readRecordReplayInputAuthority,
+}) {
+  clearRecordReplayProviders();
+  assert.equal(readRecordReplayInputAuthority(), true, 'no registration ⇒ input is authoritative');
+
+  let lockedA = false;
+  let lockedB = false;
+  const offA = registerRecordReplayProviders({ inputAuthority: () => !lockedA });
+  const offB = registerRecordReplayProviders({ inputAuthority: () => !lockedB });
+  assert.equal(readRecordReplayInputAuthority(), true);
+  lockedB = true;
+  assert.equal(readRecordReplayInputAuthority(), false, 'any provider saying false wins');
+  lockedA = true;
+  assert.equal(readRecordReplayInputAuthority(), false);
+  offB();
+  assert.equal(readRecordReplayInputAuthority(), false, 'the remaining provider still holds the lock');
+  offA();
+  assert.equal(readRecordReplayInputAuthority(), true, 'unregistering restores the default');
+
+  // 抛异常的 provider 不许把整条链带崩
+  const offThrow = registerRecordReplayProviders({ inputAuthority: () => { throw new Error('boom'); } });
+  assert.equal(readRecordReplayInputAuthority(), true, 'a throwing provider must not deny authority');
+  offThrow();
+  clearRecordReplayProviders();
+}
+
+/**
+ * 「输入非授权」片段:示教时钟必须按 dt 自然推进,不受跟踪误差门控。
+ * 这正是 last-stand 的过场自动移动踩到的死锁 —— 角色被脚本拖到窗口之外,
+ * crossError 顶穿 ⇒ gain=0 ⇒ 时钟停 ⇒ 窗口跟着时钟走,永远追不上。
+ */
+function assertSemanticPathTrackerScriptedSegment({ SemanticPathTracker }) {
+  const trail = [
+    { t: 0, x: 0, z: 0 },
+    { t: 1, x: 5, z: 0 },
+    { t: 2, x: 10, z: 0 },
+  ];
+  const farAway = { x: 0, z: 40 };   // 离航迹 40 单位:crossError 远超 crossErrorStall
+
+  // 授权状态:增益归零,时钟纹丝不动(现行为,必须保持)
+  const gated = new SemanticPathTracker(trail);
+  gated.resetTo(0.5);
+  const gatedStep = gated.advance(0.25, farAway);
+  assert.equal(gatedStep.gain, 0, 'authoritative + far off-path ⇒ clock stalls');
+  assert.equal(gated.scheduleSec, 0.5, 'stalled clock must not advance');
+  assert.equal(gatedStep.inputAuthoritative, true);
+
+  // 非授权状态:同样的位置,时钟按 dt 前进
+  const scripted = new SemanticPathTracker(trail);
+  scripted.resetTo(0.5);
+  const step = scripted.advance(0.25, farAway, undefined, { inputAuthoritative: false });
+  assert.equal(step.gain, 1, 'non-authoritative ⇒ clock runs at teach pace');
+  assert.equal(step.inputAuthoritative, false);
+  assert.ok(Math.abs(scripted.scheduleSec - 0.75) < 1e-9, `expected 0.75, got ${scripted.scheduleSec}`);
+  // 目标锚在示教时钟上,而不是被窗口钳死的投影上
+  assert.deepEqual(step.target, scripted.positionAt(0.75 + 0.2));
+
+  // cap 仍然有效
+  scripted.resetTo(0.9);
+  scripted.advance(0.5, farAway, 1.0, { inputAuthoritative: false });
+  assert.ok(scripted.scheduleSec <= 1.0 + 1e-9, 'cap must still clamp a scripted segment');
+
+  // 授权恢复后回到正常门控
+  const resumed = scripted.advance(0.1, scripted.positionAt(scripted.scheduleSec));
+  assert.equal(resumed.inputAuthoritative, true);
+  assert.ok(resumed.gain > 0.99, 'back on path ⇒ full gain again');
+}
+
+/**
+ * 标定阶段也必须受 authority 门控。
+ *
+ * 回归来自 qy-last-stand:剧情自动移动玩家时,标定照发脉冲、照量位移 —— 剧情的位移被归因给脉冲,
+ * 于是 `calibration.status = ok` 而矩阵是错的;而且示教时钟在整个剧情段纹丝不动(scriptedSec = 0)。
+ */
+function assertSemanticCalibrationUnderScriptedMovement({
+  clearRecordReplayProviders,
+  registerRecordReplayProviders,
+  SemanticReplayController,
+}) {
+  let authoritative = false;   // 开局:剧情接管,输入不算数
+  withSemanticMockGame({
+    clearRecordReplayProviders,
+    registerRecordReplayProviders,
+    inputAuthority: () => authoritative,
+  }, (game) => {
+    const script = createSemanticControllerScript({
+      durationSec: 8,
+      waypoints: [{ t: 0, x: 0, z: 0 }, { t: 6, x: 6, z: 0 }],
+      trail: [{ t: 0, x: 0, z: 0 }, { t: 6, x: 6, z: 0 }],
+    });
+    const controller = new SemanticReplayController(game, script, { maxDurationSec: 60 });
+
+    // ---- 剧情段:输入不算数,游戏自己把角色从 (0,0) 搬到 (0,6)(离航迹 6 个单位)
+    const scriptedSteps = 20;
+    const dt = 0.1;
+    for (let index = 0; index < scriptedSteps; index += 1) {
+      const input = controller.getInput();
+      assert.equal(input.isActive, false, 'no calibration pulses while input is not authoritative');
+      assert.equal(input.magnitude, 0, 'scripted segment must emit idle input');
+      game.scriptedMoveTo(0, 6 * (index + 1) / scriptedSteps);   // 剧情自动移动
+      controller.afterUpdate(dt);
+    }
+
+    // ---- 剧情结束,输入解禁;角色被留在 (0,6)
+    authoritative = true;
+    game.scriptedMoveTo(0, 0);   // 剧情把角色送回航迹起点(它在示教里也是这么做的)
+    stepSemanticController(controller, game, { steps: 400, dt: 0.05, speed: 2 });
+
+    const verdict = controller.getVerdict();
+    // 1. 标定推迟到解禁之后,且矩阵没有被剧情位移投毒
+    assert.equal(verdict.calibration.status, 'ok', 'calibration must succeed after authority returns');
+    assert.ok(verdict.calibration.matrix.inputX.x > 0.9,
+      `inputX must map to +x, got ${JSON.stringify(verdict.calibration.matrix)}`);
+    assert.ok(verdict.calibration.matrix.inputY.z > 0.9,
+      `inputY must map to +z, got ${JSON.stringify(verdict.calibration.matrix)}`);
+    // 剧情搬了 6 个单位;若被归因给标定脉冲,displacement 会是 6 量级而不是 0.5 量级
+    assert.ok(verdict.calibration.displacement.inputX < 1,
+      `calibration displacement must not absorb the cutscene move, got ${verdict.calibration.displacement.inputX}`);
+
+    // 2. 剧情段被记账,且示教时钟在那段时间照常推进
+    assert.ok(verdict.trailTracking.scriptedSec >= scriptedSteps * dt - 1e-6,
+      `scriptedSec must cover the whole cutscene, got ${verdict.trailTracking.scriptedSec}`);
+    assert.ok(verdict.trailTracking.scheduleSec >= scriptedSteps * dt - 1e-6,
+      `teach clock must advance through the cutscene, got ${verdict.trailTracking.scheduleSec}`);
+  });
 }

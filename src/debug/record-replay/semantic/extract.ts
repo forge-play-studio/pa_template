@@ -13,6 +13,7 @@ import {
   type RecordReplayEconomyState,
   type RecordReplayObservation,
 } from '../providers';
+import type { SemanticTrailPoint } from './path-tracker';
 
 export type SemanticInputSegmentKind = 'drag' | 'idle';
 export type SemanticMilestoneKind = string;
@@ -28,8 +29,15 @@ export interface SemanticScript {
   inputSegments: SemanticInputSegment[];
   milestones: SemanticMilestone[];
   waypoints: SemanticWaypoint[];
+  /**
+   * 抽稀后的完整示教航迹(时间参数化)。Mode B 的轨迹跟踪用它复现「扫过路径」与节奏;
+   * waypoints 只留作 verdict 统计与老脚本兼容。老 tape 无 trail 时该字段缺省。
+   */
+  trail?: SemanticTrailPoint[];
   economyFinal: SemanticEconomyState;
 }
+
+export type { SemanticTrailPoint };
 
 export interface SemanticInputSegment {
   tStart: number;
@@ -73,6 +81,10 @@ export interface ExtractSemanticScriptOptions {
   trimLeadingIdle?: boolean;
   dwellDistanceEpsilon?: number;
   dwellMinSec?: number;
+  /** trail 抽稀:相邻保留点的最小空间间距。 */
+  trailSpacing?: number;
+  /** trail 抽稀:即使没移动,超过该时间间隔也保留一个点(保住 dwell 的时间分辨率)。 */
+  trailMaxTimeGap?: number;
 }
 
 export interface ExtractSemanticSummary {
@@ -95,12 +107,48 @@ export interface ExtractSemanticScriptResult {
   recording: DemoRecording;
   script: SemanticScript;
   summary: ExtractSemanticSummary;
+  /** Non-fatal problems that make the script weak or worthless. Empty = clean. */
+  warnings: string[];
+}
+
+/**
+ * Why a script may be unusable for certification.
+ *
+ * `milestones` come from `recording.stateSamples` and `waypoints` from `recording.trail`.
+ * A tape that carries neither (e.g. one assembled without them) still extracts *something* —
+ * input segments — and would otherwise sail through `semanticReplay` asserting nothing.
+ * That silent pass is worse than a failure, so name the gaps explicitly.
+ */
+export function describeSemanticScriptGaps(
+  recording: DemoRecording,
+  script: SemanticScript,
+): string[] {
+  const warnings: string[] = [];
+  const sampleCount = recording.stateSamples?.length ?? 0;
+  const trailCount = recording.trail?.length ?? 0;
+  if (sampleCount === 0) {
+    warnings.push('recording.stateSamples is empty — no observations, so no milestones can be extracted.');
+  }
+  if (trailCount === 0) {
+    warnings.push('recording.trail is empty — waypoints fall back to sparse state samples, and Mode B loses trail following.');
+  }
+  if (script.milestones.length === 0 && script.waypoints.length === 0) {
+    warnings.push('semantic script asserts nothing (0 milestones, 0 waypoints); it cannot certify a replay.');
+  }
+  return warnings;
+}
+
+/** A script with neither milestones nor waypoints can only ever produce a vacuous pass. */
+export function isSemanticScriptCertifiable(script: SemanticScript): boolean {
+  return script.milestones.length > 0 || script.waypoints.length > 0;
 }
 
 const DEFAULT_INPUT_RDP_TOLERANCE = 0.02;
 const DEFAULT_WAYPOINT_RDP_TOLERANCE = 0.5;
 const DEFAULT_DWELL_DISTANCE_EPSILON = 0.5;
 const DEFAULT_DWELL_MIN_SEC = 1.5;
+const DEFAULT_TRAIL_SPACING = 0.08;
+const DEFAULT_TRAIL_MAX_TIME_GAP = 0.2;
 const MAX_LEADING_IDLE_SEC = 2;
 const ACTIVE_INPUT_EPSILON = 0.0001;
 
@@ -153,6 +201,11 @@ export function extractSemanticScript(
     ),
     waypointTolerance,
   );
+  const trail = decimateSemanticTrail(
+    trailPoints,
+    options.trailSpacing ?? DEFAULT_TRAIL_SPACING,
+    options.trailMaxTimeGap ?? DEFAULT_TRAIL_MAX_TIME_GAP,
+  );
   const durationSec = roundTime(
     observations[observations.length - 1]?.t
       ?? Math.max(0, (frameTimes[frameTimes.length - 1] ?? 0) - trimOffset),
@@ -176,10 +229,44 @@ export function extractSemanticScript(
     inputSegments,
     milestones,
     waypoints,
+    ...(trail.length > 1 ? { trail } : {}),
     economyFinal,
   };
   const summary = summarizeSemanticScript(recording, script, null);
-  return { recording, script, summary };
+  const warnings = describeSemanticScriptGaps(recording, script);
+  if (warnings.length > 0) {
+    console.warn('[record-replay] semantic script has gaps:', warnings);
+  }
+  return { recording, script, summary, warnings };
+}
+
+/**
+ * trail 抽稀:保留形状(空间间距)与节奏(时间间隔)。
+ * 时间间隔那一条很关键 —— 人类站着不动的 dwell 在空间上是同一个点,
+ * 只有靠时间间隔才能把「站了多久」保留下来。
+ */
+export function decimateSemanticTrail(
+  points: readonly SemanticWaypoint[],
+  minSpacing: number,
+  maxTimeGap: number,
+): SemanticTrailPoint[] {
+  if (points.length <= 2) return points.map((point) => ({ t: point.t, x: point.x, z: point.z }));
+  const spacing = Math.max(0.001, minSpacing);
+  const timeGap = Math.max(0.001, maxTimeGap);
+  const first = points[0]!;
+  const kept: SemanticTrailPoint[] = [{ t: first.t, x: first.x, z: first.z }];
+  for (let index = 1; index < points.length - 1; index += 1) {
+    const point = points[index]!;
+    const last = kept[kept.length - 1]!;
+    const moved = Math.hypot(point.x - last.x, point.z - last.z);
+    if (moved >= spacing || point.t - last.t >= timeGap) {
+      kept.push({ t: point.t, x: point.x, z: point.z });
+    }
+  }
+  const final = points[points.length - 1]!;
+  const last = kept[kept.length - 1]!;
+  if (final.t > last.t) kept.push({ t: final.t, x: final.x, z: final.z });
+  return kept;
 }
 
 export function summarizeSemanticScript(

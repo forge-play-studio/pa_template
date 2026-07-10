@@ -43,3 +43,6 @@ export { analyticsPlugin } from './analytics';
 export type { AdNetwork, AnalyticsPluginOptions } from './analytics';
 
 export { molocoCtaPlugin } from './molocoCta';
+
+export { tapeServerPlugin } from './tapeServer';
+export type { TapeServerPluginOptions } from './tapeServer';

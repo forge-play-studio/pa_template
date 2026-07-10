@@ -84,11 +84,22 @@ export class RecorderSource implements MovementInputSource {
   }
 
   getFrames(): DemoRecordingFrame[] {
-    return this.frames.map((frame) => ({
-      frame: frame.frame,
-      dt: frame.dt,
-      input: { ...frame.input },
-    }));
+    return this.getFrameSlice(0);
+  }
+
+  /**
+   * Incremental read for checkpointing: copies only `[fromIndex, end)` instead of the whole tape.
+   * A 55-minute session is ~200k frames; copying all of them every checkpoint would be quadratic.
+   */
+  getFrameSlice(fromIndex: number): DemoRecordingFrame[] {
+    const start = Math.max(0, Math.min(Math.floor(fromIndex), this.frames.length));
+    const slice: DemoRecordingFrame[] = [];
+    for (let index = start; index < this.frames.length; index += 1) {
+      const frame = this.frames[index];
+      if (!frame) continue;
+      slice.push({ frame: frame.frame, dt: frame.dt, input: { ...frame.input } });
+    }
+    return slice;
   }
 
   getRecordedFrameCount(): number {

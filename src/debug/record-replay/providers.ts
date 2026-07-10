@@ -40,12 +40,47 @@ export interface MilestoneDetector {
   detect(previous: RecordReplayObservation, next: RecordReplayObservation): RecordReplayMilestoneEvent[];
   isSatisfied?(milestone: RecordReplayMilestoneEvent, observation: RecordReplayObservation): boolean;
   getIdentity?(milestone: Pick<RecordReplayMilestoneEvent, 'kind' | 'detail'>): string | null;
+  /**
+   * 这个里程碑在不在**主线因果链**上?
+   *
+   * `true`(critical)—— 缺一个就判 failed:通关 / 死亡等终局态,以及推进阶段的关键节点。
+   * `false`(optional)—— 路过型:交付档位、装备拾取。缺失只按比例扣分(见 semantic/grade.ts)。
+   *
+   * 不声明 = 按 kind 走默认表(`RECORD_REPLAY_DEFAULT_CRITICAL_KINDS`)。
+   * 契约:`fps-3d-harness/docs/06-record-replay-dual-mode.md` §6.2。
+   */
+  critical?: boolean;
 }
+
+/**
+ * 默认 critical 的 kind。游戏可用 `MilestoneDetector.critical` 逐个覆盖。
+ *
+ * 导出是为了让 harness 侧的 runner 在**没有游戏运行时**也能从 `kind` 复算分层
+ * (verdict / 剧本里只留 kind,不落 critical 标记)。
+ */
+export const RECORD_REPLAY_DEFAULT_CRITICAL_KINDS: readonly string[] = ['outcome', 'stage'];
+
+/** 没有注册检测器时的兜底:只认默认表。 */
+export function getDefaultRecordReplayMilestoneCriticality(kind: string): boolean {
+  return RECORD_REPLAY_DEFAULT_CRITICAL_KINDS.includes(String(kind ?? '').trim());
+}
+
+/**
+ * 「此刻玩家输入说了算吗?」
+ *
+ * 返回 `false` 表示**游戏正在自己驱动角色** —— 过场动画、剧情自动移动、输入被锁死等等。
+ * 这段时间里回放注入的输入根本不起作用,于是「角色跟不跟得上目标」不再能反映回放的进度,
+ * 语义回放的轨迹跟踪必须知道这一点,否则会把「跟不上」误判成「跑偏了」而把示教时钟按死。
+ *
+ * 不注册 = 一直授权 = 与注册前行为完全一致。
+ */
+export type RecordReplayInputAuthorityProvider = () => boolean;
 
 export interface RegisterRecordReplayProvidersOptions {
   snapshotProviders?: readonly RecordReplaySnapshotProvider[];
   milestoneDetectors?: readonly MilestoneDetector[];
   playerPosition?: (() => RecordReplayPlayerPosition | null | undefined) | null;
+  inputAuthority?: RecordReplayInputAuthorityProvider | null;
 }
 
 export interface RecordReplaySnapshotEntry {
@@ -62,6 +97,7 @@ let nextRegistrationId = 1;
 const snapshotProviders: Array<Registered<RecordReplaySnapshotProvider>> = [];
 const milestoneDetectors: Array<Registered<MilestoneDetector>> = [];
 const playerPositionProviders: Array<Registered<() => RecordReplayPlayerPosition | null | undefined>> = [];
+const inputAuthorityProviders: Array<Registered<RecordReplayInputAuthorityProvider>> = [];
 
 export function registerRecordReplayProviders(options: RegisterRecordReplayProvidersOptions): () => void {
   const id = nextRegistrationId++;
@@ -74,11 +110,15 @@ export function registerRecordReplayProviders(options: RegisterRecordReplayProvi
   if (options.playerPosition) {
     playerPositionProviders.push({ id, value: options.playerPosition });
   }
+  if (options.inputAuthority) {
+    inputAuthorityProviders.push({ id, value: options.inputAuthority });
+  }
 
   return () => {
     removeRegistered(snapshotProviders, id);
     removeRegistered(milestoneDetectors, id);
     removeRegistered(playerPositionProviders, id);
+    removeRegistered(inputAuthorityProviders, id);
   };
 }
 
@@ -86,6 +126,22 @@ export function clearRecordReplayProviders(): void {
   snapshotProviders.length = 0;
   milestoneDetectors.length = 0;
   playerPositionProviders.length = 0;
+  inputAuthorityProviders.length = 0;
+}
+
+/**
+ * 只要有**任何一个**注册方说「现在输入不算数」,就当作不算数 —— 锁是合取的。
+ * 没有注册方时恒为 true(默认行为不变)。
+ */
+export function readRecordReplayInputAuthority(): boolean {
+  for (const registered of inputAuthorityProviders) {
+    try {
+      if (registered.value() === false) return false;
+    } catch (error) {
+      console.warn('[record-replay] input authority provider failed:', error);
+    }
+  }
+  return true;
 }
 
 export function collectRecordReplaySnapshotEntries(): RecordReplaySnapshotEntry[] {
@@ -168,6 +224,24 @@ export function isRecordReplayMilestoneSatisfied(
     }
   }
   return false;
+}
+
+/**
+ * 该里程碑是不是主线因果链上的?注册的检测器声明优先,其次落到 kind 默认表。
+ *
+ * 同一 kind 注册了多个检测器时,**只要有一个说 critical 就是 critical** —— 分层宁严勿松,
+ * 与 `readRecordReplayInputAuthority` 的「有一个说不算数就不算数」是同一种保守取向。
+ */
+export function isRecordReplayMilestoneCritical(milestone: Pick<RecordReplayMilestoneEvent, 'kind'>): boolean {
+  const kind = String(milestone.kind ?? '').trim();
+  let declared: boolean | null = null;
+  for (const registered of milestoneDetectors) {
+    if (registered.value.kind !== kind || typeof registered.value.critical !== 'boolean') continue;
+    if (registered.value.critical) return true;
+    declared = false;
+  }
+  if (declared !== null) return declared;
+  return getDefaultRecordReplayMilestoneCriticality(kind);
 }
 
 export function getRecordReplayMilestoneIdentity(
