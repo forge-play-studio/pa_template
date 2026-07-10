@@ -20,6 +20,9 @@ let loadingScreen: LoadingScreen | null = null;
 /** DEV-only runtime debug bootstrap */
 let runtimeDebug: { dispose(): void; detachForEditor?: () => void } | null = null;
 
+/** Explicit test-build-only WASD scene walkthrough. */
+let sceneWalkthrough: { dispose(): void } | null = null;
+
 /** 确保沙盒/动态注入场景下入口只启动一次 */
 let initStarted = false;
 
@@ -38,6 +41,18 @@ async function registerRuntimeEditorBridge(): Promise<void> {
 function disposeRuntimeDebug(): void {
   runtimeDebug?.dispose();
   runtimeDebug = null;
+}
+
+function disposeSceneWalkthrough(): void {
+  sceneWalkthrough?.dispose();
+  sceneWalkthrough = null;
+}
+
+async function mountSceneWalkthroughForTestBuild(): Promise<void> {
+  if (!__SCENE_WALKTHROUGH_BUILD__ || !game) return;
+  const { mountSceneWalkthrough } = await import('./test-build/scene-walkthrough');
+  disposeSceneWalkthrough();
+  sceneWalkthrough = mountSceneWalkthrough(game);
 }
 
 function detachRuntimeDebugForEditor(): void {
@@ -109,6 +124,7 @@ function restoreRenderCanvasPlacement(placement: RenderCanvasPlacement | null): 
 }
 
 async function disposeProjectGameWorldCore(): Promise<void> {
+  disposeSceneWalkthrough();
   const gameToDispose = game;
   const renderCanvasPlacement = captureRenderCanvasPlacement();
   game = null;
@@ -184,6 +200,10 @@ async function init(): Promise<void> {
 
     if (import.meta.env.DEV) {
       await mountRuntimeDebugForDev();
+    }
+
+    if (__SCENE_WALKTHROUGH_BUILD__) {
+      await mountSceneWalkthroughForTestBuild();
     }
 
   } catch (error) {

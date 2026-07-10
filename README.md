@@ -160,6 +160,7 @@ CTA 链接默认读取 `scene.json.meta.playableAdInfo.ctaUrl`。打开顺序统
 1. `npm run build`：构建 `EN + applovin` 的有埋点和无埋点版本。
 2. `npm run build:all`：按 `appConfig.i18n.buildVersions` 构建全部语言和全部渠道矩阵。
 3. `npm run build:single`：只做普通单产物构建，输出到 `dist/index.html`。
+4. `npm run build:scene-walkthrough`：只用于场景地编巡查，输出到 `dist/scene-walkthrough/index.html`。该包启用 WASD 驱动模板 `SimplePlayer`，由相机跟随观察场景；常规 `dev`、`build` 和 `build:single` 都不会挂载或打入该控制路径。
 
 矩阵构建输出到 `dist/<LOCALE>/tracked` 和 `dist/<LOCALE>/untracked`。`TRACKING=false` 时不会注入 analytics SDK；Moloco 渠道会额外注入与落地项目一致的 CTA shim。
 

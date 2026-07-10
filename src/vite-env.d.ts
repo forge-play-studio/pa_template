@@ -64,6 +64,7 @@ declare module '*.ktx2?url' {
 
 declare const __LITE_BUILD__: boolean;
 declare const __PROD_BUILD__: boolean;
+declare const __SCENE_WALKTHROUGH_BUILD__: boolean;
 declare const __LOCALE__: string;
 declare const __CHANNEL__: string;
 declare const __RTL__: boolean;

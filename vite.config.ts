@@ -81,6 +81,8 @@ const analyticsConfig = appConfig.analytics;
 const i18nConfig = appConfig.i18n;
 const liteBuild = process.env.LITE_BUILD === 'true';
 const isProduction = process.env.NODE_ENV === 'production';
+// This is deliberately production-only: normal dev and release builds must not mount the test controls.
+const sceneWalkthroughBuild = isProduction && process.env.SCENE_WALKTHROUGH_BUILD === 'true';
 const enableDevDebugTooling = !isProduction;
 const VFX_USAGES_SCHEMA_REF = './usages.schema.json';
 const VFX_USAGES_SCHEMA_VERSION = 'project-vfx-usages/1.0';
@@ -1173,6 +1175,7 @@ export default defineConfig({
     __LITE_BUILD__: JSON.stringify(liteBuild),
     // 在生产构建时完全移除开发功能
     __PROD_BUILD__: JSON.stringify(isProduction),
+    __SCENE_WALKTHROUGH_BUILD__: JSON.stringify(sceneWalkthroughBuild),
     __LOCALE__: JSON.stringify(locale),
     __CHANNEL__: JSON.stringify(channel),
     __RTL__: JSON.stringify(localeMeta.isRTL),
@@ -1281,7 +1284,7 @@ export default defineConfig({
   assetsInclude: ['**/*.env'],
   build: {
     target: 'esnext',
-    outDir: buildMatrix ? 'dist/_build' : 'dist',
+    outDir: buildMatrix ? 'dist/_build' : sceneWalkthroughBuild ? 'dist/scene-walkthrough' : 'dist',
     // 临时降低内联阈值：查看文件大小分布
     assetsInlineLimit: 100000000, // 内联所有资源
     chunkSizeWarningLimit: 1000000,
