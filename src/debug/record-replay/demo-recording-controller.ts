@@ -52,6 +52,7 @@ export interface DemoRecordingApiLike {
     stateHashes: string[];
     trail?: Array<[number, number]> | null;
     stateSamples?: Array<{ frame: number }>;
+    events?: Array<{ frame: number }>;
   };
   peekRec(fromIndex?: number): {
     envelope: unknown;
@@ -61,6 +62,7 @@ export interface DemoRecordingApiLike {
     stateHashes: string[];
     trail: Array<[number, number]> | null;
     stateSamples: Array<{ frame: number }>;
+    events: Array<{ frame: number }>;
     droppedFrames: number;
   } | null;
 }
@@ -251,6 +253,8 @@ export function createDemoRecordingController(
           stateHashes: recording.stateHashes.slice(from),
           trail: recording.trail ? recording.trail.slice(from) : null,
           stateSamples: (recording.stateSamples ?? []).filter((sample) => sample.frame >= from),
+          // 短命事件只活在 events 里,不随 stateSamples 走 —— 不带上就等于没录。
+          events: (recording.events ?? []).filter((event) => event.frame >= from),
         }, { beacon: true });
         phase = 'stopped';
         frames = recording.frames.length;
@@ -366,6 +370,7 @@ function peekToChunk(peek: NonNullable<ReturnType<DemoRecordingApiLike['peekRec'
     stateHashes: peek.stateHashes,
     trail: peek.trail,
     stateSamples: peek.stateSamples,
+    events: peek.events,
   };
 }
 

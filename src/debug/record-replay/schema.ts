@@ -29,6 +29,18 @@ export interface DemoRecordingEnvelope {
   startStateHash: string;
   frames: number;
   label: string;
+  /**
+   * 录制超过 `maxFrames`,RecorderSource 环形缓冲丢掉了最早的若干帧。
+   *
+   * 此时 `anchorFrame` / `startFrame` / `startStateHash` 描述的仍是**被丢掉的那个起点**,
+   * 而 `frames[0]` 已经是后来的某一帧 —— tape 谎报了自己的起点。Mode A 必然从第 0 帧就发散,
+   * 而且发散原因看起来像"世界不确定",极具误导性。所以 Mode A 直接拒绝这类 tape。
+   *
+   * 语义提取仍可继续(航迹与里程碑不依赖绝对起点),但会带一条 warning。
+   */
+  truncated?: boolean;
+  /** 被环形缓冲丢弃的帧数(`truncated` 为真时 > 0)。 */
+  droppedFrames?: number;
 }
 
 export interface DemoRecordingFrame {

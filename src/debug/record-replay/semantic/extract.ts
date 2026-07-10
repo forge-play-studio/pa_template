@@ -135,6 +135,13 @@ export function describeSemanticScriptGaps(
   if (script.milestones.length === 0 && script.waypoints.length === 0) {
     warnings.push('semantic script asserts nothing (0 milestones, 0 waypoints); it cannot certify a replay.');
   }
+  if (recording.envelope?.truncated) {
+    warnings.push(
+      `recording was truncated: RecorderSource dropped ${recording.envelope?.droppedFrames ?? 'some'} leading frames `
+      + '(maxFrames overflow). The envelope\'s anchorFrame/startStateHash describe a start that is no longer in the tape, '
+      + 'so Mode A refuses it. Waypoints and milestones remain usable, but the script no longer covers the demo\'s opening.',
+    );
+  }
   return warnings;
 }
 
@@ -179,7 +186,10 @@ export function extractSemanticScript(
     trimOffset,
   );
   const inputSegments = trimInputSegments(rawInputSegments, trimOffset);
-  const milestones = extractMilestones(observations);
+  // 逐帧事件优先:稀疏 stateSample 之间的短命事件(false→true→false)只有它有。
+  // 老 tape 没有 events,退回基于采样的提取(会漏短命事件,但不改变既有行为)。
+  const milestones = extractMilestonesFromEvents(recording, frameTimes, trimOffset)
+    ?? extractMilestones(observations);
   const rawTrailPoints: SemanticWaypoint[] = (recording.trail ?? [])
     .slice(0, frameTimes.length)
     .map((pair, index) => ({ t: roundTime(frameTimes[index] ?? 0), x: pair[0], z: pair[1] }));
@@ -674,6 +684,51 @@ function readObservationFromSample(
     sample.snapshot,
     frameTimes[sample.frame] ?? sample.frame / 60,
   );
+}
+
+/** `warning:*` 是录制器自己塞进 events 的诊断条目,不是玩法事件。 */
+function isDetectorEvent(event: { kind?: unknown }): boolean {
+  return typeof event.kind === 'string' && event.kind.length > 0 && !event.kind.startsWith('warning:');
+}
+
+/**
+ * 从 tape 里逐帧持久化的 detector 事件重建里程碑。
+ *
+ * 返回 `null` 表示这条 tape 没有可用的逐帧事件(老 tape),调用方退回基于 stateSample 的提取。
+ * 事件的 `frame` 是**帧索引**(与 stateSample 同一坐标系),`payload.economy` 是该帧的经济读数。
+ */
+function extractMilestonesFromEvents(
+  recording: DemoRecording,
+  frameTimes: readonly number[],
+  trimOffset: number,
+): SemanticMilestone[] | null {
+  const events = (recording.events ?? []).filter(isDetectorEvent);
+  if (events.length === 0) return null;
+
+  const milestones: SemanticMilestone[] = [];
+  for (const event of [...events].sort((a, b) => a.frame - b.frame)) {
+    const payload = event.payload as { detail?: Record<string, number | string>; economy?: unknown } | undefined;
+    const t = frameTimes[event.frame];
+    if (typeof t !== 'number') continue;
+    if (t <= trimOffset) continue;
+    const milestone: SemanticMilestone = {
+      t: roundTime(t - trimOffset),
+      kind: event.kind,
+      detail: { ...(payload?.detail ?? {}) },
+      economyAtGate: readEconomyGateExpectation(readEconomyFromUnknown(payload?.economy)),
+    };
+    if (!isDiscreteSemanticMilestone(milestone)) continue;
+    milestones.push(milestone);
+  }
+  return milestones;
+}
+
+function readEconomyFromUnknown(value: unknown): { cash: number; totalEarned: number; totalSpent: number } {
+  const record = (value && typeof value === 'object' ? value : {}) as Record<string, unknown>;
+  const read = (key: string): number => (typeof record[key] === 'number' && Number.isFinite(record[key] as number)
+    ? record[key] as number
+    : 0);
+  return { cash: read('cash'), totalEarned: read('totalEarned'), totalSpent: read('totalSpent') };
 }
 
 function extractMilestones(observations: readonly SemanticObservation[]): SemanticMilestone[] {

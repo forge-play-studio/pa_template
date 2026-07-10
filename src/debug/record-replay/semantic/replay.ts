@@ -30,7 +30,6 @@ import {
 
 export interface SemanticReplayOptions {
   waypointToleranceBand?: number;
-  milestoneSlackSec?: number;
   stageTimeoutSlackSec?: number;
   stuckWindowSec?: number;
   stuckDistanceEpsilon?: number;
@@ -108,7 +107,13 @@ export interface SemanticVerdict {
   };
   economyFinal: {
     pass: boolean;
-    diffs: Record<string, { expected: number; actual: number }>;
+    /** 生效的容差(与经济闸门同一口径)。 */
+    tolerance: number;
+    /**
+     * 三个键的实际 vs 期望。**`pass` ⟺ 每一项 `withinTolerance`** —— 以前 diffs 用精确相等,
+     * 于是「pass:true 却有 diffs」,读的人不知道该信哪个。
+     */
+    diffs: Record<string, { expected: number; actual: number; withinTolerance: boolean }>;
   };
   economyGates: SemanticEconomyGateVerdict[];
   waypoints: {
@@ -144,6 +149,8 @@ export interface SemanticTrailTrackingVerdict {
    * 这段时间的 crossError 无意义,已从上面的统计里排除。
    */
   scriptedSec: number;
+  /** 剧情段里被立即放行的闸门数(>0 说明示教剧本的里程碑落在了过场窗口内)。 */
+  scriptedGateReleases: number;
 }
 
 export interface SemanticEconomyGateVerdict {
@@ -346,6 +353,8 @@ export class SemanticReplayController implements MovementInputSource {
   private readonly gateStallTimeoutSec: number;
   /** 已经放行了几个闸门(闸门处久等无进展时逐个前移 cap)。命中里程碑后清零。 */
   private releasedGates = 0;
+  /** 其中有多少个是在「输入不算数」的剧情段里立即放行的(诊断用)。 */
+  private scriptedGateReleases = 0;
   private gateHoldStalledSec = 0;
   private stageNoProgressSec = 0;
   private progressSignature = '';
@@ -515,9 +524,27 @@ export class SemanticReplayController implements MovementInputSource {
     const madeProgress = signature !== this.progressSignature;
     this.progressSignature = signature;
 
-    // 游戏在自己驱动角色:既不该因为"没进展"放行闸门(过场正在把进展做出来),
-    // 也不该把这段时间算进停滞判负。活性仍由全局 maxDurationSec 兜底。
-    if (!this.inputAuthoritative) return;
+    if (!this.inputAuthoritative) {
+      // 游戏在自己驱动角色。这段时间不算停滞(活性由全局 maxDurationSec 兜底),
+      // 但**闸门必须立刻放行** —— 回放注入的输入此刻根本不起作用,「停在闸门等进展」
+      // 是死等:能不能满足这个里程碑完全由游戏自己决定,回放做什么都改变不了。
+      //
+      // 不放行的后果(last-stand 实测,2 tape × 2 次完全一致):示教时钟被钉死在剧情开始
+      // 那一刻的闸门时刻(swordPicked t=0.058),而剧情把角色带走 28 个单位;解禁后
+      // 投影窗口跨不过这个缺口 ⇒ 永久 stall,scheduleSec 恒 0.7294,里程碑停在 1/59。
+      //
+      // 放行只前移 schedule cap,**不跳过里程碑**(matchedMilestones 不变),
+      // 该里程碑之后照样要被 detector 命中,漏了仍会判 missing。
+      if (
+        this.tracker.isHoldingAt(capSec)
+        && this.matchedMilestones + this.releasedGates < this.script.milestones.length
+      ) {
+        this.releasedGates += 1;
+        this.scriptedGateReleases += 1;
+        this.gateHoldStalledSec = 0;
+      }
+      return;
+    }
 
     if (madeProgress) {
       this.gateHoldStalledSec = 0;
@@ -1326,10 +1353,19 @@ export class SemanticReplayController implements MovementInputSource {
   }
 
 
+  /**
+   * 经济终值是一条**下界**:回放可以比示教更富(多挖了几趟),不能更穷。
+   *
+   * `cash` 原先根本不参与判定 —— 一条「示教结束时背着 100 块石头」的 tape,
+   * 回放空手走到终点也算过。三个键现在统一走同一条容差下界(与经济闸门同口径)。
+   */
+  private isEconomyValueSatisfied(expected: number, actual: number): boolean {
+    return actual >= expected * (1 - this.economyGateTolerance);
+  }
+
   private isEconomyFinalSatisfied(economy: { cash: number; totalEarned: number; totalSpent: number }): boolean {
-    for (const key of ['totalEarned', 'totalSpent'] as const) {
-      const expected = this.script.economyFinal[key];
-      if (economy[key] < expected * (1 - this.economyGateTolerance)) return false;
+    for (const key of ['cash', 'totalEarned', 'totalSpent'] as const) {
+      if (!this.isEconomyValueSatisfied(this.script.economyFinal[key], economy[key])) return false;
     }
     return true;
   }
@@ -1352,11 +1388,12 @@ export class SemanticReplayController implements MovementInputSource {
 
   private buildVerdict(): SemanticVerdict {
     const current = this.readObservation();
-    const economyDiffs: Record<string, { expected: number; actual: number }> = {};
+    const economyDiffs: Record<string, { expected: number; actual: number; withinTolerance: boolean }> = {};
     for (const key of ['cash', 'totalEarned', 'totalSpent'] as const) {
       const expected = this.script.economyFinal[key];
       const actual = current.economy[key];
-      if (expected !== actual) economyDiffs[key] = { expected, actual };
+      if (expected === actual) continue;
+      economyDiffs[key] = { expected, actual, withinTolerance: this.isEconomyValueSatisfied(expected, actual) };
     }
     const failedStage = this.stageVerdicts.some((stage) => stage.status === 'failed' || stage.status === 'active');
     const economyGateFailed = this.economyGates.some((gate) => !gate.pass);
@@ -1417,6 +1454,7 @@ export class SemanticReplayController implements MovementInputSource {
       },
       economyFinal: {
         pass: economyFinalPass,
+        tolerance: this.economyGateTolerance,
         diffs: economyDiffs,
       },
       economyGates: this.economyGates.map((gate) => ({
@@ -1448,6 +1486,7 @@ export class SemanticReplayController implements MovementInputSource {
             maxBehindSec: roundTo(this.trackBehindMax, 4),
             stalledSec: roundTo(this.trackStalledSec, 4),
             scriptedSec: roundTo(this.trackScriptedSec, 4),
+            scriptedGateReleases: this.scriptedGateReleases,
           }
         : null,
       calibration: cloneCalibrationVerdict(this.calibrationVerdict),
@@ -1546,7 +1585,7 @@ export function createRefusedSemanticVerdict(script: SemanticScript): SemanticVe
       criticalTotal: 0,
       optionalTotal: 0,
     },
-    economyFinal: { pass: false, diffs: {} },
+    economyFinal: { pass: false, tolerance: 0, diffs: {} },
     economyGates: [],
     waypoints: { reached: 0, skipped: 0, maxDeviation: 0, toleranceBand: 0 },
     trailTracking: null,

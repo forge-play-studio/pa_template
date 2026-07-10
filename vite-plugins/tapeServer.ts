@@ -76,6 +76,7 @@ export function tapeServerPlugin(options: TapeServerPluginOptions = {}): Plugin 
   const sessionDir = (id: string): string => join(sessionsRoot, id);
   const framesPath = (id: string): string => join(sessionDir(id), 'frames.jsonl');
   const samplesPath = (id: string): string => join(sessionDir(id), 'samples.jsonl');
+  const eventsPath = (id: string): string => join(sessionDir(id), 'events.jsonl');
   const metaPath = (id: string): string => join(sessionDir(id), 'meta.json');
   const finalizedPath = (id: string): string => join(sessionDir(id), 'finalized.json');
   const tapePath = (id: string): string => join(outRoot, `${id}.tape.json`);
@@ -115,6 +116,21 @@ export function tapeServerPlugin(options: TapeServerPluginOptions = {}): Plugin 
       byFrame.set(Number(sample.frame), sample);
     }
     return [...byFrame.values()].sort((left, right) => left.frame - right.frame);
+  };
+
+  /** Detector events are append-only and frame-indexed, exactly like samples. */
+  const readEventLines = (id: string): unknown[] => {
+    const path = eventsPath(id);
+    if (!existsSync(path)) return [];
+    return readFileSync(path, 'utf8')
+      .split('\n')
+      .filter((line) => line.trim().length > 0)
+      .map((line) => JSON.parse(line) as unknown);
+  };
+
+  const appendEventLines = (id: string, events: unknown[]): void => {
+    if (events.length === 0) return;
+    appendFileSync(eventsPath(id), `${events.map((e) => JSON.stringify(e)).join('\n')}\n`);
   };
 
   const appendSampleLines = (id: string, samples: unknown[]): void => {
@@ -174,6 +190,7 @@ export function tapeServerPlugin(options: TapeServerPluginOptions = {}): Plugin 
         writeFileSync(metaPath(sessionId), JSON.stringify(meta, null, 2));
         writeFileSync(framesPath(sessionId), '');
         writeFileSync(samplesPath(sessionId), '');
+        writeFileSync(eventsPath(sessionId), '');
         writtenFrames.set(sessionId, 0);
         sendJson(res, 200, { ok: true, sessionId, dir, written: 0 });
       }
@@ -207,6 +224,9 @@ export function tapeServerPlugin(options: TapeServerPluginOptions = {}): Plugin 
         );
         appendSampleLines(sessionId, (body.stateSamples as unknown[] ?? []).filter(
           (sample) => Number((sample as SampleLine)?.frame) >= written,
+        ));
+        appendEventLines(sessionId, (body.events as unknown[] ?? []).filter(
+          (event) => Number((event as { frame?: number })?.frame) >= written,
         ));
         sendJson(res, 200, { ok: true, sessionId, written: written + appended, appended });
       }
@@ -267,6 +287,9 @@ export function tapeServerPlugin(options: TapeServerPluginOptions = {}): Plugin 
           appendSampleLines(sessionId, (body.stateSamples as unknown[] ?? []).filter(
             (sample) => Number((sample as SampleLine)?.frame) >= written,
           ));
+          appendEventLines(sessionId, (body.events as unknown[] ?? []).filter(
+            (event) => Number((event as { frame?: number })?.frame) >= written,
+          ));
 
           // Unload beacons are fired in order but served concurrently; wait for any still-in-flight
           // append so the composed tape is not silently truncated.
@@ -275,6 +298,7 @@ export function tapeServerPlugin(options: TapeServerPluginOptions = {}): Plugin 
 
           const lines = readFrameLines(sessionId);
           const samples = readSampleLines(sessionId);
+          const events = readEventLines(sessionId);
           const meta = JSON.parse(readFileSync(metaPath(sessionId), 'utf8')) as SessionMeta;
           const envelope = {
             ...meta.envelope,
@@ -290,7 +314,7 @@ export function tapeServerPlugin(options: TapeServerPluginOptions = {}): Plugin 
             envelope,
             frames: lines.map((line) => ({ frame: line.frame, dt: line.dt, input: line.input })),
             stateHashes: lines.map((line) => line.hash ?? ''),
-            events: [],
+            events,
             ...(trail ? { trail } : {}),
             ...(samples.length > 0 ? { stateSamples: samples } : {}),
           };

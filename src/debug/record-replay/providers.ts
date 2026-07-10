@@ -7,6 +7,18 @@ export interface RecordReplayPlayerPosition {
 export interface RecordReplaySnapshotProvider {
   name: string;
   getSnapshot(): unknown;
+  /**
+   * 本 provider 里哪些 fact 是**状态观测**而不是进度(会来回翻转 / 会回落),
+   * 因而豁免「布尔必须 latch、数值必须单调」的契约校验。
+   *
+   * ⚠️ 这是**注册期的静态元数据**,故意不放进 `getSnapshot()` 的返回值:
+   * 快照会逐帧进 state hash,往里加任何字段都会改变 `startStateHash`,
+   * 让所有已录 tape 的 Mode A 立刻失配。(2026-07-10 实测踩到:加进快照后
+   * Page 的 5003 帧 tape 从 `fnv1a32:593582e0` 变成 `fnv1a32:f9c22e44`。)
+   *
+   * 豁免只让校验器闭嘴,**不会**替你把这些 fact 从 detector 里筛掉。
+   */
+  observationOnlyFacts?: readonly string[];
 }
 
 export interface RecordReplayEconomyState {
@@ -142,6 +154,23 @@ export function readRecordReplayInputAuthority(): boolean {
     }
   }
   return true;
+}
+
+/**
+ * 注册方声明的豁免 fact key,已带 provider 名前缀(与 `readRecordReplayFactsFromSnapshots` 同一坐标系)。
+ * 走注册表而不是快照 —— 快照进 hash,注册元数据不进。
+ */
+export function readRecordReplayObservationOnlyFactKeys(): string[] {
+  const keys: string[] = [];
+  for (const registered of snapshotProviders) {
+    const declared = registered.value.observationOnlyFacts;
+    if (!declared) continue;
+    const name = normalizeProviderName(registered.value.name);
+    for (const key of declared) {
+      if (typeof key === 'string' && key.trim()) keys.push(`${name}.${key.trim()}`);
+    }
+  }
+  return keys;
 }
 
 export function collectRecordReplaySnapshotEntries(): RecordReplaySnapshotEntry[] {

@@ -26,6 +26,7 @@ import {
   parseDemoRecordingJson,
   type DemoRecording,
   type DemoRecordingEnvelope,
+  type DemoRecordingEvent,
   type DemoRecordingFrame,
   type DemoRecordingStateSample,
   type RecordReplayHashVersion,
@@ -46,9 +47,14 @@ import {
   type SemanticMajorityOptions,
 } from './record-replay/semantic/grade';
 import {
+  diffSemanticObservations,
   extractSemanticScript,
+  isDiscreteSemanticMilestone,
+  readSemanticObservationFromSnapshot,
+  type SemanticObservation,
   type SemanticScript,
 } from './record-replay/semantic/extract';
+import { FactContractChecker, formatFactContractViolation } from './record-replay/fact-contract';
 import {
   runSemanticReplay,
   type SemanticReplayOptions,
@@ -63,7 +69,10 @@ import {
   type StateDiff,
   type StateHashResult,
 } from './record-replay/verify';
-import { readRecordReplayPlayerPosition } from './record-replay/providers';
+import {
+  readRecordReplayObservationOnlyFactKeys,
+  readRecordReplayPlayerPosition,
+} from './record-replay/providers';
 import { collapseDebugUiForRecording } from './record-replay/debug-ui-visibility';
 import { registerTemplateRecordReplayProviders } from './record-replay/template-providers';
 
@@ -198,6 +207,8 @@ export interface RecordReplayRecordingPeek {
   trail: Array<[number, number]> | null;
   /** State samples whose `frame` falls inside the returned slice. Feed the semantic extractor. */
   stateSamples: DemoRecordingStateSample[];
+  /** Per-frame detector events inside the returned slice. Short-lived events live only here. */
+  events: DemoRecordingEvent[];
   /** >0 means RecorderSource ring-buffered and absolute indices shifted — checkpointing must stop. */
   droppedFrames: number;
 }
@@ -247,6 +258,10 @@ interface RecordingSession {
   stateHashes: string[];
   snapshots: JsonSnapshot[];
   stateSamples: DemoRecordingStateSample[];
+  /** 逐帧跑 detector 抓到的离散事件。稀疏 stateSample 之间的短命事件只有这里有。 */
+  events: DemoRecordingEvent[];
+  previousObservation: SemanticObservation | null;
+  factContract: FactContractChecker;
   restoreUpdate: () => void;
   restoreDebugUi: () => void;
   droppedStateHashes: number;
@@ -337,6 +352,9 @@ function createRecordReplayApi(options: RuntimeRecordReplayPanelOptions, state: 
         stateHashes: [],
         snapshots: [],
         stateSamples: [],
+        events: [],
+        previousObservation: null,
+        factContract: createFactContractChecker(),
         restoreUpdate: () => undefined,
         restoreDebugUi: collapseDebugUiForRecording(document),
         droppedStateHashes: 0,
@@ -429,6 +447,7 @@ function createRecordReplayApi(options: RuntimeRecordReplayPanelOptions, state: 
         stateHashes: session.stateHashes.slice(start, end),
         trail: buildTrailFromSnapshots(session.snapshots.slice(start, end), usable),
         stateSamples: session.stateSamples.filter((sample) => sample.frame >= start && sample.frame < end),
+        events: session.events.filter((event) => event.frame >= start && event.frame < end),
         droppedFrames: session.recorder.getDroppedFrameCount(),
       };
     },
@@ -613,6 +632,13 @@ function createActionButton(doc: Document, label: string, onClick: () => void): 
 }
 
 
+/** 豁免来自 providers 注册表(静态元数据),不来自逐帧快照 —— 快照进 hash。 */
+function createFactContractChecker(): FactContractChecker {
+  const checker = new FactContractChecker();
+  checker.addExemptions(readRecordReplayObservationOnlyFactKeys());
+  return checker;
+}
+
 function installRecordingUpdateHook(session: RecordingSession): () => void {
   return installPostUpdateStateCapture(session.game, session.hashVersion, (result, update) => {
     captureRecordedFrameState(session, result, update);
@@ -632,16 +658,58 @@ function captureRecordedFrameState(
     session.snapshots.splice(0, droppedNow);
     for (const sample of session.stateSamples) sample.frame -= droppedNow;
     session.stateSamples = session.stateSamples.filter((sample) => sample.frame >= 0);
+    // 事件按**索引**存(与 stateSamples 同一坐标系),环形丢帧后一起左移并丢弃越界的。
+    for (const event of session.events) event.frame -= droppedNow;
+    session.events = session.events.filter((event) => event.frame >= 0);
     session.droppedStateHashes = dropped;
   }
 
   const index = recorded.index;
   session.stateHashes[index] = result.hash;
   session.snapshots[index] = result.snapshot;
+  captureRecordedFrameEvents(session, result.snapshot, index, update);
   if (index % STATE_SAMPLE_INTERVAL_FRAMES === 0) {
     upsertStateSample(session, index, recorded.frame.frame, result);
   }
   session.lastHashedFrame = recorded.frame.frame;
+}
+
+/**
+ * 逐帧跑 detector,把离散事件持久化进 tape。
+ *
+ * 为什么必须逐帧:`stateSamples` 每 60 帧才存一份,一个完整发生在两次采样之间的
+ * `false → true → false`(短命事件:一次性拾取、瞬时触发、一帧内开合的门)在基于采样的
+ * 提取里**完全消失** —— 示教剧本里没有它,Mode B 自然也不会去验它。
+ *
+ * 顺带在这里做 providers 契约校验(布尔要 latch / 数值要单调):违约的 provider 会让
+ * 逐帧检测产出一串伪里程碑,当场喊出来比几小时后在 verdict 里读到一堆 extra 便宜得多。
+ */
+function captureRecordedFrameEvents(
+  session: RecordingSession,
+  snapshot: JsonSnapshot,
+  index: number,
+  update: PostUpdateStateCapture,
+): void {
+  const observation = readSemanticObservationFromSnapshot(snapshot, update.frame);
+  for (const violation of session.factContract.observe(update.frame, observation.facts)) {
+    console.warn(formatFactContractViolation(violation));
+  }
+
+  const previous = session.previousObservation;
+  session.previousObservation = observation;
+  if (!previous) return;
+
+  for (const milestone of diffSemanticObservations(previous, observation)) {
+    if (!isDiscreteSemanticMilestone(milestone)) continue;
+    session.events.push({
+      frame: index,
+      kind: milestone.kind,
+      payload: {
+        detail: { ...milestone.detail },
+        economy: { ...observation.economy },
+      },
+    });
+  }
 }
 
 function readPlayerPositionFromSnapshot(snapshot: unknown): [number, number] | null {
@@ -701,7 +769,11 @@ function upsertStateSample(
 
 /** Envelope for a recording slice. Shared by `stopRec()` and the incremental `peekRec()`. */
 function createRecordingEnvelope(session: RecordingSession, frameCount: number, label: string): DemoRecordingEnvelope {
+  // maxFrames 溢出后 RecorderSource 环形丢掉了最早的帧,而下面这些字段描述的仍是**被丢掉的那个起点**。
+  // 不打标的话,tape 就在谎报自己从哪开始 —— Mode A 会从第 0 帧发散,且看起来像"世界不确定"。
+  const droppedFrames = session.recorder.getDroppedFrameCount();
   return {
+    ...(droppedFrames > 0 ? { truncated: true as const, droppedFrames } : {}),
     schemaVersion: RECORD_REPLAY_SCHEMA_VERSION,
     hashVersion: session.hashVersion,
     templateVersion: packageInfo.version ?? '0.0.0',
@@ -759,6 +831,8 @@ function finishRecordingSession(session: RecordingSession, label: string): DemoR
             payload: { anchorFrame: session.anchorFrame, message: NON_FRAME_ZERO_ANCHOR_WARNING },
           }]
         : []),
+      // 逐帧 detector 事件。稀疏 stateSample 之间的短命事件(false→true→false)只有这里有。
+      ...session.events.filter((event) => event.frame >= 0 && event.frame < frames.length),
     ],
     stateSamples: session.stateSamples
       .filter((sample) => sample.frame >= 0 && sample.frame < frames.length)
@@ -1350,6 +1424,17 @@ async function prepareReplayGame(
   return precheckReplayStart(game, recording);
 }
 
+/**
+ * 语义回放的起跑线,必须与 Mode A 完全一致:**pause → 等 settled → resume**。
+ *
+ * 曾经是 `resume() → 等 settled`(靠一个放弃了 frame-0 断言的 `waitForGameplaySettledLive`)。
+ * 如果某个游戏的 settled 栅栏要等墙钟计时器排空(qy-last-stand 就是),游戏会在**智能体接管之前**
+ * 实时空跑几百帧 —— 实测 748 帧,剧情自己播完了。settled 几乎立即为真的游戏(本仓 / 模板)只是
+ * 潜伏,不是没问题:起跑线取决于墙钟就已经不确定了。
+ *
+ * `waitForGameplaySettled()` 的 frame-0 断言(等待期间帧号不许前进)正是用来抓这件事的,
+ * 所以这里必须用它,不能用那个放宽版本。
+ */
 async function prepareSemanticReplayGame(
   options: RuntimeRecordReplayPanelOptions,
   restart: boolean,
@@ -1358,18 +1443,29 @@ async function prepareSemanticReplayGame(
     const previous = options.getGame();
     await options.restartGame({ reason: 'semantic-record-replay' });
     const restarted = await waitForReadyGame(options.getGame, previous);
+    restarted.pause();
+    await waitForGameplaySettled(restarted, 'semantic record-replay restart');
     restarted.resume();
-    await waitForGameplaySettledLive(restarted, 'semantic record-replay restart');
     return restarted;
   }
 
   const game = requireGame(options);
+  game.pause();
+  await waitForGameplaySettled(game, 'semantic record-replay');
   game.resume();
-  await waitForGameplaySettledLive(game, 'semantic record-replay');
   return game;
 }
 
 function precheckReplayStart(game: Game, recording: DemoRecording): Game {
+  if (recording.envelope.truncated) {
+    throw new Error(
+      `truncated record-replay tape: RecorderSource dropped ${recording.envelope.droppedFrames ?? 'some'} leading frames `
+      + '(maxFrames overflow), so envelope.anchorFrame/startStateHash describe a start that is no longer in frames[0]. '
+      + 'Mode A cannot replay it — every frame would be off by the dropped count and the divergence would look like '
+      + 'world non-determinism. Re-record with a larger maxFrames, or use Mode B (extractSemantic + semanticReplay), '
+      + 'which does not depend on the absolute start frame.',
+    );
+  }
   const nonDenseGap = findFirstNonDenseRecordingFrameGap(recording.frames);
   if (nonDenseGap) {
     throw new Error(
@@ -1619,24 +1715,6 @@ function waitForGameplaySettled(game: Game, label: string): Promise<Game> {
   });
 }
 
-function waitForGameplaySettledLive(game: Game, label: string): Promise<Game> {
-  if (game.isGameplaySettled()) return Promise.resolve(game);
-  const startedAt = performance.now();
-  return new Promise((resolve, reject) => {
-    const poll = () => {
-      if (game.isGameplaySettled()) {
-        resolve(game);
-        return;
-      }
-      if (performance.now() - startedAt > GAMEPLAY_SETTLED_TIMEOUT_MS) {
-        reject(new Error(`Timed out waiting for gameplay settled before ${label}.`));
-        return;
-      }
-      requestGameplaySettledPoll(poll);
-    };
-    poll();
-  });
-}
 
 function requestGameplaySettledPoll(callback: () => void): void {
   if (typeof requestAnimationFrame === 'function') {

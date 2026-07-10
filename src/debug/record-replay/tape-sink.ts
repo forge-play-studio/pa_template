@@ -60,6 +60,8 @@ export interface TapeChunk {
   trail: Array<[number, number]> | null;
   /** Sparse; each carries its own absolute `frame`. */
   stateSamples: Array<{ frame: number }>;
+  /** Per-frame detector events; each carries its own absolute `frame`. */
+  events?: Array<{ frame: number }>;
 }
 
 export interface TapeSink {

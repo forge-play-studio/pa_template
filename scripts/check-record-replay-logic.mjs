@@ -28,6 +28,7 @@ try {
     'src/debug/record-replay/semantic/extract.ts',
     'src/debug/record-replay/semantic/replay.ts',
     'src/debug/record-replay/semantic/grade.ts',
+    'src/debug/record-replay/fact-contract.ts',
     'src/debug/record-replay/benchmark.ts',
     'src/core/determinism.ts',
     'src/core/engine-clock.ts',
@@ -50,6 +51,7 @@ try {
   const semanticReplay = require(join(outDir, 'debug/record-replay/semantic/replay.js'));
   const pathTracker = require(join(outDir, 'debug/record-replay/semantic/path-tracker.js'));
   const semanticGrade = require(join(outDir, 'debug/record-replay/semantic/grade.js'));
+  const factContract = require(join(outDir, 'debug/record-replay/fact-contract.js'));
   const benchmark = require(join(outDir, 'debug/record-replay/benchmark.js'));
   const { createDeterminismContext } = require(join(outDir, 'core/determinism.js'));
   const { pinEngineDeltaTimeForFrame } = require(join(outDir, 'core/engine-clock.js'));
@@ -173,6 +175,12 @@ try {
   await assertSemanticGradeMajority(semanticGrade);
   assertMilestoneCriticality(providers);
   assertSemanticGradeFromController({ ...providers, ...semanticReplay });
+  assertFactContractChecker(factContract);
+  assertObservationOnlyFactRegistry(providers);
+  assertShortLivedEventExtraction({ ...semanticExtract, ...providers });
+  assertEconomyFinalCashTolerance({ clearRecordReplayProviders, registerRecordReplayProviders, SemanticReplayController });
+  assertTruncatedTapeRefusal(semanticExtract);
+  assertScriptedGateRelease({ ...providers, ...semanticReplay });
 
   console.log('[check-record-replay-logic] OK');
 } finally {
@@ -1305,6 +1313,249 @@ function stepSemanticController(controller, game, { steps, dt, speed }) {
     game.applyInput(input, dt, speed);
     controller.afterUpdate(dt);
   }
+}
+
+/** providers 契约:布尔必须 latch,数值必须单调。每个 key 只报一次。 */
+function assertFactContractChecker({ FactContractChecker, formatFactContractViolation }) {
+  const checker = new FactContractChecker();
+  assert.deepEqual(checker.observe(0, { 'a.flag': false, 'a.count': 1 }), [], 'first observation establishes a baseline');
+  assert.deepEqual(checker.observe(1, { 'a.flag': true, 'a.count': 2 }), [], 'latching true and increasing are fine');
+
+  const unlatched = checker.observe(2, { 'a.flag': false, 'a.count': 2 });
+  assert.equal(unlatched.length, 1, 'true → false is a violation');
+  assert.equal(unlatched[0].kind, 'boolean-unlatched');
+  assert.equal(unlatched[0].key, 'a.flag');
+  assert.equal(unlatched[0].frame, 2);
+  assert.match(formatFactContractViolation(unlatched[0]), /must latch/, 'message explains the rule');
+
+  // 同一个 key 不再重复报
+  assert.deepEqual(checker.observe(3, { 'a.flag': true }), [], 'a latched-again flip is not re-reported');
+  assert.deepEqual(checker.observe(4, { 'a.flag': false }), [], 'each key is reported at most once');
+
+  const decreased = checker.observe(5, { 'a.count': 1 });
+  assert.equal(decreased.length, 1, 'a decreasing number is a violation');
+  assert.equal(decreased[0].kind, 'number-decreased');
+  assert.match(formatFactContractViolation(decreased[0]), /monotonic/, 'message explains the rule');
+
+  // 字符串 fact 不受约束
+  const strings = new FactContractChecker();
+  strings.observe(0, { 'a.label': 'x' });
+  assert.deepEqual(strings.observe(1, { 'a.label': 'y' }), [], 'string facts are labels, not progress');
+
+  assert.equal(checker.getViolations().length, 2, 'violations accumulate');
+  checker.reset();
+  assert.equal(checker.getViolations().length, 0, 'reset clears');
+
+  // 豁免:状态观测型 fact(「此刻在罩内吗」)天生来回翻转,不该一直喊
+  const exempted = new FactContractChecker();
+  exempted.addExemptions(['qy.oxygen.insideBoundary']);
+  exempted.observe(0, { 'qy.oxygen.insideBoundary': true, 'qy.other.flag': true });
+  const fresh = exempted.observe(1, { 'qy.oxygen.insideBoundary': false, 'qy.other.flag': false });
+  assert.equal(fresh.length, 1, 'only the non-exempt fact is reported');
+  assert.equal(fresh[0].key, 'qy.other.flag', 'the exempt observation-only fact stays quiet');
+}
+
+/** observationOnlyFacts 声明在**注册面**(不进快照 ⇒ 不进 state hash),读出来带 provider 前缀。 */
+function assertObservationOnlyFactRegistry({
+  clearRecordReplayProviders,
+  registerRecordReplayProviders,
+  readRecordReplayObservationOnlyFactKeys,
+  collectRecordReplaySnapshotEntries,
+}) {
+  clearRecordReplayProviders();
+  assert.deepEqual(readRecordReplayObservationOnlyFactKeys(), [], 'nothing registered ⇒ nothing exempt');
+
+  const unregister = registerRecordReplayProviders({
+    snapshotProviders: [
+      {
+        name: 'qy.oxygen',
+        getSnapshot: () => ({ recordReplay: { facts: { insideBoundary: true } } }),
+        observationOnlyFacts: ['insideBoundary', ' edgeWarning ', ''],
+      },
+      { name: 'qy.mining', getSnapshot: () => ({ recordReplay: { facts: { consumed: 1 } } }) },
+    ],
+  });
+  assert.deepEqual(
+    readRecordReplayObservationOnlyFactKeys().sort(),
+    ['qy.oxygen.edgeWarning', 'qy.oxygen.insideBoundary'],
+    'keys are provider-prefixed and trimmed; empties dropped',
+  );
+
+  // 关键:声明**不得**出现在快照里,否则它会进 state hash
+  const entries = collectRecordReplaySnapshotEntries();
+  const oxygen = entries.find((entry) => entry.name === 'qy.oxygen');
+  assert.equal(
+    JSON.stringify(oxygen.snapshot).includes('observationOnlyFacts'),
+    false,
+    'observationOnlyFacts must never leak into the hashed snapshot',
+  );
+  unregister();
+  clearRecordReplayProviders();
+}
+/**
+ * 短命事件:一个完整发生在两次 stateSample 之间的 false→true→false,
+ * 基于采样的提取**看不见**;逐帧持久化的 events 能看见。
+ */
+function assertShortLivedEventExtraction({
+  extractSemanticScript,
+  clearRecordReplayProviders,
+  registerRecordReplayProviders,
+}) {
+  clearRecordReplayProviders();
+  const unregister = registerRecordReplayProviders({
+    milestoneDetectors: [createFactMilestoneDetector('custom')],
+  });
+  try {
+    const frames = Array.from({ length: 130 }, (_, index) => ({ frame: index, dt: 0.1, input: { x: 0, y: 0, magnitude: 0, isActive: false } }));
+    const base = {
+      envelope: {
+        schemaVersion: 1, hashVersion: 4, templateVersion: '0.0.0', projectId: 'test',
+        createdAt: new Date(0).toISOString(), seed: 1, startFrame: 0, anchorFrame: 0,
+        settledMarker: 'gameplay-settled-v1', startStateHash: 'h0', frames: frames.length, label: 'short-lived',
+      },
+      frames,
+      stateHashes: frames.map((_, index) => `h${index}`),
+      stateSamples: [0, 60, 120].map((frame) => ({
+        frame, gameFrame: frame, hashVersion: 4, hash: `h${frame}`,
+        snapshot: { 'mock.state': { recordReplay: { economy: { cash: 0, totalEarned: 0, totalSpent: 0 }, facts: { ready: false } } } },
+      })),
+      trail: frames.map((_, index) => [index * 0.01, 0]),
+    };
+
+    // 没有 events:采样之间的 false→true→false 完全消失
+    const withoutEvents = extractSemanticScript(base, {}).script;
+    assert.equal(withoutEvents.milestones.length, 0, 'sample-based extraction cannot see a short-lived event');
+
+    // 有 events:逐帧 detector 在 frame 30 抓到了 ready:false→true
+    const withEvents = extractSemanticScript({
+      ...base,
+      events: [
+        { frame: 5, kind: 'warning:droppedFrames', payload: { droppedFrames: 3 } },
+        { frame: 30, kind: 'custom', payload: { detail: { id: 'mock.state.ready', from: 'false', to: 'true' }, economy: { cash: 0, totalEarned: 0, totalSpent: 0 } } },
+      ],
+    }, {}).script;
+    assert.equal(withEvents.milestones.length, 1, 'per-frame events resurrect the short-lived milestone');
+    assert.equal(withEvents.milestones[0].kind, 'custom');
+    assert.equal(withEvents.milestones[0].detail.id, 'mock.state.ready');
+    assert.equal(Math.abs(withEvents.milestones[0].t - 3.1) < 0.05, true, `milestone t maps through frame times, got ${withEvents.milestones[0].t}`);
+  } finally {
+    unregister();
+    clearRecordReplayProviders();
+  }
+}
+
+/** economyFinal.cash 必须参与判定;diffs 的 withinTolerance 与 pass 同口径。 */
+function assertEconomyFinalCashTolerance({ clearRecordReplayProviders, registerRecordReplayProviders, SemanticReplayController }) {
+  const run = (endCash) => {
+    let verdict = null;
+    withSemanticMockGame({ clearRecordReplayProviders, registerRecordReplayProviders }, (game) => {
+      game.addEconomyRule(({ economy }) => { economy.cash = endCash; });
+      const script = createSemanticControllerScript({
+        durationSec: 2,
+        waypoints: [{ t: 0, x: 0, z: 0 }, { t: 1, x: 1, z: 0 }],
+        economyFinal: { cash: 100, totalEarned: 0, totalSpent: 0 },
+      });
+      const controller = new SemanticReplayController(game, script, { waypointToleranceBand: 0.12, maxDurationSec: 6 });
+      stepSemanticController(controller, game, { steps: 90, dt: 0.1, speed: 1 });
+      verdict = controller.getVerdict();
+    });
+    return verdict;
+  };
+
+  const poor = run(50);
+  assert.equal(poor.economyFinal.pass, false, 'ending poorer than the demo fails — cash used to be ignored entirely');
+  assert.equal(poor.economyFinal.diffs.cash.withinTolerance, false, 'the failing key is flagged');
+  assert.equal(poor.ok, false, 'ok follows economyFinal');
+
+  const rich = run(140);
+  assert.equal(rich.economyFinal.pass, true, 'ending richer than the demo is not a failure');
+  assert.equal(rich.economyFinal.diffs.cash.withinTolerance, true, 'diffs report the delta but mark it in-tolerance');
+
+  const nearly = run(86); // 100 * (1 - 0.15) = 85
+  assert.equal(nearly.economyFinal.pass, true, 'inside the tolerance band passes');
+  assert.equal(run(84).economyFinal.pass, false, 'just outside the band fails');
+
+  // pass ⟺ 每一项 withinTolerance
+  for (const verdict of [poor, rich, nearly]) {
+    const allWithin = Object.values(verdict.economyFinal.diffs).every((diff) => diff.withinTolerance);
+    assert.equal(verdict.economyFinal.pass, allWithin, 'pass and diffs share one 口径');
+  }
+}
+
+/** 溢出截断的 tape:提取带 warning(Mode A 的拒绝在面板层,这里验 warning 通道)。 */
+function assertTruncatedTapeRefusal({ extractSemanticScript }) {
+  const frames = Array.from({ length: 10 }, (_, index) => ({ frame: index + 500, dt: 0.1, input: { x: 0, y: 0, magnitude: 0, isActive: false } }));
+  const recording = {
+    envelope: {
+      schemaVersion: 1, hashVersion: 4, templateVersion: '0.0.0', projectId: 'test',
+      createdAt: new Date(0).toISOString(), seed: 1, startFrame: 0, anchorFrame: 0,
+      settledMarker: 'gameplay-settled-v1', startStateHash: 'h0', frames: frames.length, label: 'truncated',
+      truncated: true, droppedFrames: 500,
+    },
+    frames,
+    stateHashes: frames.map((_, index) => `h${index}`),
+    trail: frames.map((_, index) => [index * 0.01, 0]),
+  };
+  const { warnings } = extractSemanticScript(recording, {});
+  assert.equal(warnings.some((warning) => /truncated/.test(warning)), true, 'truncated tapes carry a loud warning');
+  assert.equal(warnings.some((warning) => /500 leading frames/.test(warning)), true, 'the warning names the dropped count');
+}
+
+/**
+ * P0:剧情段(输入不算数)里的闸门必须立即放行,否则示教时钟被钉死在闸门时刻,
+ * 而剧情把角色带走 —— 解禁后再也追不回来。
+ */
+function assertScriptedGateRelease({ clearRecordReplayProviders, registerRecordReplayProviders, SemanticReplayController }) {
+  let authoritative = true;
+  let verdict = null;
+  withSemanticMockGame({
+    clearRecordReplayProviders,
+    registerRecordReplayProviders,
+    inputAuthority: () => authoritative,
+  }, (game) => {
+    // 闸门里程碑永远不会被满足 —— 它是否被「放行」只取决于剧情段的处理。
+    game.addFactRule('gate.open', () => false);
+    const trail = Array.from({ length: 61 }, (_, index) => ({ t: index * 0.1, x: index * 0.5, z: 0 }));
+    const script = createSemanticControllerScript({
+      durationSec: 6,
+      waypoints: [{ t: 0, x: 0, z: 0 }, { t: 6, x: 30, z: 0 }],
+      trail,
+      milestones: [{ t: 0.4, kind: 'custom', detail: { id: 'mock.state.gate.open', to: 'true' } }],
+    });
+    const controller = new SemanticReplayController(game, script, {
+      waypointToleranceBand: 0.5,
+      maxDurationSec: 20,
+      calibrationPulseSec: 0.1,
+      calibrationSettleSec: 0.1,
+      gateHoldPatienceSec: 100,   // 授权态下绝不会因"耐心耗尽"放行,排除混淆变量
+      gateStallTimeoutSec: 100,
+    });
+
+    // 1) 有权限:跑完标定,进入 navigating。
+    //    ⚠️ 这里**不能**调 getVerdict() —— 它会把 finalVerdict 缓存下来,后面的断言就读到旧快照了。
+    stepSemanticController(controller, game, { steps: 20, dt: 0.1, speed: 1 });
+
+    // 2) 剧情段:输入不算数,游戏自己把角色搬走 28 个单位
+    authoritative = false;
+    for (let index = 0; index < 25; index += 1) {
+      if (controller.isDone()) break;
+      controller.getInput();
+      game.scriptedMoveTo(index * 1.2, 0);
+      game.applyInput({ x: 0, y: 0, magnitude: 0, isActive: false }, 0.1, 0);
+      controller.afterUpdate(0.1);
+    }
+    verdict = controller.getVerdict();
+  });
+
+  const tracking = verdict.trailTracking;
+  assert.equal(tracking.enabled, true, 'trail tracking is on');
+  assert.equal(tracking.scriptedGateReleases >= 1, true,
+    `a gate inside the cutscene must be released immediately, got ${tracking.scriptedGateReleases}`);
+  assert.equal(tracking.scheduleSec > 0.4 + 1e-6, true,
+    `the teach clock must move past the pinned gate, got scheduleSec=${tracking.scheduleSec}`);
+  assert.equal(tracking.scriptedSec > 1, true, 'the whole cutscene counts as scripted time');
+  assert.equal(verdict.milestones.matched, 0, 'releasing a gate does NOT match its milestone');
+  assert.equal(verdict.calibration.status, 'ok', 'calibration ran while input was still authoritative');
 }
 
 /**
