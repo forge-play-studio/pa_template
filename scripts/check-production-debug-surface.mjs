@@ -24,6 +24,10 @@ const forbiddenTokens = [
   'runtime-debug-bootstrap',
   'debug-panel-layout',
   'RuntimeDebugActionRegistry',
+  '__fp3d',
+  'fp3d-observation',
+  'pa-template-runtime-inspector',
+  'runtime-inspector',
 ];
 
 if (!existsSync(distRoot)) {

@@ -273,6 +273,7 @@ zone 检测能力默认内置，但只负责矩形区域几何检测和 `enter/t
 4. `framework/`：debug 面板基础能力，包括统一 panel manager、controls、config client、overlay、action registry 和 disposable helpers。
 5. `panel-manifest.ts`：玩法阶段面板注册 manifest。模板默认不注册具体玩法面板，builder 按阶段生成。
 6. `runtime-gameplay-debug-panels.ts`：读取 panel manifest 并通过统一 manager mount 玩法阶段 debug 面板。
+7. `runtime-inspector/`：dev-only `window.__fp3d` 运行时感知与可恢复控制契约；提供 runtime identity、稳定对象句柄、query / inspect / relations 和 CameraLease，不包含 UI。
 
 runtime debug UI 由 `src/debug/framework/panel-manager.ts` 统一管理。全局 Debug 显隐、底部 dock、右侧 rail、面板顺序、折叠状态、底部面板独立打开状态和 `RuntimeDebugActionRegistry` 生命周期都由 manager 持有；新面板不应自行创建 fixed 全局 dock、全局 toggle 或独立 z-index 层。标准面板使用 `mountRuntimeDebugPanel()` 创建；外部 SDK 或复杂自绘面板使用 `mountRuntimeDebugPanelContainer()` 注册容器，由 manager 接管布局、顺序、显隐和入口按钮样式。Camera / Lighting 这类 editor SDK 面板挂入右侧 rail，VFX 和玩法阶段面板挂入底部 dock。debug 面板入口按钮统一使用按面板标题稳定 hash 的马卡龙色；底部 dock 面板点击按钮打开或关闭对应面板内容，外部 editor SDK 容器按钮由 manager 做布局和样式适配。`src/debug/` 之外需要 debug 面板能力时，不应直接创建 DOM 面板，应通过 `src/debug/debug-panel-layout.ts` 暴露的统一接口接入。
 
@@ -292,6 +293,42 @@ debug 面板职责边界：
 4. numeric tuning 的持久化应写回源码配置。当前 dev server 已提供 `/__debug_panel_config`，允许读写 `src/config/*.json`；标准 gameplay tuning 默认写回 `src/config/gameplay.json`。
 5. 面板必须由 `src/main.ts` 的 dev-only dynamic import 链路加载，不要在 production-owned 文件里静态 import debug module 的值。
 6. production / package build 不得 mount runtime debug panel、注册 `window.__paDebugActions`、暴露 debug HUD / tuning UI，正式 gameplay 逻辑也不得依赖 debug-only API。
+
+#### 3D runtime inspector（`window.__fp3d`）
+
+模板在 dev 模式由 `src/main.ts` 独立挂载 `window.__fp3d`；它跟随页面 document，不随单个 Game 或 debug panels 销毁。基础观察协议保持 v0.1，相机控制为 capability `camera: 0.3`，无刷新 Scene 生命周期实现版本为 0.4.0。外部 agent 必须先确认运行身份和对象实例，再进入可恢复相机事务：
+
+```js
+const identity = window.__fp3d.discover();
+const matches = window.__fp3d.query({ name: { exact: 'target-name' } });
+const detail = window.__fp3d.inspect(matches.data[0]);
+const relations = window.__fp3d.relations(matches.data[0]);
+
+const lease = window.__fp3d.camera.acquire({ owner: 'agent', timeoutMs: 15000 });
+const focused = window.__fp3d.camera.focus(lease.data.id, matches.data, { margin: 1.5 });
+const occlusion = window.__fp3d.camera.occlusion(lease.data.id, matches.data);
+const hidden = window.__fp3d.camera.patch(lease.data.id, {
+  mode: 'hide',
+  handles: occlusion.data.occluders.map(item => item.handle),
+});
+const restored = window.__fp3d.camera.restore(lease.data.id);
+```
+
+关键约束：
+
+1. query 永远返回 handle 数组；同名对象全部返回并附 ambiguity warning，不静默选择第一个。
+2. handle 绑定 runtime session、scene generation、Babylon uniqueId 和 object generation；dispose/reuse 后旧 handle 返回结构化 stale 错误。
+3. 每个 observation 都声明 `coverage.observed` / `coverage.unavailable`，不能把“没接入”解释成“没有变化”。
+4. 相机控制必须显式 `acquire → focus → restore`。同一时刻只允许一个 lease；冲突、非法 lease 和重复 restore 返回结构化错误。
+5. lease 保存 pose、projection、target、项目 camera owner 与 visibility patch 状态；显式 restore、超时、pagehide、dispose 都执行清理。正交 focus 只改 target/ortho bounds，不用 radius 缩放。
+6. `occlusion` 使用 bbox-center raycast 输出稳定 occluder handles；结果带 target-miss warning，是近似诊断，不等同于 depth-buffer visibility。
+7. `patch` 支持 hide/ghost/isolate，只改 `isVisible/visibility`，不关闭 gameplay node、不修改共享材质；多个 patch 逆序恢复，inline changed handles 上限为 20。
+8. 项目只通过 provider 注册 build、camera owner、逻辑 ID、marker/VFX registry 等项目事实；`template-providers.ts` 是模板包装，项目 adapter 不进入 core。
+9. 无刷新 Game/Scene 替换前必须调用 inspector disposable 的 `beforeSceneChange()`：旧 CameraLease 先恢复；随后同一 runtime session 内 scene id 更换、generation 前进，旧 handle 返回 `SCENE_MISMATCH`。
+10. 完整外部契约、case 和 conformance 脚本在 `fps-3d-harness/docs/07-runtime-perception-control.md`；模板只承载游戏内实现。
+11. `pnpm test:runtime-inspector` 检查模板边界；`pnpm build:single` 会通过 `check:prod-debug` 保证 `__fp3d` 和 runtime-inspector token 不进入 production dist。
+
+当前不提供性能运行时计数、Performance Provider、record-replay、depth-buffer visibility 或调试 UI。
 
 ### `entities/`
 
