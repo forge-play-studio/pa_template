@@ -184,6 +184,7 @@ try {
   assertEarlyDeathReachesFailed({ ...providers, ...semanticReplay });
   assertScriptedSegmentDuringCalibration({ ...providers, ...semanticReplay });
   assertTeachClockSelfLock({ ...providers, ...semanticReplay });
+  assertMonotonicOvershootExemption({ ...providers, ...semanticReplay });
 
   console.log('[check-record-replay-logic] OK');
 } finally {
@@ -1273,6 +1274,11 @@ function createSemanticControllerMockGame(options = {}) {
       state.facts[id] = false;
       state.factRules.push({ id, rule });
     },
+    /** 数值 fact(单调计数器):检测器会为每次变化产出 detail.to = 数值刻度的里程碑。 */
+    addNumericFactRule(id, rule) {
+      state.facts[id] = 0;
+      state.factRules.push({ id, rule, numeric: true });
+    },
     addEconomyRule(rule) {
       state.economyRules.push(rule);
     },
@@ -1316,7 +1322,8 @@ function createSemanticControllerMockGame(options = {}) {
         }
       }
       for (const rule of state.factRules) {
-        state.facts[rule.id] = !!rule.rule({ position: state.position, economy: state.economy, elapsedTimeSec });
+        const value = rule.rule({ position: state.position, economy: state.economy, elapsedTimeSec });
+        state.facts[rule.id] = rule.numeric ? Number(value) : !!value;
       }
       for (const rule of state.economyRules) {
         rule({ position: state.position, economy: state.economy, elapsedTimeSec });
@@ -2052,14 +2059,25 @@ function assertSemanticGradeLadder({
     'calibration failure is failed even when ok=true — the replay never drove anything',
   );
 
-  // ---- good:critical 全中,轻微绕路 / 少量 optional 缺失
+  // ---- good = 验收线(Page 2026-07-10 校准):critical 全中即业务大概率满足。
+  //      经济终值 / stage 中断 / 绕路 —— 如实进 reason,不降档。
   assert.equal(gradeOf({ quality: 'recovered', detourScore: 1 }), 'good', 'mild recovery grades good (old recovered)');
   assert.equal(
-    gradeOf({ optionalMissing: 1, optionalTotal: 5, ok: false, quality: 'failed' }),
+    gradeOf({ optionalMissing: 2, optionalTotal: 4, ok: false, quality: 'failed' }),
     'good',
-    'optional missing exactly at 20% stays good (boundary is inclusive)',
+    'optional missing at 50% stays good (boundary is inclusive) — process marks are diagnostics, not acceptance',
   );
-  assert.equal(gradeOf({ quality: 'recovered', detourScore: 2 }), 'good', 'detour below threshold stays good');
+  assert.equal(gradeOf({ quality: 'recovered', detourScore: 36 }), 'good',
+    'heavy detour stays good — the run reached every critical gate (last-stand real signature)');
+  assert.equal(gradeOf({ economyPass: false, ok: false, quality: 'failed' }), 'good',
+    'final-economy shortfall stays good — every matched critical gate already passed its economyAtGate check');
+  assert.equal(gradeOf({ stageDisrupted: true, ok: false, quality: 'failed' }), 'good',
+    'a disrupted stage stays good when all critical milestones matched');
+  assert.match(
+    gradeSemanticVerdict({ ...base, economyPass: false, quality: 'recovered', detourScore: 36 }).reason,
+    /economy outside tolerance.*detours|detours.*economy outside tolerance/,
+    'diagnostics must still be spelled out in the reason',
+  );
   assert.equal(gradeOf({ optionalMissing: 0, optionalTotal: 0, quality: 'recovered', detourScore: 1 }), 'good',
     'zero optional milestones ⇒ ratio 0, not NaN');
 
@@ -2076,32 +2094,29 @@ function assertSemanticGradeLadder({
   );
   assert.equal(gradeOf({ criticalTotal: 1 }), 'clean', 'one critical milestone is enough to earn clean');
 
-  // ---- degraded:critical 全中,但明显不干净
+  // ---- degraded:唯一触发器 = 过程大面积偏离(optional 缺失 > 50%)
   assert.equal(
-    gradeOf({ optionalMissing: 1, optionalTotal: 4, ok: false, quality: 'failed' }),
+    gradeOf({ optionalMissing: 3, optionalTotal: 4, ok: false, quality: 'failed' }),
     'degraded',
-    'optional missing 25% > 20% drops to degraded',
+    'optional missing 75% > 50% drops to degraded — the process diverged broadly',
   );
-  assert.equal(gradeOf({ economyPass: false, ok: false, quality: 'failed' }), 'degraded', 'economy out of tolerance ⇒ degraded');
-  assert.equal(gradeOf({ stageDisrupted: true, ok: false, quality: 'failed' }), 'degraded', 'disrupted stage ⇒ degraded');
-  assert.equal(gradeOf({ quality: 'recovered', detourScore: 3 }), 'degraded', 'detour at threshold ⇒ degraded');
 
   // ---- 阈值可覆盖
   assert.equal(
-    gradeOf({ optionalMissing: 1, optionalTotal: 4, ok: false, quality: 'failed' }, { optionalMissingRatio: 0.5 }),
+    gradeOf({ optionalMissing: 3, optionalTotal: 4, ok: false, quality: 'failed' }, { optionalMissingRatio: 0.8 }),
     'good',
     'loosened optional threshold promotes degraded→good',
   );
   assert.equal(
-    gradeOf({ quality: 'recovered', detourScore: 2 }, { detourScore: 2 }),
+    gradeOf({ optionalMissing: 1, optionalTotal: 4, ok: false, quality: 'failed' }, { optionalMissingRatio: 0.2 }),
     'degraded',
-    'tightened detour threshold demotes good→degraded',
+    'tightened optional threshold demotes good→degraded',
   );
 
   // ---- 定档理由与指标必须落盘(排查时不重跑)
   const detail = gradeSemanticVerdict({ ...base, optionalMissing: 1, optionalTotal: 4, ok: false, quality: 'failed' });
   assert.equal(detail.optionalMissingRatio, 0.25, 'grading reports the optional missing ratio');
-  assert.equal(detail.thresholds.optionalMissingRatio, 0.2, 'grading reports the thresholds actually applied');
+  assert.equal(detail.thresholds.optionalMissingRatio, 0.5, 'grading reports the thresholds actually applied');
   assert.match(detail.reason, /optional/, 'grading explains why');
 
   // ---- 档位序关系
@@ -2109,6 +2124,95 @@ function assertSemanticGradeLadder({
   assert.equal(isSemanticGradeAtLeast('clean', 'good'), true, 'clean meets good');
   assert.equal(isSemanticGradeAtLeast('degraded', 'good'), false, 'degraded misses the baseline bar');
   assert.equal(worstSemanticGrade(['clean', 'degraded', 'good']), 'degraded', 'worst grade wins a tie');
+}
+
+/**
+ * 单调计数的超产 ≠ terminal divergence(与「经济可合法超产」同一哲学)。
+ * 实证:两次 65/65 全中、推进最远的运行曾因多挖一颗矿(46 > 剧本 45)被判死。
+ * 真正的示教外终局态(死亡)必须仍然 terminal。
+ */
+function assertMonotonicOvershootExemption({ clearRecordReplayProviders, registerRecordReplayProviders, SemanticReplayController }) {
+  const straightTrail = Array.from({ length: 121 }, (_, index) => ({ t: index * 0.1, x: index * 0.3, z: 0 }));
+  const makeScript = (milestones) => createSemanticControllerScript({
+    durationSec: 12,
+    waypoints: [{ t: 0, x: 0, z: 0 }, { t: 12, x: 36, z: 0 }],
+    trail: straightTrail,
+    milestones,
+  });
+  const options = {
+    waypointToleranceBand: 0.5,
+    maxDurationSec: 40,
+    calibrationPulseSec: 0.1,
+    calibrationSettleSec: 0.1,
+  };
+  const counterMilestones = [
+    { t: 3.2, kind: 'custom', detail: { id: 'mock.state.ore', to: '1' } },
+    { t: 6.2, kind: 'custom', detail: { id: 'mock.state.ore', to: '2' } },
+  ];
+
+  // ── 超产:剧本刻度到 2,回放把计数推到 3(x 走得更远)⇒ extra,不判 terminal,运行照常走完
+  // identity 必须与真实游戏同构(`id=值`,每个刻度是独立身份)—— 裸 id 的话 ore=3 会与剧本
+  // 里程碑同身份,terminal 路径根本不触发,本用例就测不到任何东西。
+  const counterBase = createFactMilestoneDetector('custom');
+  const counterDetector = {
+    ...counterBase,
+    getIdentity: (milestone) => (typeof milestone.detail.id === 'string'
+      ? `${milestone.detail.id}=${milestone.detail.to}`
+      : null),
+  };
+  let overshootVerdict = null;
+  withSemanticMockGame({
+    clearRecordReplayProviders,
+    registerRecordReplayProviders,
+    milestoneDetectors: [counterDetector],
+  }, (game) => {
+    game.addNumericFactRule('ore', ({ position }) => Math.max(0, Math.floor(position.x / 9)));
+    const controller = new SemanticReplayController(game, makeScript(counterMilestones), options);
+    stepSemanticController(controller, game, { steps: 400, dt: 0.1, speed: 3 });
+    overshootVerdict = controller.getVerdict();
+  });
+  assert.equal(overshootVerdict.milestones.matched, 2,
+    `both taught counter marks must match, got ${overshootVerdict.milestones.matched}`);
+  assert.equal(
+    overshootVerdict.milestones.missing.some((diff) => /terminal divergence/.test(diff.reason)),
+    false,
+    `over-mining past the taught max must not be terminal divergence, got: ${
+      overshootVerdict.milestones.missing.map((d) => d.reason).join(' | ')}`,
+  );
+  assert.equal(
+    overshootVerdict.milestones.extra.some((entry) => /ore/.test(JSON.stringify(entry.actual.detail))),
+    true,
+    'the overshoot is still honestly recorded as an extra event',
+  );
+
+  // ── 对照:示教外的非数值终局态(死亡)仍然 terminal。
+  //    剧本留一个远端未决里程碑(stage.done 永假),死亡发生在「仍有期待」的窗口内 —— 与真实
+  //    场景同构(死亡总是发生在通关目标达成之前;目标都达成了的运行谈不上 terminal)。
+  let deathVerdict = null;
+  withSemanticMockGame({
+    clearRecordReplayProviders,
+    registerRecordReplayProviders,
+    // 死亡走独立的 outcome kind(与真实游戏同构)—— 同 kind 的意外事件会被级联窗口
+    // 正确地当成微观时序抖动忽略,那不是本用例要测的东西。
+    milestoneDetectors: [
+      createFactMilestoneDetector('custom', (key) => !/died/.test(key)),
+      createFactMilestoneDetector('outcome', (key) => /died/.test(key)),
+    ],
+  }, (game) => {
+    game.addFactRule('died', ({ elapsedTimeSec }) => elapsedTimeSec > 4);
+    game.addFactRule('stage.done', () => false);
+    const controller = new SemanticReplayController(game, makeScript([
+      ...counterMilestones.slice(0, 1),
+      { t: 11, kind: 'custom', detail: { id: 'mock.state.stage.done', to: 'true' } },
+    ]), options);
+    stepSemanticController(controller, game, { steps: 200, dt: 0.1, speed: 3 });
+    deathVerdict = controller.getVerdict();
+  });
+  assert.equal(
+    deathVerdict.milestones.missing.some((diff) => /terminal divergence/.test(diff.reason)),
+    true,
+    'an out-of-script boolean terminal state (death) must still fail the run',
+  );
 }
 
 /** 分层计数:分母取剧本总数;缺失按剧本下标去重(一次失败不能计两笔)。 */

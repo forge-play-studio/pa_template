@@ -32,14 +32,19 @@ export function worstSemanticGrade(grades: readonly SemanticGrade[]): SemanticGr
 }
 
 export interface SemanticGradeThresholds {
-  /** optional 里程碑允许缺失的比例上限(超过 ⇒ 掉到 degraded)。契约默认 20%。 */
+  /**
+   * optional 里程碑允许缺失的比例上限,超过 ⇒ degraded(「过程大面积偏离」)。
+   * 2026-07-10 校准(Page):验收判据是「大致跑出来、业务上大概率满足」= critical 因果链全中;
+   * optional 刻度与绕路是**诊断信息**,不是业务不满足。阈值从 20% 放宽到 50% ——
+   * 只有过程对不上一半以上才值得把档位降下来提示人工排查。
+   */
   optionalMissingRatio: number;
-  /** 绕路 / 重试的严重度阈值,达到即「显著」⇒ degraded。 */
+  /** 绕路 / 重试的严重度阈值 —— 仅用于区分 clean(零绕路高保真)与 good,不再降档到 degraded。 */
   detourScore: number;
 }
 
 export const DEFAULT_SEMANTIC_GRADE_THRESHOLDS: Readonly<SemanticGradeThresholds> = Object.freeze({
-  optionalMissingRatio: 0.2,
+  optionalMissingRatio: 0.5,
   detourScore: 3,
 });
 
@@ -92,9 +97,16 @@ export interface SemanticGradeResult {
  * 判据顺序即优先级,从最硬的失败往下走。任何一条 failed 命中就不再看后面的。
  *
  *   failed   critical 缺失 / terminal divergence / 标定失败 / 空剧本拒绝
- *   clean    旧判据全过 且 零绕路(quality === 'clean')
- *   degraded critical 全中,但 optional 缺失超阈值 / 经济超容差 / stage 没走完 / 绕路显著
- *   good     其余(critical 全中,optional 缺失 ≤ 阈值,无 terminal divergence)
+ *   clean    旧判据全过 且 零绕路(quality === 'clean')—— 高保真档,正本/素材级
+ *   degraded critical 全中,但 optional 缺失 > 50%(过程大面积偏离,建议人工排查)
+ *   good     critical 全中(= Page 定义的验收线「大致跑出来、业务上大概率满足」)。
+ *            经济终值出容差 / stage 中断 / 绕路显著 —— 这些**如实写进 reason 供排查**,
+ *            但不降档:每个 critical 闸门本身已带 economyAtGate 容差校验,闸门全过
+ *            意味着因果链上的经济是对的;终值缺口与绕路是「玩得没人优雅」,不是「业务没达成」。
+ *
+ * 2026-07-10 校准前的旧行为(optional>20% / detour≥3 / 经济终值 / stage 中断均降 degraded)
+ * 把「机器人玩得不优雅」误判成「业务不满足」,与验收策略相悖 —— 实证:critical 17/17、
+ * 推进 86% 的运行被判 degraded+flaky,而按策略它就是 good。
  */
 export function gradeSemanticVerdict(
   input: SemanticGradeInput,
@@ -143,25 +155,22 @@ export function gradeSemanticVerdict(
     return {
       ...base,
       grade: 'degraded',
-      reason: `optional milestones missing ${formatPercent(optionalMissingRatio)} > ${formatPercent(thresholds.optionalMissingRatio)}`,
+      reason: `optional milestones missing ${formatPercent(optionalMissingRatio)} > ${formatPercent(thresholds.optionalMissingRatio)} — process diverged broadly, worth a human look`,
     };
   }
-  if (!input.economyPass) {
-    return { ...base, grade: 'degraded', reason: 'economy outside tolerance' };
-  }
-  if (input.stageDisrupted) {
-    return { ...base, grade: 'degraded', reason: 'a stage did not complete normally' };
-  }
-  if (detourScore >= thresholds.detourScore) {
-    return { ...base, grade: 'degraded', reason: `detour/retry score ${detourScore} >= ${thresholds.detourScore}` };
-  }
 
+  // critical 全中 = 业务验收线(good)。以下都是诊断信息,如实进 reason,不降档。
+  const notes: string[] = [];
+  if (optionalMissingRatio > 0) notes.push(`optional missing ${formatPercent(optionalMissingRatio)}`);
+  if (!input.economyPass) notes.push('final economy outside tolerance (per-gate economy all passed)');
+  if (input.stageDisrupted) notes.push('a stage did not complete normally');
+  if (detourScore >= thresholds.detourScore) notes.push(`notable detours (score ${detourScore})`);
   return {
     ...base,
     grade: 'good',
-    reason: input.criticalMissing === 0 && optionalMissingRatio === 0 && detourScore === 0
+    reason: notes.length === 0
       ? 'all critical milestones matched'
-      : `critical milestones matched; optional missing ${formatPercent(optionalMissingRatio)}, detour ${detourScore}`,
+      : `critical milestones matched; ${notes.join('; ')}`,
   };
 }
 

@@ -816,9 +816,31 @@ export class SemanticReplayController implements MovementInputSource {
   private isTerminalDivergence(actual: SemanticMilestone): boolean {
     if (!isDiscreteSemanticMilestone(actual)) return false;
     const identity = getRecordReplayMilestoneIdentity(actual);
-    return !this.script.milestones.some(
+    const inScript = this.script.milestones.some(
       (milestone) => getRecordReplayMilestoneIdentity(milestone) === identity,
     );
+    if (inScript) return false;
+    // 单调计数的**超产**(例:剧本挖到 45,回放挖到 46)不是「世界离开了示教流形」——
+    // 与经济契约「循环可合法超产(≥ 录制值)」同一哲学。示教在 45 停下只因人停了录,
+    // 不是 46 不可能。超产照记 extra(进诊断),但不判 terminal。
+    // 实证:两次 65/65 全中、推进最远的运行曾因多挖一颗被判死(2026-07-10 稳定性探针 run1/3)。
+    return !this.isMonotonicCounterOvershoot(actual);
+  }
+
+  /** actual 是否为「剧本内某单调数值刻度」的超产:同 kind 同 detail.id,数值大于剧本最大刻度。 */
+  private isMonotonicCounterOvershoot(actual: SemanticMilestone): boolean {
+    const id = readMilestoneDetailId(actual);
+    const value = readMilestoneDetailNumeric(actual);
+    if (id === null || value === null) return false;
+    let maxTaught: number | null = null;
+    for (const milestone of this.script.milestones) {
+      if (milestone.kind !== actual.kind) continue;
+      if (readMilestoneDetailId(milestone) !== id) continue;
+      const taught = readMilestoneDetailNumeric(milestone);
+      if (taught === null) return false;   // 同 id 存在非数值刻度 ⇒ 语义不明,保守不豁免
+      maxTaught = maxTaught === null ? taught : Math.max(maxTaught, taught);
+    }
+    return maxTaught !== null && value > maxTaught;
   }
 
   private updateStuckWatchdog(): void {
@@ -2191,4 +2213,16 @@ function readPositiveInteger(value: number | undefined, fallback: number): numbe
 function roundTo(value: number, digits: number): number {
   const factor = 10 ** digits;
   return Math.round(value * factor) / factor;
+}
+
+function readMilestoneDetailId(milestone: SemanticMilestone): string | null {
+  const detail = (milestone as { detail?: Record<string, unknown> }).detail;
+  return detail && typeof detail.id === 'string' ? detail.id : null;
+}
+
+function readMilestoneDetailNumeric(milestone: SemanticMilestone): number | null {
+  const detail = (milestone as { detail?: Record<string, unknown> }).detail;
+  const to = detail?.to;
+  const value = typeof to === 'number' ? to : typeof to === 'string' ? Number(to) : Number.NaN;
+  return Number.isFinite(value) ? value : null;
 }
