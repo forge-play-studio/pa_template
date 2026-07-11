@@ -25,6 +25,13 @@ export interface SemanticScript {
     seed: number;
     durationSec: number;
     extractedAt: string;
+    /**
+     * 示教移动速度中位数(u/s,排除 <0.3 u/s 的驻留/噪声段)。
+     * 回放侧卡死看门狗用它导出「有意义进度」阈值 —— 示教即真值,不用固定魔法数字;
+     * 换游戏(慢速潜行/高速载具)阈值自动跟着该游戏的示教走。
+     * 可选:老剧本不带此字段,回放侧回退固定阈值。
+     */
+    trailMovingSpeedP50?: number;
   };
   inputSegments: SemanticInputSegment[];
   milestones: SemanticMilestone[];
@@ -228,6 +235,7 @@ export function extractSemanticScript(
   const sourceTape = options.sourceTape
     ?? recording.envelope.label
     ?? 'recording';
+  const trailMovingSpeedP50 = computeTrailMovingSpeedP50(trailPoints);
   const script: SemanticScript = {
     meta: {
       schemaVersion: 1,
@@ -235,6 +243,7 @@ export function extractSemanticScript(
       seed: recording.envelope.seed,
       durationSec,
       extractedAt: options.extractedAt ?? new Date().toISOString(),
+      ...(trailMovingSpeedP50 !== null ? { trailMovingSpeedP50 } : {}),
     },
     inputSegments,
     milestones,
@@ -862,6 +871,24 @@ function asRecord(value: unknown): JsonRecord {
 
 function lerp(start: number, end: number, ratio: number): number {
   return start + (end - start) * ratio;
+}
+
+/** 排除驻留/噪声段(<0.3 u/s)后的示教移动速度中位数;段数不足时返回 null(老/异常 tape)。 */
+const TRAIL_MOVING_SPEED_NOISE_FLOOR = 0.3;
+
+function computeTrailMovingSpeedP50(points: readonly SemanticWaypoint[]): number | null {
+  const movingSpeeds: number[] = [];
+  for (let index = 1; index < points.length; index += 1) {
+    const previous = points[index - 1]!;
+    const current = points[index]!;
+    const dt = current.t - previous.t;
+    if (dt <= 0) continue;
+    const speed = Math.hypot(current.x - previous.x, current.z - previous.z) / dt;
+    if (speed > TRAIL_MOVING_SPEED_NOISE_FLOOR) movingSpeeds.push(speed);
+  }
+  if (movingSpeeds.length < 10) return null;
+  movingSpeeds.sort((left, right) => left - right);
+  return roundTime(movingSpeeds[Math.floor(movingSpeeds.length / 2)]!);
 }
 
 function roundTime(value: number): number {

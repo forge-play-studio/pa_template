@@ -285,6 +285,13 @@ const IDLE_INPUT: Readonly<MovementInputState> = Object.freeze({
 });
 const CASCADE_WINDOW_SEC = 3;
 const DEFAULT_ECONOMY_GATE_TOLERANCE = 0.15;
+
+/** 卡死判据:窗口内净位移低于「α × 示教中位移动速度 × 窗口」即视为无实质进度(示教即真值)。 */
+const STUCK_PROGRESS_ALPHA = 0.15;
+/** ε 地板:防极慢示教把阈值压进位置噪声底。 */
+const STUCK_PROGRESS_EPSILON_FLOOR = 0.3;
+/** 老剧本(meta 无 trailMovingSpeedP50)的固定回退阈值。 */
+const STUCK_PROGRESS_EPSILON_FALLBACK = 0.75;
 /** 追踪目标近到这个距离就不再给输入(人类站定时的死区)。 */
 const PURSUIT_STOP_DISTANCE = 0.05;
 /** 目标距离达到此值即全速;更近则线性减速 —— 到达阻尼,避免绕着目标点抖。 */
@@ -420,9 +427,18 @@ export class SemanticReplayController implements MovementInputSource {
       1,
       options.maxDurationSec ?? (this.script.meta.durationSec * 2 + this.stageTimeoutSlackSec + 10),
     );
+    // 卡死判据的 ε 从示教导出:「窗口内净位移 < α × 示教中位移动速度 × 窗口」= 没有实质进度。
+    // 固定 0.05(位置噪声底)抓不到「动而不进」—— 顶墙微动振荡会不断重置锚点,阶梯永远不点火
+    // (sword_craft_story 实证:满幅输入 0.1–0.3 u/s 微动 106s,四层脱困零触发,塔被打死判 failed)。
+    // 老剧本(无 trailMovingSpeedP50)回退固定 0.75;显式传入 stuckDistanceEpsilon 仍最高优先。
+    const stuckWindowSec = options.stuckWindowSec ?? 2;
+    const teachSpeed = this.script.meta.trailMovingSpeedP50;
+    const derivedStuckEpsilon = typeof teachSpeed === 'number' && Number.isFinite(teachSpeed) && teachSpeed > 0
+      ? Math.max(STUCK_PROGRESS_EPSILON_FLOOR, STUCK_PROGRESS_ALPHA * teachSpeed * stuckWindowSec)
+      : STUCK_PROGRESS_EPSILON_FALLBACK;
     this.watchdog = new SemanticStuckWatchdog({
-      windowSec: options.stuckWindowSec ?? 2,
-      distanceEpsilon: options.stuckDistanceEpsilon ?? 0.05,
+      windowSec: stuckWindowSec,
+      distanceEpsilon: options.stuckDistanceEpsilon ?? derivedStuckEpsilon,
     });
     this.calibrationPulseSec = Math.max(0.05, options.calibrationPulseSec ?? 0.25);
     this.calibrationSettleSec = Math.max(0, options.calibrationSettleSec ?? 0.2);
