@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "note": "现存墙钟命中台账;新增命中必须收编或显式入账(见文件头注释)",
+  "entries": {
+    "src/services/AudioService.ts::performance.now::const now = performance.now();": "TODO: 在 design doc §3.1 归类(喂不喂 hash/处置)",
+    "src/services/AudioService.ts::performance.now::this.activeLoopLastPlayTime.set(soundId, performance.now());": "TODO: 在 design doc §3.1 归类(喂不喂 hash/处置)",
+    "src/services/AudioService.ts::setInterval::const timer = window.setInterval(playNow, this.getActiveLoopIntervalMs(sound));": "TODO: 在 design doc §3.1 归类(喂不喂 hash/处置)",
+    "src/services/SceneVfxService.ts::setTimeout::window.setTimeout(resolve, 0);": "TODO: 在 design doc §3.1 归类(喂不喂 hash/处置)"
+  }
+}

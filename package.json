@@ -29,7 +29,8 @@
     "check:scene-walkthrough-disabled": "node scripts/check-scene-walkthrough-build.mjs --disabled",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "typecheck:editor-local": "tsc -p tsconfig.fps-editor-local.json --noEmit"
+    "typecheck:editor-local": "tsc -p tsconfig.fps-editor-local.json --noEmit",
+    "check:wallclock": "node scripts/check-wallclock-usage.mjs"
   },
   "keywords": [
     "playable",
