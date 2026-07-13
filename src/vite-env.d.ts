@@ -32,6 +32,26 @@ declare module '*.mp3?url' {
   export default src;
 }
 
+declare module '*.ogg?url' {
+  const src: string;
+  export default src;
+}
+
+declare module '*.flac?url' {
+  const src: string;
+  export default src;
+}
+
+declare module '*.aac?url' {
+  const src: string;
+  export default src;
+}
+
+declare module '*.m4a?url' {
+  const src: string;
+  export default src;
+}
+
 declare module '*.wasm?url' {
   const src: string;
   export default src;

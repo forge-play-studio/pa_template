@@ -1200,7 +1200,11 @@ export default defineConfig({
     projectAuthoringApiPlugin(),
     // 开发模式模型强缓存 + URL 版本化（mtime）
     modelCachePlugin({
-      extensions: ['.glb', '.gltf', '.png', '.jpg', '.jpeg', '.mp3'],
+      extensions: [
+        '.glb', '.gltf',
+        '.png', '.jpg', '.jpeg',
+        '.mp3', '.wav', '.ogg', '.flac', '.aac', '.m4a',
+      ],
       roots: ['src'],
       cacheMaxAgeSeconds: 31536000,
     }),

@@ -22,7 +22,7 @@ export const projectAssetCatalogConfig = {
     '.glb', '.gltf',
     '.png', '.jpg', '.jpeg', '.webp',
     '.env', '.hdr', '.dds', '.ktx', '.ktx2',
-    '.mp3', '.wav', '.ogg', '.m4a',
+    '.mp3', '.wav', '.ogg', '.flac', '.aac', '.m4a',
   ],
   commands: {
     register: 'npm run asset:register',
