@@ -1,4 +1,13 @@
-import type { RuntimeInspectorBuildIdentity } from './schema';
+import type {
+  RuntimeInspectorBuildIdentity,
+  RuntimeInspectorCoverage,
+  RuntimeInspectorObjectHandle,
+  RuntimeInspectorSnapshotCaptureSpec,
+} from './schema';
+import type { TransformNode } from '@babylonjs/core/Meshes/transformNode';
+import type { Scene } from '@babylonjs/core/scene';
+import type { Material } from '@babylonjs/core/Materials/material';
+import type { AnimationGroup } from '@babylonjs/core/Animations/animationGroup';
 
 export type RuntimeInspectorCameraOwnerAcquireContext = {
   leaseId: string;
@@ -19,9 +28,125 @@ export type RuntimeInspectorCameraControlProvider = {
   readState?(): unknown;
 };
 
+export type RuntimeInspectorLogicalObjectDescriptor = {
+  id: string;
+  name: string;
+  kind: string;
+  root: TransformNode;
+  members?: TransformNode[];
+  tags?: string[];
+  metadata?: unknown;
+  source: string;
+};
+
+export type RuntimeInspectorLogicalObjectProvider = {
+  id: string;
+  list(): RuntimeInspectorLogicalObjectDescriptor[];
+};
+
+export type RuntimeInspectorSnapshotProviderContext = {
+  scene: Scene;
+  nodes: TransformNode[];
+  handles: RuntimeInspectorObjectHandle[];
+  spec: RuntimeInspectorSnapshotCaptureSpec;
+};
+
+export type RuntimeInspectorSnapshotProviderCapture = {
+  data: unknown;
+  observed?: string[];
+  unavailable?: RuntimeInspectorCoverage['unavailable'];
+  warnings?: string[];
+};
+
+export type RuntimeInspectorSnapshotProvider = {
+  id: string;
+  capture(context: RuntimeInspectorSnapshotProviderContext): RuntimeInspectorSnapshotProviderCapture;
+};
+
+export type RuntimeInspectorVfxEffectDescriptor = {
+  id: string;
+  name: string;
+  placement: string;
+  geometrySpace?: string | null;
+  requiredInputs?: string[];
+  optionalInputs?: string[];
+  defaultParams?: unknown;
+  paramDefinitions?: unknown[];
+  metadata?: unknown;
+  source: string;
+};
+
+export type RuntimeInspectorVfxUsageDescriptor = {
+  id: string;
+  label: string;
+  effectId: string;
+  placement: string;
+  lifecycle: string;
+  binding?: unknown;
+  params?: unknown;
+  offset?: unknown;
+  /** undefined = provider cannot observe instances; null = observed inactive. */
+  root?: TransformNode | null;
+  source: string;
+};
+
+export type RuntimeInspectorVfxProvider = {
+  id: string;
+  listEffects(): RuntimeInspectorVfxEffectDescriptor[];
+  listUsages(): RuntimeInspectorVfxUsageDescriptor[];
+  captureUsageState?(usageId: string): unknown;
+  previewUsage?(usageId: string, params: Record<string, unknown>): boolean;
+  restoreUsageState?(usageId: string, state: unknown): boolean;
+};
+
+export type RuntimeInspectorMaterialAssetDescriptor = {
+  id: string;
+  name: string;
+  kind: string;
+  profile?: unknown;
+  readonly?: boolean;
+  origin?: unknown;
+  metadata?: unknown;
+  source: string;
+};
+
+export type RuntimeInspectorMaterialInstanceDescriptor = {
+  id: string;
+  material: Material;
+  source: string;
+};
+
+export type RuntimeInspectorMaterialProvider = {
+  id: string;
+  listAssets(): RuntimeInspectorMaterialAssetDescriptor[];
+  listInstances(): RuntimeInspectorMaterialInstanceDescriptor[];
+  captureInstanceState?(instanceId: string): unknown;
+  previewInstance?(instanceId: string, set: Record<string, unknown>): boolean;
+  restoreInstanceState?(instanceId: string, state: unknown): boolean;
+};
+
+export type RuntimeInspectorAnimationGroupDescriptor = {
+  id: string;
+  group: AnimationGroup;
+  source: string;
+};
+
+export type RuntimeInspectorAnimationProvider = {
+  id: string;
+  listGroups(): RuntimeInspectorAnimationGroupDescriptor[];
+  captureGroupState?(groupId: string): unknown;
+  previewGroup?(groupId: string, set: { paused?: boolean; currentFrame?: number; speedRatio?: number }): boolean;
+  restoreGroupState?(groupId: string, state: unknown): boolean;
+};
+
 export type RuntimeInspectorProviderRegistration = {
   buildIdentity?: () => Partial<RuntimeInspectorBuildIdentity> | null | undefined;
   cameraControl?: RuntimeInspectorCameraControlProvider;
+  logicalObjects?: RuntimeInspectorLogicalObjectProvider;
+  snapshot?: RuntimeInspectorSnapshotProvider;
+  vfx?: RuntimeInspectorVfxProvider;
+  materials?: RuntimeInspectorMaterialProvider;
+  animations?: RuntimeInspectorAnimationProvider;
 };
 
 type RegisteredProvider = {
@@ -79,6 +204,36 @@ export function readRuntimeInspectorCameraControlProvider(): RuntimeInspectorCam
     if (provider) return provider;
   }
   return null;
+}
+
+export function readRuntimeInspectorLogicalObjectProviders(): RuntimeInspectorLogicalObjectProvider[] {
+  return providers
+    .map(provider => provider.registration.logicalObjects)
+    .filter((provider): provider is RuntimeInspectorLogicalObjectProvider => Boolean(provider));
+}
+
+export function readRuntimeInspectorSnapshotProviders(): RuntimeInspectorSnapshotProvider[] {
+  return providers
+    .map(provider => provider.registration.snapshot)
+    .filter((provider): provider is RuntimeInspectorSnapshotProvider => Boolean(provider));
+}
+
+export function readRuntimeInspectorVfxProviders(): RuntimeInspectorVfxProvider[] {
+  return providers
+    .map(provider => provider.registration.vfx)
+    .filter((provider): provider is RuntimeInspectorVfxProvider => Boolean(provider));
+}
+
+export function readRuntimeInspectorMaterialProviders(): RuntimeInspectorMaterialProvider[] {
+  return providers
+    .map(provider => provider.registration.materials)
+    .filter((provider): provider is RuntimeInspectorMaterialProvider => Boolean(provider));
+}
+
+export function readRuntimeInspectorAnimationProviders(): RuntimeInspectorAnimationProvider[] {
+  return providers
+    .map(provider => provider.registration.animations)
+    .filter((provider): provider is RuntimeInspectorAnimationProvider => Boolean(provider));
 }
 
 export function clearRuntimeInspectorProviders(): void {

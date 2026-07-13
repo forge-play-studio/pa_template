@@ -71,6 +71,14 @@ export interface ProjectVfxUsageTarget {
   params: Partial<VfxParamValues>;
 }
 
+export interface ProjectVfxUsageRuntimeState {
+  usageId: string;
+  savedParams: Partial<VfxParamValues>;
+  previewParams: Partial<VfxParamValues> | null;
+  savedOffset: ProjectVfxOffsetConfig;
+  previewOffset: ProjectVfxOffsetConfig | null;
+}
+
 const PROJECT_VFX_USAGES = sanitizeUsagesDocument(usagesDocument as ProjectVfxUsagesDocument);
 
 export class ProjectVfxDirector implements GameplayModule {
@@ -151,6 +159,33 @@ export class ProjectVfxDirector implements GameplayModule {
 
   getVfxUsageRoot(usageId: string): TransformNode | null {
     return this.handles.get(usageId)?.root ?? null;
+  }
+
+  captureVfxUsageRuntimeState(usageId: string): ProjectVfxUsageRuntimeState | null {
+    if (!findUsage(usageId)) return null;
+    return {
+      usageId,
+      savedParams: cloneParams(this.savedParams.get(usageId)),
+      previewParams: this.previewParams.has(usageId)
+        ? cloneParams(this.previewParams.get(usageId))
+        : null,
+      savedOffset: cloneOffset(this.savedOffsets.get(usageId)),
+      previewOffset: this.previewOffsets.has(usageId)
+        ? cloneOffset(this.previewOffsets.get(usageId))
+        : null,
+    };
+  }
+
+  restoreVfxUsageRuntimeState(state: ProjectVfxUsageRuntimeState): boolean {
+    const usage = findUsage(state.usageId);
+    if (!usage) return false;
+    this.savedParams.set(state.usageId, cloneParams(state.savedParams));
+    if (state.previewParams) this.previewParams.set(state.usageId, cloneParams(state.previewParams));
+    else this.previewParams.delete(state.usageId);
+    this.savedOffsets.set(state.usageId, cloneOffset(state.savedOffset));
+    if (state.previewOffset) this.previewOffsets.set(state.usageId, cloneOffset(state.previewOffset));
+    else this.previewOffsets.delete(state.usageId);
+    return this.playUsage(usage);
   }
 
   previewVfxUsageParams(usageId: string, params: Partial<VfxParamValues>, offset?: ProjectVfxOffsetConfig): boolean {

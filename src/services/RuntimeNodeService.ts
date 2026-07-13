@@ -19,9 +19,14 @@ export interface RuntimeBindingReadinessReport {
 
 export interface RuntimeNodeRegistration {
   id: string;
+  logicalId?: string;
   label?: string;
   node: TransformNode;
   source?: 'scene' | 'runtime';
+  logicalKind?: string;
+  logicalTags?: string[];
+  logicalMetadata?: unknown;
+  logicalMembers?: TransformNode[];
 }
 
 export class RuntimeNodeService {

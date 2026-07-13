@@ -8,6 +8,9 @@ export type BabylonRuntimeNode = TransformNode;
 export type BabylonMeshVisibilityState = {
   isVisible: boolean;
   visibility: number;
+  renderOutline: boolean;
+  outlineColor: [number, number, number] | null;
+  outlineWidth: number | null;
 };
 
 export function listBabylonRuntimeNodes(scene: Scene): BabylonRuntimeNode[] {
@@ -53,6 +56,11 @@ export function readBabylonMeshVisibility(
   return {
     isVisible: node.isVisible,
     visibility: node.visibility,
+    renderOutline: node.renderOutline,
+    outlineColor: node.outlineColor
+      ? [node.outlineColor.r, node.outlineColor.g, node.outlineColor.b]
+      : null,
+    outlineWidth: Number.isFinite(node.outlineWidth) ? node.outlineWidth : null,
   };
 }
 
@@ -63,6 +71,9 @@ export function writeBabylonMeshVisibility(
   if (!hasMeshFields(node)) return;
   node.isVisible = state.isVisible;
   node.visibility = state.visibility;
+  node.renderOutline = state.renderOutline;
+  if (state.outlineColor && node.outlineColor) node.outlineColor.copyFromFloats(...state.outlineColor);
+  if (state.outlineWidth !== null) node.outlineWidth = state.outlineWidth;
 }
 
 export function readBabylonNodeMaterial(node: BabylonRuntimeNode): { name: string; uniqueId: string } | null {

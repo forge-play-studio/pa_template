@@ -26,6 +26,14 @@ export function mountRuntimeInspector(options: MountRuntimeInspectorOptions): Ru
     beforeSceneChange() {
       const current = runtime.camera.current();
       if (current.ok && current.data?.active) runtime.camera.restore(current.data.id);
+      const mutation = runtime.mutation.current();
+      if (mutation.ok && mutation.data?.active) runtime.mutation.restore(mutation.data.id);
+      const vfx = runtime.vfx.current();
+      if (vfx.ok && vfx.data?.active) runtime.vfx.restore(vfx.data.id);
+      const material = runtime.materials.current();
+      if (material.ok && material.data?.active) runtime.materials.restore(material.data.id);
+      const animation = runtime.animations.current();
+      if (animation.ok && animation.data?.active) runtime.animations.restore(animation.data.id);
     },
     dispose() {
       runtime.dispose();

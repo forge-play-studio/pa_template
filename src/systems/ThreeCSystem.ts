@@ -13,6 +13,8 @@ export interface ThreeCSnapshot {
 }
 
 export class ThreeCSystem implements GameplayModule {
+  private cameraFollowEnabled = true;
+
   constructor(private readonly options: {
     scene: Scene;
     camera: ArcRotateCamera | null;
@@ -45,9 +47,17 @@ export class ThreeCSystem implements GameplayModule {
   }
 
   update(): void {
-    if (this.options.camera) {
+    if (this.options.camera && this.cameraFollowEnabled) {
       this.options.camera.target.copyFrom(this.options.player.position);
     }
+  }
+
+  get isCameraFollowEnabled(): boolean {
+    return this.cameraFollowEnabled;
+  }
+
+  setCameraFollowEnabled(enabled: boolean): void {
+    this.cameraFollowEnabled = enabled;
   }
 
   getSnapshot(): ThreeCSnapshot {
