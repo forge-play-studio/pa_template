@@ -41,12 +41,30 @@ export interface DemoRecordingEnvelope {
   truncated?: boolean;
   /** 被环形缓冲丢弃的帧数(`truncated` 为真时 > 0)。 */
   droppedFrames?: number;
+  /**
+   * 录制时注册的观测语义版本(providers `semanticsVersion`)。观测口径变更即 +1。
+   * 回放/提取与现注册版本错配 = 剧本目标与传感器读数不可比 → 拒绝认证;
+   * 老 tape 缺省 = legacy,仅警告不拒(向后兼容)。
+   */
+  providerSemanticsVersion?: number;
+}
+
+/**
+ * 离散动作(点击选卡类):录**语义 ID** 不录像素坐标。
+ * 挂帧语义 = 「在本帧 update 之前已生效」——DOM click 在帧间触发、游戏态立即变化,
+ * 帧 N 的 hash 已含选择效果,故动作记在帧 N、回放时于帧 N update 前 invoke。
+ * 输入侧数据,不进 state hash;老 tape 无此字段,回放路径 no-op。
+ */
+export interface DemoRecordingFrameAction {
+  id: string;
+  params: Record<string, string | number>;
 }
 
 export interface DemoRecordingFrame {
   frame: number;
   dt: number;
   input: MovementInputState;
+  actions?: DemoRecordingFrameAction[];
 }
 
 export interface DemoRecordingEvent {

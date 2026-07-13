@@ -7,6 +7,8 @@ import {
 } from '../schema';
 import {
   detectRecordReplayMilestones,
+  getRecordReplayProviderSemanticsVersion,
+  isRecordReplayMilestoneCritical,
   readRecordReplayEconomyFromSnapshots,
   readRecordReplayFactsFromSnapshots,
   type RecordReplayEconomyGateExpectation,
@@ -32,6 +34,13 @@ export interface SemanticScript {
      * 可选:老剧本不带此字段,回放侧回退固定阈值。
      */
     trailMovingSpeedP50?: number;
+    /** 录制时的观测语义版本(tape envelope 透传);回放与现注册版本错配 → 拒绝认证。 */
+    providerSemanticsVersion?: number;
+    /** 示教第 0 帧(未裁剪)的经济与 facts。回放开跑前比对,拦"带存档启动/复位不净"的白送里程碑。 */
+    initialEconomy?: SemanticEconomyState;
+    initialFacts?: Record<string, number | string | boolean>;
+    /** tape 准入审计结果(错误=病 tape,不得用于认证;警告=如实告知)。 */
+    admission?: { errors: string[]; warnings: string[] };
   };
   inputSegments: SemanticInputSegment[];
   milestones: SemanticMilestone[];
@@ -41,7 +50,20 @@ export interface SemanticScript {
    * waypoints 只留作 verdict 统计与老脚本兼容。老 tape 无 trail 时该字段缺省。
    */
   trail?: SemanticTrailPoint[];
+  /**
+   * 离散决策(点击选卡类):示教者在 promptId 处选了 chosen。
+   * Mode B 轮询 ActionProvider.getPending(),按 (id, promptId) 顺序消费重演;
+   * 老剧本无此段。
+   */
+  decisions?: SemanticDecision[];
   economyFinal: SemanticEconomyState;
+}
+
+export interface SemanticDecision {
+  t: number;
+  id: string;
+  promptId: string;
+  chosen: string;
 }
 
 export type { SemanticTrailPoint };
@@ -157,6 +179,68 @@ export function isSemanticScriptCertifiable(script: SemanticScript): boolean {
   return script.milestones.length > 0 || script.waypoints.length > 0;
 }
 
+/**
+ * tape 准入审计 —— 录制侧的**内容完整性**门禁(生命线体检管"落得下盘",这里管"内容能不能用")。
+ *
+ * errors = 病 tape,认证跑不该消费它(rr-probe / runner 应拒绝,--force 才放行):
+ * - 经济全程冻结在非零常量:传感器死数(旧模块图页面录制 / provider 没接线)。
+ *   实证(axe,2026-07-12):cash 恒 500 → 经济闸门全空真 + economyFinal 物理不可达 → 每跑尾段死等。
+ * - 观测语义版本错配:剧本目标与现传感器读数不可比。
+ *
+ * warnings = 如实告知,不拦:无终局里程碑(可能 Stop 早了,回放没有终点目标)、
+ * 经济全零(游戏可能本无经济信号)、legacy tape 无版本号、零 critical 断言。
+ */
+export function auditSemanticTapeAdmission(
+  recording: DemoRecording,
+  observations: readonly SemanticObservation[],
+  script: SemanticScript,
+): { errors: string[]; warnings: string[] } {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  const first = observations[0]?.economy;
+  if (first) {
+    const frozen = observations.every((observation) => observation.economy.cash === first.cash
+      && observation.economy.totalEarned === first.totalEarned
+      && observation.economy.totalSpent === first.totalSpent);
+    if (frozen && (first.cash !== 0 || first.totalEarned !== 0 || first.totalSpent !== 0)) {
+      errors.push(
+        `economy frozen for the entire take at {cash:${first.cash}, earned:${first.totalEarned}, spent:${first.totalSpent}} `
+        + '— dead sensor suspected (page loaded before the current provider landed, or provider miswired). '
+        + 'Economy gates would be vacuously true and economyFinal unreachable. Re-record on a freshly loaded page.',
+      );
+    } else if (frozen) {
+      warnings.push('economy is all-zero for the entire take — no economy signal; economy assertions will be vacuous.');
+    }
+  }
+
+  if (!script.milestones.some((milestone) => milestone.kind === 'outcome')) {
+    warnings.push(
+      'no outcome (victory/death) milestone in the script — recording may have stopped before the terminal moment; '
+      + 'the replay will have no terminal goal (axe 2026-07-12: tape ended 2.5s after upgrade #14, the winning unlock was never captured).',
+    );
+  }
+
+  const liveVersion = getRecordReplayProviderSemanticsVersion();
+  const tapedVersion = recording.envelope.providerSemanticsVersion;
+  if (typeof tapedVersion === 'number' && liveVersion !== null && tapedVersion !== liveVersion) {
+    errors.push(
+      `provider semantics version mismatch: tape v${tapedVersion} vs registered v${liveVersion} `
+      + '— script targets are not comparable with live sensor readings; re-record on the current build.',
+    );
+  } else if (tapedVersion === undefined) {
+    warnings.push('tape carries no providerSemanticsVersion (legacy) — sensor semantics may have changed since it was recorded.');
+  }
+
+  const criticalCount = script.milestones
+    .filter((milestone) => isRecordReplayMilestoneCritical(milestone)).length;
+  if (criticalCount === 0) {
+    warnings.push('script asserts 0 critical milestones — it can never certify above `good` (docs/06 §6.2).');
+  }
+
+  return { errors, warnings };
+}
+
 const DEFAULT_INPUT_RDP_TOLERANCE = 0.02;
 const DEFAULT_WAYPOINT_RDP_TOLERANCE = 0.5;
 const DEFAULT_DWELL_DISTANCE_EPSILON = 0.5;
@@ -188,15 +272,14 @@ export function extractSemanticScript(
   const trimOffset = options.trimLeadingIdle === false
     ? 0
     : calculateLeadingIdleTrimOffset(rawInputSegments);
-  const observations = trimSemanticObservations(
-    buildSemanticObservations(recording, frameTimes),
-    trimOffset,
-  );
+  const rawObservations = buildSemanticObservations(recording, frameTimes);
+  const observations = trimSemanticObservations(rawObservations, trimOffset);
   const inputSegments = trimInputSegments(rawInputSegments, trimOffset);
   // 逐帧事件优先:稀疏 stateSample 之间的短命事件(false→true→false)只有它有。
   // 老 tape 没有 events,退回基于采样的提取(会漏短命事件,但不改变既有行为)。
   const milestones = extractMilestonesFromEvents(recording, frameTimes, trimOffset)
     ?? extractMilestones(observations);
+  const decisions = extractDecisionsFromFrames(recording, frameTimes, trimOffset);
   const rawTrailPoints: SemanticWaypoint[] = (recording.trail ?? [])
     .slice(0, frameTimes.length)
     .map((pair, index) => ({ t: roundTime(frameTimes[index] ?? 0), x: pair[0], z: pair[1] }));
@@ -236,6 +319,7 @@ export function extractSemanticScript(
     ?? recording.envelope.label
     ?? 'recording';
   const trailMovingSpeedP50 = computeTrailMovingSpeedP50(trailPoints);
+  const initialObservation = rawObservations[0];
   const script: SemanticScript = {
     meta: {
       schemaVersion: 1,
@@ -244,17 +328,32 @@ export function extractSemanticScript(
       durationSec,
       extractedAt: options.extractedAt ?? new Date().toISOString(),
       ...(trailMovingSpeedP50 !== null ? { trailMovingSpeedP50 } : {}),
+      ...(typeof recording.envelope.providerSemanticsVersion === 'number'
+        ? { providerSemanticsVersion: recording.envelope.providerSemanticsVersion }
+        : {}),
+      ...(initialObservation
+        ? {
+          initialEconomy: { ...initialObservation.economy },
+          initialFacts: { ...initialObservation.facts },
+        }
+        : {}),
     },
     inputSegments,
     milestones,
     waypoints,
     ...(trail.length > 1 ? { trail } : {}),
+    ...(decisions.length > 0 ? { decisions } : {}),
     economyFinal,
   };
+  const admission = auditSemanticTapeAdmission(recording, rawObservations, script);
+  script.meta.admission = admission;
   const summary = summarizeSemanticScript(recording, script, null);
-  const warnings = describeSemanticScriptGaps(recording, script);
+  const warnings = [...describeSemanticScriptGaps(recording, script), ...admission.warnings];
   if (warnings.length > 0) {
     console.warn('[record-replay] semantic script has gaps:', warnings);
+  }
+  if (admission.errors.length > 0) {
+    console.error('[record-replay] tape admission FAILED — not certifiable:', admission.errors);
   }
   return { recording, script, summary, warnings };
 }
@@ -871,6 +970,25 @@ function asRecord(value: unknown): JsonRecord {
 
 function lerp(start: number, end: number, ratio: number): number {
   return start + (end - start) * ratio;
+}
+
+function extractDecisionsFromFrames(
+  recording: DemoRecording,
+  frameTimes: readonly number[],
+  trimOffset: number,
+): SemanticDecision[] {
+  const decisions: SemanticDecision[] = [];
+  recording.frames.forEach((frame, index) => {
+    for (const action of frame.actions ?? []) {
+      decisions.push({
+        t: roundTime(Math.max(0, (frameTimes[index] ?? 0) - trimOffset)),
+        id: action.id,
+        promptId: String(action.params.promptId ?? ''),
+        chosen: String(action.params.chosen ?? ''),
+      });
+    }
+  });
+  return decisions;
 }
 
 /** 排除驻留/噪声段(<0.3 u/s)后的示教移动速度中位数;段数不足时返回 null(老/异常 tape)。 */

@@ -20,9 +20,21 @@ import type { RecordingHudBanner } from './recording-hud';
  *   5. `createTemplateRecordingBanner()` 录制 HUD 的游戏专属警告条(见文件末尾)
  *
  * 接入规范(实证教训,详见 fps-3d-harness `docs/06-record-replay-dual-mode.md` §6.3)。
+ *
+ * ⚠️ **经济必须接"玩法真正消费的货币"**。scaffold 的 EconomySystem 是死数(cash 恒定),
+ * 如果解锁台实际消费的是背包实物,economy 三元组必须映射背包(参照 axe
+ * `createInventoryEconomyTracker`:观测层 onChange 订阅,游戏逻辑零入侵)。录成死数的
+ * tape 会被 tape 准入契约(06 §2)当场拒收——但别指望门禁,接对是本分。
+ *
+ * ⚠️ **里程碑事件带真名**(06 §6.3 规 8):计数型断言接不住"数量对、内容错"(axe 实证:
+ * 回放斧头等级与示教不一致仍全绿)。检测器 detect 时把具体身份写进 detail(如 upgradeId,
+ * 闭包可直读游戏的完成 id 集)并声明 `strictDetailKeys: ['upgradeId']`。
  */
 export function registerTemplateRecordReplayProviders(getGame: () => Game | null): () => void {
   return registerRecordReplayProviders({
+    // 观测语义版本(06 §6.3 规 9):经济换传感器 / facts 换含义 / 里程碑换身份规则,就 +1。
+    // 录制写进 envelope、提取进剧本 meta、回放错配即拒 —— 老页面/老口径的 tape 不再无声流入认证。
+    semanticsVersion: 1,
     snapshotProviders: [
       {
         name: 'template.simplePlayer',

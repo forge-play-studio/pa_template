@@ -2,8 +2,11 @@ import type { MovementInputSource, MovementInputState } from '../../../services/
 import {
   collectRecordReplaySnapshotEntries,
   getRecordReplayMilestoneIdentity,
+  getRecordReplayProviderSemanticsVersion,
+  recordReplayMilestoneStrictKeysMatch,
   isRecordReplayMilestoneCritical,
   isRecordReplayMilestoneSatisfied,
+  readRecordReplayActionProviders,
   readRecordReplayInputAuthority,
   readRecordReplayPlayerPosition,
 } from '../providers';
@@ -40,6 +43,12 @@ export interface SemanticReplayOptions {
   skipFailedStage?: boolean;
   maxLoopsPerStage?: number;
   maxDurationSec?: number;
+  /**
+   * 航迹补猎循环的总预算硬顶 = maxDurationSec × 本系数(默认 2,即最多把运行时长翻一倍)。
+   * 世界节奏弹性(2026-07-12):环境节流把资源产出拖慢时,回放沿示教航迹重驱补足经济,
+   * 每一圈按航迹段时长扩充预算 —— 弹性有顶,不是无限磨。
+   */
+  trailFarmDurationFactor?: number;
   /** 关掉轨迹跟踪,退回旧的 RDP waypoint 直线奔向(脚本无 trail 时自动退回)。 */
   trailFollowing?: boolean;
   /** 轨迹跟踪:目标点取在示教时钟前方多少秒。 */
@@ -62,6 +71,8 @@ export interface SemanticReplayOptions {
    * 不传 = `verdict.determinism` 为 null,行为与分级 v2 之前完全一致。
    */
   determinismHorizon?: number | 'green-full' | null;
+  /** 跳过 tape 准入拒绝(admission 错误/语义版本错配/初始状态错配),仅供开发排障;认证跑不得使用。 */
+  ignoreAdmission?: boolean;
 }
 
 /** Set when the run never happened because the script could not certify anything. */
@@ -132,14 +143,25 @@ export interface SemanticVerdict {
   waypointsPerStage: number[];
   stages: SemanticStageVerdict[];
   stuckEvents: SemanticStuckEvent[];
+  /**
+   * 离散决策重演账目。`unconsumed` > 0(剧本决策从未被消费)⇒ failed
+   * ——示教的决策点从未出现,因果链分叉;已消费的决策必按剧本选,无需再验。
+   */
+  decisions?: {
+    taken: Array<{ id: string; promptId: string; chosen: string; tSim: number }>;
+    unscripted: Array<{ id: string; promptId: string; tSim: number }>;
+    unconsumed?: number;
+  };
   durationSec: number;
 }
 
 export interface SemanticTrailTrackingVerdict {
   enabled: boolean;
   trailPoints: number;
-  /** 示教时钟推进到哪(秒)/ 示教总时长。 */
+  /** 示教时钟推进到的最远处(秒,**单调最大**——合法回拨如补猎循环不使其倒退)/ 示教总时长。 */
   scheduleSec: number;
+  /** 结束时示教时钟的位置(补猎循环回拨后可小于 scheduleSec)。 */
+  scheduleFinalSec: number;
   scriptDurationSec: number;
   /** 全程 actor 到航迹的最大 / 平均横向偏离。 */
   maxCrossError: number;
@@ -163,6 +185,10 @@ export interface SemanticTrailTrackingVerdict {
   reanchors: number;
   /** 障碍协商阶梯耗尽 deflect/backtrack 后,沿航迹向前跳锚的次数(每次都计入 detour)。 */
   trailSkips: number;
+  /** 航迹补猎循环次数(世界节奏弹性:>0 说明世界比示教穷,回放整圈重驱补足了经济)。 */
+  trailFarmLoops: number;
+  /** 补猎循环挣来的时长预算延长(秒)。 */
+  farmExtensionSec: number;
 }
 
 export interface SemanticEconomyGateVerdict {
@@ -303,6 +329,8 @@ const CLOCK_LOCK_CROSS_ERROR_EPSILON = 1e-3;
 /** 两次自锁的示教时刻相差小于此值 ⇒ 视为「在同一位置又锁住了」。 */
 const CLOCK_LOCK_SAME_ANCHOR_EPSILON_SEC = 0.05;
 const DEFAULT_CLOCK_LOCK_TIMEOUT_SEC = 1.5;
+/** 航迹末端完成余量:时钟渐近逼近 endSec,落在该余量内即视为「全程驶完」(见 updateWaypointProgressFromSchedule)。 */
+const TRAIL_END_COMPLETION_MARGIN_SEC = 0.25;
 /** actor 本帧位移小于此值才算「停住」。自锁是不动点:时钟、世界、actor 三者都不动。 */
 const CLOCK_LOCK_ACTOR_TRAVEL_EPSILON = 1e-3;
 /** 障碍协商阶梯最后一级:沿航迹向前跳锚的默认步长(秒)。 */
@@ -339,6 +367,17 @@ export class SemanticReplayController implements MovementInputSource {
   private readonly economyGates: SemanticEconomyGateVerdict[] = [];
   private readonly stageVerdicts: MutableStageVerdict[] = [];
   private readonly stuckEvents: SemanticStuckEvent[] = [];
+  /** 夺权(剧情段)开始时的示教时钟——剧情段边界重锚的前向下限基准。 */
+  private scriptedLockStartScheduleSec: number | null = null;
+  /** 同点连续重锁计数(原地重触发循环断路器,前向偏置按 2^n 升级)。 */
+  private consecutiveScriptedRelocks = 0;
+  private lastScriptedEndScheduleSec: number | null = null;
+  /** L2 监督干预账目(诚实入档;认证侧可据此封顶,零干预跑不受影响)。 */
+  private readonly supervisorInterventions: Array<{ tSim: number; action: string; arg?: number }> = [];
+  private readonly decisionsTaken: Array<{ id: string; promptId: string; chosen: string; tSim: number }> = [];
+  private readonly unscriptedDecisions: Array<{ id: string; promptId: string; tSim: number }> = [];
+  private readonly consumedDecisionIndices = new Set<number>();
+  private lastUnscriptedDecisionKey = '';
   private previousObservation: SemanticObservation;
   private recovery: RecoveryState | null = null;
   private recoveryAttemptForWaypoint = 0;
@@ -362,6 +401,8 @@ export class SemanticReplayController implements MovementInputSource {
   private readonly tracker: SemanticPathTracker | null;
   private pursuitTarget: { x: number; z: number } | null = null;
   private pursuitScheduleSec = 0;
+  /** 示教时钟推进过的最远处(单调最大;合法回拨——补猎循环/回锚——不使其倒退)。 */
+  private pursuitScheduleMaxSec = 0;
   private lastInputActive = false;
   private trackCrossErrorMax = 0;
   private trackCrossErrorSum = 0;
@@ -411,6 +452,20 @@ export class SemanticReplayController implements MovementInputSource {
   private gateHoldStalledSec = 0;
   private stageNoProgressSec = 0;
   private progressSignature = '';
+  /** 航迹补猎循环(见 maybeTrailFarmLoop):整圈重驱示教航迹以补足经济缺口的次数。 */
+  private trailFarmLoops = 0;
+  /** 连续零进账的补猎圈数(产出保险丝:≥2 判定世界不再产出,诚实失败)。 */
+  private trailFarmUnproductiveLoops = 0;
+  private trailFarmLastEarned: number | null = null;
+  /** 补猎圈挣来的预算延长(秒),与 maxDurationSec 相加后受 trailFarmHardCapSec 封顶。 */
+  private trailFarmExtensionSec = 0;
+  private readonly trailFarmHardCapSec: number;
+  /**
+   * 补猎回拨后的归航期:actor 从航迹末端走回 stage 起点的转场。
+   * 该期间横向偏离是预期转场距离而非跟踪不忠,不计入 crossError/stalled 统计
+   * (与剧情段排除同一哲学);贴回轨道带内即结束。活性仍由 crossErrorImproving 保障。
+   */
+  private farmHomingToTrail = false;
 
   constructor(
     private readonly game: SemanticReplayGame,
@@ -427,6 +482,7 @@ export class SemanticReplayController implements MovementInputSource {
       1,
       options.maxDurationSec ?? (this.script.meta.durationSec * 2 + this.stageTimeoutSlackSec + 10),
     );
+    this.trailFarmHardCapSec = this.maxDurationSec * Math.max(1, options.trailFarmDurationFactor ?? 2);
     // 卡死判据的 ε 从示教导出:「窗口内净位移 < α × 示教中位移动速度 × 窗口」= 没有实质进度。
     // 固定 0.05(位置噪声底)抓不到「动而不进」—— 顶墙微动振荡会不断重置锚点,阶梯永远不点火
     // (sword_craft_story 实证:满幅输入 0.1–0.3 u/s 微动 106s,四层脱困零触发,塔被打死判 failed)。
@@ -557,8 +613,20 @@ export class SemanticReplayController implements MovementInputSource {
     const authoritative = readRecordReplayInputAuthority();
     this.inputAuthoritative = authoritative;
     // **推进之前**放行剧情段里的闸门,否则 cap 会在本帧就把时钟钳住(见下)。
-    if (!authoritative) this.releaseGatesBlockingScriptedSchedule(deltaTime);
-    else if (!wasAuthoritative) this.reanchorAfterScriptedSegment();
+    if (!authoritative) {
+      if (wasAuthoritative) {
+        // 夺权开始:记基准 + 判定是否为「同点重锁」(上次剧情段结束后时钟几乎没走 = 循环)
+        const schedule = this.tracker?.scheduleSec ?? 0;
+        this.consecutiveScriptedRelocks = this.lastScriptedEndScheduleSec !== null
+          && schedule - this.lastScriptedEndScheduleSec < 0.25
+          ? this.consecutiveScriptedRelocks + 1
+          : 0;
+        this.scriptedLockStartScheduleSec = schedule;
+      }
+      this.releaseGatesBlockingScriptedSchedule(deltaTime);
+    } else if (!wasAuthoritative) {
+      this.reanchorAfterScriptedSegment();
+    }
     const capSec = this.getScheduleCapSec();
 
     const step = this.tracker.advance(deltaTime, this.readCurrentPosition(), capSec, {
@@ -585,12 +653,18 @@ export class SemanticReplayController implements MovementInputSource {
     if (!authoritative) this.clockLockSec = 0;   // 剧情段里跟踪误差无意义
 
     if (authoritative) {
-      // 只有「输入说了算」时,跟踪误差才是真实的保真度指标。
-      this.trackCrossErrorMax = Math.max(this.trackCrossErrorMax, step.crossError);
-      this.trackCrossErrorSum += step.crossError;
-      this.trackSamples += 1;
-      this.trackBehindMax = Math.max(this.trackBehindMax, step.behindSec);
-      this.trackStalledSec += Math.max(0, deltaTime) * (1 - step.gain);
+      // 补猎归航:贴回轨道带内(2×容差带,下限 1.5u)即恢复正常计量。
+      if (this.farmHomingToTrail && step.crossError <= Math.max(1.5, this.waypointToleranceBand * 2)) {
+        this.farmHomingToTrail = false;
+      }
+      if (!this.farmHomingToTrail) {
+        // 只有「输入说了算」且不在归航转场时,跟踪误差才是真实的保真度指标。
+        this.trackCrossErrorMax = Math.max(this.trackCrossErrorMax, step.crossError);
+        this.trackCrossErrorSum += step.crossError;
+        this.trackSamples += 1;
+        this.trackBehindMax = Math.max(this.trackBehindMax, step.behindSec);
+        this.trackStalledSec += Math.max(0, deltaTime) * (1 - step.gain);
+      }
     } else {
       this.trackScriptedSec += Math.max(0, deltaTime);
     }
@@ -704,7 +778,9 @@ export class SemanticReplayController implements MovementInputSource {
       return;
     }
     this.clearExpiredRecovery();
+    this.updatePendingDecisions();
     this.updatePathTracking(deltaTime);
+    this.pursuitScheduleMaxSec = Math.max(this.pursuitScheduleMaxSec, this.pursuitScheduleSec);
     this.updateWaypointProgress();
     this.updateMilestones();
     this.updateStuckWatchdog();
@@ -761,6 +837,19 @@ export class SemanticReplayController implements MovementInputSource {
    * 偏差记为那一刻 actor 到该 waypoint 的距离。dwell 由航迹本身承载,不再单独 hold。
    */
   private updateWaypointProgressFromSchedule(): void {
+    // 末端栅栏:时钟对 endSec 的逼近是渐近的(gain×dt 芝诺),而最后一个 waypoint 的 t
+    // 恰为 endSec —— 差一线永远消费不掉 ⇒ 完成条件永假 ⇒ 尾段自锁循环烧到阶梯误判
+    // 「耗尽」判负(cert-v2 run0/run2 实证:20/29 次逃逸、烧 60–120s、quality=failed)。
+    // 时钟已进入末端余量 ⇒ 同一余量内的收尾 waypoints 按 reached 处理(统计口径,非闸门)。
+    if (this.tracker && this.tracker.scheduleSec >= this.tracker.endSec - TRAIL_END_COMPLETION_MARGIN_SEC) {
+      let tail = this.getCurrentWaypoint();
+      while (tail && tail.t >= this.tracker.endSec - TRAIL_END_COMPLETION_MARGIN_SEC) {
+        this.maxReachDeviation = Math.max(this.maxReachDeviation, this.trackCrossErrorMax);
+        this.reachedWaypoints += 1;
+        this.waypointIndex += 1;
+        tail = this.getCurrentWaypoint();
+      }
+    }
     let target = this.getCurrentWaypoint();
     while (target && this.pursuitScheduleSec >= target.t - 1e-6) {
       // 追踪模式下「偏离」的正确度量是 actor 到示教航迹的横向距离(crossError),
@@ -857,6 +946,90 @@ export class SemanticReplayController implements MovementInputSource {
       maxTaught = maxTaught === null ? taught : Math.max(maxTaught, taught);
     }
     return maxTaught !== null && value > maxTaught;
+  }
+
+  // ── L2 监督接口:遥测 + 有界干预菜单(runSemanticReplay 挂到 window.__semCtl)──
+  // 设计:监督者(AI 看截图+运行时数据)只能从**控制律已有的确定性动作**里选,
+  // 每次干预记账进 verdict —— 可审计、可封顶,零干预跑的认证语义完全不变。
+
+  getSupervisorStatus(): Record<string, unknown> {
+    return {
+      phase: this.phase,
+      elapsedSec: roundTo(this.elapsedSec, 2),
+      scheduleSec: roundTo(this.tracker?.scheduleSec ?? 0, 2),
+      scriptDurationSec: this.script.meta.durationSec,
+      stagesResolved: this.stageVerdicts.filter((stage) => stage.status !== 'active').length,
+      stuckEvents: this.stuckEvents.length,
+      scriptedReanchors: this.scriptedReanchors,
+      inputAuthoritative: this.inputAuthoritative,
+      decisionsTaken: this.decisionsTaken.length,
+      unscriptedDecisions: this.unscriptedDecisions.length,
+      interventions: this.supervisorInterventions.length,
+      // 补猎循环是单调计数器(L2 采样定理:循环检测只信单调量)。
+      trailFarmLoops: this.trailFarmLoops,
+      budgetSec: roundTo(this.effectiveMaxDurationSec(), 1),
+    };
+  }
+
+  supervisorSkipForward(sec: number): void {
+    if (!this.tracker || !this.trackerStarted || !Number.isFinite(sec) || sec <= 0) return;
+    this.supervisorInterventions.push({ tSim: roundTo(this.elapsedSec, 2), action: 'skipForward', arg: sec });
+    this.tracker.skipForward(sec, this.getScheduleCapSec());
+    this.previousCrossError = Number.POSITIVE_INFINITY;
+    this.clockLockSec = 0;
+    this.gateHoldStalledSec = 0;
+    this.stageNoProgressSec = 0;
+  }
+
+  supervisorTriggerEscape(): void {
+    this.supervisorInterventions.push({ tSim: roundTo(this.elapsedSec, 2), action: 'triggerEscape' });
+    if (!this.recovery) this.startRecovery(this.readCurrentPosition());
+  }
+
+  supervisorReanchorForward(biasSec: number): void {
+    if (!this.tracker || !this.trackerStarted) return;
+    const bias = Number.isFinite(biasSec) && biasSec > 0 ? biasSec : 0.75;
+    this.supervisorInterventions.push({ tSim: roundTo(this.elapsedSec, 2), action: 'reanchorForward', arg: bias });
+    this.reanchorTeachClock((this.tracker.scheduleSec ?? 0) + bias);
+  }
+
+  /**
+   * 离散决策重演:轮询各注册动作面的待决选择,按 (id, promptId) **顺序消费**剧本 decisions。
+   * 剧本里没有的卡(示教没遇过)→ 不点,记 unscripted,由既有 stage 超时机制诚实失败。
+   */
+  private updatePendingDecisions(): void {
+    const scriptDecisions = this.script.decisions ?? [];
+    for (const provider of readRecordReplayActionProviders()) {
+      let pending: { promptId: string; options: string[] } | null = null;
+      try {
+        pending = provider.getPending();
+      } catch {
+        continue;
+      }
+      if (!pending) continue;
+      const key = `${provider.id}::${pending.promptId}`;
+      let matched = -1;
+      for (let index = 0; index < scriptDecisions.length; index += 1) {
+        if (this.consumedDecisionIndices.has(index)) continue;
+        const decision = scriptDecisions[index]!;
+        if (decision.id === provider.id && decision.promptId === pending.promptId) {
+          matched = index;
+          break;
+        }
+      }
+      if (matched < 0) {
+        if (this.lastUnscriptedDecisionKey !== key) {
+          this.lastUnscriptedDecisionKey = key;
+          this.unscriptedDecisions.push({ id: provider.id, promptId: pending.promptId, tSim: roundTo(this.elapsedSec, 4) });
+        }
+        continue;
+      }
+      this.consumedDecisionIndices.add(matched);
+      const decision = scriptDecisions[matched]!;
+      provider.invoke({ promptId: decision.promptId, chosen: decision.chosen });
+      this.decisionsTaken.push({ id: decision.id, promptId: decision.promptId, chosen: decision.chosen, tSim: roundTo(this.elapsedSec, 4) });
+      this.lastUnscriptedDecisionKey = '';
+    }
   }
 
   private updateStuckWatchdog(): void {
@@ -989,9 +1162,12 @@ export class SemanticReplayController implements MovementInputSource {
       this.maybeLoopTailForEconomyFinal();
       return;
     }
-    // 追踪模式:闸门未过时示教时钟被钉在闸门时刻(见 getScheduleCapSec),
-    // actor 就停在人类当时的位置上继续攒进度。不需要、也不该整段重跑。
-    if (this.tracker) return;
+    // 追踪模式:闸门未过时先钉住等(见 getScheduleCapSec),等不来则耐心放行沿航迹继续走;
+    // 一整圈走完仍差进度 ⇒ 补猎循环(见 maybeTrailFarmLoop)。
+    if (this.tracker) {
+      this.maybeTrailFarmLoop(expected);
+      return;
+    }
     const stageWaypointEndIndex = this.getCurrentStageWaypointEndIndex();
     if (this.stageWaypointStartIndex >= stageWaypointEndIndex) return;
     if (this.waypointIndex < stageWaypointEndIndex) return;
@@ -1026,6 +1202,76 @@ export class SemanticReplayController implements MovementInputSource {
     if (!this.tracker) return;
     this.tracker.resetTo(this.scriptStageStartSec);
     this.pursuitScheduleSec = this.tracker.scheduleSec;
+  }
+
+  /**
+   * 航迹补猎循环 —— 世界节奏弹性(Page 裁决,2026-07-12)。
+   *
+   * 环境把世界节奏拖慢(计时器节流、负载)时,actor 到达闸门的经济可能比示教同刻更穷。
+   * 示教是**策略**不是时刻表:人类差钱时会沿老路再跑一圈打猎,晚点再买。触发判据 =
+   * 示教时钟已顶到航迹尽头 + 剩余闸门全部被耐心放行过 + 里程碑仍有缺 ⇒ 把时钟拨回当前
+   * stage 起点整圈重驱(示教航迹本身就是被证明有效的觅食路线),经济攒够后途经的机关
+   * 自然重新触发,里程碑照常靠 detector 命中,不跳过、不放容差。
+   *
+   * 两道保险丝防无限磨:
+   * - 产出保险丝:连续 2 圈 totalEarned 零进账 = 世界真的不再产出,诚实失败;
+   * - 预算硬顶:每个productive 圈按航迹段时长扩充 maxDuration 预算,但受 trailFarmHardCapSec 封死。
+   */
+  private maybeTrailFarmLoop(expected: SemanticMilestone): void {
+    if (!this.tracker || !this.inputAuthoritative) return;
+    // 「剩余闸门全放行 + 时钟顶到航迹尽头」= 一圈走完。闸门还横在前方时轮不到这里 ——
+    // 那是钉住等/耐心放行的职责范围。
+    if (this.matchedMilestones + this.releasedGates < this.script.milestones.length) return;
+    if (this.tracker.scheduleSec < this.tracker.endSec - 0.1) return;
+    const current = this.readObservation();
+    if (this.isStageGateSatisfied(expected, current)) return; // 已攒够,让里程碑匹配自己走完
+
+    const stage = this.stageVerdicts[this.stageVerdicts.length - 1];
+    if (!stage || stage.status !== 'active') return;
+    if (stage.loops >= this.maxLoopsPerStage) {
+      this.recordMissingMilestone({
+        index: this.matchedMilestones,
+        expected,
+        reason: `trail farm loop limit reached (${this.maxLoopsPerStage})`,
+      });
+      this.handleStageFailure('trail farm loop limit reached');
+      return;
+    }
+    const earned = current.economy.totalEarned;
+    if (this.trailFarmLastEarned !== null && earned <= this.trailFarmLastEarned) {
+      this.trailFarmUnproductiveLoops += 1;
+      if (this.trailFarmUnproductiveLoops >= 2) {
+        this.recordMissingMilestone({
+          index: this.matchedMilestones,
+          expected,
+          reason: 'trail farm loops stopped yielding income',
+        });
+        this.handleStageFailure('trail farm loops unproductive');
+        return;
+      }
+    } else {
+      this.trailFarmUnproductiveLoops = 0;
+    }
+    this.trailFarmLastEarned = earned;
+
+    stage.loops += 1;
+    this.trailFarmLoops += 1;
+    this.trailFarmExtensionSec += Math.max(0, this.tracker.endSec - this.scriptStageStartSec);
+    this.farmHomingToTrail = true;
+    this.rewindStagePath();
+    // 时钟拨回后,未匹配闸门重新横在前方:cap 恢复,耐心计时清零;
+    // 剧情段自锁基准建立在旧时钟坐标上,拨回后作废,否则回拨会被误判成「同点重锁」。
+    this.releasedGates = 0;
+    this.gateHoldStalledSec = 0;
+    this.stageNoProgressSec = 0;
+    this.lastScriptedEndScheduleSec = null;
+    this.consecutiveScriptedRelocks = 0;
+    this.scriptedLockStartScheduleSec = null;
+    this.recovery = null;
+    this.recoveryAttemptForWaypoint = 0;
+    this.consecutiveSkippedWaypoints = 0;
+    this.clearWaypointDwell();
+    this.watchdog.reset();
   }
 
   private handleStageFailure(reason: string): void {
@@ -1085,9 +1331,14 @@ export class SemanticReplayController implements MovementInputSource {
     this.clearDwelledWaypointsInRange(this.stageWaypointStartIndex, stageWaypointEndIndex);
   }
 
+  /** 有效时长预算 = 基础预算 + 补猎圈挣来的延长,硬顶封死(弹性不是无限)。 */
+  private effectiveMaxDurationSec(): number {
+    return Math.min(this.maxDurationSec + this.trailFarmExtensionSec, this.trailFarmHardCapSec);
+  }
+
   private checkCompletion(): void {
     if (this.failed || this.done) return;
-    if (this.elapsedSec > this.maxDurationSec) {
+    if (this.elapsedSec > this.effectiveMaxDurationSec()) {
       this.failCurrentStage('semantic replay maxDurationSec elapsed');
       return;
     }
@@ -1571,7 +1822,15 @@ export class SemanticReplayController implements MovementInputSource {
    */
   private reanchorAfterScriptedSegment(): void {
     if (!this.tracker || !this.trackerStarted) return;
-    this.reanchorTeachClock();
+    // 前向单调重锚:锚点不得早于夺权开始时刻 + 前向偏置——否则原地机关(按钮跳跃)
+    // 会形成「落地→重锚回机关→走回去→再触发」死循环(第四型,axe 实证)。
+    // 同点连续重锁时偏置按 2^n 升级(0.75→1.5→3→6s 封顶),有界必然脱离。
+    const bias = Math.min(6, 0.75 * 2 ** this.consecutiveScriptedRelocks);
+    const floor = this.scriptedLockStartScheduleSec !== null
+      ? this.scriptedLockStartScheduleSec + bias
+      : undefined;
+    this.reanchorTeachClock(floor);
+    this.lastScriptedEndScheduleSec = this.tracker.scheduleSec;
     this.scriptedReanchors += 1;
     // 剧情段边界是**新的一次**机会:允许自锁检测在这里再逃逸一次。
     this.lastLockEscapeScheduleSec = null;
@@ -1712,9 +1971,9 @@ export class SemanticReplayController implements MovementInputSource {
    * 把示教时钟重锚到 actor 在航迹上的全程最近点。B(边界已知)与 C(运行时发现)共用这一原语,
    * 差别只在**触发时机**,不在动作。
    */
-  private reanchorTeachClock(): void {
+  private reanchorTeachClock(minScheduleSec?: number): void {
     if (!this.tracker || !this.trackerStarted) return;
-    this.tracker.reanchorToActor(this.readCurrentPosition(), this.getScheduleCapSec());
+    this.tracker.reanchorToActor(this.readCurrentPosition(), this.getScheduleCapSec(), minScheduleSec);
     this.pursuitScheduleSec = this.tracker.scheduleSec;
     this.previousCrossError = Number.POSITIVE_INFINITY;
     this.crossErrorImproving = false;
@@ -1752,11 +2011,14 @@ export class SemanticReplayController implements MovementInputSource {
     const failedStage = this.stageVerdicts.some((stage) => stage.status === 'failed' || stage.status === 'active');
     const economyGateFailed = this.economyGates.some((gate) => !gate.pass);
     const economyFinalPass = this.isEconomyFinalSatisfied(current.economy);
+    // 决策终局对账:没消费 = 示教的决策点从未出现,因果链分叉(已消费必按剧本选,无需再验)。
+    const unconsumedDecisions = Math.max(0, (this.script.decisions?.length ?? 0) - this.decisionsTaken.length);
     const ok = this.missingMilestones.length === 0
       && this.extraMilestones.length === 0
       && this.orderViolations === 0
       && !economyGateFailed
       && economyFinalPass
+      && unconsumedDecisions === 0
       && this.calibrationVerdict.status === 'ok'
       && !failedStage;
     const recovered = this.stuckEvents.length > 0
@@ -1782,6 +2044,7 @@ export class SemanticReplayController implements MovementInputSource {
         optionalTotal: layered.optionalTotal,
         criticalTotal: layered.criticalTotal,
         economyPass: !economyGateFailed && economyFinalPass,
+        unconsumedDecisions,
         stageDisrupted: this.stageVerdicts.some((stage) => stage.status !== 'ok'),
         detourScore,
         ok,
@@ -1834,7 +2097,8 @@ export class SemanticReplayController implements MovementInputSource {
         ? {
             enabled: true,
             trailPoints: this.script.trail?.length ?? 0,
-            scheduleSec: roundTo(this.pursuitScheduleSec, 4),
+            scheduleSec: roundTo(Math.max(this.pursuitScheduleMaxSec, this.pursuitScheduleSec), 4),
+            scheduleFinalSec: roundTo(this.pursuitScheduleSec, 4),
             scriptDurationSec: this.script.meta.durationSec,
             maxCrossError: roundTo(this.trackCrossErrorMax, 4),
             meanCrossError: roundTo(this.trackSamples > 0 ? this.trackCrossErrorSum / this.trackSamples : 0, 4),
@@ -1846,6 +2110,8 @@ export class SemanticReplayController implements MovementInputSource {
             clockLockEscapes: this.clockLockEscapes,
             reanchors: this.reanchors,
             trailSkips: this.trailSkips,
+            trailFarmLoops: this.trailFarmLoops,
+            farmExtensionSec: roundTo(this.trailFarmExtensionSec, 2),
           }
         : null,
       calibration: cloneCalibrationVerdict(this.calibrationVerdict),
@@ -1860,6 +2126,18 @@ export class SemanticReplayController implements MovementInputSource {
           : stage.durationSec,
       })),
       stuckEvents: this.stuckEvents.map((event) => ({ ...event, pos: { ...event.pos } })),
+      ...(this.decisionsTaken.length > 0 || this.unscriptedDecisions.length > 0 || unconsumedDecisions > 0
+        ? {
+          decisions: {
+            taken: this.decisionsTaken.map((decision) => ({ ...decision })),
+            unscripted: this.unscriptedDecisions.map((decision) => ({ ...decision })),
+            ...(unconsumedDecisions > 0 ? { unconsumed: unconsumedDecisions } : {}),
+          },
+        }
+        : {}),
+      ...(this.supervisorInterventions.length > 0
+        ? { supervisorInterventions: this.supervisorInterventions.map((entry) => ({ ...entry })) }
+        : {}),
       durationSec: roundTo(this.elapsedSec, 4),
     };
   }
@@ -1906,7 +2184,7 @@ export class SemanticStuckWatchdog {
  * A verdict for a script that was never driven. `ok: false` + `refused` so callers cannot mistake
  * it for a passing run, and `quality: 'failed'` so existing consumers treat it as a failure.
  */
-export function createRefusedSemanticVerdict(script: SemanticScript): SemanticVerdict {
+export function createRefusedSemanticVerdict(script: SemanticScript, reason?: string): SemanticVerdict {
   const grading = gradeSemanticVerdict({
     refused: true,
     calibrationFailed: false,
@@ -1929,8 +2207,9 @@ export function createRefusedSemanticVerdict(script: SemanticScript): SemanticVe
     terminalDivergence: null,
     determinism: null,
     refused: {
-      reason: 'semantic script asserts nothing (0 milestones, 0 waypoints) — nothing to certify. '
-        + 'Most often the source tape carries no stateSamples/trail.',
+      reason: reason
+        ?? ('semantic script asserts nothing (0 milestones, 0 waypoints) — nothing to certify. '
+          + 'Most often the source tape carries no stateSamples/trail.'),
       milestones: script.milestones.length,
       waypoints: script.waypoints.length,
     },
@@ -1976,12 +2255,75 @@ export function runSemanticReplay(options: RunSemanticReplayOptions): Promise<Se
     return Promise.resolve(createRefusedSemanticVerdict(script));
   }
 
+  // tape 准入门禁的回放侧兜底(正门在 extract 的 auditSemanticTapeAdmission):
+  // 病 tape / 语义版本错配 = 剧本目标与传感器读数不可比,跑了也是脏结论,宁红不空绿。
+  if (!options.options?.ignoreAdmission) {
+    const admissionErrors = script.meta.admission?.errors ?? [];
+    if (admissionErrors.length > 0) {
+      return Promise.resolve(createRefusedSemanticVerdict(
+        script,
+        `tape admission failed: ${admissionErrors.join(' | ')}`,
+      ));
+    }
+    const liveSemanticsVersion = getRecordReplayProviderSemanticsVersion();
+    if (typeof script.meta.providerSemanticsVersion === 'number'
+      && liveSemanticsVersion !== null
+      && script.meta.providerSemanticsVersion !== liveSemanticsVersion) {
+      return Promise.resolve(createRefusedSemanticVerdict(
+        script,
+        `provider semantics version mismatch: script v${script.meta.providerSemanticsVersion} vs registered v${liveSemanticsVersion} — re-record on the current build.`,
+      ));
+    }
+    // 初始状态断言:世界必须干净起步(带存档启动/复位不净会把里程碑白送给回放)。
+    if (script.meta.initialFacts) {
+      const liveFacts = readSemanticObservationFromSnapshot({
+        time: 0,
+        playerPosition: { x: 0, y: 0, z: 0 },
+        providers: collectRecordReplaySnapshotEntries(),
+      }, 0).facts;
+      const mismatches: string[] = [];
+      for (const [key, expected] of Object.entries(script.meta.initialFacts)) {
+        const actual = liveFacts[key];
+        if (actual !== undefined && actual !== expected) {
+          mismatches.push(`${key}: teach=${String(expected)} live=${String(actual)}`);
+        }
+      }
+      if (mismatches.length > 0) {
+        return Promise.resolve(createRefusedSemanticVerdict(
+          script,
+          `initial state mismatch — the world did not start where the teach started (${mismatches.join(', ')}). `
+          + 'Suspect an unclean restart or a completed-at-boot save.',
+        ));
+      }
+    }
+  }
+
   const currentSeed = game.getDeterminismContext().seed;
   if (currentSeed !== script.meta.seed) {
     throw new Error(`seed mismatch: semantic script=${script.meta.seed}, current=${currentSeed}`);
   }
+  // 回放不自录:rrAutoStart 页里触发回放时,先把进行中的录制收掉 ——
+  // 回放录像毫无语义价值,只会产生悬挂 checkpoint 会话与录制负载税。
+  if (typeof window !== 'undefined') {
+    const demoRec = (window as unknown as {
+      __demoRec?: { getStatus?: () => { phase?: string }; stop?: () => Promise<void> };
+    }).__demoRec;
+    if (demoRec?.getStatus?.().phase === 'recording') {
+      console.warn('[record-replay] semantic replay starting while a demo recording is active — stopping the recording first.');
+      void demoRec.stop?.().catch(() => undefined);
+    }
+  }
   const originalSource = inputService.getMovementSource();
   const controller = new SemanticReplayController(game, script, options.options);
+  // L2 监督接口:AI/人监督者经 window.__semCtl 观察(遥测)与干预(有界菜单,全记账)
+  if (typeof window !== 'undefined') {
+    (window as unknown as { __semCtl?: unknown }).__semCtl = {
+      getStatus: () => controller.getSupervisorStatus(),
+      skipForward: (sec: number) => controller.supervisorSkipForward(sec),
+      triggerEscape: () => controller.supervisorTriggerEscape(),
+      reanchorForward: (biasSec: number) => controller.supervisorReanchorForward(biasSec),
+    };
+  }
   const restoreUpdate = installSemanticPostUpdateHook(game, (deltaTime) => {
     if (options.shouldAbort?.()) {
       cleanup();
@@ -2004,6 +2346,9 @@ export function runSemanticReplay(options: RunSemanticReplayOptions): Promise<Se
     inputService.setMovementSource(originalSource);
     game.setDtOverride?.(null);
     restoreUpdate();
+    if (typeof window !== 'undefined') {
+      delete (window as unknown as { __semCtl?: unknown }).__semCtl;
+    }
   };
   const resolveOnce = (verdict: SemanticVerdict): void => {
     if (resolved) return;
@@ -2025,7 +2370,13 @@ export function runSemanticReplay(options: RunSemanticReplayOptions): Promise<Se
       } catch (error) {
         rejectPromise(error);
       }
-    }, Math.max(1, (options.options?.maxDurationSec ?? script.meta.durationSec * 2 + 20) * 1000));
+    }, Math.max(
+      1,
+      // 兜底墙钟超时与控制律的弹性预算同步放大(基础预算 × 补猎硬顶系数 + 余量),
+      // 否则补猎圈还在正常产出时就被外层一刀切掉。
+      (options.options?.maxDurationSec ?? script.meta.durationSec * 2 + 20)
+        * Math.max(1, options.options?.trailFarmDurationFactor ?? 2) * 1000 + 30_000,
+    ));
   }).catch((error) => {
     cleanup();
     throw error;
@@ -2043,6 +2394,7 @@ export function normalizeSemanticReplayScript(script: SemanticScript): SemanticS
     milestones: normalizeSemanticMilestones(script.milestones),
     waypoints: script.waypoints.map((waypoint) => ({ ...waypoint })),
     ...(script.trail ? { trail: script.trail.map((point) => ({ ...point })) } : {}),
+    ...(script.decisions ? { decisions: script.decisions.map((decision) => ({ ...decision })) } : {}),
     economyFinal: { ...script.economyFinal },
   };
 }
@@ -2157,7 +2509,10 @@ function economyGatePasses(
 
 function milestonesHaveSameIdentity(expected: SemanticMilestone, actual: SemanticMilestone): boolean {
   return expected.kind === actual.kind
-    && getRecordReplayMilestoneIdentity(expected) === getRecordReplayMilestoneIdentity(actual);
+    && getRecordReplayMilestoneIdentity(expected) === getRecordReplayMilestoneIdentity(actual)
+    // 强断言键(providers strictDetailKeys):双方都带键时值必须相等 —— "第 N 次升级"必须
+    // 是"同一件升级"。缺键不约束(老 tape 兼容)。
+    && recordReplayMilestoneStrictKeysMatch(expected, actual);
 }
 
 function computeNominalDragMagnitude(script: SemanticScript): number {
@@ -2236,9 +2591,21 @@ function readMilestoneDetailId(milestone: SemanticMilestone): string | null {
   return detail && typeof detail.id === 'string' ? detail.id : null;
 }
 
+/**
+ * 单调计数刻度的数值读取(超产豁免用,§6.2)。
+ * 原实现只认 qy 形状 `detail.to`——axe 的 `{id, stage}` 读不出数值,导致合法超产
+ * (upgrade#14 > 示教 13)被误判 terminal(2026-07-12 实证)。
+ * 形状无关规则:`to` 优先(qy 兼容);否则 detail 中**恰好一个**数值字段时用它;
+ * 多个数值字段语义不明,保守返回 null(不豁免)。
+ */
 function readMilestoneDetailNumeric(milestone: SemanticMilestone): number | null {
   const detail = (milestone as { detail?: Record<string, unknown> }).detail;
-  const to = detail?.to;
-  const value = typeof to === 'number' ? to : typeof to === 'string' ? Number(to) : Number.NaN;
-  return Number.isFinite(value) ? value : null;
+  if (!detail) return null;
+  const to = detail.to;
+  const toValue = typeof to === 'number' ? to : typeof to === 'string' ? Number(to) : Number.NaN;
+  if (Number.isFinite(toValue)) return toValue;
+  const numericValues = Object.entries(detail)
+    .filter(([key, value]) => key !== 'id' && typeof value === 'number' && Number.isFinite(value))
+    .map(([, value]) => value as number);
+  return numericValues.length === 1 ? numericValues[0]! : null;
 }

@@ -75,6 +75,13 @@ export interface SemanticGradeInput {
   criticalTotal: number;
   /** 经济终值 + 全部经济闸门都在容差内。 */
   economyPass: boolean;
+  /**
+   * 剧本里的离散决策(选卡)有几个从未被消费。> 0 ⇒ failed:
+   * 已消费的决策必然按剧本选(invoke 注入 chosen),而**没消费 = 示教的某个决策点从未出现**,
+   * 因果链已经分叉(实证:axe 回放斧头等级与示教不一致,计数型里程碑没接住,2026-07-12)。
+   * 可选:老调用方不传 = 0,行为不变。
+   */
+  unconsumedDecisions?: number;
   /** 有 stage 没能正常走完(failed / active / skipped)。 */
   stageDisrupted: boolean;
   /** 绕路 / 重试 / 卡死恢复的累计严重度。 */
@@ -130,6 +137,13 @@ export function gradeSemanticVerdict(
   }
   if (input.criticalMissing > 0) {
     return { ...base, grade: 'failed', reason: `${input.criticalMissing} critical milestone(s) missing` };
+  }
+  if ((input.unconsumedDecisions ?? 0) > 0) {
+    return {
+      ...base,
+      grade: 'failed',
+      reason: `${input.unconsumedDecisions} scripted decision(s) never consumed — a demonstrated choice point was never reached`,
+    };
   }
   if (input.calibrationFailed) {
     // 里程碑可能全中,但那不是回放开出来的 —— 拒绝给这种运行任何正面名分。

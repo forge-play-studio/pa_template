@@ -53,6 +53,14 @@ export interface MilestoneDetector {
   isSatisfied?(milestone: RecordReplayMilestoneEvent, observation: RecordReplayObservation): boolean;
   getIdentity?(milestone: Pick<RecordReplayMilestoneEvent, 'kind' | 'detail'>): string | null;
   /**
+   * detail 里的**强断言键**:匹配双方都带这些键时,值必须相等才算同一里程碑。
+   *
+   * 用于把"第 N 次升级"升格为"具体升级了哪一件"(反例实证:axe 回放斧头等级与示教
+   * 不一致仍 14/14 全绿——计数对了,内容错了,2026-07-12)。只约束**双方都带键**的情形:
+   * 老 tape 的事件没有该键 ⇒ 不构成约束,回退计数/身份语义,向后兼容。
+   */
+  strictDetailKeys?: readonly string[];
+  /**
    * 这个里程碑在不在**主线因果链**上?
    *
    * `true`(critical)—— 缺一个就判 failed:通关 / 死亡等终局态,以及推进阶段的关键节点。
@@ -88,11 +96,31 @@ export function getDefaultRecordReplayMilestoneCriticality(kind: string): boolea
  */
 export type RecordReplayInputAuthorityProvider = () => boolean;
 
+/**
+ * 离散动作面(点击选卡类游戏动词)。游戏注册「出现了什么选择 + 怎么执行」,
+ * 框架录**语义 ID**(promptId/chosen),不录像素坐标。
+ * `invoke` 必须与人点击走**同一条代码路径**(同一漏斗函数)且同步执行;
+ * `getPending` 返回当前待决选择(Mode B 轮询它决定何时替玩家做选择)。
+ */
+export interface RecordReplayActionProvider {
+  id: string;
+  invoke(params: Record<string, string | number>): void;
+  getPending(): { promptId: string; options: string[] } | null;
+}
+
 export interface RegisterRecordReplayProvidersOptions {
   snapshotProviders?: readonly RecordReplaySnapshotProvider[];
   milestoneDetectors?: readonly MilestoneDetector[];
   playerPosition?: (() => RecordReplayPlayerPosition | null | undefined) | null;
   inputAuthority?: RecordReplayInputAuthorityProvider | null;
+  actions?: readonly RecordReplayActionProvider[];
+  /**
+   * 观测语义版本。**观测口径变了就 +1**(经济换传感器/里程碑换身份规则/facts 换含义)。
+   * 录制时写进 tape envelope,提取时写进剧本 meta,回放时与现注册版本比对 ——
+   * 错配 = 剧本目标与传感器读数不可比,直接拒绝认证(实证:axe economyFinal cash:500
+   * 旧脚手架死数 vs 新背包传感器 ≤85,目标物理不可达,尾段死等到超时,2026-07-12)。
+   */
+  semanticsVersion?: number;
 }
 
 export interface RecordReplaySnapshotEntry {
@@ -110,9 +138,21 @@ const snapshotProviders: Array<Registered<RecordReplaySnapshotProvider>> = [];
 const milestoneDetectors: Array<Registered<MilestoneDetector>> = [];
 const playerPositionProviders: Array<Registered<() => RecordReplayPlayerPosition | null | undefined>> = [];
 const inputAuthorityProviders: Array<Registered<RecordReplayInputAuthorityProvider>> = [];
+const actionProviders: Array<Registered<RecordReplayActionProvider>> = [];
+/** 帧间发生的动作缓冲;RecorderSource 在采集钩子逐帧 drain(未录制也 drain,防泄漏)。 */
+const pendingActionNotifications: Array<{ id: string; params: Record<string, string | number> }> = [];
+/** 现注册的观测语义版本(见 RegisterRecordReplayProvidersOptions.semanticsVersion)。 */
+let providerSemanticsVersion: number | null = null;
+
+export function getRecordReplayProviderSemanticsVersion(): number | null {
+  return providerSemanticsVersion;
+}
 
 export function registerRecordReplayProviders(options: RegisterRecordReplayProvidersOptions): () => void {
   const id = nextRegistrationId++;
+  if (typeof options.semanticsVersion === 'number' && Number.isFinite(options.semanticsVersion)) {
+    providerSemanticsVersion = options.semanticsVersion;
+  }
   for (const provider of options.snapshotProviders ?? []) {
     snapshotProviders.push({ id, value: provider });
   }
@@ -125,13 +165,59 @@ export function registerRecordReplayProviders(options: RegisterRecordReplayProvi
   if (options.inputAuthority) {
     inputAuthorityProviders.push({ id, value: options.inputAuthority });
   }
+  for (const action of options.actions ?? []) {
+    actionProviders.push({ id, value: action });
+  }
 
   return () => {
     removeRegistered(snapshotProviders, id);
     removeRegistered(milestoneDetectors, id);
     removeRegistered(playerPositionProviders, id);
     removeRegistered(inputAuthorityProviders, id);
+    removeRegistered(actionProviders, id);
   };
+}
+
+/**
+ * 游戏在「执行选择的漏斗函数」里调用(人点击与回放 invoke 都过同一漏斗;
+ * 录制未激活时最终被 drain 丢弃,无害)。
+ */
+export function notifyRecordReplayAction(id: string, params: Record<string, string | number>): void {
+  const normalizedId = String(id ?? '').trim();
+  if (!normalizedId) return;
+  const cleaned: Record<string, string | number> = {};
+  for (const [key, value] of Object.entries(params ?? {})) {
+    if (typeof value === 'string' || (typeof value === 'number' && Number.isFinite(value))) cleaned[key] = value;
+  }
+  pendingActionNotifications.push({ id: normalizedId, params: cleaned });
+}
+
+/** RecorderSource 每帧调用:取走缓冲(挂到当前帧,语义=本帧 update 前已生效)。 */
+export function drainRecordReplayPendingActions(): Array<{ id: string; params: Record<string, string | number> }> {
+  if (pendingActionNotifications.length === 0) return [];
+  return pendingActionNotifications.splice(0, pendingActionNotifications.length);
+}
+
+export function readRecordReplayActionProviders(): RecordReplayActionProvider[] {
+  return actionProviders.map((registered) => registered.value);
+}
+
+/**
+ * 回放侧:在执行帧 N 的 update **之前**重演该帧记录的动作。
+ * 未注册的 action id 抛错(宁可红,不可静默漂移)。
+ */
+export function applyRecordedFrameActions(
+  frame: { actions?: Array<{ id: string; params: Record<string, string | number> }> } | undefined,
+): void {
+  const actions = frame?.actions;
+  if (!actions || actions.length === 0) return;
+  for (const action of actions) {
+    const provider = actionProviders.find((registered) => registered.value.id === action.id)?.value;
+    if (!provider) {
+      throw new Error(`[record-replay] recorded action "${action.id}" has no registered provider — game must registerRecordReplayProviders({ actions: [...] }).`);
+    }
+    provider.invoke(action.params);
+  }
 }
 
 export function clearRecordReplayProviders(): void {
@@ -139,6 +225,8 @@ export function clearRecordReplayProviders(): void {
   milestoneDetectors.length = 0;
   playerPositionProviders.length = 0;
   inputAuthorityProviders.length = 0;
+  actionProviders.length = 0;
+  pendingActionNotifications.length = 0;
 }
 
 /**
@@ -271,6 +359,28 @@ export function isRecordReplayMilestoneCritical(milestone: Pick<RecordReplayMile
   }
   if (declared !== null) return declared;
   return getDefaultRecordReplayMilestoneCriticality(kind);
+}
+
+/**
+ * 强断言键校验(见 MilestoneDetector.strictDetailKeys)。
+ * 只有该 kind 注册了强键、且**两侧 detail 都携带**该键时才比对;缺键=不约束(老 tape 兼容)。
+ */
+export function recordReplayMilestoneStrictKeysMatch(
+  expected: Pick<RecordReplayMilestoneEvent, 'kind' | 'detail'>,
+  actual: Pick<RecordReplayMilestoneEvent, 'kind' | 'detail'>,
+): boolean {
+  if (expected.kind !== actual.kind) return false;
+  for (const registered of milestoneDetectors) {
+    const detector = registered.value;
+    if (detector.kind !== expected.kind || !detector.strictDetailKeys?.length) continue;
+    for (const key of detector.strictDetailKeys) {
+      const left = expected.detail?.[key];
+      const right = actual.detail?.[key];
+      if (left === undefined || right === undefined) continue;
+      if (left !== right) return false;
+    }
+  }
+  return true;
 }
 
 export function getRecordReplayMilestoneIdentity(

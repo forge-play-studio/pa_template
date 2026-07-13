@@ -460,12 +460,38 @@ export class Game {
   }
 
   private update(deltaTime: number): void {
+    this.simElapsedSec += deltaTime;
+    if (this.simDeferredCallbacks.length > 0) {
+      const due = this.simDeferredCallbacks.filter((entry) => entry.atSec <= this.simElapsedSec);
+      if (due.length > 0) {
+        for (const entry of due) {
+          const index = this.simDeferredCallbacks.indexOf(entry);
+          if (index >= 0) this.simDeferredCallbacks.splice(index, 1);
+        }
+        for (const entry of due) entry.callback();
+      }
+    }
     // Entities
     this.player?.update(deltaTime);
     this.zoneSystem?.update(deltaTime);
     for (const module of this.gameplayModules) {
       module.update?.(deltaTime);
     }
+  }
+
+  // ── 确定性接缝(内建):sim 时钟延迟回调 ──────────────────────────
+  /**
+   * gameplay 路径**禁用墙钟 `setTimeout`**(暂停期不冻结、录放错位、后台/遮挡时被浏览器
+   * 节流)。任何"N 秒后发生玩法事件"(补怪 / 延迟结算 / 攻击间隔)一律用本接缝:按模拟
+   * 时钟计时,暂停冻结、录放一致、节流免疫。
+   *
+   * 反例实证(axe_and_bear,2026-07-12):补怪 `window.setTimeout` 被节流 → 肉经济饿死 →
+   * 同 tape 同代码认证 good↔failed 随环境翻转(fps-3d-harness docs/06 §3-2、§4.6)。
+   */
+  private simElapsedSec = 0;
+  private readonly simDeferredCallbacks: Array<{ atSec: number; callback: () => void }> = [];
+  deferSimCallback(delaySec: number, callback: () => void): void {
+    this.simDeferredCallbacks.push({ atSec: this.simElapsedSec + Math.max(0, delaySec), callback });
   }
 
   // ============================================================

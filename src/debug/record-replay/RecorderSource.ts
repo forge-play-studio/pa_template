@@ -1,4 +1,5 @@
 import type { MovementInputSource, MovementInputState } from '../../services/InputService';
+import { drainRecordReplayPendingActions } from './providers';
 import { IDLE_MOVEMENT_INPUT, normalizeMovementInput, normalizeRecordedDt, type DemoRecordingFrame } from './schema';
 
 export interface RecorderGameClock {
@@ -45,16 +46,20 @@ export class RecorderSource implements MovementInputSource {
     const input = this.polledInputFrame === normalizedFrame
       ? normalizeMovementInput(this.polledInput)
       : { ...IDLE_MOVEMENT_INPUT };
+    // 帧间发生的离散动作挂到本帧(语义=本帧 update 前已生效);单接缝原则:与 input/hash 同钩子采集
+    const actions = drainRecordReplayPendingActions();
     const latest = this.frames[this.frames.length - 1];
 
     if (latest && latest.frame === normalizedFrame) {
       latest.dt = normalizeRecordedDt(dt);
       latest.input = input;
+      if (actions.length > 0) latest.actions = [...(latest.actions ?? []), ...actions];
       return {
         frame: {
           frame: latest.frame,
           dt: latest.dt,
           input: { ...latest.input },
+          ...(latest.actions ? { actions: latest.actions.map((a) => ({ id: a.id, params: { ...a.params } })) } : {}),
         },
         index: this.frames.length - 1,
         droppedFrames: this.droppedFrames,
@@ -65,6 +70,7 @@ export class RecorderSource implements MovementInputSource {
       frame: normalizedFrame,
       dt: normalizeRecordedDt(dt),
       input,
+      ...(actions.length > 0 ? { actions } : {}),
     };
     this.frames.push(recorded);
     while (this.frames.length > this.maxFrames) {
@@ -77,6 +83,7 @@ export class RecorderSource implements MovementInputSource {
         frame: recorded.frame,
         dt: recorded.dt,
         input: { ...recorded.input },
+        ...(recorded.actions ? { actions: recorded.actions.map((a) => ({ id: a.id, params: { ...a.params } })) } : {}),
       },
       index: index >= 0 ? index : this.frames.length - 1,
       droppedFrames: this.droppedFrames,
@@ -97,7 +104,12 @@ export class RecorderSource implements MovementInputSource {
     for (let index = start; index < this.frames.length; index += 1) {
       const frame = this.frames[index];
       if (!frame) continue;
-      slice.push({ frame: frame.frame, dt: frame.dt, input: { ...frame.input } });
+      slice.push({
+        frame: frame.frame,
+        dt: frame.dt,
+        input: { ...frame.input },
+        ...(frame.actions ? { actions: frame.actions.map((a) => ({ id: a.id, params: { ...a.params } })) } : {}),
+      });
     }
     return slice;
   }

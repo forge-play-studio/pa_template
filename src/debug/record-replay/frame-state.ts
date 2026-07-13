@@ -1,3 +1,4 @@
+import { applyRecordedFrameActions } from './providers';
 import { ReplaySource } from './ReplaySource';
 import {
   assertDemoRecording,
@@ -141,6 +142,8 @@ export async function replayRecordingFrameStates(
 
       captured = null;
       options.onBeforeFrame?.(index);
+      // 离散动作重演:帧 N 记录的动作在其 update 之前生效(与录制挂帧语义对齐)
+      applyRecordedFrameActions(recording.frames[index]);
       replaySource.setFrameIndex(index);
       game.stepFrame(recording.frames[index]?.dt ?? 0);
       const capturedState = requireCapturedFrameState(captured, index);

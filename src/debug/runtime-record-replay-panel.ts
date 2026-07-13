@@ -70,6 +70,8 @@ import {
   type StateHashResult,
 } from './record-replay/verify';
 import {
+  applyRecordedFrameActions,
+  getRecordReplayProviderSemanticsVersion,
   readRecordReplayObservationOnlyFactKeys,
   readRecordReplayPlayerPosition,
 } from './record-replay/providers';
@@ -772,8 +774,10 @@ function createRecordingEnvelope(session: RecordingSession, frameCount: number, 
   // maxFrames 溢出后 RecorderSource 环形丢掉了最早的帧,而下面这些字段描述的仍是**被丢掉的那个起点**。
   // 不打标的话,tape 就在谎报自己从哪开始 —— Mode A 会从第 0 帧发散,且看起来像"世界不确定"。
   const droppedFrames = session.recorder.getDroppedFrameCount();
+  const semanticsVersion = getRecordReplayProviderSemanticsVersion();
   return {
     ...(droppedFrames > 0 ? { truncated: true as const, droppedFrames } : {}),
+    ...(semanticsVersion !== null ? { providerSemanticsVersion: semanticsVersion } : {}),
     schemaVersion: RECORD_REPLAY_SCHEMA_VERSION,
     hashVersion: session.hashVersion,
     templateVersion: packageInfo.version ?? '0.0.0',
@@ -878,6 +882,7 @@ async function playbackRecording(
         }
         state.replayFrame = index;
         const dt = recording.frames[index]?.dt ?? 0;
+        applyRecordedFrameActions(recording.frames[index]);
         replaySource.setFrameIndex(index);
         game.stepFrame(dt);
         const waitMs = Math.min(250, (dt * 1000) / speed);
@@ -1077,6 +1082,7 @@ async function reconstructTrail(
         if (state.abortRequested) { aborted = true; break; }
         if (index > 0 && index % 25 === 0) await yieldToEventLoopViaChannel();
         state.replayFrame = index;
+        applyRecordedFrameActions(recording.frames[index]);
         replaySource.setFrameIndex(index);
         game.stepFrame(recording.frames[index]?.dt ?? 0);
         const point = readPlayerWorldPosition(game);

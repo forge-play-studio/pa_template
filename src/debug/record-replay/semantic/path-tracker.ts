@@ -202,8 +202,15 @@ export class SemanticPathTracker {
    * (与标定重开 `beginCalibrationAttempt()` 同一哲学),宁可重新找,也不要抱着一个错锚点。
    * 上界仍受 cap 约束,不会越过尚未匹配的闸门。
    */
-  reanchorToActor(actor: { x: number; z: number }, maxScheduleSec?: number): number {
+  /**
+   * @param minScheduleSec 可选前向下限:锚点不得早于该时刻。用于剧情段边界重锚——
+   * 若夺权机关(按钮跳跃类)把 actor 放回原地,无下限的最近点重锚会把时钟钉回
+   * 机关处 → 目标仍在机关上 → 走回去 → 再触发 → **原地重触发死循环**
+   * (axe_and_bear button_02 实证,2026-07-12;三因分类法之外的第四型)。
+   */
+  reanchorToActor(actor: { x: number; z: number }, maxScheduleSec?: number, minScheduleSec?: number): number {
     const cap = clamp(maxScheduleSec ?? this.endSec, this.startSec, this.endSec);
+    const floor = clamp(minScheduleSec ?? this.startSec, this.startSec, this.endSec);
     let bestSec = this.schedule;
     let bestDistanceSq = Infinity;
     const lastIndex = this.points.length - 2;
@@ -211,13 +218,21 @@ export class SemanticPathTracker {
       const a = this.points[index]!;
       const b = this.points[index + 1]!;
       if (a.t > cap) break;
+      if (b.t < floor) continue;
       const { ratio, distanceSq } = closestPointOnSegment(actor, a, b);
       if (distanceSq < bestDistanceSq) {
         bestDistanceSq = distanceSq;
         bestSec = a.t + (b.t - a.t) * ratio;
       }
     }
-    this.schedule = clamp(Math.min(bestSec, cap), this.startSec, this.endSec);
+    this.schedule = clamp(Math.min(Math.max(bestSec, floor), cap), this.startSec, this.endSec);
+    return this.schedule;
+  }
+
+  /** L2 监督干预:示教时钟前跳(受 cap 约束,不越过未匹配闸门)。 */
+  skipForward(sec: number, maxScheduleSec?: number): number {
+    const cap = clamp(maxScheduleSec ?? this.endSec, this.startSec, this.endSec);
+    this.schedule = clamp(Math.min(this.schedule + Math.max(0, sec), cap), this.startSec, this.endSec);
     return this.schedule;
   }
 
