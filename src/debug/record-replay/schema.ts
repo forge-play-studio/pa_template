@@ -95,6 +95,12 @@ export interface DemoRecording {
   stateSamples?: DemoRecordingStateSample[];
   /** 逐帧玩家世界坐标 [x, z](与 frames 同长,1e-3 量化)。可选:老 tape 缺省;可由 Mode A 回放重建。 */
   trail?: Array<[number, number]>;
+  /**
+   * 录制期通用点按侦察(pointer-capture.ts):非 debug UI 上的短促点按,按帧记录。
+   * 只用于准入审计比对「点按数 vs 语义动作数」,探测决策点漏接线(不参与回放/hash)。
+   * 可选:老 tape 缺省。
+   */
+  pointerTaps?: Array<{ frame: number }>;
 }
 
 export const IDLE_MOVEMENT_INPUT: Readonly<MovementInputState> = Object.freeze({

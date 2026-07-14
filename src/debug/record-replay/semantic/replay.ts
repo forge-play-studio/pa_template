@@ -73,6 +73,8 @@ export interface SemanticReplayOptions {
   determinismHorizon?: number | 'green-full' | null;
   /** 跳过 tape 准入拒绝(admission 错误/语义版本错配/初始状态错配),仅供开发排障;认证跑不得使用。 */
   ignoreAdmission?: boolean;
+  /** 第五检测器阈值:输入被夺权且世界零进展持续多少秒判负(默认 15;过场/结算通常远短于此)。 */
+  authorityWaitTimeoutSec?: number;
 }
 
 /** Set when the run never happened because the script could not certify anything. */
@@ -452,6 +454,15 @@ export class SemanticReplayController implements MovementInputSource {
   private gateHoldStalledSec = 0;
   private stageNoProgressSec = 0;
   private progressSignature = '';
+  /**
+   * 第五检测器:授权等待超时。「输入被夺权 + 世界零进展」的持续秒数。
+   * 前四个检测器在夺权期全部让位(设计如此:剧情期不判卡),组合盲区实证两例:
+   * axe button_02 跳跃冻结(§9.1-B)、train_oil 未接线的交互门(移动被锁死等一次
+   * 永远不会来的点击,2026-07-13)。世界有进展(经济/facts 在动)则不断累计——
+   * 那是真过场;夺权且万籁俱寂才是病。
+   */
+  private authorityWaitNoProgressSec = 0;
+  private readonly authorityWaitTimeoutSec: number;
   /** 航迹补猎循环(见 maybeTrailFarmLoop):整圈重驱示教航迹以补足经济缺口的次数。 */
   private trailFarmLoops = 0;
   /** 连续零进账的补猎圈数(产出保险丝:≥2 判定世界不再产出,诚实失败)。 */
@@ -500,6 +511,7 @@ export class SemanticReplayController implements MovementInputSource {
     this.calibrationSettleSec = Math.max(0, options.calibrationSettleSec ?? 0.2);
     this.calibrationMinDisplacement = Math.max(0.0001, options.calibrationMinDisplacement ?? 0.02);
     this.gateHoldPatienceSec = Math.max(0.1, options.gateHoldPatienceSec ?? 1.5);
+    this.authorityWaitTimeoutSec = Math.max(3, options.authorityWaitTimeoutSec ?? 15);
     this.gateStallTimeoutSec = Math.max(0.5, options.gateStallTimeoutSec ?? 6);
     // 自锁检测必须**早于**停滞判负触发,否则永远轮不到它逃逸。
     this.clockLockTimeoutSec = Math.min(
@@ -721,8 +733,23 @@ export class SemanticReplayController implements MovementInputSource {
       // (见 releaseGatesBlockingScriptedSchedule)。
       this.gateHoldStalledSec = 0;
       this.stageNoProgressSec = 0;
+      // 第五检测器:夺权 + 世界零进展 —— 真过场世界总在动(经济/facts);
+      // 万籁俱寂的夺权 = 未接线的交互门 / 冻住的剧情,判负并点名去向。
+      if (gameProgressed) {
+        this.authorityWaitNoProgressSec = 0;
+      } else {
+        this.authorityWaitNoProgressSec += Math.max(0, deltaTime);
+        if (this.authorityWaitNoProgressSec > this.authorityWaitTimeoutSec) {
+          const reason = `input authority seized for ${roundTo(this.authorityWaitNoProgressSec, 1)}s with zero world progress `
+            + '— suspect an interactive gate not wired to record-replay actions (runbook 07 §1.2) or a frozen cutscene';
+          const expected = this.script.milestones[this.matchedMilestones];
+          if (expected) this.recordMissingMilestone({ index: this.matchedMilestones, expected, reason });
+          this.handleStageFailure(reason);
+        }
+      }
       return;
     }
+    this.authorityWaitNoProgressSec = 0;
 
     // 自锁检测必须在停滞计账之前:它要么把时钟救活,要么移交障碍协商阶梯。
     // 它同时算出 `crossErrorImproving`(= actor 正在收敛回航迹),下面的停滞计账复用这个信号。

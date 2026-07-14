@@ -76,6 +76,7 @@ import {
   readRecordReplayPlayerPosition,
 } from './record-replay/providers';
 import { collapseDebugUiForRecording } from './record-replay/debug-ui-visibility';
+import { installRecordingPointerCapture } from './record-replay/pointer-capture';
 import { registerTemplateRecordReplayProviders } from './record-replay/template-providers';
 
 export interface RuntimeRecordReplayPanelOptions {
@@ -266,6 +267,8 @@ interface RecordingSession {
   factContract: FactContractChecker;
   restoreUpdate: () => void;
   restoreDebugUi: () => void;
+  /** 录制期通用点按侦察(决策点漏接线的缺口探测器,见 pointer-capture.ts)。 */
+  pointerCapture: ReturnType<typeof installRecordingPointerCapture>;
   droppedStateHashes: number;
   lastHashedFrame: number | null;
 }
@@ -341,6 +344,7 @@ function createRecordReplayApi(options: RuntimeRecordReplayPanelOptions, state: 
       const recorder = new RecorderSource(inputService.getMovementSource(), game, {
         maxFrames: recordOptions.maxFrames,
       });
+      const startFrameForCapture = game.getFrameCount();
       const session: RecordingSession = {
         game,
         inputService,
@@ -359,6 +363,9 @@ function createRecordReplayApi(options: RuntimeRecordReplayPanelOptions, state: 
         factContract: createFactContractChecker(),
         restoreUpdate: () => undefined,
         restoreDebugUi: collapseDebugUiForRecording(document),
+        pointerCapture: installRecordingPointerCapture({
+          getFrame: () => Math.max(0, game.getFrameCount() - startFrameForCapture),
+        }),
         droppedStateHashes: 0,
         lastHashedFrame: null,
       };
@@ -366,6 +373,7 @@ function createRecordReplayApi(options: RuntimeRecordReplayPanelOptions, state: 
         session.restoreUpdate = installRecordingUpdateHook(session);
         inputService.setMovementSource(recorder);
       } catch (error) {
+        session.pointerCapture.dispose();
         session.restoreDebugUi();
         throw error;
       }
@@ -794,6 +802,8 @@ function createRecordingEnvelope(session: RecordingSession, frameCount: number, 
 }
 
 function finishRecordingSession(session: RecordingSession, label: string): DemoRecording {
+  const pointerTaps = session.pointerCapture.readTaps();
+  session.pointerCapture.dispose();
   session.restoreUpdate();
   session.inputService.setMovementSource(session.originalSource);
   session.game.setDtOverride(null);
@@ -842,6 +852,9 @@ function finishRecordingSession(session: RecordingSession, label: string): DemoR
       .filter((sample) => sample.frame >= 0 && sample.frame < frames.length)
       .sort((a, b) => a.frame - b.frame),
     ...(trail ? { trail } : {}),
+    ...(pointerTaps.length > 0
+      ? { pointerTaps: pointerTaps.filter((tap) => tap.frame < frames.length) }
+      : {}),
   };
   assertDemoRecording(recording);
   return recording;
@@ -1500,6 +1513,7 @@ function precheckReplayStart(game: Game, recording: DemoRecording): Game {
 function cleanupRecordingSession(state: MutablePanelState): void {
   const session = state.recordingSession;
   if (!session) return;
+  session.pointerCapture.dispose();
   session.restoreUpdate();
   session.inputService.setMovementSource(session.originalSource);
   session.game.setDtOverride(null);

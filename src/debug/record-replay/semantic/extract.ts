@@ -221,6 +221,21 @@ export function auditSemanticTapeAdmission(
     );
   }
 
+  // 点按缺口探测(pointer-capture 侦察数据):短促点按数远超语义动作数 = 疑似决策点漏接线。
+  // 用 warning 不用 error:点按判据是启发式(点地移动/装饰性点按会计入),人工确认一眼即可。
+  if (recording.pointerTaps) {
+    const taps = recording.pointerTaps.length;
+    const actions = recording.frames.reduce((count, frame) => count + (frame.actions?.length ?? 0), 0);
+    if (taps > actions) {
+      warnings.push(
+        `recording captured ${taps} short tap(s) outside debug UI but only ${actions} semantic action(s) entered the tape `
+        + '— if this game has click-driven decision points (choice cards / confirm gates), their funnel is likely not wired '
+        + 'to record-replay (runbook 07 §1.2 three-part seam; train_oil upgrade-gate incident 2026-07-13). '
+        + 'Purely decorative taps can be ignored.',
+      );
+    }
+  }
+
   const liveVersion = getRecordReplayProviderSemanticsVersion();
   const tapedVersion = recording.envelope.providerSemanticsVersion;
   if (typeof tapedVersion === 'number' && liveVersion !== null && tapedVersion !== liveVersion) {
