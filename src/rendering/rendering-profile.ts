@@ -1,12 +1,9 @@
 import {
   EDITOR_SCENE_DEFAULT_PLANAR_SHADOW_EXCLUDE_PATTERNS,
   EDITOR_SCENE_DEFAULT_PLANAR_SHADOW_RECEIVER_PATTERNS,
-  EDITOR_SCENE_RENDERING_PROFILE_ALLOWED_PATCH_PATHS,
-  applyEditorSceneRenderingProfilePatch,
   createEditorSceneBlobShadowPreviewSettings,
   createEditorScenePlanarShadowPreviewSettings,
   createEditorSceneStaticProjectedShadowPreviewSettings,
-  isEditorSceneRenderingProfilePatchPath,
   normalizeEditorSceneRenderingProfile,
   summarizeEditorSceneRenderingProfile,
   type EditorSceneBlobShadowPreviewSettings,
@@ -17,11 +14,16 @@ import {
   type EditorSceneRenderingColorRgb,
   type EditorSceneRenderingColorRgba,
   type EditorSceneRenderingProfile,
-  type EditorSceneRenderingProfilePatchPath,
-  type EditorSceneRenderingProfilePatchResult,
   type EditorSceneRenderingVec3,
   type EditorSceneStaticProjectedShadowPreviewSettings,
   type EditorSceneStaticProjectedShadowPreviewSettingsInput,
+} from '@fps-games/editor/playable-runtime';
+import {
+  EDITOR_SCENE_RENDERING_PROFILE_ALLOWED_PATCH_PATHS,
+  applyEditorSceneRenderingProfilePatch,
+  isEditorSceneRenderingProfilePatchPath,
+  type EditorSceneRenderingProfilePatchPath,
+  type EditorSceneRenderingProfilePatchResult,
 } from '@fps-games/editor/playable-sdk';
 
 export type RenderingVec3 = EditorSceneRenderingVec3;

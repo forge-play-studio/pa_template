@@ -3,9 +3,9 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import {
-  AssetRegistryError,
-  unregisterAsset,
-} from './asset-registry/core.mjs';
+  PlayableEditorAssetRegistryError as AssetRegistryError,
+  unregisterPlayableEditorAsset as unregisterAsset,
+} from '@fps-games/editor/playable-sdk/vite';
 
 const errorCodes = {
   assetStillReferenced: 'asset_still_referenced',

@@ -5,7 +5,7 @@
     "authoringSource": {
       "sourceId": "scene.main",
       "sourceType": "scene",
-      "revision": 67
+      "revision": 73
     }
   },
   "assets": [
@@ -7088,6 +7088,33 @@
           }
         ]
       }
+    },
+    {
+      "id": "prefab_issue464_crate_reference",
+      "guid": "prefab_issue464_crate_reference",
+      "type": "prefab",
+      "displayName": "阴影测试-箱子 Prefab",
+      "category": "Prefab",
+      "prefab": {
+        "sourceAssetId": "asset_759b595e81934517ba0251b16bd31061",
+        "sourceAssetGuid": "759b595e-8193-4517-ba02-51b16bd31061",
+        "compositionVersion": 1,
+        "rootNodeId": "prefab-root",
+        "nodes": [
+          {
+            "id": "prefab-root",
+            "name": "阴影测试-箱子 Prefab",
+            "kind": "root"
+          },
+          {
+            "id": "prefab-model",
+            "name": "阴影测试-箱子",
+            "parentId": "prefab-root",
+            "kind": "model",
+            "sourceAssetId": "asset_759b595e81934517ba0251b16bd31061"
+          }
+        ]
+      }
     }
   ],
   "scene": {
@@ -8301,6 +8328,266 @@
             }
           }
         }
+      },
+      {
+        "id": "issue464_ground_decal_operation",
+        "guid": "go_issue464_ground_decal_operation",
+        "name": "Issue 464 Operation Ground Decal Fixture",
+        "kind": "transform",
+        "parentId": "root",
+        "active": true,
+        "transformType": "groundDecal",
+        "groundDecal": {
+          "uiKind": "operation",
+          "size": {
+            "width": 1.8,
+            "depth": 1.8
+          },
+          "aspectSourceLayerId": "border",
+          "lockAspectToBorder": true,
+          "mask": {
+            "enabled": true,
+            "source": "roundedRect",
+            "cornerRadius": 0.18,
+            "padding": 0.02
+          },
+          "rendering": {
+            "textureWidth": 512,
+            "textureHeight": 512,
+            "alphaIndex": 100,
+            "diffuseTextureLevel": 1,
+            "emissiveTextureLevel": 0
+          },
+          "layers": [
+            {
+              "id": "base",
+              "role": "base",
+              "kind": "color",
+              "color": {
+                "r": 0.08,
+                "g": 0.08,
+                "b": 0.08,
+                "a": 0.56
+              },
+              "zOrder": 0,
+              "rect": {
+                "x": 0,
+                "z": 0,
+                "width": 1,
+                "depth": 1
+              }
+            },
+            {
+              "id": "mainLogo",
+              "role": "mainLogo",
+              "kind": "texture",
+              "textureId": "texture_331e16209e8c47cc94217508d719cbbb",
+              "zOrder": 20,
+              "rect": {
+                "x": 0,
+                "z": 0,
+                "width": 1,
+                "depth": 1
+              }
+            },
+            {
+              "id": "border",
+              "role": "border",
+              "kind": "texture",
+              "textureId": "texture_969907ee4a1d453ea7b0ee3247cb6bb1",
+              "zOrder": 100,
+              "rect": {
+                "x": 0,
+                "z": 0,
+                "width": 1,
+                "depth": 1
+              }
+            }
+          ]
+        },
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": -3.2,
+              "y": 0.02,
+              "z": 2.8
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          }
+        ]
+      },
+      {
+        "id": "issue464_ground_decal_delivery",
+        "guid": "go_issue464_ground_decal_delivery",
+        "name": "Issue 464 Delivery Ground Decal Fixture",
+        "kind": "transform",
+        "parentId": "root",
+        "active": true,
+        "transformType": "groundDecal",
+        "groundDecal": {
+          "uiKind": "delivery",
+          "size": {
+            "width": 1.8,
+            "depth": 1.8
+          },
+          "aspectSourceLayerId": "border",
+          "lockAspectToBorder": true,
+          "mask": {
+            "enabled": true,
+            "source": "roundedRect",
+            "cornerRadius": 0.18,
+            "padding": 0.02
+          },
+          "rendering": {
+            "textureWidth": 512,
+            "textureHeight": 512,
+            "alphaIndex": 100,
+            "diffuseTextureLevel": 1,
+            "emissiveTextureLevel": 0
+          },
+          "layers": [
+            {
+              "id": "base",
+              "role": "base",
+              "kind": "color",
+              "color": {
+                "r": 0.08,
+                "g": 0.08,
+                "b": 0.08,
+                "a": 0.56
+              },
+              "zOrder": 0,
+              "rect": {
+                "x": 0,
+                "z": 0,
+                "width": 1,
+                "depth": 1
+              }
+            },
+            {
+              "id": "progressFill",
+              "role": "progressFill",
+              "kind": "progress",
+              "value": 0,
+              "direction": "bottomToTop",
+              "color": {
+                "r": 0.16,
+                "g": 0.56,
+                "b": 1,
+                "a": 0.88
+              },
+              "zOrder": 10,
+              "rect": {
+                "x": 0,
+                "z": 0,
+                "width": 1,
+                "depth": 1
+              }
+            },
+            {
+              "id": "mainLogo",
+              "role": "mainLogo",
+              "kind": "texture",
+              "textureId": "texture_ee97d50a7eb442b5905add9aaae74f2c",
+              "zOrder": 20,
+              "rect": {
+                "x": 0,
+                "z": 0,
+                "width": 1,
+                "depth": 1
+              }
+            },
+            {
+              "id": "subLogo",
+              "role": "subLogo",
+              "kind": "texture",
+              "textureId": "texture_331e16209e8c47cc94217508d719cbbb",
+              "zOrder": 25,
+              "rect": {
+                "x": -0.25,
+                "z": -0.25,
+                "width": 0.5,
+                "depth": 0.5
+              }
+            },
+            {
+              "id": "amount",
+              "role": "amount",
+              "kind": "text",
+              "text": {
+                "value": "30",
+                "fontFamily": "system-ui, Arial, sans-serif",
+                "fontSize": 96,
+                "fontWeight": "800",
+                "color": {
+                  "r": 1,
+                  "g": 1,
+                  "b": 1,
+                  "a": 1
+                },
+                "strokeColor": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 0.45
+                },
+                "strokeWidth": 8,
+                "align": "center",
+                "baseline": "middle"
+              },
+              "zOrder": 30,
+              "rect": {
+                "x": 0.2,
+                "z": -0.25,
+                "width": 0.28,
+                "depth": 0.22
+              }
+            },
+            {
+              "id": "border",
+              "role": "border",
+              "kind": "texture",
+              "textureId": "texture_969907ee4a1d453ea7b0ee3247cb6bb1",
+              "zOrder": 100,
+              "rect": {
+                "x": 0,
+                "z": 0,
+                "width": 1,
+                "depth": 1
+              }
+            }
+          ]
+        },
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": -1.2,
+              "y": 0.02,
+              "z": 2.8
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          }
+        ]
       }
     ],
     "materialAssets": [

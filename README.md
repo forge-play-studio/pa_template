@@ -24,11 +24,11 @@
 3. 最小 `scene.json` 与 `ConfigService`
 4. Gameplay Binding contract 类型、默认入口、查询服务和基础校验
 5. Project gameplay composition hook：`src/gameplay/createProjectGameplay.ts`
-6. 项目侧 `src/fps-game-editor-adapter`
-7. dev-only `src/debug/local-editor-mode-switcher.ts`
+6. 产品化 `fps.config.ts` 与项目 Plugin / feature 配置
+7. dev-only `src/editor-features/local-editor.ts` runtime hooks
 8. GUID asset catalog 与 `src/assets/imported` 资产落地目录
-9. document/history/export/commit 主链
-10. `sceneNode` adapter 与 duplicate 主链
+9. SDK-owned document/history/export/commit 主链
+10. 标准 Scene Assembly 与项目 feature contribution
 11. 新项目尽早验证编辑器闭环所需的基础结构
 12. 默认 Vite plugin 初始化链：`bridge / inspector / glb / modelCache / stripBabylon / locale / analytics / molocoCta / viteSingleFile / optimizePng / gzipBundle`
 13. 可直接启用的构建增强插件：`thirdPartyWhitelist / visualizer`
@@ -257,17 +257,9 @@ zone 检测能力默认内置，但只负责矩形区域几何检测和 `enter/t
 3. 如果改成左手系，模型朝向、旋转、变换和后续能力接入都会变复杂
 4. 编辑器、运行时节点、模型资源三者统一使用一套坐标规则，更稳定
 
-### `fps-game-editor-adapter/`
+### `editor-features/`
 
-放项目侧编辑器能力和对 `@fps-games/editor` 暴露的接口。
-
-适合放：
-
-1. document
-2. canonical asset adapter
-3. editor scene compiler / session
-4. editor plugin / runtime bridge
-5. export / commit / duplicate / undo / redo 主链
+只放项目特有的 editor feature 配置与 runtime hooks，例如 GroundDecal presets、layer policy、texture resolver 和 projection hook。标准 document、asset、compiler、session、Inspector、history 与 host assembly 由 `@fps-games/editor/playable-sdk` 提供；不要重新创建 `fps-game-editor-adapter/` 或 editor service implementation root。
 
 ### `debug/`
 
@@ -277,11 +269,10 @@ zone 检测能力默认内置，但只负责矩形区域几何检测和 `enter/t
 
 1. `camera-debug-panel.ts`：编辑器相机 runtime 调试面板。
 2. `runtime-lighting-debug-panel.ts`：编辑器灯光 runtime 调试面板。
-3. `local-editor-mode-switcher.ts`：本地编辑器/游戏模式切换入口。
-4. `runtime-debug-bootstrap.ts`：dev-only debug 总入口；只由 `src/main.ts` 的 dev dynamic import 加载。
-5. `framework/`：debug 面板基础能力，包括统一 panel manager、controls、config client、overlay、action registry 和 disposable helpers。
-6. `panel-manifest.ts`：玩法阶段面板注册 manifest。模板默认不注册具体玩法面板，builder 按阶段生成。
-7. `runtime-gameplay-debug-panels.ts`：读取 panel manifest 并通过统一 manager mount 玩法阶段 debug 面板。
+3. `runtime-debug-bootstrap.ts`：dev-only debug 总入口；只由 `src/main.ts` 的 dev dynamic import 加载，并从 `src/editor-features/local-editor.ts` 挂载产品化编辑器 host。
+4. `framework/`：debug 面板基础能力，包括统一 panel manager、controls、config client、overlay、action registry 和 disposable helpers。
+5. `panel-manifest.ts`：玩法阶段面板注册 manifest。模板默认不注册具体玩法面板，builder 按阶段生成。
+6. `runtime-gameplay-debug-panels.ts`：读取 panel manifest 并通过统一 manager mount 玩法阶段 debug 面板。
 
 runtime debug UI 由 `src/debug/framework/panel-manager.ts` 统一管理。全局 Debug 显隐、底部 dock、右侧 rail、面板顺序、折叠状态、底部面板独立打开状态和 `RuntimeDebugActionRegistry` 生命周期都由 manager 持有；新面板不应自行创建 fixed 全局 dock、全局 toggle 或独立 z-index 层。标准面板使用 `mountRuntimeDebugPanel()` 创建；外部 SDK 或复杂自绘面板使用 `mountRuntimeDebugPanelContainer()` 注册容器，由 manager 接管布局、顺序、显隐和入口按钮样式。Camera / Lighting 这类 editor SDK 面板挂入右侧 rail，VFX 和玩法阶段面板挂入底部 dock。debug 面板入口按钮统一使用按面板标题稳定 hash 的马卡龙色；底部 dock 面板点击按钮打开或关闭对应面板内容，外部 editor SDK 容器按钮由 manager 做布局和样式适配。`src/debug/` 之外需要 debug 面板能力时，不应直接创建 DOM 面板，应通过 `src/debug/debug-panel-layout.ts` 暴露的统一接口接入。
 
@@ -542,7 +533,7 @@ brew install webp optipng
 1. `src/config/types.ts`
 2. `src/config/scene.json`
 3. `src/config/ConfigService.ts`
-4. `src/fps-game-editor-adapter/`
+4. `fps.config.ts` 与 `src/editor-features/`
 5. `src/core/Game.ts`
 
 新项目初始化后，建议尽早完成一次编辑器闭环验证：

@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import {
-  createAssetId,
-} from './asset-registry/core.mjs';
+  createPlayableEditorAssetId as createAssetId,
+} from '@fps-games/editor/playable-sdk/vite';
 
 const manifest = await readJson('src/assets/generated/asset-catalog.manifest.json');
 const sceneConfig = await readJson('src/config/scene.json');
@@ -59,7 +59,12 @@ function checkEditorScene(document) {
   const sceneAssetIds = new Set((document.assets ?? []).map((asset) => asset.id));
   for (const [index, asset] of (document.assets ?? []).entries()) {
     assert.equal(Object.hasOwn(asset, 'sourceId'), false, `editor.assets[${index}] must not contain sourceId`);
-    assert.ok(modelIds.has(asset.id), `editor.assets[${index}].id must point to catalog model`);
+    if (asset.type === 'prefab') {
+      assert.equal(typeof asset.id, 'string', `editor.assets[${index}].id`);
+      assert.ok(modelIds.has(asset.prefab?.sourceAssetId), `editor.assets[${index}].prefab.sourceAssetId must point to catalog model`);
+    } else {
+      assert.ok(modelIds.has(asset.id), `editor.assets[${index}].id must point to catalog model`);
+    }
     assert.equal(typeof asset.guid, 'string', `editor.assets[${index}].guid`);
   }
   walk(document, (path, key, value) => {

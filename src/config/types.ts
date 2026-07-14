@@ -10,6 +10,9 @@
 import type {
   EditorShadowResolvedPlan,
   EditorShadowSettings,
+} from '@fps-games/editor/playable-runtime';
+import type {
+  EditorSceneStaticShadowArtifact,
 } from '@fps-games/editor/playable-sdk';
 
 // ============================================================
@@ -177,8 +180,6 @@ export interface SceneRuntimeSourceBinding extends SceneAuthoringSourceRef {
   propertyPath?: string;
 }
 
-export type SceneNodeShadowMode = 'default' | 'none' | 'blob' | 'static' | 'planar' | 'dynamic';
-
 export interface SceneNodeRenderingConfig {
   renderingGroupId?: number;
   alphaIndex?: number;
@@ -190,7 +191,6 @@ export interface SceneNodeBase {
   kind: 'group' | 'instance' | 'transform' | 'primitive';
   parentId?: string;
   enabled?: boolean;
-  shadowMode?: SceneNodeShadowMode;
   shadow?: EditorShadowSettings;
   shadowPlan?: EditorShadowResolvedPlan;
   rendering?: SceneNodeRenderingConfig;
@@ -371,9 +371,7 @@ export interface OutlineOverrideConfig {
 export interface SceneNodeVisualOverrides {
   materialBinding?: SceneNodeMaterialBindingConfig;
   materialSlotBindings?: Record<string, SceneNodeMaterialBindingConfig>;
-  childMaterialBindings?: Record<string, SceneNodeMaterialBindingConfig>;
   material?: MaterialOverrideConfig;
-  childMaterials?: Record<string, MaterialOverrideConfig>;
   childTransforms?: Record<string, TransformConfig>;
   outline?: OutlineOverrideConfig;
   childOutlines?: Record<string, OutlineOverrideConfig>;
@@ -668,7 +666,7 @@ export interface SceneConfig {
   gameplay?: SceneGameplayConfig;
   scene?: SceneDocumentScene;
   render?: SceneRenderConfig;
-  staticShadows?: unknown;
+  staticShadows?: EditorSceneStaticShadowArtifact;
 }
 
 export interface GameConfig {

@@ -63,7 +63,6 @@ import {
   applyPlayableBabylonOutlineOverrideToRuntimeNode,
   applyMaterialValueToRuntimeMaterial,
   createMaterialSlotOwnerPathMatchKey,
-  isMaterialSlotOwnerPathMatch,
   normalizeMaterialSlotOwnerPath,
   resolveEditorSceneGameObjectRendering,
   resolveEditorSceneArtistMaterialBinding,
@@ -673,7 +672,6 @@ export class SceneBuilder {
       runtimeNode,
       nodeConfig.id,
       nodeConfig.source,
-      nodeConfig.shadowMode,
       nodeConfig.shadow,
       nodeConfig.shadowPlan,
     );
@@ -758,7 +756,6 @@ export class SceneBuilder {
         nodeId: nodeConfig.id,
         runtimeKind: 'primitive',
         primitiveShape: shape,
-        ...(nodeConfig.shadowMode ? { shadowMode: nodeConfig.shadowMode } : {}),
         ...(nodeConfig.shadow ? { shadow: structuredClone(nodeConfig.shadow) } : {}),
         ...(nodeConfig.shadowPlan ? { shadowPlan: structuredClone(nodeConfig.shadowPlan) } : {}),
       },
@@ -970,9 +967,7 @@ export class SceneBuilder {
     const overrides = nodeConfig.overrides;
     if (overrides?.materialBinding) return true;
     if (Object.keys(overrides?.materialSlotBindings ?? {}).length > 0) return true;
-    if (Object.keys(overrides?.childMaterialBindings ?? {}).length > 0) return true;
     if (overrides?.material) return true;
-    if (Object.keys(overrides?.childMaterials ?? {}).length > 0) return true;
 
     const materialEntries = configService.getSceneDocument().scene?.materials ?? [];
     return materialEntries.some((entry) => {
@@ -1350,7 +1345,6 @@ export class SceneBuilder {
     node: TransformNode,
     nodeId: string,
     source?: SceneRuntimeSourceBinding,
-    shadowMode?: SceneNodeConfig['shadowMode'],
     shadow?: SceneNodeConfig['shadow'],
     shadowPlan?: SceneNodeConfig['shadowPlan'],
   ): void {
@@ -1367,7 +1361,6 @@ export class SceneBuilder {
       editorProjection: {
         ...editorProjection,
         nodeId,
-        ...(shadowMode ? { shadowMode } : {}),
         ...(shadow ? { shadow: structuredClone(shadow) } : {}),
         ...(shadowPlan ? { shadowPlan: structuredClone(shadowPlan) } : {}),
       },
@@ -1474,7 +1467,6 @@ export class SceneBuilder {
       this.applyMaterialBinding(materialScopeRoot, '', overrides.materialBinding, nodeConfig.id, asset);
     }
 
-    const materialSlotDescriptors: SceneBuilderMaterialSlotSourceDescriptor[] = [];
     for (const [slotId, materialBinding] of Object.entries(overrides.materialSlotBindings ?? {})) {
       const materialSlot = this.resolveSceneAssetMaterialSlot(asset, slotId, materialBinding);
       if (!materialSlot) {
@@ -1491,21 +1483,10 @@ export class SceneBuilder {
         continue;
       }
       this.applyMaterialSlotBinding(materialScopeRoot, materialSlot, materialBinding, nodeConfig.id, asset);
-      materialSlotDescriptors.push(materialSlot);
-    }
-
-    for (const [ownerNodePath, materialBinding] of Object.entries(overrides.childMaterialBindings ?? {})) {
-      if (isMaterialOwnerPathEqualToSlotDescriptor(ownerNodePath, materialSlotDescriptors, nodeConfig.id)) continue;
-      this.applyMaterialBinding(materialScopeRoot, ownerNodePath, materialBinding, nodeConfig.id, asset);
     }
 
     if (overrides.material) {
       this.applyMaterialOverride(materialScopeRoot, '', overrides.material, nodeConfig.id, asset);
-    }
-
-    for (const [ownerNodePath, materialOverride] of Object.entries(overrides.childMaterials ?? {})) {
-      if (isMaterialOwnerPathCoveredBySlotDescriptors(ownerNodePath, materialSlotDescriptors, nodeConfig.id)) continue;
-      this.applyMaterialOverride(materialScopeRoot, ownerNodePath, materialOverride, nodeConfig.id, asset);
     }
 
     if (overrides.outline) {
@@ -1880,26 +1861,6 @@ function createSceneBuilderMaterialSlotSubMaterialName(
   const slotKey = materialSlot.slotId || materialSlot.ownerNodePath || `primitive_${primitiveIndex}`;
   const suffix = `${sceneNodeId}_${slotKey}`.replace(/[^a-zA-Z0-9_-]+/g, '_');
   return `${baseName}_slot_${suffix}_sub${primitiveIndex}`;
-}
-
-function isMaterialOwnerPathEqualToSlotDescriptor(
-  ownerNodePath: string,
-  materialSlots: readonly SceneBuilderMaterialSlotSourceDescriptor[],
-  projectionNodeId: string,
-): boolean {
-  const resolveContext = { projectionNodeId };
-  const ownerKey = createMaterialSlotOwnerPathMatchKey(ownerNodePath, resolveContext);
-  if (!ownerKey) return false;
-  return materialSlots.some(slot => createMaterialSlotOwnerPathMatchKey(slot.ownerNodePath, resolveContext) === ownerKey);
-}
-
-function isMaterialOwnerPathCoveredBySlotDescriptors(
-  ownerNodePath: string,
-  materialSlots: readonly SceneBuilderMaterialSlotSourceDescriptor[],
-  projectionNodeId: string,
-): boolean {
-  const resolveContext = { projectionNodeId };
-  return materialSlots.some(slot => isMaterialSlotOwnerPathMatch(ownerNodePath, slot.ownerNodePath, resolveContext));
 }
 
 function isSceneBuilderMaterialSlotSameMesh(

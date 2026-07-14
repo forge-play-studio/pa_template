@@ -8,10 +8,10 @@
     "generatedFrom": {
       "sourceId": "scene.main",
       "sourceType": "scene",
-      "revision": 67,
+      "revision": 73,
       "compilerId": "@fps-games/editor.playable-sdk.scene-compiler",
       "compilerVersion": "1",
-      "compiledAt": "2026-07-03T01:24:22.454Z"
+      "compiledAt": "2026-07-12T00:17:52.669Z"
     }
   },
   "gameplay": {
@@ -7115,7 +7115,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 67,
+          "revision": 73,
           "objectGuid": "go_2406b122-d63b-4971-bf66-7d78a8776543",
           "objectId": "main_camera",
           "component": "Transform"
@@ -7171,7 +7171,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 67,
+          "revision": 73,
           "objectGuid": "go_environment_light_default",
           "objectId": "environment_light",
           "component": "Transform"
@@ -7217,7 +7217,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 67,
+          "revision": 73,
           "objectGuid": "go_7017d029-9d69-4381-91ac-75093053caa9",
           "objectId": "sun_light",
           "component": "Transform"
@@ -7287,7 +7287,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 67,
+          "revision": 73,
           "objectGuid": "go_20efbb4a-c323-4ea3-911c-23c72827d7b9",
           "objectId": "plane",
           "component": "PrimitiveRenderer"
@@ -7353,7 +7353,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 67,
+          "revision": 73,
           "objectGuid": "go_ac4a2824-3625-468c-aeee-d7c75dedc814",
           "objectId": "cube",
           "component": "PrimitiveRenderer"
@@ -7418,7 +7418,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 67,
+          "revision": 73,
           "objectGuid": "go_cc80f1b1-57b9-4373-baba-eed140d90c8f",
           "objectId": "sphere",
           "component": "PrimitiveRenderer"
@@ -7483,7 +7483,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 67,
+          "revision": 73,
           "objectGuid": "go_68778bee-9b2d-44bb-9a37-cfa42efa2846",
           "objectId": "capsule",
           "component": "PrimitiveRenderer"
@@ -7517,7 +7517,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 67,
+          "revision": 73,
           "objectGuid": "go_shadow_fixture_group",
           "objectId": "shadow_fixture_group",
           "component": "GameObject"
@@ -7576,7 +7576,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 67,
+          "revision": 73,
           "objectGuid": "go_shadow_fixture_player",
           "objectId": "shadow_fixture_player",
           "component": "ModelRenderer"
@@ -7654,7 +7654,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 67,
+          "revision": 73,
           "objectGuid": "go_shadow_fixture_worker",
           "objectId": "shadow_fixture_worker",
           "component": "ModelRenderer"
@@ -7726,7 +7726,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 67,
+          "revision": 73,
           "objectGuid": "go_shadow_fixture_truck",
           "objectId": "shadow_fixture_truck",
           "component": "ModelRenderer"
@@ -7807,7 +7807,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 67,
+          "revision": 73,
           "objectGuid": "go_shadow_fixture_pine_tree",
           "objectId": "shadow_fixture_pine_tree",
           "component": "ModelRenderer"
@@ -7879,7 +7879,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 67,
+          "revision": 73,
           "objectGuid": "go_shadow_fixture_bush",
           "objectId": "shadow_fixture_bush",
           "component": "ModelRenderer"
@@ -7951,7 +7951,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 67,
+          "revision": 73,
           "objectGuid": "go_shadow_fixture_rocks",
           "objectId": "shadow_fixture_rocks",
           "component": "ModelRenderer"
@@ -8023,7 +8023,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 67,
+          "revision": 73,
           "objectGuid": "go_shadow_fixture_fence",
           "objectId": "shadow_fixture_fence",
           "component": "ModelRenderer"
@@ -8095,7 +8095,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 67,
+          "revision": 73,
           "objectGuid": "go_shadow_fixture_log_bundle",
           "objectId": "shadow_fixture_log_bundle",
           "component": "ModelRenderer"
@@ -8170,7 +8170,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 67,
+          "revision": 73,
           "objectGuid": "go_shadow_fixture_crate",
           "objectId": "shadow_fixture_crate",
           "component": "ModelRenderer"
@@ -8242,7 +8242,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 67,
+          "revision": 73,
           "objectGuid": "go_shadow_fixture_barrel",
           "objectId": "shadow_fixture_barrel",
           "component": "ModelRenderer"
@@ -8314,7 +8314,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 67,
+          "revision": 73,
           "objectGuid": "go_shadow_fixture_chicken",
           "objectId": "shadow_fixture_chicken",
           "component": "ModelRenderer"
@@ -8386,7 +8386,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 67,
+          "revision": 73,
           "objectGuid": "go_shadow_fixture_hay_bale",
           "objectId": "shadow_fixture_hay_bale",
           "component": "ModelRenderer"
@@ -8458,7 +8458,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 67,
+          "revision": 73,
           "objectGuid": "go_shadow_fixture_counter",
           "objectId": "shadow_fixture_counter",
           "component": "ModelRenderer"
@@ -8499,7 +8499,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 67,
+          "revision": 73,
           "objectGuid": "go_8c25b316-6074-41ae-a1f2-49f3709453ec",
           "objectId": "asset",
           "component": "ModelRenderer"
@@ -8564,7 +8564,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 67,
+          "revision": 73,
           "objectGuid": "go_1ecaee91-9738-4914-8fc2-5f2b69cc018a",
           "objectId": "asset_2",
           "component": "ModelRenderer"
@@ -8629,7 +8629,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 67,
+          "revision": 73,
           "objectGuid": "go_cd724b70-f492-4014-ac1d-e51ef61cfc0d",
           "objectId": "asset_3",
           "component": "ModelRenderer"
@@ -8670,7 +8670,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 67,
+          "revision": 73,
           "objectGuid": "go_cc0008ef-62dc-4a23-ba98-bced26f56a80",
           "objectId": "issue_444__04",
           "component": "ModelRenderer"
@@ -8717,7 +8717,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 67,
+          "revision": 73,
           "objectGuid": "go_22987ad9-9e4b-46ce-9978-1e72c24fbc53",
           "objectId": "issue_444",
           "component": "ModelRenderer"
@@ -8761,6 +8761,272 @@
               "materialAssetId": "mat_d6fbc596d7fb4729a4fbc270d5fbc403"
             }
           }
+        }
+      },
+      {
+        "id": "issue464_ground_decal_operation",
+        "name": "Issue 464 Operation Ground Decal Fixture",
+        "parentId": "root",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 73,
+          "objectGuid": "go_issue464_ground_decal_operation",
+          "objectId": "issue464_ground_decal_operation",
+          "component": "Transform"
+        },
+        "transform": {
+          "position": {
+            "x": -3.2,
+            "y": 0.02,
+            "z": 2.8
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "transform",
+        "transformType": "groundDecal",
+        "groundDecal": {
+          "uiKind": "operation",
+          "size": {
+            "width": 1.8,
+            "depth": 1.8
+          },
+          "aspectSourceLayerId": "border",
+          "lockAspectToBorder": true,
+          "mask": {
+            "enabled": true,
+            "source": "roundedRect",
+            "cornerRadius": 0.18,
+            "padding": 0.02
+          },
+          "rendering": {
+            "textureWidth": 512,
+            "textureHeight": 512,
+            "alphaIndex": 100,
+            "diffuseTextureLevel": 1,
+            "emissiveTextureLevel": 0
+          },
+          "layers": [
+            {
+              "id": "base",
+              "role": "base",
+              "kind": "color",
+              "color": {
+                "r": 0.08,
+                "g": 0.08,
+                "b": 0.08,
+                "a": 0.56
+              },
+              "zOrder": 0,
+              "rect": {
+                "x": 0,
+                "z": 0,
+                "width": 1,
+                "depth": 1
+              }
+            },
+            {
+              "id": "mainLogo",
+              "role": "mainLogo",
+              "kind": "texture",
+              "textureId": "texture_331e16209e8c47cc94217508d719cbbb",
+              "zOrder": 20,
+              "rect": {
+                "x": 0,
+                "z": 0,
+                "width": 1,
+                "depth": 1
+              }
+            },
+            {
+              "id": "border",
+              "role": "border",
+              "kind": "texture",
+              "textureId": "texture_969907ee4a1d453ea7b0ee3247cb6bb1",
+              "zOrder": 100,
+              "rect": {
+                "x": 0,
+                "z": 0,
+                "width": 1,
+                "depth": 1
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "issue464_ground_decal_delivery",
+        "name": "Issue 464 Delivery Ground Decal Fixture",
+        "parentId": "root",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 73,
+          "objectGuid": "go_issue464_ground_decal_delivery",
+          "objectId": "issue464_ground_decal_delivery",
+          "component": "Transform"
+        },
+        "transform": {
+          "position": {
+            "x": -1.2,
+            "y": 0.02,
+            "z": 2.8
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "transform",
+        "transformType": "groundDecal",
+        "groundDecal": {
+          "uiKind": "delivery",
+          "size": {
+            "width": 1.8,
+            "depth": 1.8
+          },
+          "aspectSourceLayerId": "border",
+          "lockAspectToBorder": true,
+          "mask": {
+            "enabled": true,
+            "source": "roundedRect",
+            "cornerRadius": 0.18,
+            "padding": 0.02
+          },
+          "rendering": {
+            "textureWidth": 512,
+            "textureHeight": 512,
+            "alphaIndex": 100,
+            "diffuseTextureLevel": 1,
+            "emissiveTextureLevel": 0
+          },
+          "layers": [
+            {
+              "id": "base",
+              "role": "base",
+              "kind": "color",
+              "color": {
+                "r": 0.08,
+                "g": 0.08,
+                "b": 0.08,
+                "a": 0.56
+              },
+              "zOrder": 0,
+              "rect": {
+                "x": 0,
+                "z": 0,
+                "width": 1,
+                "depth": 1
+              }
+            },
+            {
+              "id": "progressFill",
+              "role": "progressFill",
+              "kind": "progress",
+              "value": 0,
+              "direction": "bottomToTop",
+              "color": {
+                "r": 0.16,
+                "g": 0.56,
+                "b": 1,
+                "a": 0.88
+              },
+              "zOrder": 10,
+              "rect": {
+                "x": 0,
+                "z": 0,
+                "width": 1,
+                "depth": 1
+              }
+            },
+            {
+              "id": "mainLogo",
+              "role": "mainLogo",
+              "kind": "texture",
+              "textureId": "texture_ee97d50a7eb442b5905add9aaae74f2c",
+              "zOrder": 20,
+              "rect": {
+                "x": 0,
+                "z": 0,
+                "width": 1,
+                "depth": 1
+              }
+            },
+            {
+              "id": "subLogo",
+              "role": "subLogo",
+              "kind": "texture",
+              "textureId": "texture_331e16209e8c47cc94217508d719cbbb",
+              "zOrder": 25,
+              "rect": {
+                "x": -0.25,
+                "z": -0.25,
+                "width": 0.5,
+                "depth": 0.5
+              }
+            },
+            {
+              "id": "amount",
+              "role": "amount",
+              "kind": "text",
+              "text": {
+                "value": "30",
+                "fontFamily": "system-ui, Arial, sans-serif",
+                "fontSize": 96,
+                "fontWeight": "800",
+                "color": {
+                  "r": 1,
+                  "g": 1,
+                  "b": 1,
+                  "a": 1
+                },
+                "strokeColor": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 0.45
+                },
+                "strokeWidth": 8,
+                "align": "center",
+                "baseline": "middle"
+              },
+              "zOrder": 30,
+              "rect": {
+                "x": 0.2,
+                "z": -0.25,
+                "width": 0.28,
+                "depth": 0.22
+              }
+            },
+            {
+              "id": "border",
+              "role": "border",
+              "kind": "texture",
+              "textureId": "texture_969907ee4a1d453ea7b0ee3247cb6bb1",
+              "zOrder": 100,
+              "rect": {
+                "x": 0,
+                "z": 0,
+                "width": 1,
+                "depth": 1
+              }
+            }
+          ]
         }
       }
     ],
@@ -9841,6 +10107,6 @@
     "textures": []
   },
   "render": {},
-  "version": 64,
-  "updatedAt": "2026-07-03T01:24:22.460Z"
+  "version": 68,
+  "updatedAt": "2026-07-12T00:17:52.673Z"
 }
