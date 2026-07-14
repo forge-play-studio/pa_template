@@ -18,8 +18,8 @@ importers:
         specifier: 0.1.8-beta.2
         version: 0.1.8-beta.2
       '@fps-games/vfx':
-        specifier: 0.3.17
-        version: 0.3.17(@babylonjs/core@8.52.1)(@babylonjs/loaders@8.52.1(@babylonjs/core@8.52.1)(babylonjs-gltf2interface@8.56.2))
+        specifier: 0.3.19
+        version: 0.3.19(@babylonjs/core@8.52.1)(@babylonjs/loaders@8.52.1(@babylonjs/core@8.52.1)(babylonjs-gltf2interface@8.56.2))
       brotli-dec-wasm:
         specifier: ^2.3.2
         version: 2.3.2
@@ -802,8 +802,8 @@ packages:
       - '@fps-games/editor-playable-sdk'
       - '@fps-games/editor-protocol'
 
-  '@fps-games/vfx@0.3.17':
-    resolution: {integrity: sha512-6FGtzoTCrlKEjFuZ83q83IMNxFdLtBpZAQBRV9h0eq87ico7Q1X+kKuJ9n5cD9gabgHQ6NecIf7/XjIlIiZYkA==}
+  '@fps-games/vfx@0.3.19':
+    resolution: {integrity: sha512-zApoQuxC4utr7t6hXrPGWQO6ZX2DDhjZIwV7xv+Rz7CqQIpSWOjslL4LCPGqh0RLHaI9kL0b3bdEkk31vgqCkw==}
     peerDependencies:
       '@babylonjs/core': ^8.0.0
       '@babylonjs/loaders': ^8.0.0
@@ -2631,7 +2631,7 @@ snapshots:
 
   '@fps-games/editor@0.1.8-beta.2': {}
 
-  '@fps-games/vfx@0.3.17(@babylonjs/core@8.52.1)(@babylonjs/loaders@8.52.1(@babylonjs/core@8.52.1)(babylonjs-gltf2interface@8.56.2))':
+  '@fps-games/vfx@0.3.19(@babylonjs/core@8.52.1)(@babylonjs/loaders@8.52.1(@babylonjs/core@8.52.1)(babylonjs-gltf2interface@8.56.2))':
     dependencies:
       '@babylonjs/core': 8.52.1
       '@babylonjs/loaders': 8.52.1(@babylonjs/core@8.52.1)(babylonjs-gltf2interface@8.56.2)
