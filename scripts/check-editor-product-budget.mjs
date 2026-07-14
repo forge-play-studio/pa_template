@@ -56,6 +56,10 @@ const finalProductSurfacePaths = [
 // this is for game/runtime code that consumes editor-authored config, not a
 // general exemption for editor host, save, document authoring, or adapter glue.
 const runtimeAuthoredConfigConsumerPaths = new Set([
+  // Runtime lifecycle owners expose editor restart/debug hooks without owning
+  // the editor host, document authoring, or adapter implementation.
+  'src/project-runtime-entry.ts',
+  'src/debug/runtime-debug-bootstrap.ts',
   'src/config/ConfigService.ts',
   'src/config/SceneJsonV2Validator.ts',
   'src/config/types.ts',
