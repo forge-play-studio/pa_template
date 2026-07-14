@@ -21,7 +21,7 @@ const rendering = createFpsGameEditorRenderingAuthoringServices(editorConfig, {
   additionalInvalidationFiles: [
     'src/rendering/rendering-profile.ts',
     'src/services/RenderingService.ts',
-    'src/services/ShadowService.ts',
+    'src/services/fps-game-editor/renderer-host.ts',
     'src/services/SceneBuilder.ts',
   ],
 });

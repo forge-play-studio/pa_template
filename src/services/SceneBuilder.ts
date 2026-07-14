@@ -28,8 +28,6 @@ import { DirectionalLight } from '@babylonjs/core/Lights/directionalLight';
 
 import { AssetLoader } from './AssetLoader';
 import { ModelPool } from './ModelPool';
-import { RenderingService } from './RenderingService';
-import { ShadowService } from './ShadowService';
 import { createGroundDecalUiDynamicTexture, isGroundDecalUiConfig } from './GroundDecalUiService';
 import { applyMaterialDebugAdjustments } from '../utils/materialDebugAdjust';
 
@@ -80,8 +78,6 @@ export interface SceneEnvironment {
   camera: ArcRotateCamera;
   hemisphericLight: HemisphericLight;
   directionalLight: DirectionalLight;
-  renderingService: RenderingService;
-  shadowService: ShadowService;
 }
 
 export interface SceneRuntimeLightState<TLightConfig extends SceneHemisphericLightConfig | SceneDirectionalLightConfig> {
@@ -128,7 +124,7 @@ export class SceneBuilder {
   private selectedDirectionalLightEnabled = true;
   private hemisphericLightSource: SceneRuntimeSourceBinding | undefined;
   private directionalLightSource: SceneRuntimeSourceBinding | undefined;
-  private shadowService: ShadowService | null = null;
+  private readonly runtimeBindingListeners = new Set<() => void>();
 
   constructor(scene: Scene, assetLoader: AssetLoader, modelPool?: ModelPool) {
     this.scene = scene;
@@ -171,20 +167,11 @@ export class SceneBuilder {
     // 2) Lights
     const { hemisphericLight, directionalLight } = this.createLights();
 
-    // 3) Rendering pipeline
-    const renderingService = new RenderingService(this.scene);
-    renderingService.initialize([camera]);
-
-    // 4) Shadows (可通过 rendering.json 开关)
-    const shadowService = new ShadowService(this.scene, directionalLight, camera);
-    shadowService.initialize();
-    this.shadowService = shadowService;
-
-    // 5) 默认地面（让脚手架“开箱即有东西可见”）
+    // 3) 默认地面（让脚手架“开箱即有东西可见”）
     this.buildDefaultGround();
     this.buildLayoutPlaceholderSurfaces();
 
-    return { camera, hemisphericLight, directionalLight, renderingService, shadowService };
+    return { camera, hemisphericLight, directionalLight };
   }
 
   private createCamera(): ArcRotateCamera {
@@ -262,6 +249,11 @@ export class SceneBuilder {
     return this.directionalLight;
   }
 
+  subscribeRuntimeBindings(listener: () => void): () => void {
+    this.runtimeBindingListeners.add(listener);
+    return () => this.runtimeBindingListeners.delete(listener);
+  }
+
   getSelectedHemisphericLightState(): SceneRuntimeLightState<SceneHemisphericLightConfig> {
     const fallback = this.resolveHemisphericLightSource();
     return {
@@ -307,7 +299,7 @@ export class SceneBuilder {
     runtimeLight.intensity = nextLight.intensity;
     runtimeLight.direction = new Vector3(nextLight.direction.x, nextLight.direction.y, nextLight.direction.z);
     runtimeLight.setEnabled(this.selectedDirectionalLightEnabled);
-    this.shadowService?.setDirectionalLightEnabled(this.selectedDirectionalLightEnabled);
+    this.notifyRuntimeBindingsChanged();
     if (nextLight.diffuseColor) {
       runtimeLight.diffuse = toColor3(nextLight.diffuseColor);
     }
@@ -589,7 +581,9 @@ export class SceneBuilder {
    * 至少需要让这个方法在自己的 SceneBuilder 上成立。
    */
   addSceneNodeFromConfig(nodeConfig: SceneNodeConfig, parent?: TransformNode | null): TransformNode | null {
-    return this.buildSceneNodeRuntime(nodeConfig, 'sync', parent ?? undefined);
+    const runtimeNode = this.buildSceneNodeRuntime(nodeConfig, 'sync', parent ?? undefined);
+    if (runtimeNode) this.notifyRuntimeBindingsChanged();
+    return runtimeNode;
   }
 
   removeSceneNode(id: string): boolean {
@@ -611,6 +605,7 @@ export class SceneBuilder {
     node.parent = null;
     cleanup?.();
     node.dispose();
+    this.notifyRuntimeBindingsChanged();
     return true;
   }
 
@@ -1450,6 +1445,10 @@ export class SceneBuilder {
     }
   }
 
+  private notifyRuntimeBindingsChanged(): void {
+    for (const listener of this.runtimeBindingListeners) listener();
+  }
+
   private applySceneNodeOverrides(
     nodeConfig: SceneInstanceNode | SceneTransformNode | ScenePrimitiveNode,
     rootNode: TransformNode,
@@ -1812,7 +1811,7 @@ export class SceneBuilder {
 
   dispose(): void {
     this.clearSceneRuntime();
-    this.shadowService = null;
+    this.runtimeBindingListeners.clear();
     this.root.dispose();
   }
 }

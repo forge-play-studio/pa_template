@@ -3,7 +3,7 @@
  *
  * 职责：
  * - 初始化 Babylon Engine/Scene
- * - 初始化服务层（AssetLoader / ModelPool / RenderingService 等）
+ * - 初始化服务层（AssetLoader / ModelPool / Renderer Host 等）
  * - 初始化系统/实体/UI
  * - 驱动游戏循环（update + render）
  *
@@ -48,8 +48,6 @@ import {
   InputService,
   SceneBuilder,
   MaterialConfigService,
-  RenderingService,
-  ShadowService,
   SceneVfxService,
   playableAnalyticsService,
   playableCtaService,
@@ -67,6 +65,11 @@ import { createProjectGameplayRuntime } from '../gameplay';
 import type { GameplayModule, ProjectGameplayRuntime } from '../gameplay';
 import type { EffectPackageService } from '@fps-games/vfx';
 import type { VfxParamValues, VfxSpawnTransform } from '../assets/vfx';
+import {
+  createProjectRendererSession,
+  type ProjectRendererSession,
+} from '../services/fps-game-editor/renderer-host';
+import type { FpsShadowRendererService } from '@fps-games/editor/playable-runtime/babylon';
 
 export interface GameOptions {
   canvasId: string;
@@ -93,9 +96,8 @@ export class Game {
   private animationService: AnimationService | null = null;
   private audioService: AudioService | null = null;
   private sceneBuilder: SceneBuilder | null = null;
-  private renderingService: RenderingService | null = null;
   private materialConfigService: MaterialConfigService | null = null;
-  private shadowService: ShadowService | null = null;
+  private rendererSession: ProjectRendererSession | null = null;
   private sceneVfxService: SceneVfxService | null = null;
   private zoneSystem: ZoneSystem | null = null;
   private analyticsService: PlayableAnalyticsService = playableAnalyticsService;
@@ -154,8 +156,6 @@ export class Game {
     this.sceneBuilder = new SceneBuilder(this.scene, this.assetLoader);
     const env = this.sceneBuilder.buildSceneEnvironment();
     this.camera = env.camera;
-    this.renderingService = env.renderingService;
-    this.shadowService = env.shadowService;
 
     // 3) Other services
     this.animationService = new AnimationService();
@@ -177,8 +177,8 @@ export class Game {
     // 7) Warm up pooled model instances declared in scene.assets
     this.warmupModelsFromConfig();
 
-    // 8) Refresh shadows after scene loaded
-    this.shadowService.refreshShadowMeshes();
+    // 8) Start the shared generated renderer module after scene identities exist.
+    this.rendererSession = await createProjectRendererSession(this.scene, this.sceneBuilder);
 
     // 9) Input
     this.initInput();
@@ -288,10 +288,9 @@ export class Game {
       !this.inputService ||
       !this.materialConfigService ||
       !this.modelPool ||
-      !this.renderingService ||
       !this.sceneBuilder ||
       !this.sceneVfxService ||
-      !this.shadowService ||
+      !this.rendererSession ||
       !this.player ||
       !this.zoneSystem
     ) {
@@ -307,10 +306,9 @@ export class Game {
       inputService: this.inputService,
       materialConfigService: this.materialConfigService,
       modelPool: this.modelPool,
-      renderingService: this.renderingService,
       sceneBuilder: this.sceneBuilder,
       sceneVfxService: this.sceneVfxService,
-      shadowService: this.shadowService,
+      rendererShadows: this.rendererSession.shadows,
       analytics: this.analyticsService,
       cta: this.ctaService,
       player: this.player,
@@ -413,8 +411,8 @@ export class Game {
     return this.sceneBuilder;
   }
 
-  getShadowService(): ShadowService | null {
-    return this.shadowService;
+  getRendererShadows(): FpsShadowRendererService | null {
+    return this.rendererSession?.shadows ?? null;
   }
 
   getInputService(): InputService | null {
@@ -465,7 +463,7 @@ export class Game {
   // Dispose
   // ============================================================
 
-  dispose(): void {
+  async dispose(): Promise<void> {
     const errors: unknown[] = [];
     const attempt = (operation: () => void): void => {
       try { operation(); } catch (error) { errors.push(error); }
@@ -494,14 +492,14 @@ export class Game {
     attempt(() => this.zoneSystem?.dispose());
     this.zoneSystem = null;
 
-    attempt(() => this.renderingService?.dispose());
-    this.renderingService = null;
-
     attempt(() => this.materialConfigService?.dispose());
     this.materialConfigService = null;
 
-    attempt(() => this.shadowService?.dispose());
-    this.shadowService = null;
+    const rendererSession = this.rendererSession;
+    this.rendererSession = null;
+    if (rendererSession) {
+      try { await rendererSession.dispose(); } catch (error) { errors.push(error); }
+    }
 
     attempt(() => this.modelPool?.dispose());
     this.modelPool = null;

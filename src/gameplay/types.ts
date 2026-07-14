@@ -10,11 +10,10 @@ import type {
   ModelPool,
   PlayableAnalyticsService,
   PlayableCtaService,
-  RenderingService,
   SceneBuilder,
   SceneVfxService,
-  ShadowService,
 } from '../services';
+import type { FpsShadowRendererService } from '@fps-games/editor/playable-runtime/babylon';
 import type { ZoneSystem } from '../systems';
 
 export interface GameplayModule {
@@ -32,10 +31,9 @@ export interface GameplayRuntimeContext {
   inputService: InputService;
   materialConfigService: MaterialConfigService;
   modelPool: ModelPool;
-  renderingService: RenderingService;
   sceneBuilder: SceneBuilder;
   sceneVfxService: SceneVfxService;
-  shadowService: ShadowService;
+  rendererShadows: FpsShadowRendererService;
   analytics: PlayableAnalyticsService;
   cta: PlayableCtaService;
   player: SimplePlayer;

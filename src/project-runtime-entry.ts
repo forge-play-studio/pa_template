@@ -157,7 +157,7 @@ async function disposeProjectGameWorldCore(): Promise<void> {
   if (gameToDispose) {
     try {
       await waitForSceneReadyBeforeDispose(gameToDispose);
-      gameToDispose.dispose();
+      await gameToDispose.dispose();
     } catch (error) {
       errors.push(error);
     } finally {

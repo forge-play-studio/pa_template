@@ -62,7 +62,7 @@ const runtimeAuthoredConfigConsumerPaths = new Set([
   'src/rendering/rendering-profile.ts',
   'src/services/RenderingService.ts',
   'src/services/SceneBuilder.ts',
-  'src/services/ShadowService.ts',
+  'src/services/fps-game-editor/renderer-host.ts',
   'src/debug/camera-debug-panel.ts',
   'src/debug/runtime-lighting-debug-panel.ts',
 ]);

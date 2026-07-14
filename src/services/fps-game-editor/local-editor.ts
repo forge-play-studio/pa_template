@@ -33,6 +33,7 @@ import {
   enrichEditorSceneDocumentAssets,
 } from './scene-feature';
 import { editorPluginHost } from './plugin-host';
+import * as rendererPluginModule from 'virtual:fps-plugins/renderer';
 
 const projectionPreview = createFpsGameEditorProductProjectionPreview<EditorSceneDocument, EditorSceneGameObject, EditorSceneAssetLibraryItem, GroundDecalUiConfig>({
   assetsModule: editorAssets,
@@ -100,6 +101,9 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
     hierarchyContextActions: createEditorSceneGroundDecalHierarchyActions(),
     loadingContent,
     runtimeWindow: window,
+    rendererPluginModule,
+    rendererPluginVersion: rendererPluginModule.manifests
+      .find(manifest => manifest.id === 'fps.renderer.babylon')?.version ?? '0.0.0',
     loadBabylon: () => import('@babylonjs/core'),
     world: { cameraTarget: { x: 0, y: 0.6, z: 0 }, cameraRadius: 12, clearColor: { r: 0.055, g: 0.07, b: 0.09, a: 1 }, useRightHandedSystem: true, selectionEdgesPrewarm: 'lazy' },
     reportError: (error: unknown) => console.error('[LocalEditorModeSwitcher] Forge Play mode change failed', error),
