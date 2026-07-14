@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "project-vfx-runtime/1.0",
+  "title": "Project VFX Effect Runtime",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "effectId", "poolSize", "expectedPeak", "lifecycle"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": { "const": "project-vfx-runtime/1.0" },
+    "effectId": { "type": "string", "minLength": 1 },
+    "displayName": { "type": "string" },
+    "poolSize": { "type": "integer", "minimum": 1 },
+    "expectedPeak": { "type": "integer", "minimum": 0 },
+    "lifecycle": { "enum": ["one-shot", "persistent", "mixed"] }
+  }
+}

@@ -32,7 +32,6 @@ import type {
   SceneSharedMaterialConfig,
   SceneNodeConfig,
   StandardMaterialLightingOverrideConfig,
-  SceneVfxConfig,
   LayoutPlaceholderSurfaceConfig,
   GroundOverlayPlaneConfig,
   GameplayBindingConfig,
@@ -839,10 +838,6 @@ export class ConfigService {
   getGameplayBindings(): GameplayBindingConfig[] {
     const bindings = this.sceneConfig.gameplay?.gameplayBindings;
     return Array.isArray(bindings) ? bindings : [];
-  }
-
-  getSceneVfxConfig(): SceneVfxConfig | undefined {
-    return this.sceneConfig.gameplay?.tuning?.sceneVfx;
   }
 
   getLayoutPlaceholderSurfaces(): LayoutPlaceholderSurfaceConfig[] {

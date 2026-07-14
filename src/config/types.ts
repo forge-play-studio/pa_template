@@ -105,28 +105,6 @@ export interface SceneHemisphericLightConfig {
 export type SceneLightConfig = SceneHemisphericLightConfig | SceneDirectionalLightConfig;
 
 // ============================================================
-// Scene VFX (可选)
-// ============================================================
-
-export interface SceneVfxConfig {
-  /** effectId -> effect */
-  effects: Record<string, SceneVfxEffectConfig>;
-}
-
-export interface SceneVfxEffectConfig {
-  enabled?: boolean;
-  position: Position3D;
-  rotationDeg?: Position3D;
-  systems: Record<string, SceneVfxParticleSystemConfig>;
-}
-
-export interface SceneVfxParticleSystemConfig {
-  enabled?: boolean;
-  capacity?: number;
-  textureId?: string;
-}
-
-// ============================================================
 // Scene JSON
 // ============================================================
 
@@ -640,9 +618,7 @@ export interface SceneZoneConfig {
 export interface SceneGameplayConfig {
   gameplayBindings?: GameplayBindingConfig[];
   zones?: SceneZoneConfig[];
-  tuning?: {
-    sceneVfx?: SceneVfxConfig;
-  };
+  tuning?: Record<string, unknown>;
   layoutPlaceholderSurfaces?: LayoutPlaceholderSurfaceConfig[];
   groundOverlayPlanes?: GroundOverlayPlaneConfig[];
   [key: string]: unknown;

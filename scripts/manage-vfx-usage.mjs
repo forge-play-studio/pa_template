@@ -451,6 +451,21 @@ function validateEffect(effectId, options) {
   if (!existsSync(effectDir) || !statSync(effectDir).isDirectory()) {
     throw new Error(`Unknown effect "${effectId}". Expected directory: ${relativePath(effectDir)}. Pass --allow-missing-effect to bypass.`);
   }
+  const indexPath = path.join(effectDir, 'index.ts');
+  const runtimePath = path.join(effectDir, 'vfx-runtime.json');
+  if (!existsSync(indexPath)) {
+    throw new Error(`Effect "${effectId}" is missing ${relativePath(indexPath)}.`);
+  }
+  if (!existsSync(runtimePath)) {
+    throw new Error(`Effect "${effectId}" is missing ${relativePath(runtimePath)}; production VFX must declare pool capacity and lifecycle.`);
+  }
+  const runtime = JSON.parse(stripBom(readFileSync(runtimePath, 'utf8')));
+  if (runtime?.effectId !== effectId) {
+    throw new Error(`${relativePath(runtimePath)} effectId must equal "${effectId}".`);
+  }
+  if (!Number.isInteger(runtime?.poolSize) || runtime.poolSize < 1) {
+    throw new Error(`${relativePath(runtimePath)} poolSize must be a positive integer.`);
+  }
 }
 
 function validateTarget(target, options) {

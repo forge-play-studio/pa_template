@@ -1,8 +1,7 @@
 import { Vector3 } from '@babylonjs/core/Maths/math.vector';
 import type { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import type { GameplayModule } from '../gameplay';
-import type { RuntimeNodeService, SceneVfxService } from '../services';
-import type { VfxEffectHandle, VfxEffectInputs, VfxParamValues } from '../assets/vfx';
+import type { RuntimeNodeService, VfxParams, VfxPlaybackHandle, VfxService } from '../services';
 import usagesDocument from '../assets/vfx/usages.json';
 
 type ProjectVfxLifecycle = 'follow' | 'loop' | 'oneshot';
@@ -17,9 +16,7 @@ interface ProjectVfxNodePositionSource {
   nodeId: string;
 }
 
-type ProjectVfxPositionSource =
-  | ProjectVfxSocketPositionSource
-  | ProjectVfxNodePositionSource;
+type ProjectVfxPositionSource = ProjectVfxSocketPositionSource | ProjectVfxNodePositionSource;
 
 export interface ProjectVfxVector3Config {
   x?: number;
@@ -53,7 +50,7 @@ interface ProjectVfxUsageConfig {
   offset?: ProjectVfxOffsetConfig;
   lifecycle: ProjectVfxLifecycle;
   repeatIntervalSec?: number;
-  params?: Partial<VfxParamValues>;
+  params?: VfxParams;
 }
 
 interface ProjectVfxUsagesDocument {
@@ -68,22 +65,22 @@ export interface ProjectVfxUsageTarget {
   positionSource: ProjectVfxPositionSource;
   offset?: ProjectVfxOffsetConfig;
   lifecycle: ProjectVfxLifecycle;
-  params: Partial<VfxParamValues>;
+  params: VfxParams;
 }
 
 const PROJECT_VFX_USAGES = sanitizeUsagesDocument(usagesDocument as ProjectVfxUsagesDocument);
 
 export class ProjectVfxDirector implements GameplayModule {
-  private readonly handles = new Map<string, VfxEffectHandle>();
-  private readonly savedParams = new Map<string, Partial<VfxParamValues>>();
-  private readonly previewParams = new Map<string, Partial<VfxParamValues>>();
+  private readonly handles = new Map<string, VfxPlaybackHandle>();
+  private readonly savedParams = new Map<string, VfxParams>();
+  private readonly previewParams = new Map<string, VfxParams>();
   private readonly savedOffsets = new Map<string, ProjectVfxOffsetConfig>();
   private readonly previewOffsets = new Map<string, ProjectVfxOffsetConfig>();
   private readonly repeatElapsed = new Map<string, number>();
 
   constructor(
     private readonly runtimeNodes: RuntimeNodeService,
-    private readonly sceneVfxService: SceneVfxService,
+    private readonly vfxService: VfxService,
   ) {
     for (const usage of PROJECT_VFX_USAGES) {
       this.savedParams.set(usage.id, cloneParams(usage.params));
@@ -106,22 +103,18 @@ export class ProjectVfxDirector implements GameplayModule {
       if (usage.lifecycle !== 'loop') continue;
       const repeatIntervalSec = readRepeatInterval(usage);
       if (repeatIntervalSec <= 0) continue;
-
       const nextElapsed = (this.repeatElapsed.get(usage.id) ?? 0) + deltaTime;
       if (nextElapsed < repeatIntervalSec) {
         this.repeatElapsed.set(usage.id, nextElapsed);
         continue;
       }
-
       this.repeatElapsed.set(usage.id, 0);
       this.playUsage(usage);
     }
   }
 
   dispose(): void {
-    for (const handle of this.handles.values()) {
-      handle.dispose();
-    }
+    for (const usage of PROJECT_VFX_USAGES) this.vfxService.releaseByOwner(createUsageOwner(usage.id));
     this.handles.clear();
     this.previewParams.clear();
     this.previewOffsets.clear();
@@ -129,7 +122,7 @@ export class ProjectVfxDirector implements GameplayModule {
   }
 
   getVfxUsageTargets(): ProjectVfxUsageTarget[] {
-    return PROJECT_VFX_USAGES.map((usage) => ({
+    return PROJECT_VFX_USAGES.map(usage => ({
       id: usage.id,
       label: usage.label?.trim() || usage.id,
       effectId: usage.effect,
@@ -141,7 +134,7 @@ export class ProjectVfxDirector implements GameplayModule {
     }));
   }
 
-  getVfxUsageParams(usageId: string): Partial<VfxParamValues> {
+  getVfxUsageParams(usageId: string): VfxParams {
     return cloneParams(this.previewParams.get(usageId) ?? this.savedParams.get(usageId));
   }
 
@@ -149,26 +142,27 @@ export class ProjectVfxDirector implements GameplayModule {
     return cloneOffset(this.previewOffsets.get(usageId) ?? this.savedOffsets.get(usageId));
   }
 
-  getVfxUsageRoot(usageId: string): TransformNode | null {
-    return this.handles.get(usageId)?.root ?? null;
+  playVfxUsage(usageId: string): boolean {
+    const usage = findUsage(usageId);
+    return usage ? this.playUsage(usage) : false;
   }
 
-  previewVfxUsageParams(usageId: string, params: Partial<VfxParamValues>, offset?: ProjectVfxOffsetConfig): boolean {
+  previewVfxUsageParams(usageId: string, params: VfxParams, offset?: ProjectVfxOffsetConfig): boolean {
     const usage = findUsage(usageId);
     if (!usage) return false;
     this.previewParams.set(usage.id, cloneParams(params));
     if (offset) this.previewOffsets.set(usage.id, cloneOffset(offset));
-    return this.playUsage(usage);
+    return this.playUsage(usage, 'debug');
   }
 
-  saveVfxUsageParams(usageId: string, params: Partial<VfxParamValues>, offset?: ProjectVfxOffsetConfig): boolean {
+  saveVfxUsageParams(usageId: string, params: VfxParams, offset?: ProjectVfxOffsetConfig): boolean {
     const usage = findUsage(usageId);
     if (!usage) return false;
     this.savedParams.set(usage.id, cloneParams(params));
     if (offset) this.savedOffsets.set(usage.id, cloneOffset(offset));
     this.previewParams.delete(usage.id);
     this.previewOffsets.delete(usage.id);
-    return this.playUsage(usage);
+    return this.playUsage(usage, 'debug');
   }
 
   resetVfxUsagePreview(usageId: string): boolean {
@@ -176,53 +170,43 @@ export class ProjectVfxDirector implements GameplayModule {
     if (!usage) return false;
     this.previewParams.delete(usage.id);
     this.previewOffsets.delete(usage.id);
-    return this.playUsage(usage);
+    return this.playUsage(usage, 'debug');
   }
 
-  private playUsage(usage: ProjectVfxUsageConfig): boolean {
-    const mountNode = this.resolveMountNode(usage);
+  private playUsage(usage: ProjectVfxUsageConfig, source: 'runtime' | 'debug' = 'runtime'): boolean {
+    const mountNode = this.resolvePositionSourceNode(usage.positionSource, usage.id, 'mount');
     if (!mountNode) return false;
-    const offset = normalizeOffset(this.getEffectiveOffset(usage.id));
-    const inputs = this.resolveInputs(usage);
-
-    this.handles.get(usage.id)?.dispose();
-    const handle = this.sceneVfxService.playEffectPackage(
-      usage.effect,
-      this.getEffectiveParams(usage.id),
-      {
-        parent: mountNode,
-        position: offset.position,
-        rotation: offset.rotation,
-        scale: offset.scale,
-        offsetIsLocal: true,
-        inputs,
-      },
-    );
-
-    if (!handle) {
-      console.warn(`[ProjectVfxDirector] Failed to play VFX usage "${usage.id}" (${usage.effect}).`);
+    const owner = createUsageOwner(usage.id);
+    if (usage.lifecycle !== 'oneshot') {
+      this.handles.get(usage.id)?.release();
       this.handles.delete(usage.id);
-      return false;
     }
 
-    this.handles.set(usage.id, handle);
+    const result = this.vfxService.play(usage.effect, {
+      owner,
+      params: this.getEffectiveParams(usage.id),
+      source,
+      placement: {
+        parent: mountNode,
+        ...normalizeOffset(this.getEffectiveOffset(usage.id)),
+        offsetIsLocal: true,
+        inputs: this.resolveInputs(usage),
+      },
+    });
+    if (!result.ok) {
+      console.warn(`[ProjectVfxDirector] ${result.message}`);
+      return false;
+    }
+    if (usage.lifecycle !== 'oneshot' && result.handle.active) this.handles.set(usage.id, result.handle);
     return true;
   }
 
-  private resolveMountNode(usage: ProjectVfxUsageConfig): TransformNode | null {
-    return this.resolvePositionSourceNode(usage.positionSource, usage.id, 'mount');
-  }
-
-  private resolveInputs(usage: ProjectVfxUsageConfig): VfxEffectInputs | undefined {
+  private resolveInputs(usage: ProjectVfxUsageConfig): Readonly<Record<string, unknown>> | undefined {
     const referenceSource = usage.inputs?.reference;
     if (!referenceSource) return undefined;
-
     const referenceNode = this.resolvePositionSourceNode(referenceSource, usage.id, 'reference');
     if (!referenceNode) return undefined;
-
-    return {
-      reference: () => referenceNode.getAbsolutePosition().clone(),
-    };
+    return { reference: () => referenceNode.getAbsolutePosition().clone() };
   }
 
   private resolvePositionSourceNode(
@@ -235,16 +219,14 @@ export class ProjectVfxDirector implements GameplayModule {
       console.warn(`[ProjectVfxDirector] Missing ${source.kind} ${role} node "${source.nodeId}" for usage "${usageId}".`);
       return null;
     }
-
     if (source.kind === 'socket' && readSceneMarker(node)?.type !== 'effect-socket') {
       console.warn(`[ProjectVfxDirector] Node "${source.nodeId}" is not an effect-socket.`);
       return null;
     }
-
     return node;
   }
 
-  private getEffectiveParams(usageId: string): Partial<VfxParamValues> {
+  private getEffectiveParams(usageId: string): VfxParams {
     return cloneParams(this.previewParams.get(usageId) ?? this.savedParams.get(usageId));
   }
 
@@ -253,21 +235,19 @@ export class ProjectVfxDirector implements GameplayModule {
   }
 }
 
+function createUsageOwner(usageId: string): string {
+  return `project-vfx-usage:${usageId}`;
+}
+
 function sanitizeUsagesDocument(document: ProjectVfxUsagesDocument): ProjectVfxUsageConfig[] {
-  return (document.usages ?? []).filter((usage): usage is ProjectVfxUsageConfig => {
-    return !!usage
-      && typeof usage.id === 'string'
-      && usage.id.length > 0
-      && typeof usage.effect === 'string'
-      && usage.effect.length > 0
-      && (usage.placement === 'socket' || usage.placement === 'node')
-      && isPositionSource(usage.positionSource)
-      && usage.placement === usage.positionSource.kind
-      && typeof usage.positionSource.nodeId === 'string'
-      && usage.positionSource.nodeId.length > 0
-      && (usage.inputs === undefined || isInputsConfig(usage.inputs))
-      && (usage.lifecycle === 'follow' || usage.lifecycle === 'loop' || usage.lifecycle === 'oneshot');
-  });
+  return (document.usages ?? []).filter((usage): usage is ProjectVfxUsageConfig => !!usage
+    && typeof usage.id === 'string' && usage.id.length > 0
+    && typeof usage.effect === 'string' && usage.effect.length > 0
+    && (usage.placement === 'socket' || usage.placement === 'node')
+    && isPositionSource(usage.positionSource)
+    && usage.placement === usage.positionSource.kind
+    && (usage.inputs === undefined || isInputsConfig(usage.inputs))
+    && (usage.lifecycle === 'follow' || usage.lifecycle === 'loop' || usage.lifecycle === 'oneshot'));
 }
 
 function isInputsConfig(value: unknown): value is ProjectVfxInputsConfig {
@@ -285,7 +265,7 @@ function isPositionSource(value: unknown): value is ProjectVfxPositionSource {
 }
 
 function findUsage(usageId: string): ProjectVfxUsageConfig | null {
-  return PROJECT_VFX_USAGES.find((usage) => usage.id === usageId) ?? null;
+  return PROJECT_VFX_USAGES.find(usage => usage.id === usageId) ?? null;
 }
 
 function readRepeatInterval(usage: ProjectVfxUsageConfig): number {
@@ -300,7 +280,7 @@ function readSceneMarker(node: TransformNode): { type?: unknown } | null {
   return marker && typeof marker === 'object' ? marker as { type?: unknown } : null;
 }
 
-function cloneParams(params: Partial<VfxParamValues> | undefined): Partial<VfxParamValues> {
+function cloneParams(params: VfxParams | undefined): VfxParams {
   return { ...(params ?? {}) };
 }
 
@@ -310,9 +290,7 @@ function cloneOffset(offset: ProjectVfxOffsetConfig | undefined): ProjectVfxOffs
     ...(offset?.rotation ? { rotation: { ...offset.rotation } } : {}),
     ...(typeof offset?.scale === 'number'
       ? { scale: offset.scale }
-      : offset?.scale
-        ? { scale: { ...offset.scale } }
-        : {}),
+      : offset?.scale ? { scale: { ...offset.scale } } : {}),
   };
 }
 
@@ -324,26 +302,16 @@ function normalizeOffset(offset: ProjectVfxOffsetConfig | undefined): {
   return {
     position: toVector3(offset?.position),
     rotation: toVector3Config(offset?.rotation),
-    scale: typeof offset?.scale === 'number'
-      ? offset.scale
-      : toVector3Config(offset?.scale, 1),
+    scale: typeof offset?.scale === 'number' ? offset.scale : toVector3Config(offset?.scale, 1),
   };
 }
 
 function toVector3(value: ProjectVfxVector3Config | undefined, fallback = 0): Vector3 {
-  return new Vector3(
-    readNumber(value?.x, fallback),
-    readNumber(value?.y, fallback),
-    readNumber(value?.z, fallback),
-  );
+  return new Vector3(readNumber(value?.x, fallback), readNumber(value?.y, fallback), readNumber(value?.z, fallback));
 }
 
 function toVector3Config(value: ProjectVfxVector3Config | undefined, fallback = 0): ProjectVfxVector3Value {
-  return {
-    x: readNumber(value?.x, fallback),
-    y: readNumber(value?.y, fallback),
-    z: readNumber(value?.z, fallback),
-  };
+  return { x: readNumber(value?.x, fallback), y: readNumber(value?.y, fallback), z: readNumber(value?.z, fallback) };
 }
 
 function readNumber(value: unknown, fallback: number): number {

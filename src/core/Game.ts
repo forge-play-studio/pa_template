@@ -50,7 +50,7 @@ import {
   MaterialConfigService,
   RenderingService,
   ShadowService,
-  SceneVfxService,
+  VfxService,
   playableAnalyticsService,
   playableCtaService,
   configValidator,
@@ -65,8 +65,7 @@ import { configService, PROJECT_GAMEPLAY_CONFIG } from '../config';
 import type { SceneConfig } from '../config';
 import { createProjectGameplayRuntime } from '../gameplay';
 import type { GameplayModule, ProjectGameplayRuntime } from '../gameplay';
-import type { EffectPackageService } from '@fps-games/vfx';
-import type { VfxParamValues, VfxSpawnTransform } from '../assets/vfx';
+import { PROJECT_VFX_BUDGET, PROJECT_VFX_REGISTRATIONS } from '../assets/vfx';
 
 export interface GameOptions {
   canvasId: string;
@@ -96,7 +95,7 @@ export class Game {
   private renderingService: RenderingService | null = null;
   private materialConfigService: MaterialConfigService | null = null;
   private shadowService: ShadowService | null = null;
-  private sceneVfxService: SceneVfxService | null = null;
+  private vfxService: VfxService | null = null;
   private zoneSystem: ZoneSystem | null = null;
   private analyticsService: PlayableAnalyticsService = playableAnalyticsService;
   private ctaService: PlayableCtaService = playableCtaService;
@@ -189,9 +188,14 @@ export class Game {
     // 11) Zone interactions
     this.initZoneSystem();
 
-    // 12) Scene VFX (optional)
-    this.sceneVfxService = new SceneVfxService(this.scene);
-    this.sceneVfxService.initFromConfig();
+    // 12) Production VFX: freeze registration, preload, build pools and GPU-warm before gameplay init.
+    this.vfxService = new VfxService({
+      scene: this.scene,
+      budget: PROJECT_VFX_BUDGET,
+      renderWarmupFrame: () => this.renderVfxWarmupFrame(),
+    });
+    this.vfxService.registerAll(PROJECT_VFX_REGISTRATIONS);
+    await this.vfxService.init();
 
     // 13) Config validation (DEV)
     if (import.meta.env.DEV) {
@@ -207,9 +211,6 @@ export class Game {
 
     // 15) Project gameplay modules
     await this.initGameplayModules();
-
-    // 16) First-use warmups
-    await this.warmupVfxFirstUsePaths();
 
   }
 
@@ -233,16 +234,9 @@ export class Game {
     this.modelPool.warmupFromSceneAssets(configService.getSceneAssets());
   }
 
-  private async warmupVfxFirstUsePaths(): Promise<void> {
-    if (!this.sceneVfxService) return;
-    try {
-      await this.sceneVfxService.warmupRegisteredEffectPackages();
-      await this.scene.whenReadyAsync(false);
-      await this.renderWarmupFrame();
-      await this.renderWarmupFrame();
-    } catch (error) {
-      console.warn('[Game] VFX first-use warmup skipped:', error);
-    }
+  private async renderVfxWarmupFrame(): Promise<void> {
+    await this.scene.whenReadyAsync(false);
+    await this.renderWarmupFrame();
   }
 
   private async renderWarmupFrame(): Promise<void> {
@@ -290,7 +284,7 @@ export class Game {
       !this.modelPool ||
       !this.renderingService ||
       !this.sceneBuilder ||
-      !this.sceneVfxService ||
+      !this.vfxService ||
       !this.shadowService ||
       !this.player ||
       !this.zoneSystem
@@ -309,7 +303,7 @@ export class Game {
       modelPool: this.modelPool,
       renderingService: this.renderingService,
       sceneBuilder: this.sceneBuilder,
-      sceneVfxService: this.sceneVfxService,
+      vfxService: this.vfxService,
       shadowService: this.shadowService,
       analytics: this.analyticsService,
       cta: this.ctaService,
@@ -437,16 +431,8 @@ export class Game {
     return this.sceneBuilder?.getSceneNodeRuntime(id) ?? null;
   }
 
-  getSceneVfxService(): SceneVfxService | null {
-    return this.sceneVfxService;
-  }
-
-  getEffectPackageService(): EffectPackageService | null {
-    return this.sceneVfxService?.getEffectPackageService() ?? null;
-  }
-
-  playEffectPackage(effectId: string, params: Partial<VfxParamValues> = {}, spawnTransform?: VfxSpawnTransform | Vector3) {
-    return this.sceneVfxService?.playEffectPackage(effectId, params, spawnTransform) ?? null;
+  getVfxService(): VfxService | null {
+    return this.vfxService;
   }
 
   /**
@@ -488,8 +474,8 @@ export class Game {
     attempt(() => this.audioService?.dispose());
     this.audioService = null;
 
-    attempt(() => this.sceneVfxService?.dispose());
-    this.sceneVfxService = null;
+    attempt(() => this.vfxService?.dispose());
+    this.vfxService = null;
 
     attempt(() => this.zoneSystem?.dispose());
     this.zoneSystem = null;

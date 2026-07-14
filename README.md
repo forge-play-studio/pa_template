@@ -37,7 +37,7 @@
 16. dev-only runtime debug bootstrap：`src/debug/runtime-debug-bootstrap.ts`，统一挂载模板基础调试工具和玩法阶段面板
 17. 默认运行时节点查询封装：`RuntimeNodeService`，用于从 gameplay binding / scene node 稳定拿 runtime node
 18. 默认 debug 面板基础设施：`src/debug/framework/*`、`src/debug/panel-manifest.ts` 和 `src/debug/runtime-gameplay-debug-panels.ts`
-19. 默认 loading 链路：`Game.init` 在 gameplay modules 初始化前 preload `scene.assets`，按 `warmupCount` 通过 `ModelPool` 做 runtime asset warmup，并在 loading 结束前按 VFX registry / `assets/vfx/usages.json` 预热可 spawn 的特效首用路径
+19. 默认 loading 链路：`Game.init` 在 gameplay modules 初始化前 preload `scene.assets`、按 `warmupCount` 建立模型池，并让 `VfxService` 完成注册冻结、资源 prepare、完整特效实例建池和 GPU warmup
 20. 基础输入抽象：`InputService` / `MovementInputSource`，供项目按 `gameplay.md` 接入 joystick、键盘、点击移动或其他控制 UI
 
 当前不应默认假设已经完整包含：
@@ -124,12 +124,15 @@ LoadingScreen 显示
 -> AssetLoader preload scene.assets
 -> SceneBuilder 构建场景
 -> ModelPool 按 warmupCount warmup
+-> VfxService 冻结项目 definition/config 注册
+-> VfxService prepare、创建全部池实例并 GPU warmup
 -> gameplay modules init
--> VFX registry/usages 首用预热
 -> LoadingScreen 隐藏
 ```
 
-因此，QueueSystem、BackpackSystem、AreaSystem、ResourcesSystem 等业务系统不应临时拼路径加载模型来绕过 loading；VFX 调用也应优先通过项目 VFX registry / usages 接入，让模板 loading 阶段能覆盖首用预热。缺少 asset id/file、loading path、runtime parent/spawn root、placement root、layout、VFX usage 或 warmup/max-active 假设时，先按 Asset Gap 或 Gameplay Doc Gap 处理。
+因此，QueueSystem、BackpackSystem、AreaSystem、ResourcesSystem 等业务系统不应临时拼路径加载模型来绕过 loading。项目 VFX 通过 `src/assets/vfx/effects/*` definition、`vfx-runtime.json`、`budget.json` 和可选 `usages.json` 接入；gameplay 只能调用 `VfxService.play/release/releaseByOwner`，不能在交互或帧循环里创建特效重对象。缺少 asset id/file、loading path、runtime parent/spawn root、placement root、layout、VFX usage、poolSize 或全局 active 上限时，先按 Asset Gap、VFX Deployment Contract 或 Gameplay Doc Gap 处理。
+
+`src/services/vfx/**` 是模板拥有的稳定基础能力。项目 AI 接入新特效时原则上不修改这里，也不为某个 effect 增加 Service 分支；它只增加项目 effect definition/config、确认容量并连接真实 gameplay owner。模板默认没有具体特效，因此 `budget.json` 初始为 `unconfirmed / 0`，接入第一个生产特效时必须先由用户确认上限。
 
 ### Analytics / CTA Contract
 
@@ -336,7 +339,7 @@ Phase 1 需要在 `gameplay.md` 中明确主控对象模型。模板默认只提
 1. 优先在 `src/config/gameplay.json` 填资源、背包容量、区域、队列、升级、引导目标、结束条件和 tuning；`src/config/projectGameplayConfig.ts` 只作为 typed adapter。
 2. 如果标准薄 owner 适合承接当前阶段，按 wiki ability 扩展现有 system；如果 gameplay.md 明确需要新责任，再新增采集、加工、售卖、解锁、工人、机器 actor 等模块。
 3. 在 `src/entities/` 新增 NPC、工人、顾客、车辆、机器 actor 等单体行为。
-4. 在 `src/services/` 新增飞物品、资源堆放、动画/audio/vfx helper、binding helper 等可复用能力。
+4. 在 `src/services/` 新增飞物品、资源堆放、动画/audio helper、binding helper 等项目可复用能力；VFX 必须复用模板 `VfxService`，项目 effect adapter 放在 `src/assets/vfx/effects/*`。
 5. 在 `src/ui/` 按项目需求新增 HUD、输入 UI、引导、进度、CTA、Endcard 等界面；模板不预置具体 gameplay UI。
 6. 在 `src/gameplay/createProjectGameplay.ts` 中只做模块创建、依赖注入和返回 `GameplayModule[]`。
 
@@ -362,6 +365,7 @@ Phase 1 需要在 `gameplay.md` 中明确主控对象模型。模板默认只提
 
 1. `GameplayBindingService`：只负责 authored gameplay binding 查询，不拥有具体 gameplay 规则。
 2. `RuntimeNodeService`：把 binding id、logicType、scene node id 映射到 runtime node，并输出 binding readiness issue。
+3. `VfxService`：负责 init 前注册、Loading prepare/warmup、完整特效对象池、全局 active budget、播放租约、owner 回收和 diagnostics；不内置任何具体 effect。
 
 如果某个服务只服务于特定玩法或表现能力，例如轨迹动画、资源计数等，优先参考 [`pa_abilities`](https://github.com/forge-play-studio/pa_abilities) 的形态沉淀，而不是默认留在模板基础层。
 

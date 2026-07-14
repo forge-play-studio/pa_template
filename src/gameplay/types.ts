@@ -12,8 +12,8 @@ import type {
   PlayableCtaService,
   RenderingService,
   SceneBuilder,
-  SceneVfxService,
   ShadowService,
+  VfxService,
 } from '../services';
 import type { ZoneSystem } from '../systems';
 
@@ -34,7 +34,7 @@ export interface GameplayRuntimeContext {
   modelPool: ModelPool;
   renderingService: RenderingService;
   sceneBuilder: SceneBuilder;
-  sceneVfxService: SceneVfxService;
+  vfxService: VfxService;
   shadowService: ShadowService;
   analytics: PlayableAnalyticsService;
   cta: PlayableCtaService;

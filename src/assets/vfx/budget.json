@@ -1,0 +1,8 @@
+{
+  "$schema": "./budget.schema.json",
+  "schemaVersion": "project-vfx-budget/1.0",
+  "status": "unconfirmed",
+  "globalActiveLimit": 0,
+  "expectedGlobalPeak": 0,
+  "notes": "模板默认没有特效。接入第一个生产特效时，由 AI 分析并发并让用户确认上限。"
+}

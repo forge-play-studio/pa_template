@@ -71,7 +71,7 @@ export function createProjectGameplayRuntime(context: GameplayRuntimeContext): P
   const guide = new GuideSystem(PROJECT_GAMEPLAY_CONFIG.guideTargets, runtimeNodes);
   const endConditions = new EndConditionSystem(PROJECT_GAMEPLAY_CONFIG.endConditions, gameplayState);
   const shadowFixtureAnimations = new ShadowFixtureAnimationModule(context);
-  const vfxDirector = new ProjectVfxDirector(runtimeNodes, context.sceneVfxService);
+  const vfxDirector = new ProjectVfxDirector(runtimeNodes, context.vfxService);
 
   const modules: GameplayModule[] = [
     gameplayState,

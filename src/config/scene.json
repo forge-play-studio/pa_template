@@ -17,11 +17,7 @@
   "gameplay": {
     "gameplayBindings": [],
     "zones": [],
-    "tuning": {
-      "sceneVfx": {
-        "effects": {}
-      }
-    }
+    "tuning": {}
   },
   "scene": {
     "rootId": "root",
