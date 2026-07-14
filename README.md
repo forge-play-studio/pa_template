@@ -273,6 +273,7 @@ zone 检测能力默认内置，但只负责矩形区域几何检测和 `enter/t
 4. `framework/`：debug 面板基础能力，包括统一 panel manager、controls、config client、overlay、action registry 和 disposable helpers。
 5. `panel-manifest.ts`：玩法阶段面板注册 manifest。模板默认不注册具体玩法面板，builder 按阶段生成。
 6. `runtime-gameplay-debug-panels.ts`：读取 panel manifest 并通过统一 manager mount 玩法阶段 debug 面板。
+7. `runtime-inspector/`：dev-only `window.__fp3d` 运行时感知与可恢复控制契约；提供 runtime identity、稳定对象句柄、node/spatial/logical query、CameraLease、reference viewpoints 与瞬时 GPU depth observation，不包含 UI。
 
 runtime debug UI 由 `src/debug/framework/panel-manager.ts` 统一管理。全局 Debug 显隐、底部 dock、右侧 rail、面板顺序、折叠状态、底部面板独立打开状态和 `RuntimeDebugActionRegistry` 生命周期都由 manager 持有；新面板不应自行创建 fixed 全局 dock、全局 toggle 或独立 z-index 层。标准面板使用 `mountRuntimeDebugPanel()` 创建；外部 SDK 或复杂自绘面板使用 `mountRuntimeDebugPanelContainer()` 注册容器，由 manager 接管布局、顺序、显隐和入口按钮样式。Camera / Lighting 这类 editor SDK 面板挂入右侧 rail，VFX 和玩法阶段面板挂入底部 dock。debug 面板入口按钮统一使用按面板标题稳定 hash 的马卡龙色；底部 dock 面板点击按钮打开或关闭对应面板内容，外部 editor SDK 容器按钮由 manager 做布局和样式适配。`src/debug/` 之外需要 debug 面板能力时，不应直接创建 DOM 面板，应通过 `src/debug/debug-panel-layout.ts` 暴露的统一接口接入。
 
@@ -292,6 +293,138 @@ debug 面板职责边界：
 4. numeric tuning 的持久化应写回源码配置。当前 dev server 已提供 `/__debug_panel_config`，允许读写 `src/config/*.json`；标准 gameplay tuning 默认写回 `src/config/gameplay.json`。
 5. 面板必须由 `src/main.ts` 的 dev-only dynamic import 链路加载，不要在 production-owned 文件里静态 import debug module 的值。
 6. production / package build 不得 mount runtime debug panel、注册 `window.__paDebugActions`、暴露 debug HUD / tuning UI，正式 gameplay 逻辑也不得依赖 debug-only API。
+
+#### 3D runtime inspector（`window.__fp3d`）
+
+模板在 dev 模式由 `src/main.ts` 独立挂载 `window.__fp3d`；它跟随页面 document，不随单个 Game 或 debug panels 销毁，runtime-inspector 源码 HMR 则通过显式 accept boundary 做隔离 remount。基础观察协议保持 v0.1，当前实现版本为 0.25.0，主要 capability 为 `query: 0.2`、`spatial: 0.1`、`spatialQuery: 0.1`、`logicalObjects: 0.1`、`mutation: 0.1`、`snapshot: 0.1`、`pixelDiff: 0.1`、`trace: 0.1`、`renderExplain: 0.1`、`vfxProvider: 0.1`、`vfxControl: 0.1`、`materialProvider: 0.1`、`materialControl: 0.1`、`animationProvider: 0.1`、`animationControl: 0.1`、`camera: 0.4`、`cameraReference: 0.1`、`cameraVisual: 0.1`、`cameraVisualAttribution: 0.1`、`cameraVisualBounds: 0.1` 与 Scene Lifecycle 0.4。外部 agent 必须先确认运行身份和对象实例，再进入可恢复事务：
+
+```js
+const identity = window.__fp3d.discover();
+const matches = window.__fp3d.query({ name: { exact: 'target-name' } });
+const detail = window.__fp3d.inspect(matches.data[0]);
+const relations = window.__fp3d.relations(matches.data[0]);
+const spatial = window.__fp3d.spatial(matches.data[0]); // 仅 marker geometry handle
+const nearby = window.__fp3d.spatialQuery({ kind: 'sphere', center: [0, 0, 0], radius: 5 });
+const ray = window.__fp3d.spatialQuery({ kind: 'ray', origin: [0, 2, 5], direction: [0, 0, -1], length: 20 });
+const towers = window.__fp3d.logicalQuery({ kind: 'Tower', tags: { all: ['interactive'] } });
+
+const mutation = window.__fp3d.mutation.acquire({ owner: 'agent', timeoutMs: 15000 });
+const towerRoot = towers.data.objects[0].rootHandle;
+const rootBefore = window.__fp3d.inspect(towerRoot).data.transform;
+const moved = window.__fp3d.mutation.patch(mutation.data.id, {
+  handle: towerRoot,
+  set: { position: [rootBefore.position[0], rootBefore.position[1] + 1, rootBefore.position[2]] },
+});
+const mutationUndo = window.__fp3d.mutation.restore(mutation.data.id);
+
+const lease = window.__fp3d.camera.acquire({ owner: 'agent', timeoutMs: 15000 });
+const focusTargets = towers.data.objects[0]?.controlHandles ?? matches.data;
+const baseline = window.__fp3d.snapshot.capture({
+  label: 'before-experiment', handles: focusTargets, includeDescendants: true,
+  channels: ['nodes', 'animations', 'providers'], maxObjects: 200,
+});
+// ...执行一次短期 mutation 或业务动作...
+const current = window.__fp3d.snapshot.capture({
+  label: 'after-experiment', handles: focusTargets, includeDescendants: true,
+  channels: ['nodes', 'animations', 'providers'], maxObjects: 200,
+});
+const stateDiff = window.__fp3d.snapshot.diff(baseline.data.id, current.data.id);
+window.__fp3d.snapshot.release(current.data.id);
+window.__fp3d.snapshot.release(baseline.data.id);
+const noise = await window.__fp3d.pixels.selfCheck({
+  roi: { kind: 'handles', handles: focusTargets, paddingPx: 24 },
+});
+const pixelA = await window.__fp3d.pixels.capture({
+  label: 'pixel-before', roi: { kind: 'handles', handles: focusTargets, paddingPx: 24 },
+});
+// ...产生一次可见变化...
+const pixelB = await window.__fp3d.pixels.capture({
+  label: 'pixel-after', roi: { kind: 'handles', handles: focusTargets, paddingPx: 24 },
+});
+const pixelDiff = window.__fp3d.pixels.diff(pixelA.data.id, pixelB.data.id, {
+  channelThreshold: noise.data.maxChannelDiff, roiMode: 'union', heatmapColumns: 8, heatmapRows: 6,
+});
+window.__fp3d.pixels.release(pixelA.data.id);
+window.__fp3d.pixels.release(pixelB.data.id);
+const trace = window.__fp3d.trace.start({
+  label: 'first-position-change',
+  handles: towerRoot,
+  fields: ['transform.position', 'transform.scaling', 'health.finiteTransform'],
+  trigger: { kind: 'change', field: 'transform.position', handle: towerRoot, epsilon: 0.000001 },
+  preSamples: 30,
+  postSamples: 10,
+});
+// ...等待 after-render baseline，再执行一次业务动作或 Safe Mutation...
+const traceSummary = window.__fp3d.trace.list().data.find(item => item.id === trace.data.id);
+const tracePage = window.__fp3d.trace.get(trace.data.id, { limit: 50 });
+window.__fp3d.trace.release(trace.data.id);
+const renderEvidence = window.__fp3d.render.explain(towerRoot);
+const vfxCatalog = window.__fp3d.vfx.catalog();
+const vfxLease = window.__fp3d.vfx.acquire({ owner: 'agent', timeoutMs: 15000 });
+const vfxPreview = window.__fp3d.vfx.preview(vfxLease.data.id, {
+  providerId: 'project-vfx', usageId: 'shield', set: { radius: 6 },
+});
+const vfxRestore = window.__fp3d.vfx.restore(vfxLease.data.id);
+const materialCatalog = window.__fp3d.materials.catalog();
+const materialLease = window.__fp3d.materials.acquire({ owner: 'agent', timeoutMs: 15000 });
+const materialInstance = materialCatalog.data.instances.find(item => item.name === 'target_material');
+const materialPreview = window.__fp3d.materials.preview(materialLease.data.id, {
+  providerId: materialInstance.providerId, instanceId: materialInstance.id, set: { emissiveColor: [1, 0, 1] },
+});
+const materialRestore = window.__fp3d.materials.restore(materialLease.data.id);
+const animationCatalog = window.__fp3d.animations.catalog();
+const animationGroup = animationCatalog.data.groups[0];
+const animationLease = window.__fp3d.animations.acquire({ owner: 'agent', timeoutMs: 15000 });
+const animationPreview = window.__fp3d.animations.preview(animationLease.data.id, {
+  providerId: animationGroup.providerId,
+  groupId: animationGroup.id,
+  set: { paused: true, currentFrame: animationGroup.range.from, speedRatio: 0.5 },
+});
+const animationRestore = window.__fp3d.animations.restore(animationLease.data.id);
+const focused = window.__fp3d.camera.focus(lease.data.id, focusTargets, { margin: 1.5 });
+const occlusion = window.__fp3d.camera.occlusion(lease.data.id, matches.data);
+const visual = await window.__fp3d.camera.visualOcclusion(lease.data.id, matches.data);
+const attribution = await window.__fp3d.camera.visualAttribution(lease.data.id, matches.data);
+const alphaBounds = await window.__fp3d.camera.visualOcclusionBounds(lease.data.id, matches.data);
+const hidden = window.__fp3d.camera.patch(lease.data.id, {
+  mode: 'hide',
+  handles: occlusion.data.occluders.map(item => item.handle),
+});
+const restored = window.__fp3d.camera.restore(lease.data.id);
+```
+
+关键约束：
+
+1. query 永远返回 handle 数组；同名对象全部返回并附 ambiguity warning，不静默选择第一个。
+2. handle 绑定 runtime session、scene generation、Babylon uniqueId 和 object generation；dispose/reuse 后旧 handle 返回结构化 stale 错误。
+3. 每个 observation 都声明 `coverage.observed` / `coverage.unavailable`，不能把“没接入”解释成“没有变化”。
+4. 相机控制必须显式 `acquire → focus → restore`。同一时刻只允许一个 lease；冲突、非法 lease 和重复 restore 返回结构化错误。
+5. lease 保存 pose、projection、target、项目 camera owner 与 visibility patch 状态；显式 restore、超时、pagehide、dispose 都执行清理。正交 focus 只改 target/ortho bounds，不用 radius 缩放。
+6. `occlusion` 使用自适应 screen-grid raycast 输出 stable candidate handles；`visualOcclusion` 用 target-only/full-scene 瞬时 GPU depth 输出 opaque/alpha-test 阻挡比例；`visualAttribution` 再逐 candidate depth-match；`visualOcclusionBounds` 用 transparent-excluded 下界与 transparent-binary-opaque 上界显式表达 alpha 不确定性。
+7. `patch` 支持 hide/ghost/isolate，只改 `isVisible/visibility`，不关闭 gameplay node、不修改共享材质；多个 patch 逆序恢复，inline changed handles 上限为 20。
+8. 项目只通过 provider 注册 build、camera owner、业务对象、marker/VFX registry 等项目事实；`logicalQuery` 不从 mesh name 猜语义。模板默认把 authored `gameplayBindings` 与 `RuntimeNodeService.registerRuntimeNode({ logicalId, logicalKind, logicalTags, logicalMetadata, logicalMembers })` 映射为 provider records；项目 adapter 不进入 core。
+9. `mutation` 只允许 position/rotation/quaternion/scaling/isVisible/visibility，完整校验后才写入，并通过独立 lease 提供显式/timeout/pagehide/Scene/dispose undo。它是 runtime-only 因果实验，不保存源码，也不会暂停 gameplay property owner；必须重新 inspect 并最终 reload 验证真实修复。
+10. `snapshot` 是 bounded observation store，不是世界态 checkpoint：按 stable handles / Query 0.2 选择对象，记录 node/animation/provider channels，输出 JSON Pointer 字段差异，返回值与内部 store 隔离，最多保留 16 条。
+11. snapshot 未覆盖的 particle/VFX、shader/texture、physics、readiness、thin-instance matrices 必须出现在 `coverage.unavailable`；空 diff 只表示双方都实际观测的字段一致。
+12. `pixels` 等待一个真实完成的 render，再从 Babylon default framebuffer 读取 drawing-buffer RGBA；handle ROI 由 world bounds 投影并按 top-left 坐标返回，GL bottom-left readback 在页内翻转。raw bytes 只留在页面，最多保留 4 条、单 canvas 最多 4,194,304 pixels。
+13. pixel diff 同时报告 ROI 内与 ROI 外 collateral 的 SSD/max delta/diff count/changed bounds，并返回最多 32×32 的 tile heatmap。`selfCheck` 只证明同一已完成 framebuffer 的双读噪声；跨 render、跨机器不能宣称 byte-exact。DOM/CSS compositor 与 object-id attribution 明确 unavailable。
+14. `trace` 只在 completed Scene render 后采显式 node 字段：最多 8 nodes × 8 fields、pre+trigger+post 最多 120 samples、每页最多 50、store 最多 4 条。change/equals/manual trigger 都保留 stable handle 与 before/after；dispose 后继续报告原实例，不按名字重绑。Scene replacement、pagehide、HMR/dispose 和 release 都移除 observer。
+15. Trace 0.1 不提供 before/after-update phase、调用栈、自动 gameplay pause、render membership、VFX/physics channel，也不采 FPS/frame time/overhead distribution；sampling stride 只是有界诊断采样，不是性能计数。
+16. `render.explain` 被动报告 lifecycle/visibility/geometry/camera layer/frustum/last active-list gates、effective material、最多 16 个 submesh draw-wrapper/effect 与最多 32 个 RTT/shadow membership。effect key 最多 512 字符、defines 最多 8192 字符，并保留完整内容 hash/截断标志；它不调用 `isReady()`、不 force compile、不执行自定义 render-list callback。
+17. `active-candidate` 只证明上一完成帧的 CPU active-mesh membership，不证明产生最终像素。readiness、actual draw、occlusion、shader discard/clip、alpha/post-process、particles/sprites 必须继续结合 Pixel Diff、GPU depth 或项目 provider 判读。
+18. `vfx.catalog()` 合并 authored usages 与 runtime effective overlay，返回 effect definitions/defaults、usage binding/lifecycle/effective params、`effectAvailable`、provider provenance，以及 `active/inactive/unavailable` 实例三态；旧项目没有 root seam 时必须报 unavailable，不能伪装 inactive。缺失 registry effect 以 warning 暴露。
+19. VFX Provider 0.1 只观测 catalog/root，不读取 living particle/pool 私有状态，不证明 GPU final-pixel contribution，也不 preview/save/sweep 参数。
+20. `vfx.acquire → preview → restore` 是独立事务：patch key/type/range/enum 先按 effect param definitions 全量验证，再调用 project provider；unknown/missing effect/provider 不得产生部分 mutation。
+21. provider 用 opaque runtime state 精确保留 saved/preview provenance；显式 restore、timeout、pagehide、Scene replacement、HMR/dispose 都逆序恢复。它从不调用 save API，也不写 usages/effect 参数文件。
+22. `materials.catalog()` 分开返回 authored assets 与当前 Scene 的 live Babylon instances；instance 包含关键 JSON-safe 参数、active textures、stable handle bindings、sceneNodeIds 与共享标志。没有显式 provenance 时不根据同名/相似值猜 asset→instance 映射。
+23. `materials.acquire → preview → restore` 只允许固定常用属性白名单，先校验 instance 支持与值域，再调用 provider；返回全部 affected bindings/sceneNodeIds，共享实例必须提示影响范围。
+24. Material preview 是 runtime-only；显式/timeout/pagehide/Scene/HMR/dispose 都精确恢复，不保存 authored asset/override，不控制 shader uniform/NodeMaterial/GPU program state。
+25. Animation Provider 只报告 live AnimationGroup range/play/speed/targets；Bone/MorphTarget/plain object target 明确 unresolved，不从 group name 猜 gameplay intent。Animation Control 只允许 pause/seek/speed runtime preview，非法/越界值原子拒绝，显式/timeout/pagehide/Scene/HMR/dispose 恢复，不保存 clip 或 state machine。
+26. 无刷新 Game/Scene 替换前必须调用 inspector disposable 的 `beforeSceneChange()`：旧 CameraLease、MutationLease、VFX/Material/Animation lease 先恢复，active Trace observer 取消；随后同一 runtime session 内 scene id 更换、generation 前进，旧 handle 返回 `SCENE_MISMATCH`。
+27. 完整外部契约、case 和 conformance 脚本在 `fps-3d-harness/docs/07-runtime-perception-control.md`；模板只承载游戏内实现。
+28. `pnpm test:runtime-inspector` 检查模板边界；`pnpm build:single` 会通过 `check:prod-debug` 保证 `__fp3d` 和 runtime-inspector token 不进入 production dist。
+
+当前不提供性能运行时计数、Performance Provider、record-replay、精确 proportional-alpha/object-id 视觉真值或内建调试 UI。GPU depth renderer 只在显式 observation 期间存在；readiness 在 RTT render-pass 内完成，depth map 显式 dispose，主场景 render loop 必须继续前进。
 
 ### `entities/`
 

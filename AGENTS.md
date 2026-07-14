@@ -33,6 +33,20 @@ npm run dev:pa-template
 7. 职责边界：debug 面板只负责调参、diagnostics、preview、Reset、Save 和 quick action UI。业务规则留在 `systems/`、`services/` 或 `entities/`；quick action 调正式 runtime API 或 dev-only `RuntimeDebugActionRegistry` action。
 8. 数值调参：numeric tuning 必须 live preview；可持久化数值必须 Save 回 checked-in source config，默认优先 `src/config/gameplay.json`，不能把 gameplay tuning 持久化到 browser storage。
 
+## 3D Runtime Inspector 规范
+
+`src/debug/runtime-inspector/` 是 `window.__fp3d` 的游戏内模板实现；外部契约、case、oracle 和 runner 在 `fps-3d-harness`。新增或修改该能力时必须遵守：
+
+1. **模板承载通用 core**：identity、stable handle、query、inspect、relations、CameraLease/focus/occlusion/visibility-patch/restore、Babylon adapter、provider registry 和 production stripping 落在本仓。真实项目里跑通的通用修改要当轮回拉本目录。
+2. **项目只注册事实**：逻辑 ID、camera owner、VFX registry、marker/socket 等通过 provider/adapter 显式注册；core 不扫描具体 gameplay system 名称，也不猜项目字段。
+3. **禁止 name 单选**：name 只用于 query 和展示。不能用 `getMeshByName()` / `getTransformNodeByName()` 静默选择第一个对象；跨调用必须使用带 runtime/scene/object generation 的 handle。
+4. **观测必须声明覆盖**：所有结果带 `coverage.observed` / `coverage.unavailable`。未接 provider、节点类型不支持或 effect 未激活时要明确 unavailable，不能返回空值后声称没有变化。
+5. **控制必须可恢复**：camera/patch/watch 能力必须通过 lease/transaction/ProbeManager 管理；相机与 visibility patch 必须覆盖显式、超时、pagehide、dispose 和 `beforeSceneChange()` 恢复，不能留下 observer、RAF loop、monkey patch 或场景修改。visibility patch 不得通过共享材质变更实现 ghost。
+6. **页面与 Scene 生命周期分离**：inspector 由 `src/main.ts` 独立挂载并跟随 page document，debug panels 跟随 Game；无刷新换 Game/Scene 前必须先调用 `beforeSceneChange()`。同一 runtime 内 scene generation 必须前进，旧 handle 返回 `SCENE_MISMATCH`。
+7. **严格 dev-only**：只从 `src/main.ts` 的 DEV dynamic import 链加载；production gameplay 不得依赖 `window.__fp3d`。每次新增 token 都同步 `check-production-debug-surface.mjs`。
+8. **跨仓同步验收**：API/schema 变更同时更新 `fps-3d-harness/docs/07-runtime-perception-control.md`、schema 和 conformance case；模板 typecheck/logic/build 通过不等于外部契约通过。
+9. **范围隔离**：本能力不包含性能运行时计数或 Performance Provider，也不修改人类示教/record-replay 模块。
+
 如果这个 worktree 位于 `fps-game-editor` 下面，安装依赖时使用：
 
 ```bash

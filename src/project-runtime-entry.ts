@@ -32,6 +32,9 @@ let loadingScreen: LoadingScreen | null = null;
 let runtimeDebug: { dispose(): Promise<void>; detachForEditor?: () => void } | null = null;
 let runtimeDebugDisposal: Promise<void> | null = null;
 
+/** DEV-only runtime inspector; follows the page document, not one Game instance. */
+let runtimeInspector: { beforeSceneChange(): void; dispose(): void } | null = null;
+
 /** Explicit dedicated-build-only WASD scene walkthrough. */
 let sceneWalkthrough: { dispose(): void } | null = null;
 
@@ -59,6 +62,11 @@ async function disposeRuntimeDebug(): Promise<void> {
   } finally {
     if (runtimeDebugDisposal === pending) runtimeDebugDisposal = null;
   }
+}
+
+function disposeRuntimeInspector(): void {
+  runtimeInspector?.dispose();
+  runtimeInspector = null;
 }
 
 function disposeSceneWalkthrough(): void {
@@ -110,6 +118,18 @@ async function mountRuntimeDebugForDev(): Promise<void> {
   }
 }
 
+async function ensureRuntimeInspectorForDev(): Promise<void> {
+  if (runtimeInspector) return;
+  try {
+    const { mountTemplateRuntimeInspector } = await import('./debug/runtime-inspector/template');
+    runtimeInspector = mountTemplateRuntimeInspector({
+      getGame: () => game,
+    });
+  } catch (error) {
+    console.warn('[runtime-inspector] mount failed', error);
+  }
+}
+
 function delay(ms: number): Promise<void> {
   return new Promise(resolve => window.setTimeout(resolve, ms));
 }
@@ -151,6 +171,7 @@ async function disposeProjectGameWorldCore(): Promise<void> {
   const errors: unknown[] = [];
   try { disposeSceneWalkthrough(); } catch (error) { errors.push(error); }
   const gameToDispose = game;
+  try { runtimeInspector?.beforeSceneChange(); } catch (error) { errors.push(error); }
   const renderCanvasPlacement = captureRenderCanvasPlacement();
   game = null;
   try { clearProjectRuntimeGlobals(); } catch (error) { errors.push(error); }
@@ -235,6 +256,7 @@ async function init(): Promise<void> {
     window.game = game;
 
     if (import.meta.env.DEV) {
+      await ensureRuntimeInspectorForDev();
       await mountRuntimeDebugForDev();
     }
 
@@ -312,12 +334,18 @@ window.addEventListener('pagehide', () => playableAnalyticsService.reportComplet
 if (import.meta.env.DEV) {
   const disposeDevTools = () => {
     void disposeRuntimeDebug().catch(error => console.warn('[runtime-debug-bootstrap] dispose failed', error));
+    disposeRuntimeInspector();
   };
   const disposeDevToolsForHotReload = () => {
     window.removeEventListener('beforeunload', disposeDevTools);
     disposeDevTools();
   };
   window.addEventListener('beforeunload', disposeDevTools);
+  import.meta.hot?.accept('./debug/runtime-inspector/template', module => {
+    if (!module) return;
+    disposeRuntimeInspector();
+    runtimeInspector = module.mountTemplateRuntimeInspector({ getGame: () => game });
+  });
   import.meta.hot?.dispose(disposeDevToolsForHotReload);
 }
 

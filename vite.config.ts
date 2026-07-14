@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process';
 import {
   createFpsGameEditorAssetAuthoringServices,
   createFpsGameEditorProjectAuthoringApiPlugin,
@@ -9,6 +10,20 @@ import {
 import { createFpsConfiguredPluginManifestVitePlugin } from '@fps-games/editor/vite';
 import fpsConfig, { editorConfig } from './fps.config';
 import { createPaTemplateViteConfig } from './vite-plugins/projectViteConfig';
+
+function readProjectGitDirty(): boolean | undefined {
+  const result = spawnSync('git', ['status', '--porcelain'], {
+    cwd: __dirname,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'ignore'],
+  });
+  if (result.status !== 0) return undefined;
+  const entries = String(result.stdout ?? '')
+    .split(/\r?\n/)
+    .filter(line => line.trim().length > 0)
+    .filter(line => !/^\?\? vite\.config\.[^.]+\.timestamp-\d+-[a-z0-9]+\.mjs$/i.test(line));
+  return entries.length > 0;
+}
 
 const assets = createFpsGameEditorAssetAuthoringServices({
   projectRoot: __dirname,
@@ -44,7 +59,14 @@ const integration = createFpsGameEditorViteAdapter(editorConfig, {
   projectRoot: __dirname,
   localEditorRepo: null,
   logger: console,
-  extendAgentBridgeSessionMetadata: metadata => ({ ...metadata, paTemplateRoot: metadata.projectRoot }),
+  extendAgentBridgeSessionMetadata: metadata => {
+    const projectDirty = readProjectGitDirty();
+    return {
+      ...metadata,
+      paTemplateRoot: metadata.projectRoot,
+      ...(typeof projectDirty === 'boolean' ? { projectDirty } : {}),
+    };
+  },
   createProjectAuthoringApiPlugin: () => createFpsGameEditorProjectAuthoringApiPlugin({
     projectRoot: __dirname,
     logger: console,

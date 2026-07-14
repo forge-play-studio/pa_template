@@ -33,6 +33,7 @@
     "test:editor-vite-plugin-types": "tsc --noEmit --strict --skipLibCheck --module ESNext --moduleResolution Bundler --target ES2022 --types node scripts/check-editor-vite-plugin-types.ts",
     "test:asset-registry-unregister": "node scripts/check-asset-registry-unregister-guard.mjs",
     "test:scene-walkthrough": "node scripts/check-scene-walkthrough-contract.mjs",
+    "test:runtime-inspector": "node scripts/check-runtime-inspector-logic.mjs",
     "build": "./scripts/build-all.sh en applovin",
     "build:all": "./scripts/build-all.sh",
     "build:single": "cross-env BUILD_MATRIX=false SCENE_WALKTHROUGH_BUILD=false npm run typecheck && cross-env BUILD_MATRIX=false SCENE_WALKTHROUGH_BUILD=false vite build && npm run check:scene-walkthrough-disabled && npm run check:prod-debug",
