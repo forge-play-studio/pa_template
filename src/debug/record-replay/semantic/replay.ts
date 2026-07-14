@@ -221,6 +221,13 @@ export interface SemanticCalibrationVerdict {
     inputY: { x: number; z: number };
   } | null;
   determinant: number | null;
+  /**
+   * 控制拓扑(2026-07-13,train_oil 实证):
+   * '2d' 矩阵可逆(常规双轴)· '1d' 两脉冲位移共线但显著 = 单向轨道/推进式游戏,
+   * **标定通过**(控制已被证明建立,只是没有第二维;控制律走幅值/isActive 退化映射)·
+   * 'none' 两脉冲都推不动世界 = 输入未接上,唯一保留的硬失败(防"游戏自己演完"的空绿)。
+   */
+  topology?: '2d' | '1d' | 'none';
   error?: string;
 }
 
@@ -1629,7 +1636,20 @@ export class SemanticReplayController implements MovementInputSource {
     const inputY = { x: d2.x / d2Length, z: d2.z / d2Length };
     const determinant = inputX.x * inputY.z - inputY.x * inputX.z;
     if (Math.abs(determinant) < 0.0001) {
-      this.failCalibration('calibration basis vectors were nearly collinear');
+      // 一维控制拓扑(轨道/推进式):两脉冲都显著推动世界但方向共线 —— 控制已被证明
+      // 建立,只是这个游戏没有第二维(train_oil 实证:X/Y 都沿轨道前进)。不建矩阵,
+      // 控制律走幅值/isActive 退化映射(train_oil 全程通关即其有效性证明)。
+      // 与 'none'(两脉冲都推不动 = 输入未接上)严格区分:后者仍是硬失败。
+      this.inputWorldCalibration = null;
+      this.calibrationVerdict = {
+        ...this.calibrationVerdict,
+        status: 'ok',
+        topology: '1d',
+        matrix: null,
+        determinant: roundTo(determinant, 4),
+        error: undefined,
+      };
+      this.startNavigationAfterCalibration();
       return;
     }
 
@@ -1641,6 +1661,7 @@ export class SemanticReplayController implements MovementInputSource {
     this.calibrationVerdict = {
       ...this.calibrationVerdict,
       status: 'ok',
+      topology: '2d',
       matrix: {
         inputX: { x: roundTo(inputX.x, 4), z: roundTo(inputX.z, 4) },
         inputY: { x: roundTo(inputY.x, 4), z: roundTo(inputY.z, 4) },
@@ -1658,6 +1679,7 @@ export class SemanticReplayController implements MovementInputSource {
     this.calibrationVerdict = {
       ...this.calibrationVerdict,
       status: 'failed',
+      topology: 'none',
       matrix: null,
       determinant: null,
       error,
