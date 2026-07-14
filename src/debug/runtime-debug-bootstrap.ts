@@ -4,13 +4,13 @@
  *
  * This file stays in `src/debug` because it owns panel mount/dispose lifecycle
  * for runtime debug UI. The local editor host implementation itself lives in
- * `src/editor-features/local-editor.ts`; this file
+ * `src/services/fps-game-editor/local-editor.ts`; this file
  * only imports and mounts that host together with debug panels.
  */
 import type { Game } from '../core/Game';
 import type { ProjectGameplayRuntime } from '../gameplay';
 import { mountCameraDebugPanel } from './camera-debug-panel';
-import { mountLocalEditorModeSwitcher } from '../editor-features/local-editor';
+import { mountLocalEditorModeSwitcher } from '../services/fps-game-editor/local-editor';
 import { mountRuntimeAudioDebugPanel } from './runtime-audio-debug-panel';
 import { mountRuntimeGameplayDebugPanels } from './runtime-gameplay-debug-panels';
 import { mountRuntimeLightingDebugPanel } from './runtime-lighting-debug-panel';

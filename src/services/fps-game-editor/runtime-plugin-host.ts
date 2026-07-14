@@ -4,8 +4,8 @@ import {
   FPS_RUNTIME_DATA,
 } from '@fps-games/editor/playable-runtime';
 import * as runtimePluginModule from 'virtual:fps-plugins/runtime';
-import sceneConfig from './config/scene.json';
-import renderingConfig from './config/rendering.json';
+import sceneConfig from '../../config/scene.json';
+import renderingConfig from '../../config/rendering.json';
 
 const runtimePlugins = createFpsPluginEnvironmentLifecycle({
   module: runtimePluginModule,

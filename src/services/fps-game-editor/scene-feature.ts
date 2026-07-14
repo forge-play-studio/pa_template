@@ -20,11 +20,11 @@ import {
   type SpatialRelationTypeDefinition,
   type EditorSceneAssetCatalogEntry as PlayableEditorSceneAssetCatalogEntry,
 } from '@fps-games/editor/playable-sdk';
-import { editorConfig } from '../../fps.config';
-import baseSceneConfig from '../config/scene.json';
-import renderingConfig from '../config/rendering.json';
-import { configService } from '../config/ConfigService';
-import type { AssetExternalRef, GroundDecalUiKind, SceneConfig } from '../config';
+import { editorConfig } from '../../../fps.config';
+import baseSceneConfig from '../../config/scene.json';
+import renderingConfig from '../../config/rendering.json';
+import { configService } from '../../config/ConfigService';
+import type { AssetExternalRef, GroundDecalUiKind, SceneConfig } from '../../config';
 import {
   addGroundDecalUiDeliveryPair,
   createDefaultGroundDecalUiConfig,

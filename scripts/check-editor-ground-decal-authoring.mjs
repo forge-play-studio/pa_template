@@ -4,12 +4,12 @@ import fs from 'node:fs/promises';
 const playableSdk = await import('@fps-games/editor/playable-sdk');
 
 const editorConfig = await readText('fps.config.ts');
-const projectSceneFeature = await readText('src/editor-features/scene-feature.ts');
-const groundDecalFeatureConfig = await readText('src/editor-features/ground-decal-feature.ts');
-const groundDecalPolicy = await readText('src/editor-features/ground-decal-config.ts');
-const groundDecalAuthored = await readText('src/editor-features/ground-decal-authored.ts');
-const projectionPreviewAdapter = await readText('src/editor-features/local-editor.ts');
-const localEditorModeSwitcher = await readText('src/editor-features/local-editor.ts');
+const projectSceneFeature = await readText('src/services/fps-game-editor/scene-feature.ts');
+const groundDecalFeatureConfig = await readText('src/services/fps-game-editor/ground-decal-feature.ts');
+const groundDecalPolicy = await readText('src/services/fps-game-editor/ground-decal-config.ts');
+const groundDecalAuthored = await readText('src/services/fps-game-editor/ground-decal-authored.ts');
+const projectionPreviewAdapter = await readText('src/services/fps-game-editor/local-editor.ts');
+const localEditorModeSwitcher = await readText('src/services/fps-game-editor/local-editor.ts');
 const groundDecalUiService = await readText('src/services/GroundDecalUiService.ts');
 const assetCatalog = await readText('src/assets/generated/asset-catalog.generated.ts');
 

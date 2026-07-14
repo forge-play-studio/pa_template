@@ -47,9 +47,9 @@ const finalProductSurfacePaths = [
   'fps.config.ts',
   'src/editor.config.ts',
   'src/fps-game-editor.config.ts',
-  'src/plugin-runtime.ts',
+  'src/services/fps-game-editor/runtime-plugin-host.ts',
   'src/editor',
-  'src/editor-features',
+  'src/services/fps-game-editor',
   'src/fps-editor',
 ];
 // Exact-path stats bucket only. Adding files here requires architecture review:

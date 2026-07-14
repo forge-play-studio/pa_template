@@ -20,8 +20,8 @@ import {
   type EditorSceneRuntimeShadowMode as RuntimeShadowMode,
   type EditorSceneRuntimeLightingPatch,
 } from '@fps-games/editor/playable-sdk';
-import { patchEditorSceneGameObjectField } from '../editor-features/scene-feature';
-import { loadSceneMainSource, saveSceneMainSource } from '../editor-features/scene-feature';
+import { patchEditorSceneGameObjectField } from '../services/fps-game-editor/scene-feature';
+import { loadSceneMainSource, saveSceneMainSource } from '../services/fps-game-editor/scene-feature';
 import { mountRuntimeDebugPanelContainer } from './framework/panel-layout';
 
 export interface RuntimeLightingDebugPanelOptions {

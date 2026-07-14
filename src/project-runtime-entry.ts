@@ -13,7 +13,10 @@
 import { LoadingScreen } from './ui';
 import { Game } from './core/Game';
 import { playableAnalyticsService } from './services';
-import { disposeProjectRuntimePlugins, startProjectRuntimePlugins } from './plugin-runtime';
+import {
+  disposeProjectRuntimePlugins,
+  startProjectRuntimePlugins,
+} from './services/fps-game-editor/runtime-plugin-host';
 
 // ============================================================
 // 全局实例

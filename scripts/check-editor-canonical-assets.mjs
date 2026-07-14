@@ -59,8 +59,8 @@ for (const [index, gameObject] of editorScene.scene.gameObjects.entries()) {
 await assertEditorAssetLibraryRuntime();
 
 const sourceChecks = [
-  ['src/editor-features/scene-feature.ts', /sourceId:\s*asset\.sourceId/, false],
-  ['src/editor-features/local-editor.ts', /asset\.sourceId|sourceId:\s*groundDecalTextureId|readOptionalString\(value\.sourceId\)/, false],
+  ['src/services/fps-game-editor/scene-feature.ts', /sourceId:\s*asset\.sourceId/, false],
+  ['src/services/fps-game-editor/local-editor.ts', /asset\.sourceId|sourceId:\s*groundDecalTextureId|readOptionalString\(value\.sourceId\)/, false],
   ['vite.config.ts', /createProjectEditorAssetLibrary\(modelIds|manifestBySourceId|textureManifestBySourceId/, false],
 ];
 

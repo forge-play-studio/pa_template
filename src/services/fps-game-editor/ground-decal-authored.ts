@@ -1,4 +1,4 @@
-import type { GroundDecalUiColor, GroundDecalUiConfig, GroundDecalUiKind, GroundDecalUiTextLayer, GroundDecalUiTextureLayer } from '../config';
+import type { GroundDecalUiColor, GroundDecalUiConfig, GroundDecalUiKind, GroundDecalUiTextLayer, GroundDecalUiTextureLayer } from '../../config';
 
 // Node-safe project configuration must not import the browser asset catalog because it
 // contains Vite `?url` modules. The authoring check keeps these canonical IDs in sync

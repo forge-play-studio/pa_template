@@ -10,7 +10,7 @@ import {
 
 const root = process.cwd();
 
-const productHostSource = await fs.readFile(path.join(root, 'src/editor-features/local-editor.ts'), 'utf8');
+const productHostSource = await fs.readFile(path.join(root, 'src/services/fps-game-editor/local-editor.ts'), 'utf8');
 
 for (const retiredPath of [
   'src/fps-game-editor-adapter/assets',
