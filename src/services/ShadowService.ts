@@ -86,14 +86,7 @@ interface ShadowsConfig {
   defaultMode: SceneShadowMode;
   enabled: boolean;
   useCsm: boolean;
-  useBlobShadow: boolean;
   settings: ShadowSettings;
-  blobSettings: {
-    opacity: number;
-    yOffset: number;
-    sizeMultiplier: number;
-    minSize: number;
-  };
   shadowRange: {
     minZ: number;
     maxZ: number;
@@ -492,7 +485,6 @@ export class ShadowService {
     return resolveEditorShadowRuntimeState({
       targets: this.scene.meshes.map(mesh => this.createShadowRuntimeTarget(mesh)),
       fallbackMode: this.config.defaultMode === 'planar' ? 'projected' : this.config.defaultMode,
-      legacyReceiverPatterns: this.shadowReceivers,
     });
   }
 
@@ -506,7 +498,6 @@ export class ShadowService {
       ...(typeof projection?.rootNodeId === 'string' ? { rootNodeId: projection.rootNodeId } : {}),
       active: !(typeof mesh.isDisposed === 'function' && mesh.isDisposed()) && !this.isGeneratedShadowExcluded(mesh),
       visible: mesh.isVisible !== false,
-      shadowMode: this.readMeshShadowMode(mesh),
       shadow: this.readMeshShadowReceiveSettings(mesh),
       shadowPlan: this.readMeshShadowPlan(mesh),
       materialLightingModel: this.readMeshMaterialLightingModel(mesh),
@@ -758,7 +749,7 @@ export class ShadowService {
       mesh: this.describeMesh(mesh),
       decision,
       plan: this.describeResolvedPlan(this.readMeshShadowPlan(mesh)),
-      shadowMode: this.readMeshShadowMode(mesh),
+      mode: this.readMeshShadowMode(mesh),
       receive: this.readMeshShadowReceive(mesh),
     };
   }
@@ -835,10 +826,6 @@ export class ShadowService {
 
   private readMeshShadowMode(mesh: AbstractMesh): SceneShadowMode | 'default' | null {
     for (const node of this.walkNodeAndParents(mesh)) {
-      const mode = this.readEditorProjectionMetadata(node)?.shadowMode;
-      if (mode === 'default' || mode === 'none' || mode === 'blob' || mode === 'static' || mode === 'planar' || mode === 'dynamic') {
-        return mode;
-      }
       const shadowMode = this.readMeshShadowSettingsFromProjection(node)?.mode;
       if (shadowMode === 'none' || shadowMode === 'blob' || shadowMode === 'static' || shadowMode === 'dynamic') return shadowMode;
       if (shadowMode === 'projected') return 'planar';

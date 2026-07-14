@@ -1,5 +1,11 @@
 import type { SceneConfig } from './types';
 import sceneJsonV2Rules from './scene-json-v2-rules.json';
+import {
+  assertEditorShadowSettingsContract,
+} from '@fps-games/editor/playable-runtime';
+import {
+  assertEditorSceneStaticShadowArtifactContract,
+} from '@fps-games/editor/playable-sdk';
 
 export interface SceneJsonV2ValidationError {
   path: string;
@@ -61,8 +67,16 @@ export function validateSceneJsonV2(
   if (!Array.isArray(scene.materials)) add('$.scene.materials', 'materials must be an array');
   if (!Array.isArray(scene.textures)) add('$.scene.textures', 'textures must be an array');
   if (errors.length > 0) return errors;
+  if (sceneConfig.staticShadows != null) {
+    captureSchemaError(
+      () => assertEditorSceneStaticShadowArtifactContract(sceneConfig.staticShadows, '$.staticShadows'),
+      '$.staticShadows',
+      add,
+    );
+  }
 
   const assetIds = new Set<string>();
+  const materialSlotIdsByAssetId = new Map<string, Set<string>>();
   const materialAssetIds = new Set<string>();
   const nodeIds = new Set<string>();
   const nodeKinds = new Map<string, string>();
@@ -86,6 +100,21 @@ export function validateSceneJsonV2(
     }
     validateAssetDefaults(asset.defaults, `${path}.defaults`, add);
     if (asset.metadata != null && !isRecord(asset.metadata)) add(`${path}.metadata`, 'metadata must be an object when present');
+    const materialSlots = isRecord(asset.metadata) ? asset.metadata.materialSlots : undefined;
+    const slotIds = new Set<string>();
+    if (materialSlots != null) {
+      if (!Array.isArray(materialSlots)) add(`${path}.metadata.materialSlots`, 'materialSlots must be an array when present');
+      else materialSlots.forEach((rawSlot, slotIndex) => {
+        const slotPath = `${path}.metadata.materialSlots[${slotIndex}]`;
+        if (!isRecord(rawSlot) || !nonEmptyString(rawSlot.slotId) || !nonEmptyString(rawSlot.ownerNodePath)) {
+          add(slotPath, 'material slot must contain stable slotId and ownerNodePath');
+          return;
+        }
+        if (slotIds.has(rawSlot.slotId)) add(`${slotPath}.slotId`, `duplicate material slot id: ${rawSlot.slotId}`);
+        else slotIds.add(rawSlot.slotId);
+      });
+    }
+    if (nonEmptyString(asset.id)) materialSlotIdsByAssetId.set(asset.id, slotIds);
     if (strictAssets.has(asset.id)) assertNoRuntimeOnlyFields(asset, path, add);
   });
 
@@ -134,10 +163,23 @@ export function validateSceneJsonV2(
     validateRuntimeSourceBinding(node.source, `${path}.source`, add);
     validateTransform(node.transform, `${path}.transform`, add);
     validateNodeRendering(node.rendering, `${path}.rendering`, add);
+    if (node.shadow != null) {
+      captureSchemaError(
+        () => assertEditorShadowSettingsContract(node.shadow, `${path}.shadow`),
+        `${path}.shadow`,
+        add,
+      );
+    }
+    if (Object.prototype.hasOwnProperty.call(node, 'shadowMode')) {
+      add(`${path}.shadowMode`, 'deprecated field; use shadow.mode');
+    }
+    let instanceAssetId: string | null = null;
     if (node.kind === 'instance') {
       if (!isRecord(node.instance)) add(`${path}.instance`, 'instance node must contain instance object');
       else if (!assetIds.has(node.instance.assetId)) {
         add(`${path}.instance.assetId`, `assetId must reference scene.assets: ${node.instance.assetId}`);
+      } else {
+        instanceAssetId = nonEmptyString(node.instance.assetId) ? node.instance.assetId : null;
       }
     }
     if (node.kind === 'primitive') {
@@ -157,7 +199,13 @@ export function validateSceneJsonV2(
       validateSceneLight(node.light, `${path}.light`, add);
     }
     if (node.kind === 'instance' || node.kind === 'transform' || node.kind === 'primitive') {
-      validateNodeVisualOverrides(node.overrides, `${path}.overrides`, materialAssetIds, add);
+      validateNodeVisualOverrides(
+        node.overrides,
+        `${path}.overrides`,
+        materialAssetIds,
+        instanceAssetId ? materialSlotIdsByAssetId.get(instanceAssetId) : undefined,
+        add,
+      );
     }
     if (strictNodes.has(node.id)) assertNoRuntimeOnlyFields(node, path, add);
   });
@@ -193,10 +241,29 @@ export function validateSceneJsonV2(
   return errors;
 }
 
+function captureSchemaError(
+  operation: () => unknown,
+  fallbackPath: string,
+  add: (path: string, message: string) => void,
+): void {
+  try {
+    operation();
+  } catch (error) {
+    const path = typeof (error as { path?: unknown })?.path === 'string'
+      ? (error as { path: string }).path
+      : fallbackPath;
+    const code = typeof (error as { code?: unknown })?.code === 'string'
+      ? (error as { code: string }).code
+      : 'schema.invalidValue';
+    add(path, code);
+  }
+}
+
 function validateNodeVisualOverrides(
   overrides: unknown,
   path: string,
   materialAssetIds: Set<string>,
+  materialSlotIds: Set<string> | undefined,
   add: (path: string, message: string) => void,
 ): void {
   if (overrides == null) return;
@@ -205,8 +272,20 @@ function validateNodeVisualOverrides(
     return;
   }
   validateNodeMaterialBinding(overrides.materialBinding, `${path}.materialBinding`, materialAssetIds, add);
-  validateNodeMaterialBindingMap(overrides.materialSlotBindings, `${path}.materialSlotBindings`, 'slotId', materialAssetIds, add);
-  validateNodeMaterialBindingMap(overrides.childMaterialBindings, `${path}.childMaterialBindings`, 'ownerNodePath', materialAssetIds, add);
+  validateNodeMaterialBindingMap(
+    overrides.materialSlotBindings,
+    `${path}.materialSlotBindings`,
+    'slotId',
+    materialAssetIds,
+    materialSlotIds,
+    add,
+  );
+  if (Object.prototype.hasOwnProperty.call(overrides, 'childMaterialBindings')) {
+    add(`${path}.childMaterialBindings`, 'deprecated field; use materialSlotBindings keyed by slotId');
+  }
+  if (Object.prototype.hasOwnProperty.call(overrides, 'childMaterials')) {
+    add(`${path}.childMaterials`, 'deprecated field; use materialSlotBindings keyed by slotId');
+  }
 }
 
 function validateNodeMaterialBindingMap(
@@ -214,6 +293,7 @@ function validateNodeMaterialBindingMap(
   path: string,
   keyName: string,
   materialAssetIds: Set<string>,
+  allowedKeys: Set<string> | undefined,
   add: (path: string, message: string) => void,
 ): void {
   if (bindings == null) return;
@@ -224,7 +304,13 @@ function validateNodeMaterialBindingMap(
   for (const [key, binding] of Object.entries(bindings)) {
     const bindingPath = `${path}.${key}`;
     if (!nonEmptyString(key)) add(bindingPath, `${keyName} must be a non-empty string`);
-    validateNodeMaterialBinding(binding, bindingPath, materialAssetIds, add);
+    if (!allowedKeys) {
+      add(bindingPath, `${keyName} requires an instance asset with metadata.materialSlots`);
+    } else if (!allowedKeys.has(key)) {
+      add(bindingPath, `${keyName} must reference asset metadata.materialSlots`);
+    }
+    if (binding == null) add(bindingPath, 'material binding must be an object');
+    else validateNodeMaterialBinding(binding, bindingPath, materialAssetIds, add);
   }
 }
 

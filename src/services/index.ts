@@ -40,33 +40,6 @@ export type {
   RuntimeBindingIssueType,
   RuntimeBindingReadinessReport,
 } from './RuntimeNodeService';
-export {
-  ASSET_MANAGER_ERROR_CODES,
-  planAssetRegistration,
-  planAssetUnregistration,
-  resolveAssetReference,
-} from './AssetManager';
-export type {
-  AssetManagerErrorCode,
-  AssetReference,
-  AssetReferenceParams,
-  AssetTransportPlan,
-  AssetTransportWrite,
-} from './AssetManager';
-export {
-  createAssetInstance,
-  removeAssetInstance,
-} from './SceneAssetPlacement';
-export type {
-  AssetInstanceCreateParams,
-  AssetInstancePlacementResult,
-} from './SceneAssetPlacement';
-export {
-  assertSceneAssetUnused,
-  findSceneAssetUsageByAssetId,
-} from './SceneAssetUsage';
-export type { SceneAssetUsage } from './SceneAssetUsage';
-
 // 配置服务（便于服务层直接引用）
 export { configService, ConfigService } from '../config';
 

@@ -81,6 +81,11 @@ export class Game {
 
   // Camera
   private camera: ArcRotateCamera | null = null;
+  private readonly resizeHandler = (): void => {
+    this.handleDevicePixelRatio();
+    this.engine.resize();
+    if (this.camera) this.sceneBuilder?.updateCameraProjection(this.camera);
+  };
 
   // Services
   private assetLoader: AssetLoader | null = null;
@@ -381,13 +386,7 @@ export class Game {
   }
 
   private setupResizeHandler(): void {
-    window.addEventListener('resize', () => {
-      this.handleDevicePixelRatio();
-      this.engine.resize();
-      if (this.camera) {
-        this.sceneBuilder?.updateCameraProjection(this.camera);
-      }
-    });
+    window.addEventListener('resize', this.resizeHandler);
   }
 
   // ============================================================
@@ -467,48 +466,55 @@ export class Game {
   // ============================================================
 
   dispose(): void {
-    this.stop();
+    const errors: unknown[] = [];
+    const attempt = (operation: () => void): void => {
+      try { operation(); } catch (error) { errors.push(error); }
+    };
+    attempt(() => window.removeEventListener('resize', this.resizeHandler));
+    attempt(() => this.stop());
 
     for (let i = this.gameplayModules.length - 1; i >= 0; i--) {
-      this.gameplayModules[i].dispose?.();
+      attempt(() => this.gameplayModules[i].dispose?.());
     }
     this.gameplayModules = [];
     this.projectGameplayRuntime = null;
 
-    this.player?.dispose();
+    attempt(() => this.player?.dispose());
     this.player = null;
 
-    this.inputService?.dispose();
+    attempt(() => this.inputService?.dispose());
     this.inputService = null;
 
-    this.audioService?.dispose();
+    attempt(() => this.audioService?.dispose());
     this.audioService = null;
 
-    this.sceneVfxService?.dispose();
+    attempt(() => this.sceneVfxService?.dispose());
     this.sceneVfxService = null;
 
-    this.zoneSystem?.dispose();
+    attempt(() => this.zoneSystem?.dispose());
     this.zoneSystem = null;
 
-    this.renderingService?.dispose();
+    attempt(() => this.renderingService?.dispose());
     this.renderingService = null;
 
-    this.materialConfigService?.dispose();
+    attempt(() => this.materialConfigService?.dispose());
     this.materialConfigService = null;
 
-    this.shadowService?.dispose();
+    attempt(() => this.shadowService?.dispose());
     this.shadowService = null;
 
-    this.modelPool?.dispose();
+    attempt(() => this.modelPool?.dispose());
     this.modelPool = null;
 
-    this.sceneBuilder?.dispose();
+    attempt(() => this.sceneBuilder?.dispose());
     this.sceneBuilder = null;
 
     this.assetLoader = null;
     this.animationService = null;
 
-    this.scene.dispose();
-    this.engine.dispose();
+    attempt(() => this.scene.dispose());
+    attempt(() => this.engine.dispose());
+    if (errors.length === 1) throw errors[0];
+    if (errors.length > 1) throw Object.assign(new Error('Game disposal failed.'), { errors });
   }
 }

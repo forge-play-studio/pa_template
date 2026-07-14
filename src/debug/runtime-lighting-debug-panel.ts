@@ -1,16 +1,27 @@
+/**
+ * Runtime lighting debug panel.
+ * Last updated: 2026-07-05.
+ *
+ * This file remains in `src/debug` because it renders dev-only lighting
+ * controls against the live game runtime. It does not own editor scene
+ * persistence: saving lighting authoring data composes SDK patch helpers with
+ * the product scene-source services below.
+ */
 import type { ColorRGB } from '../config';
 import type { Game } from '../core/Game';
-import type { RuntimeLightEditorBinding } from './runtime-lighting-save';
-import { saveRuntimeLightsToEditorScene } from './runtime-lighting-save';
 import {
   mountEditorRuntimeLightingDebugPanel,
+  patchEditorSceneRuntimeLights,
   readEditorSceneLightingProjectedLengthMultiplier,
   readEditorSceneRuntimeLightBinding,
   toEditorSceneRuntimeLightingPatches,
   type EditorRuntimeLightingDebugPanel,
   type EditorSceneLightingDebugSnapshot as LightingDebugSnapshot,
   type EditorSceneRuntimeShadowMode as RuntimeShadowMode,
+  type EditorSceneRuntimeLightingPatch,
 } from '@fps-games/editor/playable-sdk';
+import { patchEditorSceneGameObjectField } from '../editor-features/scene-feature';
+import { loadSceneMainSource, saveSceneMainSource } from '../editor-features/scene-feature';
 import { mountRuntimeDebugPanelContainer } from './framework/panel-layout';
 
 export interface RuntimeLightingDebugPanelOptions {
@@ -19,6 +30,17 @@ export interface RuntimeLightingDebugPanelOptions {
 }
 
 export type RuntimeLightingDebugPanel = EditorRuntimeLightingDebugPanel;
+export type RuntimeLightEditorBinding = EditorSceneRuntimeLightingPatch['binding'];
+
+async function saveRuntimeLightsToEditorScene(patches: EditorSceneRuntimeLightingPatch[]) {
+  const loaded = await loadSceneMainSource();
+  const patched = patchEditorSceneRuntimeLights(loaded.document, patches, {
+    expectedSourceId: loaded.source.ref.sourceId,
+    patchLightField: patchEditorSceneGameObjectField,
+  });
+  const saved = await saveSceneMainSource(patched.document, { mode: 'local-commit-save' });
+  return { ...patched, document: saved.document, saved };
+}
 
 export function mountRuntimeLightingDebugPanel(options: RuntimeLightingDebugPanelOptions): RuntimeLightingDebugPanel {
   const root = options.root ?? document.body;
@@ -95,8 +117,9 @@ function readSnapshot(game: Game | null): LightingDebugSnapshot | null {
 
 function readRuntimeShadowMode(game: Game | null): RuntimeShadowMode {
   const mode = game?.getShadowService()?.getShadowMode?.();
-  if (mode === 'dynamic') return 'legacy';
-  return mode === 'planar' || mode === 'none' ? mode : 'unknown';
+  return mode === 'dynamic' || mode === 'blob' || mode === 'static' || mode === 'planar' || mode === 'none'
+    ? mode
+    : 'unknown';
 }
 
 function color3ToColor(value: unknown, fallback: ColorRGB): ColorRGB {

@@ -1,3 +1,12 @@
+/**
+ * Runtime camera debug panel.
+ * Last updated: 2026-07-05.
+ *
+ * This file remains in `src/debug` because it renders dev-only camera controls
+ * against the live game runtime. It does not own editor scene persistence:
+ * saving camera authoring data composes the SDK patch helper with the
+ * product scene-source services below.
+ */
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import { Color3 } from '@babylonjs/core/Maths/math.color';
 import { Matrix, Vector3 } from '@babylonjs/core/Maths/math.vector';
@@ -8,20 +17,20 @@ import {
   createEditorSceneCameraDebugSnapshot,
   createEditorSceneCameraPanMovement,
   mountEditorRuntimeCameraDebugPanel,
+  patchEditorSceneRuntimeCameraRig,
   readEditorSceneRuntimeCameraBinding,
   toEditorSceneCameraRig,
   type EditorRuntimeCameraDebugPanel,
   type EditorRuntimeCameraDebugPanInput,
   type EditorSceneCameraDebugSnapshot,
   type EditorSceneCameraRig,
+  type EditorSceneRuntimeCameraBinding,
   type EditorSceneVec3,
 } from '@fps-games/editor/playable-sdk';
 import type { SceneCameraRigConfig } from '../config';
 import type { Game } from '../core/Game';
-import {
-  saveRuntimeCameraRigToEditorScene,
-  type RuntimeCameraEditorBinding,
-} from './runtime-camera-rig-save';
+import { patchEditorSceneGameObjectField } from '../editor-features/scene-feature';
+import { loadSceneMainSource, saveSceneMainSource } from '../editor-features/scene-feature';
 import { mountRuntimeDebugPanelContainer } from './framework/panel-layout';
 
 export interface CameraDebugPanelOptions {
@@ -32,8 +41,23 @@ export interface CameraDebugPanelOptions {
 export type CameraDebugPanel = EditorRuntimeCameraDebugPanel;
 
 type CameraDebugSnapshot = EditorSceneCameraDebugSnapshot & {
-  binding: RuntimeCameraEditorBinding;
+  binding: EditorSceneRuntimeCameraBinding;
 };
+
+async function saveRuntimeCameraRigToEditorScene(
+  binding: EditorSceneRuntimeCameraBinding,
+  cameraRig: SceneCameraRigConfig,
+) {
+  const loaded = await loadSceneMainSource();
+  const patched = patchEditorSceneRuntimeCameraRig(
+    loaded.document,
+    binding,
+    cameraRig as unknown as EditorSceneCameraRig,
+    { expectedSourceId: loaded.source.ref.sourceId, patchCameraField: patchEditorSceneGameObjectField },
+  );
+  const saved = await saveSceneMainSource(patched.document, { mode: 'local-commit-save' });
+  return { ...patched, document: saved.document, saved };
+}
 
 const CAMERA_DEBUG_TARGET_MARKER_Y_OFFSET = 0.32;
 const CAMERA_DEBUG_TARGET_MARKER_ARM_LENGTH = 0.16;
@@ -91,7 +115,7 @@ export function mountCameraDebugPanel(options: CameraDebugPanelOptions): CameraD
 function readSnapshot(game: Game | null): CameraDebugSnapshot | null {
   const camera = game?.getCamera();
   if (!camera) return null;
-  const binding = readEditorSceneRuntimeCameraBinding(camera.metadata) as RuntimeCameraEditorBinding | null;
+  const binding = readEditorSceneRuntimeCameraBinding(camera.metadata) as EditorSceneRuntimeCameraBinding | null;
   if (!binding) return null;
   const cameraRig = game?.getSceneBuilder()?.getSelectedCameraRig();
   const snapshot = createEditorSceneCameraDebugSnapshot({

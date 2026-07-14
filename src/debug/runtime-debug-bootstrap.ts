@@ -1,12 +1,21 @@
+/**
+ * Dev-only runtime debug lifecycle entry.
+ * Last updated: 2026-07-05.
+ *
+ * This file stays in `src/debug` because it owns panel mount/dispose lifecycle
+ * for runtime debug UI. The local editor host implementation itself lives in
+ * `src/editor-features/local-editor.ts`; this file
+ * only imports and mounts that host together with debug panels.
+ */
 import type { Game } from '../core/Game';
 import type { ProjectGameplayRuntime } from '../gameplay';
 import { mountCameraDebugPanel } from './camera-debug-panel';
-import { mountLocalEditorModeSwitcher } from './local-editor-mode-switcher';
+import { mountLocalEditorModeSwitcher } from '../editor-features/local-editor';
 import { mountRuntimeAudioDebugPanel } from './runtime-audio-debug-panel';
 import { mountRuntimeGameplayDebugPanels } from './runtime-gameplay-debug-panels';
 import { mountRuntimeLightingDebugPanel } from './runtime-lighting-debug-panel';
 import { mountRuntimeVfxDebugPanel } from './runtime-vfx-debug-panel';
-import { DisposableStack, type Disposable } from './framework/disposables';
+import { DisposableStack } from './framework/disposables';
 import { createRuntimeDebugPanelManager } from './framework/panel-manager';
 
 export interface RuntimeDebugBootstrapOptions {
@@ -16,8 +25,9 @@ export interface RuntimeDebugBootstrapOptions {
   disposeGameWorld: () => void | Promise<void>;
 }
 
-export interface RuntimeDebugBootstrap extends Disposable {
+export interface RuntimeDebugBootstrap {
   detachForEditor(): void;
+  dispose(): Promise<void>;
 }
 
 export function mountRuntimeDebug(options: RuntimeDebugBootstrapOptions): RuntimeDebugBootstrap {
@@ -49,7 +59,8 @@ export function mountRuntimeDebug(options: RuntimeDebugBootstrapOptions): Runtim
     actions,
   }));
 
-  let disposedForReload = false;
+  let disposed = false;
+  let disposal: Promise<void> | null = null;
   let runtimePanelsDetached = false;
   const detachRuntimePanelsForEditor = () => {
     if (runtimePanelsDetached) return;
@@ -64,19 +75,26 @@ export function mountRuntimeDebug(options: RuntimeDebugBootstrapOptions): Runtim
       await options.disposeGameWorld();
     },
     onBeforeEnterEditor: detachRuntimePanelsForEditor,
-    onBeforeReload: () => {
-      disposedForReload = true;
-      runtimePanels.dispose();
-      editorSwitcher.dispose();
-    },
+    onBeforeReload: detachRuntimePanelsForEditor,
   });
+  async function disposeMountedEditor(): Promise<void> {
+    if (disposed) return;
+    if (disposal) return disposal;
+    const pending = (async () => {
+      runtimePanels.dispose();
+      await editorSwitcher.dispose();
+      disposed = true;
+    })();
+    disposal = pending;
+    try {
+      await pending;
+    } finally {
+      if (disposal === pending) disposal = null;
+    }
+  }
 
   return {
     detachForEditor: detachRuntimePanelsForEditor,
-    dispose() {
-      if (disposedForReload) return;
-      runtimePanels.dispose();
-      editorSwitcher.dispose();
-    },
+    dispose: disposeMountedEditor,
   };
 }

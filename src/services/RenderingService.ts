@@ -28,15 +28,12 @@ interface GlobalVolumeConfig {
     contrast: number;
   };
   environment: {
-    intensity: number;
     iblIntensity: number;
     useCocosIBL: boolean;
     texture?: {
       textureAssetId?: string | null;
       url?: string | null;
     } | null;
-    textureAssetId?: string | null;
-    textureUrl?: string | null;
     rotationY?: number;
   };
   lights: {

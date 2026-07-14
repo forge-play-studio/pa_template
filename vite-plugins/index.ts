@@ -43,3 +43,6 @@ export { analyticsPlugin } from './analytics';
 export type { AdNetwork, AnalyticsPluginOptions } from './analytics';
 
 export { molocoCtaPlugin } from './molocoCta';
+
+export { projectDebugApiPlugins } from './projectDebugApis';
+export type { ProjectDebugApiPluginOptions } from './projectDebugApis';

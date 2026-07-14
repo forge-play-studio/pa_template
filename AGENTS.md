@@ -16,7 +16,7 @@
 npm run dev:pa-template
 ```
 
-该命令会设置 `FPS_GAME_EDITOR_REPO` 并启动本模板的 `dev:editor-local`。当 `FPS_GAME_EDITOR_REPO` 存在时，`vite.config.ts` 会把 `@fps-games/editor*` 包 alias 到 editor 仓库的 `packages/*/src`，包括 `@fps-games/editor-babylon/legacy-runtime`。
+该命令会构建 editor、生成本地 tarball、把 packed `@fps-games/editor` 安装到本模板，再启动 `dev:editor-local`。不要添加 `FPS_GAME_EDITOR_REPO` 或 editor internal source aliases；reference consumer 必须验证真实 public package surface。
 
 主 README 面向模板使用者，不要在里面加入大量 `fps-game-editor` 内部联调说明。维护者/agent 专用说明放在本文件，完整 runbook 放在 `fps-game-editor` 仓库。
 

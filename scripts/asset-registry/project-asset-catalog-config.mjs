@@ -1,8 +1,9 @@
+// Project tool ownership: project-only | Reviewed: 2026-07-08 | Purpose: pa_template asset directory, generated output, and URL mapping config. | Migration: stays beside asset registry scripts; reusable registry behavior lives in @fps-games/editor/playable-sdk/vite.
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {
-  resolveAssetMetadata,
-} from './core.mjs';
+  resolvePlayableEditorAssetMetadata as resolveAssetMetadata,
+} from '@fps-games/editor/playable-sdk/vite';
 
 const cwd = process.cwd();
 const assetsDir = path.resolve(cwd, 'src/assets');

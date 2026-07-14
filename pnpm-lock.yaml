@@ -15,8 +15,8 @@ importers:
         specifier: 8.52.1
         version: 8.52.1(@babylonjs/core@8.52.1)(babylonjs-gltf2interface@8.56.2)
       '@fps-games/editor':
-        specifier: 0.1.8-beta.2
-        version: 0.1.8-beta.2
+        specifier: 0.1.8-beta.5
+        version: 0.1.8-beta.5
       '@fps-games/vfx':
         specifier: 0.3.19
         version: 0.3.19(@babylonjs/core@8.52.1)(@babylonjs/loaders@8.52.1(@babylonjs/core@8.52.1)(babylonjs-gltf2interface@8.56.2))
@@ -791,9 +791,10 @@ packages:
   '@fluentui/tokens@1.0.0-alpha.23':
     resolution: {integrity: sha512-uxrzF9Z+J10naP0pGS7zPmzSkspSS+3OJDmYIK3o1nkntQrgBXq3dBob4xSlTDm5aOQ0kw6EvB9wQgtlyy4eKQ==}
 
-  '@fps-games/editor@0.1.8-beta.2':
-    resolution: {integrity: sha512-5UwahysqEhVa3nYU/cL+I7MntDGo6DI0rReS9tdhbZsnfIWVPTCH2Nw2LqrJckDusiTMQH9ja1ZAEpMeQHy6sw==}
+  '@fps-games/editor@0.1.8-beta.5':
+    resolution: {integrity: sha512-aJyRzuZRFHvai9n0H9SVqYJ6GQByLkamZjqiUe/01CF0xzaHtPWp9CZCcKNMIEU3PhYpAiCYhRUIPiFnrhxTGg==}
     bundledDependencies:
+      - '@babel/parser'
       - '@fps-games/babylon-renderer'
       - '@fps-games/editor-babylon'
       - '@fps-games/editor-browser'
@@ -801,6 +802,12 @@ packages:
       - '@fps-games/editor-forge-play'
       - '@fps-games/editor-playable-sdk'
       - '@fps-games/editor-protocol'
+      - '@fps-games/editor-tooling'
+      - '@fps-games/playable-rendering'
+      - '@fps-games/playable-runtime'
+      - '@fps-games/plugin-api'
+      - '@fps-games/plugin-host'
+      - semver
 
   '@fps-games/vfx@0.3.19':
     resolution: {integrity: sha512-zApoQuxC4utr7t6hXrPGWQO6ZX2DDhjZIwV7xv+Rz7CqQIpSWOjslL4LCPGqh0RLHaI9kL0b3bdEkk31vgqCkw==}
@@ -2629,7 +2636,7 @@ snapshots:
     dependencies:
       '@swc/helpers': 0.5.23
 
-  '@fps-games/editor@0.1.8-beta.2': {}
+  '@fps-games/editor@0.1.8-beta.5': {}
 
   '@fps-games/vfx@0.3.19(@babylonjs/core@8.52.1)(@babylonjs/loaders@8.52.1(@babylonjs/core@8.52.1)(babylonjs-gltf2interface@8.56.2))':
     dependencies:
