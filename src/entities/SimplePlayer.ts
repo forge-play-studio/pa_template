@@ -60,21 +60,21 @@ export class SimplePlayer {
   update(deltaTime: number): void {
     const input = this.movementInput?.getInput();
 
-    // 输入向量：x 对应世界 X，y 对应世界 Z
-    const dx = input?.x ?? 0;
-    const dz = input?.y ?? 0;
+    const screenX = input?.x ?? 0;
+    const screenY = input?.y ?? 0;
 
-    // 先用世界坐标构造，再尝试转换为“相机朝向”坐标
-    let move = new Vector3(dx, 0, dz);
+    // MovementInputState 使用屏幕语义；由实际相机局部轴转换到地面世界方向。
+    let move = new Vector3(screenX, 0, screenY);
     const camera = this.scene.activeCamera as ArcRotateCamera | null;
     if (camera) {
-      // 投影相机朝向到地面，计算前/右方向
-      const forward = camera.target.subtract(camera.position);
+      const forward = camera.getDirection(Vector3.Forward(this.scene.useRightHandedSystem));
+      const right = camera.getDirection(Vector3.Right());
       forward.y = 0;
-      if (forward.lengthSquared() > 0.0001) {
+      right.y = 0;
+      if (forward.lengthSquared() > 0.0001 && right.lengthSquared() > 0.0001) {
         forward.normalize();
-        const right = Vector3.Cross(Vector3.Up(), forward).normalize();
-        move = forward.scale(dz).add(right.scale(dx));
+        right.normalize();
+        move = forward.scale(screenY).add(right.scale(screenX));
       }
     }
 

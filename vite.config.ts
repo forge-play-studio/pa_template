@@ -81,8 +81,6 @@ const analyticsConfig = appConfig.analytics;
 const i18nConfig = appConfig.i18n;
 const liteBuild = process.env.LITE_BUILD === 'true';
 const isProduction = process.env.NODE_ENV === 'production';
-// This is deliberately production-only: normal dev and release builds must not mount the test controls.
-const sceneWalkthroughBuild = isProduction && process.env.SCENE_WALKTHROUGH_BUILD === 'true';
 const enableDevDebugTooling = !isProduction;
 const VFX_USAGES_SCHEMA_REF = './usages.schema.json';
 const VFX_USAGES_SCHEMA_VERSION = 'project-vfx-usages/1.0';
@@ -91,6 +89,7 @@ const VFX_USAGE_LIFECYCLES = new Set(['follow', 'loop', 'oneshot']);
 const bridgeEnabled = process.env.BRIDGE_ENABLED !== 'false';
 const bundleStatsEnabled = process.env.BUNDLE_STATS === 'true';
 const buildMatrix = process.env.BUILD_MATRIX === 'true';
+const sceneWalkthroughRequested = process.env.SCENE_WALKTHROUGH_BUILD === 'true';
 const defaultBuildLocale = (i18nConfig.buildVersions[0] || 'EN').toUpperCase();
 const locale = (process.env.LOCALE || defaultBuildLocale).toUpperCase();
 const channel = (process.env.CHANNEL || analyticsConfig.adNetwork || 'applovin') as AdNetwork;
@@ -1169,7 +1168,16 @@ function stripVfxJsonBom(value: string): string {
   return value.charCodeAt(0) === 0xfeff ? value.slice(1) : value;
 }
 
-export default defineConfig({
+export default defineConfig(({ command }) => {
+  if (sceneWalkthroughRequested && (command !== 'build' || !isProduction || buildMatrix)) {
+    throw new Error('SCENE_WALKTHROUGH_BUILD is only valid for the dedicated non-matrix production build command');
+  }
+  const sceneWalkthroughBuild = command === 'build'
+    && isProduction
+    && !buildMatrix
+    && sceneWalkthroughRequested;
+
+  return {
   cacheDir: process.env.VITE_CACHE_DIR || `node_modules/.vite-fps-editor-${readFpsEditorVersion()}`,
   define: {
     __LITE_BUILD__: JSON.stringify(liteBuild),
@@ -1377,4 +1385,5 @@ export default defineConfig({
       'Cross-Origin-Embedder-Policy': 'credentialless',
     }
   },
+  };
 });
