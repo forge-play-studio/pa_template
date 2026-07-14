@@ -4,7 +4,7 @@ import {
   type PlayableGroundDecalUiLayer,
 } from '@fps-games/editor/playable-sdk';
 
-import type { GroundDecalUiConfig, GroundDecalUiKind, GroundDecalUiLayer } from '../config';
+import type { GroundDecalUiConfig, GroundDecalUiKind, GroundDecalUiLayer } from '../../config';
 import {
   canAddGroundDecalUiDeliveryPair,
   canRemoveGroundDecalUiDeliveryPair,

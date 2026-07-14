@@ -5,10 +5,10 @@ import {
   readFpsGameEditorPlatformAssetLookup,
   mountFpsGameEditorProductLocalEditor,
 } from '@fps-games/editor/playable-sdk';
-import * as editorAssets from '../assets';
-import type { GroundDecalUiConfig } from '../config';
-import { createGroundDecalUiDynamicTexture, isGroundDecalUiConfig } from '../services/GroundDecalUiService';
-import { editorConfig } from '../../fps.config';
+import * as editorAssets from '../../assets';
+import type { GroundDecalUiConfig } from '../../config';
+import { createGroundDecalUiDynamicTexture, isGroundDecalUiConfig } from '../GroundDecalUiService';
+import { editorConfig } from '../../../fps.config';
 import {
   findEditorSceneModelRenderer,
   type EditorSceneAssetLibraryItem,

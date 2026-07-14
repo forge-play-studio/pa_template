@@ -1,5 +1,5 @@
-import renderingConfig from '../config/rendering.json';
-import type { AssetExternalRef, ColorRGB, GroundDecalUiConfig, SceneAssetDefaults, SceneAssetMaterialMode, SceneCameraRigConfig, SceneDirectionalLightConfig, SceneHemisphericLightConfig, SceneMaterialAssetConfig, SceneNodeConfig, SceneNodeVisualOverrides, ScenePrimitiveShape, SceneTransformNode } from '../config';
+import renderingConfig from '../../config/rendering.json';
+import type { AssetExternalRef, ColorRGB, GroundDecalUiConfig, SceneAssetDefaults, SceneAssetMaterialMode, SceneCameraRigConfig, SceneDirectionalLightConfig, SceneHemisphericLightConfig, SceneMaterialAssetConfig, SceneNodeConfig, SceneNodeVisualOverrides, ScenePrimitiveShape, SceneTransformNode } from '../../config';
 import {
   cloneEditorSceneDocument as cloneDocument,
   findEditorSceneModelRenderer as findModelRenderer,

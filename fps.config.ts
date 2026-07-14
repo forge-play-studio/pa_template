@@ -8,7 +8,7 @@ import {
   scenePlugin,
   shadowsPlugin,
 } from '@fps-games/editor';
-import { paTemplateGroundDecalFeatureConfig } from './src/editor-features/ground-decal-config';
+import { paTemplateGroundDecalFeatureConfig } from './src/services/fps-game-editor/ground-decal-config';
 
 export const editorConfig = defineFpsGameEditorProject({
   projectId: 'pa_template',
