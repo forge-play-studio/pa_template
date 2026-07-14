@@ -15,12 +15,6 @@
     }
   },
   "gameplay": {
-    "worldBounds": {
-      "minX": -6,
-      "maxX": 6,
-      "minZ": -6,
-      "maxZ": 6
-    },
     "gameplayBindings": [],
     "zones": [],
     "tuning": {

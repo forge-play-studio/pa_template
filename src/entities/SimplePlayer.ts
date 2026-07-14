@@ -16,7 +16,6 @@ import { Scene } from '@babylonjs/core/scene';
 import { Vector3 } from '@babylonjs/core/Maths/math.vector';
 
 import type { MovementInputSource } from '../services';
-import { configService } from '../config';
 
 export interface SimplePlayerConfig {
   /** 初始位置 */
@@ -88,12 +87,6 @@ export class SimplePlayer {
       const speed = this.baseSpeed * (input?.magnitude ?? 1) * this.speedMultiplier;
       this._position.x += move.x * speed * deltaTime;
       this._position.z += move.z * speed * deltaTime;
-
-      // 约束在世界边界内（如无配置，使用默认边界）
-      const bounds = configService.getWorldBounds();
-      this._position.x = Math.max(bounds.minX, Math.min(bounds.maxX, this._position.x));
-      this._position.z = Math.max(bounds.minZ, Math.min(bounds.maxZ, this._position.z));
-
     }
   }
 

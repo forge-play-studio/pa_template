@@ -102,17 +102,6 @@ export interface SceneHemisphericLightConfig {
 export type SceneLightConfig = SceneHemisphericLightConfig | SceneDirectionalLightConfig;
 
 // ============================================================
-// World Bounds
-// ============================================================
-
-export interface WorldBoundsConfig {
-  minX: number;
-  maxX: number;
-  minZ: number;
-  maxZ: number;
-}
-
-// ============================================================
 // Scene VFX (可选)
 // ============================================================
 
@@ -651,7 +640,6 @@ export interface SceneZoneConfig {
 }
 
 export interface SceneGameplayConfig {
-  worldBounds?: WorldBoundsConfig;
   gameplayBindings?: GameplayBindingConfig[];
   zones?: SceneZoneConfig[];
   tuning?: {

@@ -36,11 +36,6 @@ class ConfigValidator {
 
     console.log('[ConfigValidator] 开始配置校验（Scaffold）...');
 
-    // 1) worldBounds 合法性
-    const b = configService.getWorldBounds();
-    if (b.minX >= b.maxX) result.errors.push('worldBounds.minX 必须 < worldBounds.maxX');
-    if (b.minZ >= b.maxZ) result.errors.push('worldBounds.minZ 必须 < worldBounds.maxZ');
-
     if (!sceneDocument) {
       result.errors.push('scene 文档缺失');
       return result;
@@ -49,7 +44,7 @@ class ConfigValidator {
     const assetIds = new Set<string>();
     const nodeIds = new Set<string>();
 
-    // 2) scene.assets[*] 基础校验
+    // 1) scene.assets[*] 基础校验
     for (const asset of configService.getSceneAssets()) {
       if (!asset.id) {
         result.errors.push('scene.assets[*].id 不能为空');
@@ -75,7 +70,7 @@ class ConfigValidator {
       }
     }
 
-    // 3) scene.nodes[*] 基础校验
+    // 2) scene.nodes[*] 基础校验
     const sceneNodes = configService.getSceneNodes();
     for (const node of sceneNodes) {
       if (!node.id) {
@@ -113,7 +108,7 @@ class ConfigValidator {
       }
     }
 
-    // 4) rootId / parentId 一致性校验
+    // 3) rootId / parentId 一致性校验
     const rootId = configService.getSceneRootId();
     if (!rootId) {
       result.errors.push('scene.rootId 不能为空');
@@ -133,7 +128,7 @@ class ConfigValidator {
       }
     }
 
-    // 5) gameplay.gameplayBindings contract 基础校验
+    // 4) gameplay.gameplayBindings contract 基础校验
     const gameplayBindings = sceneConfig.gameplay?.gameplayBindings;
     if (gameplayBindings != null && !Array.isArray(gameplayBindings)) {
       result.errors.push('gameplay.gameplayBindings 必须是数组');
@@ -182,10 +177,10 @@ class ConfigValidator {
       }
     }
 
-    // 6) gameplay.zones 基础校验
+    // 5) gameplay.zones 基础校验
     this.validateZones(result);
 
-    // 7) gameplay.json audio 基础校验
+    // 6) gameplay.json audio 基础校验
     this.validateAudio(result);
 
     // 输出

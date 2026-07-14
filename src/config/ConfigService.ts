@@ -9,7 +9,6 @@
 import type {
   SceneConfig,
   GameConfig,
-  WorldBoundsConfig,
   SceneAssetConfig,
   SceneAssetMaterialMode,
   SceneCameraRigConfig,
@@ -47,13 +46,6 @@ import {
 import sceneConfigJson from './scene.json';
 import gameConfigJson from './game.json';
 import renderingConfigJson from './rendering.json';
-
-const DEFAULT_WORLD_BOUNDS: WorldBoundsConfig = {
-  minX: -10,
-  maxX: 10,
-  minZ: -10,
-  maxZ: 10,
-};
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value);
@@ -937,10 +929,6 @@ export class ConfigService {
   getGameplayBindings(): GameplayBindingConfig[] {
     const bindings = this.sceneConfig.gameplay?.gameplayBindings;
     return Array.isArray(bindings) ? bindings : [];
-  }
-
-  getWorldBounds(): WorldBoundsConfig {
-    return this.sceneConfig.gameplay?.worldBounds ?? DEFAULT_WORLD_BOUNDS;
   }
 
   getSceneVfxConfig(): SceneVfxConfig | undefined {
