@@ -19,7 +19,7 @@ try {
   const config = await createConfig(root);
   await seedRegistry(config);
   await writeScene(config, {
-    assets: [{ id: assetId, guid, type: 'glb', displayName: 'Foo' }],
+    assets: [{ id: assetId, guid, type: 'glb' }],
     nodes: [],
   });
 
@@ -31,7 +31,7 @@ try {
 
   await seedRegistry(config);
   await writeScene(config, {
-    assets: [{ id: assetId, guid, type: 'glb', displayName: 'Foo' }],
+    assets: [{ id: assetId, guid, type: 'glb' }],
     nodes: [{ id: 'foo_1', kind: 'instance', instance: { assetId } }],
   });
 
@@ -93,5 +93,5 @@ async function seedRegistry(config) {
 
 async function writeScene(config, scene) {
   await fs.mkdir(path.dirname(config.scenePath), { recursive: true });
-  await fs.writeFile(config.scenePath, `${JSON.stringify({ schemaVersion: 2, scene }, null, 2)}\n`);
+  await fs.writeFile(config.scenePath, `${JSON.stringify({ schemaVersion: 3, scene }, null, 2)}\n`);
 }

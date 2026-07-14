@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { assertPlayableEditorSceneDocumentContract } from '@fps-games/editor/playable-sdk';
+import { assertPlayableEditorScenePersistedSourceContract } from '@fps-games/editor/playable-sdk';
 import { loadPlayableEditorAssetManifest } from '@fps-games/editor/playable-sdk/vite';
 
 const root = process.env.EDITOR_AUTHORED_DATA_ROOT
@@ -20,7 +20,6 @@ const catalog = await loadPlayableEditorAssetManifest({
   manifestPath: path.join(root, 'src/assets/generated/asset-catalog.manifest.json'),
 });
 const slotIdsByAssetId = new Map();
-const materialSlotsByAssetId = new Map();
 const catalogModelAssetIds = new Set();
 for (const asset of catalog) {
   const slotIds = new Set();
@@ -28,7 +27,6 @@ for (const asset of catalog) {
   if (typeof asset?.assetId === 'string' && asset.assetId.trim()) {
     if (asset.kind === 'model') catalogModelAssetIds.add(asset.assetId.trim());
     slotIdsByAssetId.set(asset.assetId.trim(), slotIds);
-    materialSlotsByAssetId.set(asset.assetId.trim(), readMaterialSlots(asset));
   }
 }
 
@@ -37,7 +35,7 @@ const authoredValues = await Promise.all(files.map(async relativePath => ({
   value: JSON.parse(await fs.readFile(path.join(root, relativePath), 'utf8')),
 })));
 const editorScene = authoredValues.find(entry => entry.relativePath === 'src/config/editor-scene.json')?.value;
-assertPlayableEditorSceneDocumentContract(editorScene);
+assertPlayableEditorScenePersistedSourceContract(editorScene);
 const authoredModelAssetIds = new Set(
   (Array.isArray(editorScene?.assets) ? editorScene.assets : [])
     .filter(asset => asset?.type === 'glb' && typeof asset.id === 'string')
@@ -50,10 +48,9 @@ for (const assetId of authoredModelAssetIds) {
 }
 for (const asset of Array.isArray(editorScene?.assets) ? editorScene.assets : []) {
   if (asset?.type !== 'glb' || typeof asset.id !== 'string') continue;
-  const authoredSlots = readMaterialSlots(asset);
-  const catalogSlots = materialSlotsByAssetId.get(asset.id) ?? [];
-  if (canonicalJson(authoredSlots) !== canonicalJson(catalogSlots)) {
-    violations.push(`src/config/editor-scene.json.assets (material slots for ${asset.id} differ from the generated catalog)`);
+  const unexpectedFields = Object.keys(asset).filter(key => key !== 'id' && key !== 'guid' && key !== 'type');
+  if (unexpectedFields.length > 0) {
+    violations.push(`src/config/editor-scene.json.assets (model ${asset.id} must be a lean catalog reference; unexpected ${unexpectedFields.join(', ')})`);
   }
 }
 const validModelAssetIds = new Set(
@@ -204,12 +201,4 @@ function collectMaterialSlotIds(value, target) {
 
 function readMaterialSlots(value) {
   return Array.isArray(value?.metadata?.materialSlots) ? value.metadata.materialSlots : [];
-}
-
-function canonicalJson(value) {
-  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
-  if (value && typeof value === 'object') {
-    return `{${Object.keys(value).sort().map(key => `${JSON.stringify(key)}:${canonicalJson(value[key])}`).join(',')}}`;
-  }
-  return JSON.stringify(value);
 }

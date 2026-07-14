@@ -61,7 +61,7 @@ import { ZoneSystem } from '../systems';
 // 实体 / UI（脚手架）
 import { SimplePlayer } from '../entities';
 
-import { configService, PROJECT_GAMEPLAY_CONFIG } from '../config';
+import { configService, PROJECT_GAMEPLAY_CONFIG, resolveSceneAssetRuntimeUrl } from '../config';
 import type { SceneConfig } from '../config';
 import { createProjectGameplayRuntime } from '../gameplay';
 import type { GameplayModule, ProjectGameplayRuntime } from '../gameplay';
@@ -217,9 +217,13 @@ export class Game {
   private async preloadModelsFromConfig(): Promise<void> {
     if (!this.assetLoader) return;
 
+    const sceneAssets = configService.getSceneAssets();
+    for (const asset of sceneAssets) {
+      const url = resolveSceneAssetRuntimeUrl(asset);
+      if (url) this.assetLoader.registerRuntimeModelUrl(asset.id, url);
+    }
     const modelIds = [...new Set(
-      configService
-        .getSceneAssets()
+      sceneAssets
         .map((asset) => asset.id)
         .filter((assetId): assetId is string => typeof assetId === 'string' && assetId.length > 0),
     )];
@@ -492,10 +496,19 @@ export class Game {
     attempt(() => this.modelPool?.dispose());
     this.modelPool = null;
 
-    attempt(() => this.sceneBuilder?.dispose());
-    this.sceneBuilder = null;
+    try {
+      this.sceneBuilder?.dispose();
+      this.sceneBuilder = null;
+    } catch (error) {
+      errors.push(error);
+    }
 
-    this.assetLoader = null;
+    try {
+      this.assetLoader?.clearCache();
+      this.assetLoader = null;
+    } catch (error) {
+      errors.push(error);
+    }
     this.animationService = null;
 
     attempt(() => this.scene.dispose());

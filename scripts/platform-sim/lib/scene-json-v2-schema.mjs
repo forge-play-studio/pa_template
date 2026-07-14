@@ -11,8 +11,10 @@ const MATERIAL_SCOPES = new Set(rules.materialScopes);
 const MATERIAL_MODES = new Set(rules.materialModes);
 const HIERARCHY_PARENT_TARGETS = new Set(rules.hierarchy?.parentTargets ?? ['root', 'sceneNode']);
 const RUNTIME_ONLY_TOKENS = rules.runtimeOnlyTokens;
+const RUNTIME_V3_ASSET_FIELDS = new Set(rules.runtimeV3.assetFields);
+const RUNTIME_V3_MATERIAL_SLOT_FIELDS = new Set(rules.runtimeV3.materialSlotFields);
 
-export function validateSceneJsonV2(sceneConfig, {
+export function validateSceneJson(sceneConfig, {
   strictAssetIds = [],
   strictNodeIds = [],
   allowOrphanSharedMaterials = true,
@@ -30,7 +32,8 @@ export function validateSceneJsonV2(sceneConfig, {
     add('$', 'scene json must be an object');
     return { ok: false, errors };
   }
-  if (sceneConfig.schemaVersion !== 2) add('$.schemaVersion', 'schemaVersion must be 2');
+  const schemaVersion = sceneConfig.schemaVersion;
+  if (schemaVersion !== 2 && schemaVersion !== 3) add('$.schemaVersion', 'schemaVersion must be 2 or 3');
   if (!isObject(sceneConfig.scene)) {
     add('$.scene', 'scene must be an object');
     return { ok: false, errors };
@@ -62,9 +65,22 @@ export function validateSceneJsonV2(sceneConfig, {
 
     if (!ASSET_TYPES.has(asset.type)) add(`${path}.type`, 'asset.type must be "glb"');
     if (asset.guid != null && !nonEmptyString(asset.guid)) add(`${path}.guid`, 'asset.guid must be a non-empty string when present');
+    if (asset.url != null && !nonEmptyString(asset.url)) add(`${path}.url`, 'asset.url must be a non-empty string when present');
     if (asset.external != null && !isObject(asset.external)) add(`${path}.external`, 'external must be an object when present');
+    if (asset.warmupCount != null && (!Number.isInteger(asset.warmupCount) || asset.warmupCount < 0)) {
+      add(`${path}.warmupCount`, 'warmupCount must be a non-negative integer when present');
+    }
+    if (asset.singleton != null && typeof asset.singleton !== 'boolean') add(`${path}.singleton`, 'singleton must be a boolean when present');
     if (asset.materialMode != null && !MATERIAL_MODES.has(asset.materialMode)) {
       add(`${path}.materialMode`, 'materialMode must be "shared" or "instance"');
+    }
+    if (schemaVersion === 3) {
+      for (const field of Object.keys(asset)) {
+        if (!RUNTIME_V3_ASSET_FIELDS.has(field)) {
+          add(`${path}.${field}`, `runtime schema v3 asset field is not allowed: ${field}`);
+        }
+      }
+      validateRuntimeV3MaterialSlots(asset.materialSlots, `${path}.materialSlots`, add);
     }
     if (strictAssets.has(asset.id)) assertNoRuntimeOnlyFields(asset, path, add);
   });
@@ -135,11 +151,57 @@ export function validateSceneJsonV2(sceneConfig, {
   return { ok: errors.length === 0, errors };
 }
 
-export function assertSceneJsonV2(sceneConfig, options = {}) {
-  const result = validateSceneJsonV2(sceneConfig, options);
+export function assertSceneJson(sceneConfig, options = {}) {
+  const result = validateSceneJson(sceneConfig, options);
   if (result.ok) return;
   const rendered = JSON.stringify(result.errors, null, 2);
-  throw new Error(`scene_json_v2_schema_failed:\n${rendered}`);
+  throw new Error(`scene_json_schema_failed:\n${rendered}`);
+}
+
+export const validateSceneJsonV2 = validateSceneJson;
+export const assertSceneJsonV2 = assertSceneJson;
+
+function validateRuntimeV3MaterialSlots(materialSlots, path, add) {
+  if (materialSlots == null) return;
+  if (!Array.isArray(materialSlots)) {
+    add(path, 'materialSlots must be an array when present');
+    return;
+  }
+  const slotIds = new Set();
+  materialSlots.forEach((slot, index) => {
+    const slotPath = `${path}[${index}]`;
+    if (!isObject(slot) || !nonEmptyString(slot.slotId) || !nonEmptyString(slot.ownerNodePath)) {
+      add(slotPath, 'material slot must contain stable slotId and ownerNodePath');
+      return;
+    }
+    if (slotIds.has(slot.slotId)) add(`${slotPath}.slotId`, `duplicate material slot id: ${slot.slotId}`);
+    else slotIds.add(slot.slotId);
+    for (const field of Object.keys(slot)) {
+      if (!RUNTIME_V3_MATERIAL_SLOT_FIELDS.has(field)) {
+        add(`${slotPath}.${field}`, `runtime schema v3 material slot field is not allowed: ${field}`);
+      }
+    }
+    if (slot.label != null && !nonEmptyString(slot.label)) {
+      add(`${slotPath}.label`, 'label must be a non-empty string when present');
+    }
+    for (const key of ['meshIndex', 'primitiveIndex']) {
+      if (slot[key] != null && (!Number.isInteger(slot[key]) || slot[key] < 0)) {
+        add(`${slotPath}.${key}`, `${key} must be a non-negative integer when present`);
+      }
+    }
+    if (slot.sourceMaterialIndices != null && (
+      !Array.isArray(slot.sourceMaterialIndices)
+      || slot.sourceMaterialIndices.some(value => !Number.isInteger(value) || value < 0)
+    )) {
+      add(`${slotPath}.sourceMaterialIndices`, 'sourceMaterialIndices must contain non-negative integers');
+    }
+    if (slot.sourceMeshName != null && !nonEmptyString(slot.sourceMeshName)) {
+      add(`${slotPath}.sourceMeshName`, 'sourceMeshName must be a non-empty string when present');
+    }
+    if (Number.isInteger(slot.meshIndex) && !nonEmptyString(slot.sourceMeshName)) {
+      add(`${slotPath}.sourceMeshName`, 'sourceMeshName is required when meshIndex is present');
+    }
+  });
 }
 
 function isObject(value) {

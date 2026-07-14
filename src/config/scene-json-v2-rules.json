@@ -7,6 +7,29 @@
   "materialModes": ["shared", "instance"],
   "materialAssetKinds": ["pbr", "standard"],
   "materialAssetSystemPresets": ["default-pbr", "default-standard"],
+  "runtimeV3": {
+    "assetFields": [
+      "id",
+      "guid",
+      "type",
+      "url",
+      "external",
+      "warmupCount",
+      "singleton",
+      "materialMode",
+      "defaults",
+      "materialSlots"
+    ],
+    "materialSlotFields": [
+      "slotId",
+      "ownerNodePath",
+      "label",
+      "meshIndex",
+      "primitiveIndex",
+      "sourceMaterialIndices",
+      "sourceMeshName"
+    ]
+  },
   "hierarchy": {
     "parentTargets": ["root", "sceneNode"]
   },

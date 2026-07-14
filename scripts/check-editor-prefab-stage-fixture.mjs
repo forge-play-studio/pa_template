@@ -7,12 +7,16 @@ import path from 'node:path';
 const projectRoot = process.cwd();
 const playableSdk = await import('@fps-games/editor/playable-sdk');
 const editorScene = await readJson(path.join(projectRoot, 'src/config/editor-scene.json'));
+const manifest = await readJson(path.join(projectRoot, 'src/assets/generated/asset-catalog.manifest.json'));
 
 const PREFAB_FIXTURE_ID = 'prefab_issue464_crate_reference';
 const SOURCE_CODE_KEY = 'shadow_fixture_crate';
 
-const sourceAsset = editorScene.assets?.find(asset => asset?.metadata?.codeKey === SOURCE_CODE_KEY);
-assert(sourceAsset, `prefab fixture source asset with codeKey "${SOURCE_CODE_KEY}" must exist`);
+const sourceCatalogEntry = manifest.find(asset => asset?.codeKey === SOURCE_CODE_KEY && asset?.kind === 'model');
+assert(sourceCatalogEntry, `prefab fixture source catalog entry with codeKey "${SOURCE_CODE_KEY}" must exist`);
+const sourceAsset = editorScene.assets?.find(asset => asset?.id === sourceCatalogEntry.assetId && asset?.type === 'glb');
+assert(sourceAsset, `prefab fixture source asset "${sourceCatalogEntry.assetId}" must exist as a lean editor-scene reference`);
+assert.equal(sourceAsset.guid, sourceCatalogEntry.guid, 'prefab fixture source reference must preserve the catalog guid');
 
 const prefabAsset = editorScene.assets?.find(asset => asset?.id === PREFAB_FIXTURE_ID);
 assert(prefabAsset, `prefab fixture asset "${PREFAB_FIXTURE_ID}" must exist`);
