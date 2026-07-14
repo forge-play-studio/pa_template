@@ -15,7 +15,7 @@ const runtimeNodeService = read('../../services/RuntimeNodeService.ts');
 const threeC = read('../../systems/ThreeCSystem.ts');
 const vfxDirector = read('../../systems/ProjectVfxDirector.ts');
 const bootstrap = read('../runtime-debug-bootstrap.ts');
-const main = read('../../main.ts');
+const projectRuntimeEntry = read('../../project-runtime-entry.ts');
 const productionScan = readFileSync(resolve('scripts/check-production-debug-surface.mjs'), 'utf8');
 
 const failures = [];
@@ -234,10 +234,10 @@ expect(vfxDirector, 'captureVfxUsageRuntimeState', 'VFX director state capture s
 expect(vfxDirector, 'restoreVfxUsageRuntimeState', 'VFX director state restore seam');
 expect(vfxDirector, 'this.previewParams.has(usageId)', 'VFX director preview provenance capture');
 forbid(bootstrap, 'mountTemplateRuntimeInspector', 'runtime inspector tied to panel lifetime');
-expect(main, 'ensureRuntimeInspectorForDev', 'page-lifetime runtime inspector mount');
-expect(main, 'runtimeInspector?.beforeSceneChange()', 'scene replacement camera lease cleanup');
-expect(main, "import.meta.hot?.accept('./debug/runtime-inspector/template'", 'runtime inspector HMR accept boundary');
-expect(main, 'disposeRuntimeInspector();', 'page-lifetime runtime inspector cleanup');
+expect(projectRuntimeEntry, 'ensureRuntimeInspectorForDev', 'page-lifetime runtime inspector mount');
+expect(projectRuntimeEntry, 'runtimeInspector?.beforeSceneChange()', 'scene replacement camera lease cleanup');
+expect(projectRuntimeEntry, "import.meta.hot?.accept('./debug/runtime-inspector/template'", 'runtime inspector HMR accept boundary');
+expect(projectRuntimeEntry, 'disposeRuntimeInspector();', 'page-lifetime runtime inspector cleanup');
 for (const token of ['__fp3d', 'fp3d-observation', 'pa-template-runtime-inspector', 'runtime-inspector']) {
   expect(productionScan, `'${token}'`, `production token scan ${token}`);
 }
