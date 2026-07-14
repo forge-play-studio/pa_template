@@ -4757,7 +4757,12 @@ export function createRuntimeInspector(options: RuntimeInspectorOptions): Runtim
         active: activeCameraLease?.record.id ?? null,
       });
     }
-    return activeCameraLease;
+    const lease = activeCameraLease;
+    if (lease.scene !== requireScene()) {
+      restoreActiveCameraLease('dispose');
+      throw new RuntimeInspectorCommandError('INVALID_LEASE', 'camera lease belongs to another scene');
+    }
+    return lease;
   }
 
   function restoreActiveCameraLease(

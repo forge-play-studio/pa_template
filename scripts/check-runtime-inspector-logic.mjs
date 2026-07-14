@@ -1,6 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+// Static token/structure guard only. Behavioral correctness belongs to the
+// fps-3d-harness conformance and real-page runtime acceptance suites.
+
 const root = resolve('src/debug/runtime-inspector');
 const schema = read('schema.ts');
 const runtime = read('runtime.ts');
@@ -181,6 +184,7 @@ expect(runtime, 'disposeTransientDepthRenderer(targetRenderer)', 'transient targ
 expect(runtime, 'disposeTransientDepthRenderer(sceneRenderer)', 'transient scene depth map disposal');
 expect(runtime, 'disposeTransientDepthRenderer(renderer)', 'transient candidate depth map disposal');
 expect(runtime, 'restoreCameraVisibilityPatches', 'visibility patch restore');
+expect(runtime, 'camera lease belongs to another scene', 'camera lease scene consistency guard');
 expect(runtime, 'renderOutline: false', 'ghost disables Babylon opaque outline rendering');
 expect(runtime, 'nullableColorEqual(after.outlineColor', 'visibility patch restores optional mesh outline color');
 expect(runtime, 'after.outlineWidth', 'visibility patch restores mesh outline width');
@@ -190,6 +194,8 @@ for (const mode of ["'hide'", "'ghost'", "'isolate'"]) {
 expect(runtime, 'coverage:', 'observation coverage');
 forbid(runtime, 'getMeshByName(', 'silent name lookup');
 forbid(runtime, 'getTransformNodeByName(', 'silent transform-node lookup');
+forbid(runtime, 'getNodeByName(', 'silent generic-node lookup');
+forbid(runtime, 'getMeshById(', 'silent mesh-id lookup');
 forbid(runtime, 'frameMs', 'performance counter');
 forbid(runtime, 'drawCalls', 'performance counter');
 
