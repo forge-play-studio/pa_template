@@ -4,7 +4,7 @@ import config from './fps.config';
 
 export default {
   plugins: [
-    createFpsConfiguredPluginManifestVitePlugin({ apiVersion: 1, projectRoot: __dirname, plugins: config.plugins }),
-    createFpsGameEditorViteAdapter(config.editor, { projectRoot: __dirname }),
+    createFpsConfiguredPluginManifestVitePlugin({ apiVersion: 1, projectRoot: '.', plugins: config.plugins }),
+    createFpsGameEditorViteAdapter(config.editor, { projectRoot: '.' }),
   ],
 };
