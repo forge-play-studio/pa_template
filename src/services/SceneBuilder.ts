@@ -1273,7 +1273,6 @@ export class SceneBuilder {
     mesh.alphaIndex = decal.rendering?.alphaIndex ?? 100;
     mesh.metadata = {
       ...(mesh.metadata ?? {}),
-      disableBlobShadow: true,
       disableStaticProjectedShadow: true,
       disablePlanarShadow: true,
       groundDecalUi: {

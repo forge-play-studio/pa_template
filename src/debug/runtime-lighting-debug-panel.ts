@@ -118,7 +118,7 @@ function readSnapshot(game: Game | null): LightingDebugSnapshot | null {
 function readRuntimeShadowMode(game: Game | null): RuntimeShadowMode {
   const mode = game?.getRendererShadows()?.getDebugSnapshot().mode;
   if (mode === 'projected') return 'planar';
-  return mode === 'dynamic' || mode === 'blob' || mode === 'static' || mode === 'none'
+  return mode === 'dynamic' || mode === 'static' || mode === 'none'
     ? mode
     : 'unknown';
 }

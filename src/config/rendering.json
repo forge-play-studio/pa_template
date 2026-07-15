@@ -158,27 +158,6 @@
         "b": 0
       }
     },
-    "blob": {
-      "enabled": true,
-      "plane": {
-        "height": 0,
-        "yOffset": 0.08
-      },
-      "appearance": {
-        "color": {
-          "r": 0,
-          "g": 0,
-          "b": 0,
-          "a": 0.35
-        },
-        "edgeSoftness": 0.55
-      },
-      "size": {
-        "sizeMultiplier": 1.25,
-        "minSize": 0.25,
-        "maxSize": 20
-      }
-    },
     "staticProjected": {
       "enabled": true,
       "plane": {

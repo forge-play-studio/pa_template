@@ -1,13 +1,10 @@
 import {
   EDITOR_SCENE_DEFAULT_PLANAR_SHADOW_EXCLUDE_PATTERNS,
   EDITOR_SCENE_DEFAULT_PLANAR_SHADOW_RECEIVER_PATTERNS,
-  createEditorSceneBlobShadowPreviewSettings,
   createEditorScenePlanarShadowPreviewSettings,
   createEditorSceneStaticProjectedShadowPreviewSettings,
   normalizeEditorSceneRenderingProfile,
   summarizeEditorSceneRenderingProfile,
-  type EditorSceneBlobShadowPreviewSettings,
-  type EditorSceneBlobShadowPreviewSettingsInput,
   type EditorScenePlanarShadowPreviewSettings,
   type EditorScenePlanarShadowPreviewSettingsInput,
   type EditorScenePlanarShadowProfile,
@@ -31,8 +28,6 @@ export type RenderingColorRgb = EditorSceneRenderingColorRgb;
 export type RenderingColorRgba = EditorSceneRenderingColorRgba;
 export type NormalizedPlanarShadowProfile = EditorScenePlanarShadowProfile;
 export type NormalizedRenderingProfile = EditorSceneRenderingProfile;
-export type BlobShadowOptionsFromRenderingProfileInput = EditorSceneBlobShadowPreviewSettingsInput;
-export type BlobShadowOptionsFromRenderingProfile = EditorSceneBlobShadowPreviewSettings;
 export type StaticProjectedShadowOptionsFromRenderingProfileInput = EditorSceneStaticProjectedShadowPreviewSettingsInput;
 export type StaticProjectedShadowOptionsFromRenderingProfile = EditorSceneStaticProjectedShadowPreviewSettings;
 export type PlanarShadowOptionsFromRenderingProfileInput = EditorScenePlanarShadowPreviewSettingsInput;
@@ -53,13 +48,6 @@ export function createPlanarShadowOptionsFromRenderingProfile(
   input: PlanarShadowOptionsFromRenderingProfileInput = {},
 ): PlanarShadowOptionsFromRenderingProfile {
   return createEditorScenePlanarShadowPreviewSettings(profile, input);
-}
-
-export function createBlobShadowOptionsFromRenderingProfile(
-  profile: NormalizedRenderingProfile,
-  input: BlobShadowOptionsFromRenderingProfileInput = {},
-): BlobShadowOptionsFromRenderingProfile {
-  return createEditorSceneBlobShadowPreviewSettings(profile, input);
 }
 
 export function createStaticProjectedShadowOptionsFromRenderingProfile(
