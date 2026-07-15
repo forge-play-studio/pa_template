@@ -5,7 +5,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const scriptPath = fileURLToPath(import.meta.url);
-const projectRoot = path.resolve(path.dirname(scriptPath), '..');
+const defaultProjectRoot = path.resolve(path.dirname(scriptPath), '..');
+const projectRoot = path.resolve(process.env.VFX_USAGE_PROJECT_ROOT || defaultProjectRoot);
 const DEFAULT_SCHEMA_REF = './usages.schema.json';
 const DEFAULT_SCHEMA_VERSION = 'project-vfx-usages/1.0';
 const VALID_LIFECYCLES = new Set(['follow', 'loop', 'oneshot']);
@@ -96,7 +97,8 @@ function validateUsages(options) {
   const usagesPath = readUsagesPath(options);
   const document = readUsagesDocument(usagesPath);
   validateUsagesDocument(document, usagesPath);
-  console.log(`OK ${relativePath(usagesPath)} (${getUsagesArray(document).length} usages)`);
+  const semantic = validateUsageSemantics(document, options);
+  console.log(`OK ${relativePath(usagesPath)} (${getUsagesArray(document).length} usages, static active ${semantic.staticDemand}/${semantic.globalActiveLimit})`);
 }
 
 function addUsage(options) {
@@ -110,10 +112,6 @@ function addUsage(options) {
   const usageId = readString(options.id) || createUniqueUsageId(usages, `${target.nodeId}-${effectId}`);
   const existingIndex = usages.findIndex((usage) => usage?.id === usageId);
   const replace = Boolean(options.replace || options.upsert);
-
-  validateEffect(effectId, options);
-  validateTarget(target, options);
-  if (inputs?.reference) validateTarget(inputs.reference, options);
 
   if (existingIndex >= 0 && !replace) {
     throw new Error(`Usage "${usageId}" already exists. Pass --replace to update it.`);
@@ -145,6 +143,8 @@ function addUsage(options) {
   document.schemaVersion = readString(document.schemaVersion) || DEFAULT_SCHEMA_VERSION;
   document.usages = usages;
   document.updatedAt = new Date().toISOString();
+  validateUsagesDocument(document, usagesPath);
+  validateUsageSemantics(document, options);
   writeUsagesDocument(usagesPath, document, options);
   console.log(`${options.dryRun ? 'Would write' : 'Wrote'} usage "${usageId}" -> ${formatTarget(target)} (${effectId})`);
 }
@@ -164,6 +164,8 @@ function removeUsage(options) {
   document.schemaVersion = readString(document.schemaVersion) || DEFAULT_SCHEMA_VERSION;
   document.usages = nextUsages;
   document.updatedAt = new Date().toISOString();
+  validateUsagesDocument(document, usagesPath);
+  validateUsageSemantics(document, options);
   writeUsagesDocument(usagesPath, document, options);
   console.log(`${options.dryRun ? 'Would remove' : 'Removed'} usage "${usageId}"`);
 }
@@ -444,12 +446,59 @@ function readReferenceSource(options) {
   return { kind, nodeId };
 }
 
-function validateEffect(effectId, options) {
-  if (options.allowMissingEffect) return;
+function validateUsageSemantics(document, options) {
+  const usages = getUsagesArray(document);
+  if (usages.length === 0) {
+    const budget = readBudget(options);
+    return { staticDemand: 0, globalActiveLimit: budget.globalActiveLimit };
+  }
+
+  const runtimes = new Map();
+  const staticDemandByEffect = new Map();
+  for (const usage of usages) {
+    const effectId = usage.effect;
+    let runtime = runtimes.get(effectId);
+    if (!runtime) {
+      runtime = readEffectRuntime(effectId, options);
+      runtimes.set(effectId, runtime);
+    }
+    validateLifecycleCompatibility(usage, runtime);
+    validateTarget(usage.positionSource, options);
+    if (usage.inputs?.reference) validateTarget(usage.inputs.reference, options);
+    if (usage.lifecycle === 'follow' || usage.lifecycle === 'loop') {
+      staticDemandByEffect.set(effectId, (staticDemandByEffect.get(effectId) ?? 0) + 1);
+    }
+  }
+
+  for (const [effectId, demand] of staticDemandByEffect) {
+    const runtime = runtimes.get(effectId);
+    if (demand > runtime.expectedPeak) {
+      throw new Error(`VFX Usage Capacity Conflict: effect "${effectId}" has ${demand} static follow/loop usages but expectedPeak is ${runtime.expectedPeak}.`);
+    }
+    if (demand > runtime.poolSize) {
+      throw new Error(`VFX Usage Capacity Conflict: effect "${effectId}" has ${demand} static follow/loop usages but poolSize is ${runtime.poolSize}.`);
+    }
+  }
+
+  const budget = readBudget(options);
+  if (budget.status !== 'confirmed') {
+    throw new Error('VFX Usage Capacity Conflict: budget.json must be status "confirmed" before production usages are mounted.');
+  }
+  const staticDemand = [...staticDemandByEffect.values()].reduce((total, value) => total + value, 0);
+  if (staticDemand > budget.expectedGlobalPeak) {
+    throw new Error(`VFX Usage Capacity Conflict: static follow/loop demand ${staticDemand} exceeds expectedGlobalPeak ${budget.expectedGlobalPeak}.`);
+  }
+  if (staticDemand > budget.globalActiveLimit) {
+    throw new Error(`VFX Usage Capacity Conflict: static follow/loop demand ${staticDemand} exceeds globalActiveLimit ${budget.globalActiveLimit}.`);
+  }
+  return { staticDemand, globalActiveLimit: budget.globalActiveLimit };
+}
+
+function readEffectRuntime(effectId, options) {
   const effectsRoot = resolveProjectPath(readString(options.effectsRoot) || 'src/assets/vfx/effects');
   const effectDir = path.join(effectsRoot, effectId);
   if (!existsSync(effectDir) || !statSync(effectDir).isDirectory()) {
-    throw new Error(`Unknown effect "${effectId}". Expected directory: ${relativePath(effectDir)}. Pass --allow-missing-effect to bypass.`);
+    throw new Error(`Unknown effect "${effectId}". Expected deployed effect directory: ${relativePath(effectDir)}.`);
   }
   const indexPath = path.join(effectDir, 'index.ts');
   const runtimePath = path.join(effectDir, 'vfx-runtime.json');
@@ -463,34 +512,75 @@ function validateEffect(effectId, options) {
   if (runtime?.effectId !== effectId) {
     throw new Error(`${relativePath(runtimePath)} effectId must equal "${effectId}".`);
   }
+  if (runtime?.schemaVersion !== 'project-vfx-runtime/1.0') {
+    throw new Error(`${relativePath(runtimePath)} schemaVersion must equal "project-vfx-runtime/1.0".`);
+  }
   if (!Number.isInteger(runtime?.poolSize) || runtime.poolSize < 1) {
     throw new Error(`${relativePath(runtimePath)} poolSize must be a positive integer.`);
   }
+  if (!Number.isInteger(runtime?.expectedPeak) || runtime.expectedPeak < 0) {
+    throw new Error(`${relativePath(runtimePath)} expectedPeak must be a non-negative integer.`);
+  }
+  if (runtime.expectedPeak > runtime.poolSize) {
+    throw new Error(`${relativePath(runtimePath)} expectedPeak ${runtime.expectedPeak} exceeds poolSize ${runtime.poolSize}.`);
+  }
+  if (!['one-shot', 'persistent', 'mixed'].includes(runtime?.lifecycle)) {
+    throw new Error(`${relativePath(runtimePath)} lifecycle must be one-shot, persistent, or mixed.`);
+  }
+  return runtime;
+}
+
+function validateLifecycleCompatibility(usage, runtime) {
+  const allowed = usage.lifecycle === 'oneshot'
+    ? runtime.lifecycle === 'one-shot' || runtime.lifecycle === 'mixed'
+    : runtime.lifecycle === 'persistent' || runtime.lifecycle === 'mixed';
+  if (!allowed) {
+    throw new Error(`VFX Usage Lifecycle Conflict: usage "${usage.id}" lifecycle "${usage.lifecycle}" is incompatible with effect "${usage.effect}" lifecycle "${runtime.lifecycle}".`);
+  }
+}
+
+function readBudget(options) {
+  const budgetPath = resolveProjectPath(readString(options.budget) || 'src/assets/vfx/budget.json');
+  if (!existsSync(budgetPath)) {
+    throw new Error(`VFX Usage Capacity Conflict: missing ${relativePath(budgetPath)}.`);
+  }
+  const budget = JSON.parse(stripBom(readFileSync(budgetPath, 'utf8')));
+  if (budget?.schemaVersion !== 'project-vfx-budget/1.0') {
+    throw new Error(`${relativePath(budgetPath)} schemaVersion must equal "project-vfx-budget/1.0".`);
+  }
+  if (!['confirmed', 'unconfirmed'].includes(budget?.status)) {
+    throw new Error(`${relativePath(budgetPath)} status must be confirmed or unconfirmed.`);
+  }
+  for (const field of ['globalActiveLimit', 'expectedGlobalPeak']) {
+    if (!Number.isInteger(budget?.[field]) || budget[field] < 0) {
+      throw new Error(`${relativePath(budgetPath)} ${field} must be a non-negative integer.`);
+    }
+  }
+  if (budget.expectedGlobalPeak > budget.globalActiveLimit) {
+    throw new Error(`${relativePath(budgetPath)} expectedGlobalPeak ${budget.expectedGlobalPeak} exceeds globalActiveLimit ${budget.globalActiveLimit}.`);
+  }
+  return budget;
 }
 
 function validateTarget(target, options) {
-  if (options.validateTarget === false) return;
-  const records = readConfigNodeRecords(target.nodeId);
+  if (options.validateTarget === false && target.kind === 'node') return;
 
   if (target.kind === 'socket') {
+    const records = readConfigNodeRecords(target.nodeId);
     if (records.length === 0) {
-      throw new Error(`Socket node "${target.nodeId}" was not found in src/config/scene.json or src/config/editor-scene.json. Pass --no-validate-target to bypass.`);
+      throw new Error(`Socket node "${target.nodeId}" was not found in src/config/scene.json or src/config/editor-scene.json.`);
     }
     if (!records.some((record) => readMarkerType(record.value) === 'effect-socket')) {
-      throw new Error(`Node "${target.nodeId}" exists but is not marked as effect-socket. Pass --no-validate-target to bypass.`);
+      throw new Error(`Node "${target.nodeId}" exists but is not marked as effect-socket.`);
     }
     return;
   }
 
-  if (records.length > 0 || sourceContainsLiteral(resolveProjectPath('src'), target.nodeId)) {
+  if (sourceContainsRuntimeNodeRegistration(resolveProjectPath('src'), target.nodeId)) {
     return;
   }
 
-  const message = `Runtime node "${target.nodeId}" was not found statically. This can be OK for nodes registered at runtime.`;
-  if (options.strictTarget) {
-    throw new Error(`${message} Remove --strict-target or pass --no-validate-target to bypass.`);
-  }
-  console.warn(`[warn] ${message}`);
+  throw new Error(`Runtime node "${target.nodeId}" has no static RuntimeNodeService.registerRuntimeNode(...) evidence. Use --no-validate-target only after code review proves registration before ProjectVfxDirector.init().`);
 }
 
 function readConfigNodeRecords(nodeId) {
@@ -548,20 +638,30 @@ function readMarkerType(value) {
   return null;
 }
 
-function sourceContainsLiteral(root, literal) {
+function sourceContainsRuntimeNodeRegistration(root, nodeId) {
   if (!existsSync(root)) return false;
   const entries = readdirSync(root, { withFileTypes: true });
   for (const entry of entries) {
     if (entry.name === 'node_modules' || entry.name === 'dist') continue;
     const fullPath = path.join(root, entry.name);
     if (entry.isDirectory()) {
-      if (sourceContainsLiteral(fullPath, literal)) return true;
+      if (sourceContainsRuntimeNodeRegistration(fullPath, nodeId)) return true;
       continue;
     }
     if (!entry.isFile() || !/\.(ts|tsx|js|jsx)$/.test(entry.name)) continue;
-    if (readFileSync(fullPath, 'utf8').includes(literal)) return true;
+    const source = readFileSync(fullPath, 'utf8');
+    const escapedNodeId = escapeRegExp(nodeId);
+    const registrationPattern = new RegExp(
+      `\\bregisterRuntimeNode\\s*\\(\\s*\\{[^}]{0,2000}?\\bid\\s*:\\s*(['"\`])${escapedNodeId}\\1`,
+      's',
+    );
+    if (registrationPattern.test(source)) return true;
   }
   return false;
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function readOffset(options) {
@@ -779,8 +879,12 @@ Usage:
 
 Examples:
   pnpm vfx:usage -- add --effect energy-shield --socket marker-4 --id marker-4-energy-shield --label "Marker 4 / Energy Shield"
-  pnpm vfx:usage -- add --effect thruster-flame --node runtime_effect_host --id runtime-effect-host-flame --label "Runtime Host / Flame" --position "0,0,-1.1" --no-validate-target
+  pnpm vfx:usage -- add --effect thruster-flame --node runtime_effect_host --id runtime-effect-host-flame --label "Runtime Host / Flame" --position "0,0,-1.1"
   pnpm vfx:usage -- remove --id marker-4-energy-shield
+
+Validation:
+  validate/add/replace/remove require deployed effects, lifecycle compatibility,
+  target evidence, a confirmed budget, and static follow/loop capacity admission.
 
 Options:
   --lifecycle follow|loop|oneshot   Default: follow
@@ -794,7 +898,6 @@ Options:
   --params-file <path>              Initial instance params from JSON object
   --replace                         Replace an existing usage with the same id
   --dry-run                         Print the changed document without writing
-  --no-validate-target              Skip static target validation
-  --allow-missing-effect            Skip effect directory validation
+  --no-validate-target              Bypass only a code-proven runtime-node target that static scan cannot resolve; never a socket
 `);
 }

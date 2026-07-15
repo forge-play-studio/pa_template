@@ -285,6 +285,7 @@ export abstract class BaseEntity {
 
     // 归还模型到对象池
     if (this.pooledInstance) {
+      this.animationService.stop(this.animations);
       this.pooledInstance.node.parent = null;
       this.modelPool.release(this.pooledInstance);
       this.pooledInstance = null;
