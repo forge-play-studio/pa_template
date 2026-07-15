@@ -352,13 +352,18 @@ export async function createProjectRendererSession(
       runtimeShadowObjectBindings.clear();
       authoredClaimBaselineRefreshers.clear();
       const shadowSettlement = shadows.whenSettled().catch(error => { errors.push(error); });
+      const hadPendingUpdates = pendingUpdates.size > 0;
       let hostDisposalError: unknown;
       let hostDisposalFailed = false;
+      // Drain handle retire commands before disposing the World whenever no
+      // renderer update needs Host cancellation. Starting both concurrently
+      // can turn a normal retire flush into an AbortError from World disposal.
+      if (!hadPendingUpdates) await shadowSettlement;
       const hostDisposal = !hostDisposed
         ? disposeRendererHost(host).catch(error => { hostDisposalFailed = true; hostDisposalError = error; })
         : null;
       await Promise.allSettled([...pendingUpdates]);
-      await shadowSettlement;
+      if (hadPendingUpdates) await shadowSettlement;
       if (!hostDisposed) {
         await hostDisposal;
         if (!hostDisposalFailed) hostDisposed = true;
@@ -369,7 +374,7 @@ export async function createProjectRendererSession(
       }
       if (!unsubscribeBindings && hostDisposed && bindingsCleared) disposed = true;
       if (errors.length > 0) {
-        throw Object.assign(new Error('Project renderer session disposal failed.'), { errors });
+        throw Object.assign(new Error('Project renderer session disposal failed.'), { cause: errors[0], errors });
       }
     },
   };

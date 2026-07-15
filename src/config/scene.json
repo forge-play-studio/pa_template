@@ -8,10 +8,10 @@
     "generatedFrom": {
       "sourceId": "scene.main",
       "sourceType": "scene",
-      "revision": 73,
+      "revision": 74,
       "compilerId": "@fps-games/editor.playable-sdk.scene-compiler",
       "compilerVersion": "1",
-      "compiledAt": "2026-07-12T00:17:52.669Z"
+      "compiledAt": "2026-07-15T13:14:22.267Z"
     }
   },
   "gameplay": {
@@ -7115,7 +7115,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 73,
+          "revision": 74,
           "objectGuid": "go_2406b122-d63b-4971-bf66-7d78a8776543",
           "objectId": "main_camera",
           "component": "Transform"
@@ -7171,7 +7171,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 73,
+          "revision": 74,
           "objectGuid": "go_environment_light_default",
           "objectId": "environment_light",
           "component": "Transform"
@@ -7217,7 +7217,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 73,
+          "revision": 74,
           "objectGuid": "go_7017d029-9d69-4381-91ac-75093053caa9",
           "objectId": "sun_light",
           "component": "Transform"
@@ -7261,7 +7261,7 @@
         "name": "Shadow Receiver Plane",
         "parentId": "root",
         "shadow": {
-          "receive": "none",
+          "receive": "auto",
           "cast": "none",
           "mode": "none"
         },
@@ -7287,7 +7287,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 73,
+          "revision": 74,
           "objectGuid": "go_20efbb4a-c323-4ea3-911c-23c72827d7b9",
           "objectId": "plane",
           "component": "PrimitiveRenderer"
@@ -7331,7 +7331,7 @@
         "shadowPlan": {
           "casterId": "cube",
           "receiverIds": [
-            "asset_3"
+            "plane"
           ],
           "lightId": "sun_light",
           "backend": "projected",
@@ -7353,7 +7353,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 73,
+          "revision": 74,
           "objectGuid": "go_ac4a2824-3625-468c-aeee-d7c75dedc814",
           "objectId": "cube",
           "component": "PrimitiveRenderer"
@@ -7396,7 +7396,7 @@
         "shadowPlan": {
           "casterId": "sphere",
           "receiverIds": [
-            "asset_3"
+            "plane"
           ],
           "lightId": "sun_light",
           "backend": "projected",
@@ -7418,7 +7418,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 73,
+          "revision": 74,
           "objectGuid": "go_cc80f1b1-57b9-4373-baba-eed140d90c8f",
           "objectId": "sphere",
           "component": "PrimitiveRenderer"
@@ -7461,7 +7461,7 @@
         "shadowPlan": {
           "casterId": "capsule",
           "receiverIds": [
-            "asset_3"
+            "plane"
           ],
           "lightId": "sun_light",
           "backend": "projected",
@@ -7483,7 +7483,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 73,
+          "revision": 74,
           "objectGuid": "go_68778bee-9b2d-44bb-9a37-cfa42efa2846",
           "objectId": "capsule",
           "component": "PrimitiveRenderer"
@@ -7517,7 +7517,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 73,
+          "revision": 74,
           "objectGuid": "go_shadow_fixture_group",
           "objectId": "shadow_fixture_group",
           "component": "GameObject"
@@ -7554,7 +7554,7 @@
         "shadowPlan": {
           "casterId": "shadow_fixture_player",
           "receiverIds": [
-            "asset_3"
+            "plane"
           ],
           "lightId": "sun_light",
           "backend": "projected",
@@ -7576,7 +7576,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 73,
+          "revision": 74,
           "objectGuid": "go_shadow_fixture_player",
           "objectId": "shadow_fixture_player",
           "component": "ModelRenderer"
@@ -7632,7 +7632,7 @@
         "shadowPlan": {
           "casterId": "shadow_fixture_worker",
           "receiverIds": [
-            "asset_3"
+            "plane"
           ],
           "lightId": "sun_light",
           "backend": "projected",
@@ -7654,7 +7654,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 73,
+          "revision": 74,
           "objectGuid": "go_shadow_fixture_worker",
           "objectId": "shadow_fixture_worker",
           "component": "ModelRenderer"
@@ -7704,7 +7704,7 @@
         "shadowPlan": {
           "casterId": "shadow_fixture_truck",
           "receiverIds": [
-            "asset_3"
+            "plane"
           ],
           "lightId": "sun_light",
           "backend": "projected",
@@ -7726,7 +7726,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 73,
+          "revision": 74,
           "objectGuid": "go_shadow_fixture_truck",
           "objectId": "shadow_fixture_truck",
           "component": "ModelRenderer"
@@ -7785,7 +7785,7 @@
         "shadowPlan": {
           "casterId": "shadow_fixture_pine_tree",
           "receiverIds": [
-            "asset_3"
+            "plane"
           ],
           "lightId": "sun_light",
           "backend": "projected",
@@ -7807,7 +7807,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 73,
+          "revision": 74,
           "objectGuid": "go_shadow_fixture_pine_tree",
           "objectId": "shadow_fixture_pine_tree",
           "component": "ModelRenderer"
@@ -7857,7 +7857,7 @@
         "shadowPlan": {
           "casterId": "shadow_fixture_bush",
           "receiverIds": [
-            "asset_3"
+            "plane"
           ],
           "lightId": "sun_light",
           "backend": "projected",
@@ -7879,7 +7879,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 73,
+          "revision": 74,
           "objectGuid": "go_shadow_fixture_bush",
           "objectId": "shadow_fixture_bush",
           "component": "ModelRenderer"
@@ -7929,7 +7929,7 @@
         "shadowPlan": {
           "casterId": "shadow_fixture_rocks",
           "receiverIds": [
-            "asset_3"
+            "plane"
           ],
           "lightId": "sun_light",
           "backend": "projected",
@@ -7951,7 +7951,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 73,
+          "revision": 74,
           "objectGuid": "go_shadow_fixture_rocks",
           "objectId": "shadow_fixture_rocks",
           "component": "ModelRenderer"
@@ -8001,7 +8001,7 @@
         "shadowPlan": {
           "casterId": "shadow_fixture_fence",
           "receiverIds": [
-            "asset_3"
+            "plane"
           ],
           "lightId": "sun_light",
           "backend": "projected",
@@ -8023,7 +8023,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 73,
+          "revision": 74,
           "objectGuid": "go_shadow_fixture_fence",
           "objectId": "shadow_fixture_fence",
           "component": "ModelRenderer"
@@ -8073,7 +8073,7 @@
         "shadowPlan": {
           "casterId": "shadow_fixture_log_bundle",
           "receiverIds": [
-            "asset_3"
+            "plane"
           ],
           "lightId": "sun_light",
           "backend": "projected",
@@ -8095,7 +8095,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 73,
+          "revision": 74,
           "objectGuid": "go_shadow_fixture_log_bundle",
           "objectId": "shadow_fixture_log_bundle",
           "component": "ModelRenderer"
@@ -8148,7 +8148,7 @@
         "shadowPlan": {
           "casterId": "shadow_fixture_crate",
           "receiverIds": [
-            "asset_3"
+            "plane"
           ],
           "lightId": "sun_light",
           "backend": "projected",
@@ -8170,7 +8170,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 73,
+          "revision": 74,
           "objectGuid": "go_shadow_fixture_crate",
           "objectId": "shadow_fixture_crate",
           "component": "ModelRenderer"
@@ -8220,7 +8220,7 @@
         "shadowPlan": {
           "casterId": "shadow_fixture_barrel",
           "receiverIds": [
-            "asset_3"
+            "plane"
           ],
           "lightId": "sun_light",
           "backend": "projected",
@@ -8242,7 +8242,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 73,
+          "revision": 74,
           "objectGuid": "go_shadow_fixture_barrel",
           "objectId": "shadow_fixture_barrel",
           "component": "ModelRenderer"
@@ -8292,7 +8292,7 @@
         "shadowPlan": {
           "casterId": "shadow_fixture_chicken",
           "receiverIds": [
-            "asset_3"
+            "plane"
           ],
           "lightId": "sun_light",
           "backend": "projected",
@@ -8314,7 +8314,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 73,
+          "revision": 74,
           "objectGuid": "go_shadow_fixture_chicken",
           "objectId": "shadow_fixture_chicken",
           "component": "ModelRenderer"
@@ -8364,7 +8364,7 @@
         "shadowPlan": {
           "casterId": "shadow_fixture_hay_bale",
           "receiverIds": [
-            "asset_3"
+            "plane"
           ],
           "lightId": "sun_light",
           "backend": "projected",
@@ -8386,7 +8386,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 73,
+          "revision": 74,
           "objectGuid": "go_shadow_fixture_hay_bale",
           "objectId": "shadow_fixture_hay_bale",
           "component": "ModelRenderer"
@@ -8436,7 +8436,7 @@
         "shadowPlan": {
           "casterId": "shadow_fixture_counter",
           "receiverIds": [
-            "asset_3"
+            "plane"
           ],
           "lightId": "sun_light",
           "backend": "projected",
@@ -8458,7 +8458,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 73,
+          "revision": 74,
           "objectGuid": "go_shadow_fixture_counter",
           "objectId": "shadow_fixture_counter",
           "component": "ModelRenderer"
@@ -8499,7 +8499,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 73,
+          "revision": 74,
           "objectGuid": "go_8c25b316-6074-41ae-a1f2-49f3709453ec",
           "objectId": "asset",
           "component": "ModelRenderer"
@@ -8564,7 +8564,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 73,
+          "revision": 74,
           "objectGuid": "go_1ecaee91-9738-4914-8fc2-5f2b69cc018a",
           "objectId": "asset_2",
           "component": "ModelRenderer"
@@ -8604,7 +8604,7 @@
         "parentId": "root",
         "shadow": {
           "cast": "none",
-          "receive": "enabled",
+          "receive": "none",
           "mode": "none"
         },
         "shadowPlan": {
@@ -8629,7 +8629,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 73,
+          "revision": 74,
           "objectGuid": "go_cd724b70-f492-4014-ac1d-e51ef61cfc0d",
           "objectId": "asset_3",
           "component": "ModelRenderer"
@@ -8670,7 +8670,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 73,
+          "revision": 74,
           "objectGuid": "go_cc0008ef-62dc-4a23-ba98-bced26f56a80",
           "objectId": "issue_444__04",
           "component": "ModelRenderer"
@@ -8717,7 +8717,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 73,
+          "revision": 74,
           "objectGuid": "go_22987ad9-9e4b-46ce-9978-1e72c24fbc53",
           "objectId": "issue_444",
           "component": "ModelRenderer"
@@ -8770,7 +8770,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 73,
+          "revision": 74,
           "objectGuid": "go_issue464_ground_decal_operation",
           "objectId": "issue464_ground_decal_operation",
           "component": "Transform"
@@ -8870,7 +8870,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 73,
+          "revision": 74,
           "objectGuid": "go_issue464_ground_decal_delivery",
           "objectId": "issue464_ground_decal_delivery",
           "component": "Transform"
@@ -10107,6 +10107,6 @@
     "textures": []
   },
   "render": {},
-  "version": 68,
-  "updatedAt": "2026-07-12T00:17:52.673Z"
+  "version": 69,
+  "updatedAt": "2026-07-15T13:14:22.272Z"
 }

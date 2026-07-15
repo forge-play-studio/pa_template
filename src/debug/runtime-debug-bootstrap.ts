@@ -14,6 +14,7 @@ import { mountLocalEditorModeSwitcher } from '../services/fps-game-editor/local-
 import { mountRuntimeAudioDebugPanel } from './runtime-audio-debug-panel';
 import { mountRuntimeGameplayDebugPanels } from './runtime-gameplay-debug-panels';
 import { mountRuntimeLightingDebugPanel } from './runtime-lighting-debug-panel';
+import { mountRuntimeShadowDebugPanel } from './runtime-shadow-debug-panel';
 import { mountRuntimeVfxDebugPanel } from './runtime-vfx-debug-panel';
 import { DisposableStack } from './framework/disposables';
 import { createRuntimeDebugPanelManager } from './framework/panel-manager';
@@ -41,6 +42,10 @@ export function mountRuntimeDebug(options: RuntimeDebugBootstrapOptions): Runtim
     getGame: options.getGame,
   }));
   runtimePanels.use(mountRuntimeLightingDebugPanel({
+    root,
+    getGame: options.getGame,
+  }));
+  runtimePanels.use(mountRuntimeShadowDebugPanel({
     root,
     getGame: options.getGame,
   }));

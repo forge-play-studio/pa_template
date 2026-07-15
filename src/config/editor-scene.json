@@ -5,7 +5,7 @@
     "authoringSource": {
       "sourceId": "scene.main",
       "sourceType": "scene",
-      "revision": 73
+      "revision": 74
     }
   },
   "assets": [
@@ -7318,7 +7318,7 @@
           }
         ],
         "shadow": {
-          "receive": "none",
+          "receive": "auto",
           "cast": "none",
           "mode": "none"
         }
@@ -8224,7 +8224,7 @@
         ],
         "shadow": {
           "cast": "none",
-          "receive": "enabled",
+          "receive": "none",
           "mode": "none"
         },
         "overrides": {
