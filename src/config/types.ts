@@ -123,10 +123,21 @@ export interface AssetExternalRef {
   [key: string]: unknown;
 }
 
+export interface SceneAssetMaterialSlotConfig {
+  slotId: string;
+  ownerNodePath: string;
+  label?: string;
+  meshIndex?: number;
+  primitiveIndex?: number;
+  sourceMaterialIndices?: number[];
+  sourceMeshName?: string;
+}
+
 export interface SceneAssetConfig {
   id: string;
   guid?: string;
   type: 'glb';
+  url?: string;
   external?: AssetExternalRef;
   displayName?: string;
   category?: string;
@@ -134,6 +145,8 @@ export interface SceneAssetConfig {
   singleton?: boolean;
   materialMode?: SceneAssetMaterialMode;
   defaults?: SceneAssetDefaults;
+  materialSlots?: SceneAssetMaterialSlotConfig[];
+  /** @deprecated Runtime schema v2 compatibility only. */
   metadata?: Record<string, unknown>;
 }
 

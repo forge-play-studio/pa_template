@@ -127,7 +127,12 @@ export const sceneSource = createFpsGameEditorSceneSourceServices<EditorSceneDoc
   compilerId: PLAYABLE_EDITOR_SCENE_COMPILER_ID,
   compilerVersion: PLAYABLE_EDITOR_SCENE_COMPILER_VERSION,
   compileRuntimeScene: document => compileEditorSceneDocumentToSceneConfig(document, structuredClone(baseSceneConfig) as SceneConfig).sceneConfig,
-  isRuntimeScene: (value): value is SceneConfig => !!value && typeof value === 'object' && (value as SceneConfig).schemaVersion === 2,
+  isRuntimeScene: (value): value is SceneConfig => {
+    const schemaVersion = !!value && typeof value === 'object'
+      ? (value as SceneConfig).schemaVersion
+      : undefined;
+    return schemaVersion === 3 || schemaVersion === 2;
+  },
   onRuntimeScene: value => configService.replaceSceneConfig(structuredClone(value)),
   renderingDraft: renderingRuntime.profileDraft,
   staticShadowDraft: renderingRuntime.staticShadowDraft,

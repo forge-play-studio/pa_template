@@ -36,6 +36,7 @@ import { applyMaterialDebugAdjustments } from '../utils/materialDebugAdjust';
 import renderingConfig from '../config/rendering.json';
 import {
   configService,
+  resolveSceneAssetRuntimeUrl,
   type ArtistMaterialProfile,
   type ColorRGB,
   type GroundDecalUiConfig,
@@ -100,6 +101,7 @@ type SceneBuilderMaterialSlotSourceDescriptor = {
   primitiveIndex?: number;
   sourceMaterialIndex?: number;
   sourceMaterialIndices?: number[];
+  sourceMeshName?: string;
   materialName?: string;
   materialNames?: string[];
 };
@@ -119,6 +121,8 @@ export class SceneBuilder {
   private sceneNodeCleanup = new Map<string, (() => void) | null>();
   private sceneNodeAnimationGroups = new Map<string, AnimationGroup[]>();
   private sceneAssetConfigs = new Map<string, SceneAssetConfig>();
+  private sceneAssetRuntimeUrlIds = new Set<string>();
+  private readonly sceneAssetRuntimeUrlOwner = {};
   private selectedCameraRig: SceneCameraRigConfig | null = null;
   private hemisphericLight: HemisphericLight | null = null;
   private directionalLight: DirectionalLight | null = null;
@@ -148,6 +152,14 @@ export class SceneBuilder {
 
   upsertSceneAssetConfig(asset: SceneAssetConfig): void {
     this.sceneAssetConfigs.set(asset.id, asset);
+    const url = resolveSceneAssetRuntimeUrl(asset);
+    if (url) {
+      this.sceneAssetRuntimeUrlIds.add(asset.id);
+      this.assetLoader.registerOwnedRuntimeModelUrl(asset.id, url, this.sceneAssetRuntimeUrlOwner);
+    } else if (this.sceneAssetRuntimeUrlIds.has(asset.id)) {
+      this.assetLoader.unregisterOwnedRuntimeModelUrl(asset.id, this.sceneAssetRuntimeUrlOwner);
+      this.sceneAssetRuntimeUrlIds.delete(asset.id);
+    }
   }
 
   async preloadSceneAsset(asset: SceneAssetConfig): Promise<void> {
@@ -1335,9 +1347,16 @@ export class SceneBuilder {
   }
 
   private syncSceneAssetIndex(): void {
+    const nextAssetIds = new Set<string>();
     this.sceneAssetConfigs.clear();
     for (const asset of configService.getSceneAssets()) {
-      this.sceneAssetConfigs.set(asset.id, asset);
+      nextAssetIds.add(asset.id);
+      this.upsertSceneAssetConfig(asset);
+    }
+    for (const assetId of this.sceneAssetRuntimeUrlIds) {
+      if (nextAssetIds.has(assetId)) continue;
+      this.assetLoader.unregisterOwnedRuntimeModelUrl(assetId, this.sceneAssetRuntimeUrlOwner);
+      this.sceneAssetRuntimeUrlIds.delete(assetId);
     }
   }
 
@@ -1633,7 +1652,7 @@ export class SceneBuilder {
   ): SceneBuilderMaterialSlotSourceDescriptor | null {
     const normalizedSlotId = typeof slotId === 'string' ? slotId.trim() : '';
     if (!asset || !normalizedSlotId) return null;
-    const materialSlots = Array.isArray(asset.metadata?.materialSlots) ? asset.metadata.materialSlots : [];
+    const materialSlots = readSceneBuilderAssetMaterialSlots(asset);
     for (const materialSlot of materialSlots) {
       if (!isRecord(materialSlot)) continue;
       const record = materialSlot;
@@ -1695,7 +1714,7 @@ export class SceneBuilder {
     sceneNodeId: string,
   ): boolean {
     if (!asset || materialSlot.primitiveIndex !== 0) return false;
-    const rawSlots = Array.isArray(asset.metadata?.materialSlots) ? asset.metadata.materialSlots : [];
+    const rawSlots = readSceneBuilderAssetMaterialSlots(asset);
     if (rawSlots.length === 0) return false;
     const resolveContext = { projectionNodeId: sceneNodeId };
     const slotKey = createMaterialSlotOwnerPathMatchKey(materialSlot.ownerNodePath, resolveContext);
@@ -1811,9 +1830,29 @@ export class SceneBuilder {
   }
 
   dispose(): void {
-    this.clearSceneRuntime();
+    const errors: unknown[] = [];
+    try {
+      this.clearSceneRuntime();
+    } catch (error) {
+      errors.push(error);
+    }
+    for (const assetId of [...this.sceneAssetRuntimeUrlIds]) {
+      try {
+        this.assetLoader.unregisterOwnedRuntimeModelUrl(assetId, this.sceneAssetRuntimeUrlOwner);
+        this.sceneAssetRuntimeUrlIds.delete(assetId);
+      } catch (error) {
+        errors.push(error);
+      }
+    }
     this.shadowService = null;
-    this.root.dispose();
+    try {
+      if (!this.root.isDisposed()) this.root.dispose();
+    } catch (error) {
+      errors.push(error);
+    }
+    if (errors.length > 0) {
+      throw new AggregateError(errors, '[SceneBuilder] dispose failed');
+    }
   }
 }
 
@@ -1846,6 +1885,7 @@ function readSceneBuilderMaterialSlotSourceDescriptor(
     ...readOptionalIntegerProperty(record, 'primitiveIndex'),
     ...readOptionalIntegerProperty(record, 'sourceMaterialIndex'),
     ...readOptionalIntegerArrayProperty(record, 'sourceMaterialIndices'),
+    ...readOptionalStringProperty(record, 'sourceMeshName'),
     ...readOptionalStringProperty(record, 'materialName'),
     ...readOptionalStringArrayProperty(record, 'materialNames'),
   };
@@ -1911,6 +1951,7 @@ function collectSceneBuilderMaterialSlotOwnerFallbackNames(
     readMaterialSlotOwnerPathLastSegment(materialSlot.ownerNodePath),
     stripPrimitiveSuffix(materialSlot.label),
     materialSlot.label,
+    materialSlot.sourceMeshName,
     readSceneBuilderAssetAnalysisMeshName(asset, materialSlot.meshIndex),
   ];
   for (const name of baseNames) {
@@ -1978,6 +2019,7 @@ function isSceneBuilderRuntimeSplitPrimitiveOwnerNode(
     readMaterialSlotOwnerPathLastSegment(materialSlot.ownerNodePath),
     stripPrimitiveSuffix(materialSlot.label),
     materialSlot.label,
+    materialSlot.sourceMeshName,
   ]) {
     addSceneBuilderMaterialSlotFallbackName(
       primitiveNames,
@@ -2006,12 +2048,18 @@ function readSceneBuilderAssetAnalysisMeshName(
   meshIndex: number | undefined,
 ): string | null {
   if (!Number.isInteger(meshIndex)) return null;
+  if (Array.isArray(asset?.materialSlots)) return null;
   const assetAnalysis = isRecord(asset?.metadata?.assetAnalysis) ? asset.metadata.assetAnalysis : null;
   const meshes = Array.isArray(assetAnalysis?.meshes) ? assetAnalysis.meshes : [];
   const mesh = meshes.find((entry): entry is Record<string, unknown> => (
     isRecord(entry) && entry.meshIndex === meshIndex
   ));
   return typeof mesh?.name === 'string' ? mesh.name : null;
+}
+
+function readSceneBuilderAssetMaterialSlots(asset: SceneAssetConfig): unknown[] {
+  if (Array.isArray(asset.materialSlots)) return asset.materialSlots;
+  return Array.isArray(asset.metadata?.materialSlots) ? asset.metadata.materialSlots : [];
 }
 
 function normalizeRuntimeMaterialOwnerName(value: string | null | undefined): string | null {

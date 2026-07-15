@@ -41,10 +41,23 @@ import type {
 import sceneConfigJson from './scene.json';
 import gameConfigJson from './game.json';
 import renderingConfigJson from './rendering.json';
-import { assertSceneJsonV2 } from './SceneJsonV2Validator';
+import { assertSceneJson } from './SceneJsonV2Validator';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+
+function readNonEmptyString(value: unknown): string | undefined {
+  const normalized = typeof value === 'string' ? value.trim() : '';
+  return normalized || undefined;
+}
+
+export function resolveSceneAssetRuntimeUrl(asset: SceneAssetConfig): string | undefined {
+  const metadata = isRecord(asset.metadata) ? asset.metadata : undefined;
+  return readNonEmptyString(asset.url)
+    ?? readNonEmptyString(metadata?.url)
+    ?? readNonEmptyString(metadata?.relativePath)
+    ?? readNonEmptyString(asset.external?.assetUrl);
 }
 
 function normalizeColorRGB(value: unknown): ColorRGB | undefined {
@@ -615,7 +628,7 @@ export class ConfigService {
   private sceneNodeMap = new Map<string, SceneNodeConfig>();
 
   constructor() {
-    assertSceneJsonV2(sceneConfigJson as SceneConfig);
+    assertSceneJson(sceneConfigJson as SceneConfig);
     this.sceneConfig = sceneConfigJson as SceneConfig;
     this.gameConfig = gameConfigJson as GameConfig;
 
@@ -750,7 +763,7 @@ export class ConfigService {
   }
 
   replaceSceneConfig(sceneConfig: SceneConfig): void {
-    assertSceneJsonV2(sceneConfig);
+    assertSceneJson(sceneConfig);
     this.sceneConfig = sceneConfig;
     this.buildIndexes();
   }
