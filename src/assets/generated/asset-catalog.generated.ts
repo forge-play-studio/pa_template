@@ -37,7 +37,12 @@ export interface GeneratedAssetCatalogEntry {
   relativePath: string;
   originalFileName?: string;
   codeKey?: string;
+  category?: string;
   placeable?: boolean;
+  warmupCount?: number;
+  singleton?: boolean;
+  materialMode?: string;
+  defaults?: Record<string, unknown>;
   contentHash?: string;
   byteSize?: number;
   external?: { platformAssetId?: string; assetPath?: string; assetUrl?: string };
