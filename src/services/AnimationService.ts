@@ -1,247 +1,318 @@
 /**
- * AnimationService - 动画播放服务
+ * AnimationService - GLB / glTF model clip playback owner.
  *
- * 职责：统一管理动画的播放、停止、混合
+ * Transform motion (item flight, pop/scale tweens, conveyor transfer) belongs
+ * to the corresponding gameplay/presentation owner. This service only owns
+ * Babylon AnimationGroup playback and centrally-updated clip transitions.
  */
 
-import { AnimationGroup } from '@babylonjs/core/Animations/animationGroup';
+import type { AnimationGroup } from '@babylonjs/core/Animations/animationGroup';
 
-/**
- * 动画播放选项
- */
 export interface PlayOptions {
-  /** 是否循环 */
+  /** Whether the clip loops. */
   loop?: boolean;
-  /** 播放速度 */
+  /** Babylon animation speed ratio. */
   speed?: number;
-  /** 从头开始 */
+  /** Restart even when the same clip is already active. */
   restart?: boolean;
 }
 
+export interface CrossFadeOptions {
+  /** Whether the destination clip loops. */
+  loop?: boolean;
+  /** Destination clip speed ratio. */
+  speed?: number;
+  /** Restart the destination clip from its first frame. */
+  restartTarget?: boolean;
+}
+
+export interface AnimationServiceDiagnostics {
+  activeTransitions: number;
+}
+
+interface AnimationSetState {
+  current: AnimationGroup | null;
+  transition: ActiveTransition | null;
+}
+
+interface ActiveTransition {
+  state: AnimationSetState;
+  from: AnimationGroup;
+  to: AnimationGroup;
+  elapsedSeconds: number;
+  durationSeconds: number;
+}
+
+const DEFAULT_CROSS_FADE_DURATION_MS = 200;
+
 /**
- * AnimationService 服务
+ * Owns skeletal/model clip playback for independently instantiated model sets.
+ *
+ * State is keyed by the actual AnimationGroup objects. Two pooled actors may
+ * contain clips with identical names without sharing playback state.
  */
 export class AnimationService {
-  // 当前播放的动画缓存：node name -> animation name
-  private currentAnimations = new Map<string, string>();
+  private readonly statesByGroup = new WeakMap<AnimationGroup, AnimationSetState>();
+  private readonly activeTransitions = new Set<ActiveTransition>();
 
-  /**
-   * 播放动画
-   * @param animations 动画组数组
-   * @param name 动画名称（支持模糊匹配）
-   * @param options 播放选项
-   * @returns 匹配到的动画组，或 null
-   */
   play(
-    animations: AnimationGroup[],
+    animations: readonly AnimationGroup[],
     name: string,
-    options: PlayOptions = {}
+    options: PlayOptions = {},
   ): AnimationGroup | null {
-    const anim = this.findAnimation(animations, name);
-    if (!anim) {
-      return null;
-    }
+    const animation = this.findAnimation(animations, name);
+    if (!animation) return null;
+
+    const state = this.getOrCreateState(animations);
+    if (!state) return null;
 
     const { loop = true, speed = 1, restart = false } = options;
-
-    // 检查是否已在播放相同动画
-    const cacheKey = this.getCacheKey(animations);
-    const currentAnim = this.currentAnimations.get(cacheKey);
-
-    if (currentAnim === anim.name && anim.isPlaying && !restart) {
-      // 已在播放，只更新速度
-      anim.speedRatio = speed;
-      return anim;
+    if (state.current === animation && animation.isStarted && !restart) {
+      animation.loopAnimation = loop;
+      animation.speedRatio = speed;
+      if (!animation.isPlaying) animation.restart();
+      return animation;
     }
 
-    // 停止当前动画
-    this.stopAll(animations);
-
-    // 播放新动画
-    anim.speedRatio = speed;
-    anim.loopAnimation = loop;
-    anim.play(loop);
-
-    // 缓存当前动画
-    this.currentAnimations.set(cacheKey, anim.name);
-
-    return anim;
+    this.cancelTransition(state);
+    this.stopGroups(animations);
+    this.startUnweighted(animation, loop, speed);
+    state.current = animation;
+    return animation;
   }
 
-  /**
-   * 停止指定动画
-   * @param animations 动画组数组
-   * @param name 动画名称，不指定则停止所有
-   */
-  stop(animations: AnimationGroup[], name?: string): void {
+  stop(animations: readonly AnimationGroup[], name?: string): void {
+    const state = this.findState(animations);
+    if (!name) {
+      if (state) this.cancelTransition(state);
+      this.stopGroups(animations);
+      if (state) state.current = null;
+      return;
+    }
+
+    const animation = this.findAnimation(animations, name);
+    if (!animation) return;
+
+    if (state?.transition && (state.transition.from === animation || state.transition.to === animation)) {
+      const other = state.transition.from === animation
+        ? state.transition.to
+        : state.transition.from;
+      this.cancelTransition(state);
+      animation.stop(true);
+      state.current = other.isStarted ? other : null;
+      return;
+    }
+
+    animation.stop(true);
+    animation.weight = -1;
+    if (state?.current === animation) state.current = null;
+  }
+
+  stopAll(animations: readonly AnimationGroup[]): void {
+    this.stop(animations);
+  }
+
+  pause(animations: readonly AnimationGroup[], name?: string): void {
     if (name) {
-      const anim = this.findAnimation(animations, name);
-      anim?.stop();
-    } else {
-      this.stopAll(animations);
+      const animation = this.findAnimation(animations, name);
+      if (animation?.isStarted && animation.isPlaying) animation.pause();
+      return;
     }
 
-    // 清除缓存
-    const cacheKey = this.getCacheKey(animations);
-    this.currentAnimations.delete(cacheKey);
-  }
-
-  /**
-   * 停止所有动画
-   */
-  stopAll(animations: AnimationGroup[]): void {
-    for (const anim of animations) {
-      if (anim.isPlaying) {
-        anim.stop();
-      }
+    for (const animation of animations) {
+      if (animation.isStarted && animation.isPlaying) animation.pause();
     }
   }
 
-  /**
-   * 暂停动画
-   */
-  pause(animations: AnimationGroup[], name?: string): void {
+  resume(animations: readonly AnimationGroup[], name?: string): void {
     if (name) {
-      const anim = this.findAnimation(animations, name);
-      anim?.pause();
-    } else {
-      animations.forEach(a => a.pause());
+      const animation = this.findAnimation(animations, name);
+      if (animation?.isStarted && !animation.isPlaying) animation.restart();
+      return;
+    }
+
+    for (const animation of animations) {
+      if (animation.isStarted && !animation.isPlaying) animation.restart();
     }
   }
 
-  /**
-   * 恢复动画
-   */
-  resume(animations: AnimationGroup[], name?: string): void {
+  setSpeed(animations: readonly AnimationGroup[], speed: number, name?: string): void {
     if (name) {
-      const anim = this.findAnimation(animations, name);
-      if (anim && !anim.isPlaying) {
-        anim.play(anim.loopAnimation);
-      }
-    } else {
-      animations.forEach(a => {
-        if (!a.isPlaying) {
-          a.play(a.loopAnimation);
-        }
-      });
+      const animation = this.findAnimation(animations, name);
+      if (animation) animation.speedRatio = speed;
+      return;
     }
+
+    for (const animation of animations) animation.speedRatio = speed;
   }
 
   /**
-   * 设置播放速度
-   */
-  setSpeed(animations: AnimationGroup[], speed: number, name?: string): void {
-    if (name) {
-      const anim = this.findAnimation(animations, name);
-      if (anim) {
-        anim.speedRatio = speed;
-      }
-    } else {
-      animations.forEach(a => {
-        a.speedRatio = speed;
-      });
-    }
-  }
-
-  /**
-   * 交叉淡入淡出（简化版：直接切换）
-   * @param animations 动画组数组
-   * @param fromName 当前动画名称
-   * @param toName 目标动画名称
-   * @param _duration 过渡时间（暂未实现真正的混合）
+   * Cross-fades between two clips using AnimationGroup weights.
+   *
+   * `durationMs` remains milliseconds for backwards compatibility. The blend
+   * itself is advanced by the single AnimationService.update() call in Game.
    */
   crossFade(
-    animations: AnimationGroup[],
+    animations: readonly AnimationGroup[],
     fromName: string,
     toName: string,
-    _duration: number = 200
-  ): void {
-    const fromAnim = this.findAnimation(animations, fromName);
-    const toAnim = this.findAnimation(animations, toName);
+    durationMs: number = DEFAULT_CROSS_FADE_DURATION_MS,
+    options: CrossFadeOptions = {},
+  ): AnimationGroup | null {
+    const requestedFrom = this.findAnimation(animations, fromName);
+    const to = this.findAnimation(animations, toName);
+    if (!to) return null;
 
-    if (fromAnim) {
-      fromAnim.stop();
+    const state = this.getOrCreateState(animations);
+    if (!state) return null;
+
+    const from = requestedFrom?.isStarted
+      ? requestedFrom
+      : state.current?.isStarted
+        ? state.current
+        : null;
+    const normalizedDurationMs = Number.isFinite(durationMs) ? Math.max(0, durationMs) : 0;
+    const { loop = true, speed = 1, restartTarget = true } = options;
+
+    if (!from || from === to || normalizedDurationMs === 0) {
+      return this.play(animations, to.name, { loop, speed, restart: restartTarget });
     }
 
-    if (toAnim) {
-      toAnim.play(true);
+    this.cancelTransition(state);
+    for (const animation of animations) {
+      if (animation !== from && animation !== to && animation.isStarted) animation.stop(true);
+    }
 
-      const cacheKey = this.getCacheKey(animations);
-      this.currentAnimations.set(cacheKey, toAnim.name);
+    from.weight = 1;
+    if (restartTarget && to.isStarted) to.stop(true);
+    to.weight = 0;
+    to.speedRatio = speed;
+    to.loopAnimation = loop;
+    if (!to.isStarted) to.play(loop);
+    else if (!to.isPlaying) to.restart();
+
+    const transition: ActiveTransition = {
+      state,
+      from,
+      to,
+      elapsedSeconds: 0,
+      durationSeconds: normalizedDurationMs / 1000,
+    };
+    state.current = to;
+    state.transition = transition;
+    this.activeTransitions.add(transition);
+    return to;
+  }
+
+  /** Advance all active clip blends once from the project update loop. */
+  update(deltaSeconds: number): void {
+    if (!Number.isFinite(deltaSeconds) || deltaSeconds <= 0 || this.activeTransitions.size === 0) return;
+
+    for (const transition of this.activeTransitions) {
+      transition.elapsedSeconds += deltaSeconds;
+      const progress = Math.min(1, transition.elapsedSeconds / transition.durationSeconds);
+      transition.from.weight = 1 - progress;
+      transition.to.weight = progress;
+
+      if (progress < 1) continue;
+
+      transition.from.stop(true);
+      transition.from.weight = -1;
+      transition.to.weight = -1;
+      transition.state.transition = null;
+      this.activeTransitions.delete(transition);
     }
   }
 
-  /**
-   * 查找动画（支持模糊匹配）
-   * @param animations 动画组数组
-   * @param name 动画名称
-   * @returns 匹配的动画组
-   */
-  findAnimation(animations: AnimationGroup[], name: string): AnimationGroup | null {
-    if (!animations || animations.length === 0) {
-      return null;
-    }
+  findAnimation(animations: readonly AnimationGroup[], name: string): AnimationGroup | null {
+    if (animations.length === 0) return null;
 
     const nameLower = name.toLowerCase();
-
-    // 精确匹配
-    let found = animations.find(a => a.name.toLowerCase() === nameLower);
+    let found = animations.find(animation => animation.name.toLowerCase() === nameLower);
     if (found) return found;
 
-    // 包含匹配
-    found = animations.find(a => a.name.toLowerCase().includes(nameLower));
+    found = animations.find(animation => animation.name.toLowerCase().includes(nameLower));
     if (found) return found;
 
-    // 常见别名匹配
-    const aliases: Record<string, string[]> = {
+    const aliases: Readonly<Record<string, readonly string[]>> = {
       idle: ['idle', 'stand', 'wait', 'default'],
       walk: ['walk', 'run', 'move', 'locomotion'],
       action: ['action', 'attack', 'hit', 'work', 'interact'],
       carry: ['carry', 'hold', 'pickup'],
     };
 
-    const aliasNames = aliases[nameLower];
-    if (aliasNames) {
-      for (const alias of aliasNames) {
-        found = animations.find(a => a.name.toLowerCase().includes(alias));
-        if (found) return found;
-      }
+    for (const alias of aliases[nameLower] ?? []) {
+      found = animations.find(animation => animation.name.toLowerCase().includes(alias));
+      if (found) return found;
     }
-
     return null;
   }
 
-  /**
-   * 检查动画是否正在播放
-   */
-  isPlaying(animations: AnimationGroup[], name: string): boolean {
-    const anim = this.findAnimation(animations, name);
-    return anim?.isPlaying ?? false;
+  isPlaying(animations: readonly AnimationGroup[], name: string): boolean {
+    return this.findAnimation(animations, name)?.isPlaying ?? false;
   }
 
-  /**
-   * 获取当前播放的动画名称
-   */
-  getCurrentAnimationName(animations: AnimationGroup[]): string | null {
-    const cacheKey = this.getCacheKey(animations);
-    return this.currentAnimations.get(cacheKey) || null;
+  getCurrentAnimationName(animations: readonly AnimationGroup[]): string | null {
+    const current = this.findState(animations)?.current;
+    return current?.isStarted ? current.name : null;
   }
 
-  /**
-   * 列出所有可用动画（调试用）
-   */
-  listAnimations(animations: AnimationGroup[]): string[] {
-    return animations.map(a => a.name);
+  listAnimations(animations: readonly AnimationGroup[]): string[] {
+    return animations.map(animation => animation.name);
   }
 
-  /**
-   * 生成缓存键
-   */
-  private getCacheKey(animations: AnimationGroup[]): string {
-    if (animations.length === 0) return '';
-    // 使用第一个动画的名称前缀作为键
-    const firstAnim = animations[0];
-    const parts = firstAnim.name.split('_');
-    return parts.slice(0, 2).join('_');
+  getDiagnostics(): AnimationServiceDiagnostics {
+    return { activeTransitions: this.activeTransitions.size };
+  }
+
+  dispose(): void {
+    for (const transition of this.activeTransitions) {
+      transition.from.stop(true);
+      transition.to.stop(true);
+      transition.from.weight = -1;
+      transition.to.weight = -1;
+      transition.state.current = null;
+      transition.state.transition = null;
+    }
+    this.activeTransitions.clear();
+  }
+
+  private getOrCreateState(animations: readonly AnimationGroup[]): AnimationSetState | null {
+    if (animations.length === 0) return null;
+    const existing = this.findState(animations);
+    const state = existing ?? { current: null, transition: null };
+    for (const animation of animations) this.statesByGroup.set(animation, state);
+    return state;
+  }
+
+  private findState(animations: readonly AnimationGroup[]): AnimationSetState | null {
+    for (const animation of animations) {
+      const state = this.statesByGroup.get(animation);
+      if (state) return state;
+    }
+    return null;
+  }
+
+  private startUnweighted(animation: AnimationGroup, loop: boolean, speed: number): void {
+    animation.weight = -1;
+    animation.speedRatio = speed;
+    animation.loopAnimation = loop;
+    animation.play(loop);
+  }
+
+  private stopGroups(animations: readonly AnimationGroup[]): void {
+    for (const animation of animations) {
+      if (animation.isStarted) animation.stop(true);
+      animation.weight = -1;
+    }
+  }
+
+  private cancelTransition(state: AnimationSetState): void {
+    const transition = state.transition;
+    if (!transition) return;
+    transition.from.weight = -1;
+    transition.to.weight = -1;
+    this.activeTransitions.delete(transition);
+    state.transition = null;
   }
 }

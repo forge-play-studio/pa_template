@@ -368,6 +368,9 @@ export class Game {
     for (const module of this.gameplayModules) {
       module.update?.(deltaTime);
     }
+    // One owner advances all AnimationGroup cross-fades. Feature code must not
+    // attach one render observer/timer per model animation.
+    this.animationService?.update(deltaTime);
   }
 
   // ============================================================
@@ -489,6 +492,9 @@ export class Game {
     attempt(() => this.shadowService?.dispose());
     this.shadowService = null;
 
+    attempt(() => this.animationService?.dispose());
+    this.animationService = null;
+
     attempt(() => this.modelPool?.dispose());
     this.modelPool = null;
 
@@ -496,7 +502,6 @@ export class Game {
     this.sceneBuilder = null;
 
     this.assetLoader = null;
-    this.animationService = null;
 
     attempt(() => this.scene.dispose());
     attempt(() => this.engine.dispose());
