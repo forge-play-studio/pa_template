@@ -309,6 +309,7 @@ export class Game {
       sceneBuilder: this.sceneBuilder,
       sceneVfxService: this.sceneVfxService,
       rendererShadows: this.rendererSession.shadows,
+      rendererSession: this.rendererSession,
       analytics: this.analyticsService,
       cta: this.ctaService,
       player: this.player,

@@ -14,6 +14,7 @@ import type {
   SceneVfxService,
 } from '../services';
 import type { FpsShadowRendererService } from '@fps-games/editor/playable-runtime/babylon';
+import type { ProjectRendererSession } from '../services/fps-game-editor/renderer-host';
 import type { ZoneSystem } from '../systems';
 
 export interface GameplayModule {
@@ -34,6 +35,7 @@ export interface GameplayRuntimeContext {
   sceneBuilder: SceneBuilder;
   sceneVfxService: SceneVfxService;
   rendererShadows: FpsShadowRendererService;
+  rendererSession: ProjectRendererSession;
   analytics: PlayableAnalyticsService;
   cta: PlayableCtaService;
   player: SimplePlayer;

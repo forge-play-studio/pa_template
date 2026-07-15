@@ -104,6 +104,12 @@ type SceneBuilderMaterialSlotTarget = {
   material: any;
 };
 
+export type SceneBuilderRuntimeBindingChange = Readonly<{
+  kind: 'node-added' | 'node-removed' | 'light-changed' | 'transform-changed' | 'material-changed';
+  nodeId: string;
+  revision: number;
+}>;
+
 export class SceneBuilder {
   private scene: Scene;
   private assetLoader: AssetLoader;
@@ -124,7 +130,8 @@ export class SceneBuilder {
   private selectedDirectionalLightEnabled = true;
   private hemisphericLightSource: SceneRuntimeSourceBinding | undefined;
   private directionalLightSource: SceneRuntimeSourceBinding | undefined;
-  private readonly runtimeBindingListeners = new Set<() => void>();
+  private readonly runtimeBindingListeners = new Set<(change: SceneBuilderRuntimeBindingChange) => void>();
+  private runtimeBindingRevision = 0;
 
   constructor(scene: Scene, assetLoader: AssetLoader, modelPool?: ModelPool) {
     this.scene = scene;
@@ -249,7 +256,7 @@ export class SceneBuilder {
     return this.directionalLight;
   }
 
-  subscribeRuntimeBindings(listener: () => void): () => void {
+  subscribeRuntimeBindings(listener: (change: SceneBuilderRuntimeBindingChange) => void): () => void {
     this.runtimeBindingListeners.add(listener);
     return () => this.runtimeBindingListeners.delete(listener);
   }
@@ -299,7 +306,7 @@ export class SceneBuilder {
     runtimeLight.intensity = nextLight.intensity;
     runtimeLight.direction = new Vector3(nextLight.direction.x, nextLight.direction.y, nextLight.direction.z);
     runtimeLight.setEnabled(this.selectedDirectionalLightEnabled);
-    this.notifyRuntimeBindingsChanged();
+    this.notifyRuntimeBindingsChanged('light-changed', 'directional-light');
     if (nextLight.diffuseColor) {
       runtimeLight.diffuse = toColor3(nextLight.diffuseColor);
     }
@@ -582,7 +589,7 @@ export class SceneBuilder {
    */
   addSceneNodeFromConfig(nodeConfig: SceneNodeConfig, parent?: TransformNode | null): TransformNode | null {
     const runtimeNode = this.buildSceneNodeRuntime(nodeConfig, 'sync', parent ?? undefined);
-    if (runtimeNode) this.notifyRuntimeBindingsChanged();
+    if (runtimeNode) this.notifyRuntimeBindingsChanged('node-added', nodeConfig.id);
     return runtimeNode;
   }
 
@@ -605,7 +612,7 @@ export class SceneBuilder {
     node.parent = null;
     cleanup?.();
     node.dispose();
-    this.notifyRuntimeBindingsChanged();
+    this.notifyRuntimeBindingsChanged('node-removed', id);
     return true;
   }
 
@@ -1445,8 +1452,12 @@ export class SceneBuilder {
     }
   }
 
-  private notifyRuntimeBindingsChanged(): void {
-    for (const listener of this.runtimeBindingListeners) listener();
+  private notifyRuntimeBindingsChanged(
+    kind: SceneBuilderRuntimeBindingChange['kind'],
+    nodeId: string,
+  ): void {
+    const change = Object.freeze({ kind, nodeId, revision: ++this.runtimeBindingRevision });
+    for (const listener of this.runtimeBindingListeners) listener(change);
   }
 
   private applySceneNodeOverrides(
