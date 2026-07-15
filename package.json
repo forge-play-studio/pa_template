@@ -41,7 +41,8 @@
     "check:scene-walkthrough": "node scripts/check-scene-walkthrough-build.mjs --enabled",
     "check:scene-walkthrough-disabled": "node scripts/check-scene-walkthrough-build.mjs --disabled",
     "preview": "vite preview",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck:editor-source": "tsc -p tsconfig.editor-source.json --noEmit"
   },
   "keywords": [
     "playable",

@@ -804,6 +804,7 @@ export class SceneBuilder {
     }
 
     attached.modelNode.parent = runtimeNode;
+    this.assignShadowReceiverSourceBindings(attached.asset, attached.modelNode);
     this.sceneNodeAnimationGroups.set(nodeConfig.id, attached.animations);
     this.applyTransform(attached.modelNode, attached.asset.defaults?.transform);
     this.applyChildTransforms(attached.modelNode, nodeConfig.overrides?.childTransforms);
@@ -838,6 +839,7 @@ export class SceneBuilder {
     }
 
     attached.modelNode.parent = runtimeNode;
+    this.assignShadowReceiverSourceBindings(attached.asset, attached.modelNode);
     this.sceneNodeAnimationGroups.set(nodeConfig.id, attached.animations);
     this.applyTransform(attached.modelNode, attached.asset.defaults?.transform);
     this.applyChildTransforms(attached.modelNode, nodeConfig.overrides?.childTransforms);
@@ -1778,6 +1780,60 @@ export class SceneBuilder {
       ? (ownerNode as any).getChildMeshes(false)
       : [];
     return childMeshes.filter((mesh: any) => !!mesh?.material);
+  }
+
+  private assignShadowReceiverSourceBindings(asset: SceneAssetConfig, rootNode: TransformNode): void {
+    const rawSlots = Array.isArray(asset.metadata?.materialSlots) ? asset.metadata.materialSlots : [];
+    const slots = rawSlots.flatMap((value): SceneBuilderMaterialSlotSourceDescriptor[] => {
+      if (!isRecord(value)) return [];
+      const ownerNodePath = typeof value.ownerNodePath === 'string' ? value.ownerNodePath.trim() : '';
+      const slotId = typeof value.slotId === 'string' ? value.slotId.trim() : '';
+      const descriptor = ownerNodePath
+        ? readSceneBuilderMaterialSlotSourceDescriptor(value, slotId, ownerNodePath)
+        : null;
+      return descriptor && Number.isInteger(descriptor.meshIndex) && Number.isInteger(descriptor.primitiveIndex)
+        ? [descriptor]
+        : [];
+    });
+    const slotsByOwnerPath = new Map<string, SceneBuilderMaterialSlotSourceDescriptor[]>();
+    for (const slot of slots) {
+      const grouped = slotsByOwnerPath.get(slot.ownerNodePath) ?? [];
+      grouped.push(slot);
+      slotsByOwnerPath.set(slot.ownerNodePath, grouped);
+    }
+    for (const [ownerNodePath, groupedSlots] of slotsByOwnerPath) {
+      const ownerNodes = this.resolveMaterialOverrideOwnerNodes(rootNode, ownerNodePath)
+        .sort((left, right) => String(left?.id ?? left?.name ?? '').localeCompare(String(right?.id ?? right?.name ?? '')));
+      if (ownerNodes.length === 0) continue;
+      for (const slot of groupedSlots) {
+        const sourceBindingId = `mesh:${slot.meshIndex}:primitive:${slot.primitiveIndex}`;
+        const namedOwner = ownerNodes.find(owner => isSceneBuilderRuntimeSplitPrimitiveOwnerNode(owner, slot));
+        const owners = namedOwner
+          ? [namedOwner]
+          : ownerNodes.length === 1
+            ? ownerNodes
+            : [ownerNodes[Math.min(slot.primitiveIndex ?? 0, ownerNodes.length - 1)]!];
+        for (const owner of owners) {
+          const metadata = owner.metadata && typeof owner.metadata === 'object' && !Array.isArray(owner.metadata)
+            ? owner.metadata as Record<string, unknown>
+            : {};
+          const editorProjection = metadata.editorProjection && typeof metadata.editorProjection === 'object'
+            && !Array.isArray(metadata.editorProjection)
+            ? metadata.editorProjection as Record<string, unknown>
+            : {};
+          const existing = Array.isArray(editorProjection.shadowReceiverSourceBindingIds)
+            ? editorProjection.shadowReceiverSourceBindingIds.filter((value): value is string => typeof value === 'string')
+            : [];
+          owner.metadata = {
+            ...metadata,
+            editorProjection: {
+              ...editorProjection,
+              shadowReceiverSourceBindingIds: [...new Set([...existing, sourceBindingId])].sort(),
+            },
+          };
+        }
+      }
+    }
   }
 
   private logMaterialSlotOwnerResolutionFailure(

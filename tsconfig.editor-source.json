@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "paths": {
+      "@/*": ["src/*"],
+      "@fps-games/editor": ["../../packages/editor/src/index.ts"],
+      "@fps-games/editor/playable-sdk": ["../../packages/editor/src/playable-sdk.ts"],
+      "@fps-games/editor/playable-runtime": ["../../packages/editor/src/playable-runtime.ts"],
+      "@fps-games/editor/playable-runtime/babylon": ["../../packages/editor/src/playable-runtime-babylon.ts"],
+      "@fps-games/playable-rendering": ["../../packages/playable-rendering/src/index.ts"],
+      "@fps-games/playable-rendering/runtime": ["../../packages/playable-rendering/src/runtime.ts"],
+      "@fps-games/babylon-renderer": ["../../packages/babylon-renderer/src/index.ts"]
+    }
+  }
+}
