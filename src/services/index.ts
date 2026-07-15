@@ -12,12 +12,11 @@ export {
 export { ModelPool } from './ModelPool';
 export type { PooledInstance, ModelConfig, ModelWarmupAssetConfig, ModelWarmupResult } from './ModelPool';
 
-export { AnimationService } from './AnimationService';
+export { ModelAnimationService } from './ModelAnimationService';
 export type {
-  AnimationServiceDiagnostics,
-  CrossFadeOptions,
-  PlayOptions,
-} from './AnimationService';
+  ModelAnimationPlayer,
+  ModelAnimationPlayOptions,
+} from './ModelAnimationService';
 
 export { AudioService } from './AudioService';
 export type { AudioDebugState, AudioPlayOptions, AudioSoundId } from './AudioService';

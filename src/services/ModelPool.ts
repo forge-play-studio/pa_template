@@ -435,6 +435,7 @@ export class ModelPool {
    * 重置实例状态
    */
   private resetInstance(instance: PooledInstance): void {
+    this.resetAnimationGroups(instance.animations);
     instance.node.position.set(0, 0, 0);
     instance.node.rotation.set(0, 0, 0);
     instance.node.scaling.setAll(1);
@@ -444,9 +445,18 @@ export class ModelPool {
   }
 
   private deactivateInstance(instance: PooledInstance): void {
+    this.resetAnimationGroups(instance.animations);
     instance.node.setEnabled(false);
     instance.node.position.set(0, -1000, 0); // 移出视野
-    instance.animations.forEach(anim => anim.stop());
+  }
+
+  private resetAnimationGroups(animations: readonly AnimationGroup[]): void {
+    for (const animation of animations) {
+      if (animation.isStarted) animation.stop(true);
+      animation.weight = -1;
+      animation.speedRatio = 1;
+      animation.loopAnimation = false;
+    }
   }
 
   private getAvailableCount(pool: PoolEntry[]): number {

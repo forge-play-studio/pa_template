@@ -19,7 +19,7 @@ import { Vector3 } from '@babylonjs/core/Maths/math.vector';
 import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import { AnimationGroup } from '@babylonjs/core/Animations/animationGroup';
 import { ModelPool, PooledInstance } from '../services/ModelPool';
-import { AnimationService } from '../services/AnimationService';
+import { ModelAnimationService } from '../services/ModelAnimationService';
 
 /**
  * 实体状态枚举
@@ -57,7 +57,7 @@ export abstract class BaseEntity {
 
   /** 服务引用 */
   protected readonly modelPool: ModelPool;
-  protected readonly animationService: AnimationService;
+  protected readonly modelAnimationService: ModelAnimationService;
 
   /** 根节点（控制节点，用于位置/旋转） */
   protected rootNode: TransformNode | null = null;
@@ -90,14 +90,14 @@ export abstract class BaseEntity {
     id: string,
     scene: Scene,
     modelPool: ModelPool,
-    animationService: AnimationService,
+    modelAnimationService: ModelAnimationService,
     config: EntityConfig
   ) {
     this.id = id;
     this.modelId = config.modelId;
     this.scene = scene;
     this.modelPool = modelPool;
-    this.animationService = animationService;
+    this.modelAnimationService = modelAnimationService;
 
     this._position = config.position.clone();
     this._rotation = config.rotation ?? 0;
@@ -246,14 +246,14 @@ export abstract class BaseEntity {
    * 播放动画
    */
   playAnimation(name: string, loop: boolean = true, speed: number = 1): void {
-    this.animationService.play(this.animations, name, { loop, speed });
+    this.modelAnimationService.play(this.animations, name, { loop, speedRatio: speed });
   }
 
   /**
    * 停止动画
    */
   stopAnimation(name?: string): void {
-    this.animationService.stop(this.animations, name);
+    this.modelAnimationService.stop(this.animations, name);
   }
 
   /**
@@ -285,7 +285,7 @@ export abstract class BaseEntity {
 
     // 归还模型到对象池
     if (this.pooledInstance) {
-      this.animationService.stop(this.animations);
+      this.modelAnimationService.stop(this.animations);
       this.pooledInstance.node.parent = null;
       this.modelPool.release(this.pooledInstance);
       this.pooledInstance = null;

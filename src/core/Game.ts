@@ -43,7 +43,7 @@ import '@babylonjs/core/Materials/Textures/texture';
 import {
   AssetLoader,
   ModelPool,
-  AnimationService,
+  ModelAnimationService,
   AudioService,
   InputService,
   SceneBuilder,
@@ -89,7 +89,7 @@ export class Game {
   // Services
   private assetLoader: AssetLoader | null = null;
   private modelPool: ModelPool | null = null;
-  private animationService: AnimationService | null = null;
+  private modelAnimationService: ModelAnimationService | null = null;
   private audioService: AudioService | null = null;
   private sceneBuilder: SceneBuilder | null = null;
   private renderingService: RenderingService | null = null;
@@ -157,7 +157,7 @@ export class Game {
     this.shadowService = env.shadowService;
 
     // 3) Other services
-    this.animationService = new AnimationService();
+    this.modelAnimationService = new ModelAnimationService();
     this.modelPool = new ModelPool(this.scene, this.assetLoader);
     this.sceneBuilder.setModelPool(this.modelPool);
 
@@ -278,7 +278,7 @@ export class Game {
   private async initGameplayModules(): Promise<void> {
     if (
       !this.assetLoader ||
-      !this.animationService ||
+      !this.modelAnimationService ||
       !this.inputService ||
       !this.materialConfigService ||
       !this.modelPool ||
@@ -296,7 +296,7 @@ export class Game {
       scene: this.scene,
       camera: this.camera,
       assetLoader: this.assetLoader,
-      animationService: this.animationService,
+      modelAnimationService: this.modelAnimationService,
       audioService: this.audioService,
       inputService: this.inputService,
       materialConfigService: this.materialConfigService,
@@ -368,9 +368,6 @@ export class Game {
     for (const module of this.gameplayModules) {
       module.update?.(deltaTime);
     }
-    // One owner advances all AnimationGroup cross-fades. Feature code must not
-    // attach one render observer/timer per model animation.
-    this.animationService?.update(deltaTime);
   }
 
   // ============================================================
@@ -439,10 +436,10 @@ export class Game {
   }
 
   /**
-   * AnimationService 访问入口（脚手架保留：具体项目可在 entity/system 中使用）
+   * 模型内置动画入口：项目侧只调用 play/stop，由 Babylon render 推进。
    */
-  getAnimationService(): AnimationService | null {
-    return this.animationService;
+  getModelAnimationService(): ModelAnimationService | null {
+    return this.modelAnimationService;
   }
 
   onEditorDocumentCommitted(sceneConfig: SceneConfig): void {
@@ -492,8 +489,7 @@ export class Game {
     attempt(() => this.shadowService?.dispose());
     this.shadowService = null;
 
-    attempt(() => this.animationService?.dispose());
-    this.animationService = null;
+    this.modelAnimationService = null;
 
     attempt(() => this.modelPool?.dispose());
     this.modelPool = null;

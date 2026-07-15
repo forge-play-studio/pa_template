@@ -2,11 +2,11 @@ import type { ArcRotateCamera } from '@babylonjs/core/Cameras/arcRotateCamera';
 import type { Scene } from '@babylonjs/core/scene';
 import type { SimplePlayer } from '../entities';
 import type {
-  AnimationService,
   AssetLoader,
   AudioService,
   InputService,
   MaterialConfigService,
+  ModelAnimationService,
   ModelPool,
   PlayableAnalyticsService,
   PlayableCtaService,
@@ -27,7 +27,7 @@ export interface GameplayRuntimeContext {
   scene: Scene;
   camera: ArcRotateCamera | null;
   assetLoader: AssetLoader;
-  animationService: AnimationService;
+  modelAnimationService: ModelAnimationService;
   audioService: AudioService | null;
   inputService: InputService;
   materialConfigService: MaterialConfigService;
