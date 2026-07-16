@@ -32,26 +32,45 @@ const GROUND_DECAL_FIXTURES = [
   },
 ];
 
+const SHADOW_MAP_EXPERIMENT_CASTER_FIXTURES = [
+  {
+    id: 'issue_444',
+    shadowMapExperiment: {
+      cast: 'enabled',
+      receive: 'enabled',
+      updateClass: 'static',
+    },
+  },
+];
+
 let editorScene = await readJson(editorScenePath);
 const previousSceneConfig = await readJson(scenePath);
 const assetManifest = await readJson(assetManifestPath);
+const forceCompile = process.argv.includes('--compile');
 let changed = false;
 
 changed = ensurePrefabStageFixture(editorScene) || changed;
 changed = ensureGroundDecalLiveFixtures(editorScene, assetManifest) || changed;
+changed = ensureShadowMapExperimentCasterFixtures(editorScene) || changed;
 
-if (changed) {
-  editorScene = playableSdk.bumpEditorSceneAuthoringSourceRevision?.(editorScene) ?? editorScene;
-  const compiled = playableSdk.compileEditorSceneDocumentToSceneConfig(editorScene, previousSceneConfig, {
+if (changed || forceCompile) {
+  if (changed) {
+    editorScene = playableSdk.bumpEditorSceneAuthoringSourceRevision?.(editorScene) ?? editorScene;
+  }
+  const assetLibrary = playableSdk.createEditorSceneAssetLibrary(assetManifest.map(entry => (
+    entry.kind === 'model' ? { ...entry, materialMode: entry.materialMode ?? 'shared' } : entry
+  )));
+  const hydratedEditorScene = playableSdk.enrichEditorSceneDocumentAssets(editorScene, assetLibrary);
+  const compiled = playableSdk.compileEditorSceneDocumentToSceneConfig(hydratedEditorScene, previousSceneConfig, {
     readCustomTransformRuntimeData: gameObject => (
       isGroundDecalUiConfig(gameObject.groundDecal)
         ? { groundDecal: structuredClone(gameObject.groundDecal) }
         : null
     ),
   });
-  await writeJson(editorScenePath, editorScene);
+  if (changed) await writeJson(editorScenePath, editorScene);
   await writeJson(scenePath, compiled.sceneConfig);
-  console.log('editor live fixtures synchronized');
+  console.log(changed ? 'editor live fixtures synchronized' : 'editor live fixture runtime scene recompiled');
 } else {
   console.log('editor live fixtures already synchronized');
 }
@@ -77,6 +96,20 @@ function ensureGroundDecalLiveFixtures(document, manifest) {
   for (const fixture of GROUND_DECAL_FIXTURES) {
     if (document.scene?.gameObjects?.some(gameObject => gameObject?.id === fixture.id)) continue;
     document.scene.gameObjects.push(createGroundDecalFixtureGameObject(fixture, rootId, textureIds));
+    changed = true;
+  }
+  return changed;
+}
+
+function ensureShadowMapExperimentCasterFixtures(document) {
+  let changed = false;
+  for (const fixture of SHADOW_MAP_EXPERIMENT_CASTER_FIXTURES) {
+    const gameObject = document.scene?.gameObjects?.find(candidate => candidate?.id === fixture.id);
+    if (!gameObject) {
+      throw new Error(`Unable to configure ShadowMap experiment caster: game object "${fixture.id}" was not found.`);
+    }
+    if (JSON.stringify(gameObject.shadowMapExperiment) === JSON.stringify(fixture.shadowMapExperiment)) continue;
+    gameObject.shadowMapExperiment = structuredClone(fixture.shadowMapExperiment);
     changed = true;
   }
   return changed;

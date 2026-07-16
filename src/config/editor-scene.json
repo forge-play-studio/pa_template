@@ -5,7 +5,7 @@
     "authoringSource": {
       "sourceId": "scene.main",
       "sourceType": "scene",
-      "revision": 79
+      "revision": 80
     }
   },
   "assets": [
@@ -1432,6 +1432,11 @@
               "materialAssetId": "mat_d6fbc596d7fb4729a4fbc270d5fbc403"
             }
           }
+        },
+        "shadowMapExperiment": {
+          "cast": "enabled",
+          "receive": "enabled",
+          "updateClass": "static"
         }
       },
       {

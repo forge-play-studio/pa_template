@@ -10,6 +10,7 @@ const runtimeScene = JSON.parse(fs.readFileSync(path.join(projectRoot, 'src/conf
 const expectedCasters = [
   'capsule',
   'cube',
+  'issue_444',
   'shadow_fixture_barrel',
   'shadow_fixture_bush',
   'shadow_fixture_chicken',
@@ -87,4 +88,4 @@ for (const id of expectedReceiverOnly) {
   );
 }
 
-console.log('shadow-map experiment fixture: ok (16 casters, 4 skinned, automatic planar/vertical receivers)');
+console.log('shadow-map experiment fixture: ok (17 casters, 4 skinned, automatic planar/vertical receivers)');
