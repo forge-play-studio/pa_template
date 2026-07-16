@@ -656,6 +656,11 @@ export interface SceneConfig {
   scene?: SceneDocumentScene;
   render?: SceneRenderConfig;
   staticShadows?: EditorSceneStaticShadowArtifact;
+  plugins?: Array<{
+    pluginId: string;
+    schemaVersion: number;
+    data: unknown;
+  }>;
 }
 
 export interface GameConfig {

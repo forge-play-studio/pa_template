@@ -71,6 +71,10 @@ import {
   resolveMaterialOwnerNode,
   resolveMaterialSlotOwnerNodes,
 } from '@fps-games/editor/playable-sdk';
+import {
+  createBabylonShadowMapExperimentSystem,
+  type BabylonShadowMapExperimentSystem,
+} from '@fps-games/editor/playable-runtime/babylon';
 
 const BABYLON_MATERIAL_RUNTIME = { Color3, MaterialPluginBase, Texture };
 
@@ -82,7 +86,7 @@ export interface SceneEnvironment {
   hemisphericLight: HemisphericLight;
   directionalLight: DirectionalLight;
   renderingService: RenderingService;
-  shadowService: ShadowService;
+  shadowService: ShadowService | null;
 }
 
 export interface SceneRuntimeLightState<TLightConfig extends SceneHemisphericLightConfig | SceneDirectionalLightConfig> {
@@ -133,6 +137,7 @@ export class SceneBuilder {
   private hemisphericLightSource: SceneRuntimeSourceBinding | undefined;
   private directionalLightSource: SceneRuntimeSourceBinding | undefined;
   private shadowService: ShadowService | null = null;
+  private shadowMapExperimentSystem: BabylonShadowMapExperimentSystem | null = null;
 
   constructor(scene: Scene, assetLoader: AssetLoader, modelPool?: ModelPool) {
     this.scene = scene;
@@ -188,8 +193,19 @@ export class SceneBuilder {
     renderingService.initialize([camera]);
 
     // 4) Shadows (可通过 rendering.json 开关)
-    const shadowService = new ShadowService(this.scene, directionalLight, camera);
-    shadowService.initialize();
+    const shadowMapExperimentEntry = configService.getSceneConfig().plugins?.find(
+      entry => entry.pluginId === 'fps.shadow-map-experiment',
+    );
+    this.shadowMapExperimentSystem = createBabylonShadowMapExperimentSystem(this.scene);
+    this.shadowMapExperimentSystem.setPlan((shadowMapExperimentEntry?.data ?? null) as never);
+
+    const shadowMapExperimentEnabled = (
+      shadowMapExperimentEntry?.data as { enabled?: unknown } | null | undefined
+    )?.enabled === true;
+    const shadowService = shadowMapExperimentEnabled
+      ? null
+      : new ShadowService(this.scene, directionalLight, camera);
+    shadowService?.initialize();
     this.shadowService = shadowService;
 
     // 5) 默认地面（让脚手架“开箱即有东西可见”）
@@ -272,6 +288,10 @@ export class SceneBuilder {
 
   getRuntimeDirectionalLight(): DirectionalLight | null {
     return this.directionalLight;
+  }
+
+  getShadowMapExperimentEvidence() {
+    return this.shadowMapExperimentSystem?.getEvidence() ?? null;
   }
 
   getSelectedHemisphericLightState(): SceneRuntimeLightState<SceneHemisphericLightConfig> {
@@ -390,6 +410,7 @@ export class SceneBuilder {
       new Vector3(sun.light.direction.x, sun.light.direction.y, sun.light.direction.z),
       this.scene,
     );
+    if (sun.source?.objectId) dir.id = sun.source.objectId;
     this.directionalLight = dir;
     this.attachRuntimeLightMetadata(dir, 'directional', sun.source);
     this.applyDirectionalLight(sun.light, { enabled: sun.enabled });
@@ -424,6 +445,7 @@ export class SceneBuilder {
     const metadata = light.metadata && typeof light.metadata === 'object' ? light.metadata : {};
     light.metadata = {
       ...metadata,
+      ...(source.objectId ? { nodeId: source.objectId } : {}),
       __fpsEditor: {
         sourceId: source.sourceId,
         ...(source.objectGuid ? { objectGuid: source.objectGuid } : {}),
@@ -1845,6 +1867,12 @@ export class SceneBuilder {
       }
     }
     this.shadowService = null;
+    try {
+      this.shadowMapExperimentSystem?.dispose();
+      this.shadowMapExperimentSystem = null;
+    } catch (error) {
+      errors.push(error);
+    }
     try {
       if (!this.root.isDisposed()) this.root.dispose();
     } catch (error) {

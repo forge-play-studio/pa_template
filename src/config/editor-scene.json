@@ -5,7 +5,7 @@
     "authoringSource": {
       "sourceId": "scene.main",
       "sourceType": "scene",
-      "revision": 75
+      "revision": 78
     }
   },
   "assets": [
@@ -331,6 +331,11 @@
           "receive": "none",
           "cast": "none",
           "mode": "none"
+        },
+        "shadowMapExperiment": {
+          "cast": "disabled",
+          "receive": "enabled",
+          "updateClass": "static"
         }
       },
       {
@@ -372,6 +377,11 @@
             "opacity": 0.65,
             "softness": 0.28
           }
+        },
+        "shadowMapExperiment": {
+          "cast": "enabled",
+          "receive": "enabled",
+          "updateClass": "static"
         }
       },
       {
@@ -531,6 +541,11 @@
           "mode": "projected",
           "quality": "high",
           "receive": "none"
+        },
+        "shadowMapExperiment": {
+          "cast": "enabled",
+          "receive": "enabled",
+          "updateClass": "skinned"
         }
       },
       {
@@ -684,6 +699,11 @@
           "mode": "projected",
           "quality": "high",
           "receive": "none"
+        },
+        "shadowMapExperiment": {
+          "cast": "enabled",
+          "receive": "enabled",
+          "updateClass": "static"
         }
       },
       {
@@ -1243,6 +1263,11 @@
               "materialAssetId": "mat_1756d8e218564a75a556d5bc1656d74f"
             }
           }
+        },
+        "shadowMapExperiment": {
+          "cast": "disabled",
+          "receive": "enabled",
+          "updateClass": "static"
         }
       },
       {
@@ -1287,6 +1312,11 @@
               "materialAssetId": "mat_e9bd35daeabd476da7bd32b4e8bd3447"
             }
           }
+        },
+        "shadowMapExperiment": {
+          "cast": "disabled",
+          "receive": "enabled",
+          "updateClass": "static"
         }
       },
       {
@@ -1598,6 +1628,42 @@
             }
           }
         ]
+      },
+      {
+        "id": "shadow_map_experiment_vertical_receiver",
+        "guid": "go_79b89c08-d20a-4c88-bb7d-14f127377093",
+        "name": "Shadow Map Vertical Receiver",
+        "kind": "primitive",
+        "parentId": "root",
+        "active": true,
+        "primitive": {
+          "shape": "cube"
+        },
+        "components": [
+          {
+            "type": "Transform",
+            "position": {
+              "x": 5,
+              "y": 1.7,
+              "z": -3.6
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 0.2,
+              "y": 3.4,
+              "z": 4
+            }
+          }
+        ],
+        "shadowMapExperiment": {
+          "cast": "disabled",
+          "receive": "enabled",
+          "updateClass": "static"
+        }
       }
     ],
     "materialAssets": [
@@ -2672,6 +2738,35 @@
           }
         }
       }
-    ]
+    ],
+    "shadowMapExperiment": {
+      "schemaVersion": 1,
+      "enabled": true,
+      "quality": "performance",
+      "lightRef": "sun_light",
+      "bounds": {
+        "mode": "fixed",
+        "center": [
+          0,
+          3,
+          0
+        ],
+        "extent": [
+          30,
+          16,
+          30
+        ],
+        "near": 0.1,
+        "far": 50
+      },
+      "advanced": {
+        "resolution": 512,
+        "filter": "hard",
+        "dynamicRefresh": "every-two-frames",
+        "bias": 0.001,
+        "normalBias": 0.02,
+        "darkness": 0.25
+      }
+    }
   }
 }

@@ -177,7 +177,7 @@ export class Game {
     this.warmupModelsFromConfig();
 
     // 8) Refresh shadows after scene loaded
-    this.shadowService.refreshShadowMeshes();
+    this.shadowService?.refreshShadowMeshes();
 
     // 9) Input
     this.initInput();
@@ -413,6 +413,10 @@ export class Game {
 
   getShadowService(): ShadowService | null {
     return this.shadowService;
+  }
+
+  getShadowMapExperimentEvidence() {
+    return this.sceneBuilder?.getShadowMapExperimentEvidence() ?? null;
   }
 
   getInputService(): InputService | null {

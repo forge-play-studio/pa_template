@@ -121,6 +121,13 @@ export const renderingRuntime = createFpsGameEditorProductRenderingRuntime<Edito
   directionalLightNodeId: 'sun_light',
   isDirectionalLightEnabled: document => document.scene.gameObjects.find(entry => entry.id === 'sun_light')?.active !== false,
   resolveLanguage: document => document.scene.gameObjects.find(entry => entry.id === 'sun_light')?.light?.inspectorLanguage === 'en' ? 'en' : 'zh',
+  getShadowMapExperimentPlan: document => {
+    const compiled = compileEditorSceneDocumentToSceneConfig(
+      document,
+      structuredClone(baseSceneConfig) as SceneConfig,
+    ).sceneConfig;
+    return (compiled.plugins?.find(entry => entry.pluginId === 'fps.shadow-map-experiment')?.data ?? null) as never;
+  },
 });
 setEditorSceneRenderingProfileReader(renderingRuntime.getProfile);
 export const sceneSource = createFpsGameEditorSceneSourceServices<EditorSceneDocument, SceneConfig, EditorSceneAssetLibraryItem>({

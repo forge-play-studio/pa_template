@@ -41,6 +41,9 @@ let initStarted = false;
 /** 当前初始化任务，用于重启入口等待游戏世界真正 ready */
 let initPromise: Promise<void> | null = null;
 
+const SHADOW_MAP_EXPERIMENT_EVIDENCE_DATASET_KEY = 'fpsShadowMapExperimentEvidence';
+const SHADOW_MAP_EXPERIMENT_EVIDENCE_PROBE_ID = 'fps-shadow-map-experiment-evidence-probe';
+
 type ProjectGameRestartContext = {
   reason?: string;
 };
@@ -93,6 +96,23 @@ function clearProjectRuntimeGlobals(): void {
   window.game = null;
   (window as any).__bridgeProjectRuntime = null;
   (window as any).__pendingEditorRuntime = null;
+  document.getElementById(SHADOW_MAP_EXPERIMENT_EVIDENCE_PROBE_ID)?.remove();
+  delete document.documentElement.dataset[SHADOW_MAP_EXPERIMENT_EVIDENCE_DATASET_KEY];
+}
+
+function mountShadowMapExperimentEvidenceProbe(): void {
+  if (!import.meta.env.DEV || document.getElementById(SHADOW_MAP_EXPERIMENT_EVIDENCE_PROBE_ID)) return;
+  const probe = document.createElement('button');
+  probe.id = SHADOW_MAP_EXPERIMENT_EVIDENCE_PROBE_ID;
+  probe.type = 'button';
+  probe.setAttribute('aria-label', 'Capture Shadow Map experiment evidence');
+  probe.style.cssText = 'position:fixed;left:0;top:0;width:2px;height:2px;opacity:0.001;z-index:2147483647';
+  probe.addEventListener('click', () => {
+    document.documentElement.dataset[SHADOW_MAP_EXPERIMENT_EVIDENCE_DATASET_KEY] = JSON.stringify(
+      game?.getShadowMapExperimentEvidence() ?? null,
+    );
+  });
+  document.body.append(probe);
 }
 
 async function mountRuntimeDebugForDev(): Promise<void> {
@@ -233,6 +253,7 @@ async function init(): Promise<void> {
     // 暴露给调试
     window.gameInstance = game;
     window.game = game;
+    mountShadowMapExperimentEvidenceProbe();
 
     if (import.meta.env.DEV) {
       await mountRuntimeDebugForDev();

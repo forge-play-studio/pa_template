@@ -6,6 +6,7 @@ import {
   materialsPlugin,
   renderingPlugin,
   scenePlugin,
+  shadowMapExperimentPlugin,
   shadowsPlugin,
 } from '@fps-games/editor';
 import { paTemplateGroundDecalFeatureConfig } from './src/services/fps-game-editor/ground-decal-config';
@@ -34,6 +35,7 @@ export const fpsConfig = Object.freeze({
     materialsPlugin(),
     renderingPlugin(),
     shadowsPlugin(),
+    shadowMapExperimentPlugin(),
     markersPlugin(),
     babylonRendererPlugin(),
   ]),
