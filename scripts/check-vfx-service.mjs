@@ -267,10 +267,11 @@ async function assertTemplateBoundary() {
       assert(file.startsWith('src/assets/vfx/effects/'), `${file} imports the VFX asset package outside a project effect adapter`);
     }
   }
-  const game = await fs.readFile('src/core/Game.ts', 'utf8');
-  assert.match(game, /await this\.vfxService\.init\(\)/);
-  assert.match(game, /await this\.initGameplayModules\(\)/);
-  assert(game.indexOf('await this.vfxService.init()') < game.indexOf('await this.initGameplayModules()'));
+  const gameWorld = await fs.readFile('src/runtime/GameWorld.ts', 'utf8');
+  assert.match(gameWorld, /await vfxService\.init\(\)/);
+  assert.match(gameWorld, /await this\.initGameplayModules\(\)/);
+  assert(gameWorld.indexOf('await vfxService.init()') < gameWorld.indexOf('await this.initGameplayModules()'));
+  assert.match(gameWorld, /renderWarmupFrame:\s*\(\)\s*=>\s*this\.renderCoordinator!\.renderOnce\(\)/);
   const service = await fs.readFile('src/services/vfx/VfxService.ts', 'utf8');
   assert.doesNotMatch(service, /from ['"]@fps-games\/vfx/);
   assert.match(service, /registryFrozen = true/);

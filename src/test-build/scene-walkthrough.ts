@@ -1,4 +1,4 @@
-import type { Game } from '../core/Game';
+import type { GameWorld } from '../runtime/GameWorld';
 import type { MovementInputSource, MovementInputState } from '../services';
 
 const WALKTHROUGH_BUILD_ATTRIBUTE = 'data-scene-walkthrough-build';
@@ -10,7 +10,7 @@ export interface SceneWalkthroughHandle {
 }
 
 /** Dedicated-build-only keyboard source for inspecting the authored scene. */
-export function mountSceneWalkthrough(game: Game): SceneWalkthroughHandle {
+export function mountSceneWalkthrough(game: GameWorld): SceneWalkthroughHandle {
   const inputService = game.getInputService();
   if (!inputService) return { dispose() {} };
 

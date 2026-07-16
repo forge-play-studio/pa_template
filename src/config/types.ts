@@ -10,10 +10,8 @@
 import type {
   EditorShadowResolvedPlan,
   EditorShadowSettings,
-} from '@fps-games/editor/playable-runtime';
-import type {
   EditorSceneStaticShadowArtifact,
-} from '@fps-games/editor/playable-sdk';
+} from '../runtime/integrations/fps-runtime/contracts';
 
 // ============================================================
 // 基础类型

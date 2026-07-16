@@ -32,7 +32,7 @@ const scene = createFpsGameEditorProjectSceneAuthoringServices(editorConfig, {
     assetLibrary: '/src/services/fps-game-editor/scene-feature.ts',
     sceneSession: '/src/services/fps-game-editor/scene-feature.ts',
     sceneCompiler: '/src/services/fps-game-editor/scene-feature.ts',
-    renderingProfile: '/src/rendering/rendering-profile.ts',
+    renderingProfile: '/src/services/fps-game-editor/rendering-profile.ts',
   },
   assertRuntimeSceneConfigModulePath: 'scripts/platform-sim/lib/scene-json-v2-schema.mjs',
   assertRuntimeSceneConfigExportName: 'assertSceneJsonV2',

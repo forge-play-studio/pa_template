@@ -28,14 +28,14 @@ import {
   type EditorSceneVec3,
 } from '@fps-games/editor/playable-sdk';
 import type { SceneCameraRigConfig } from '../config';
-import type { Game } from '../core/Game';
+import type { GameWorld } from '../runtime/GameWorld';
 import { patchEditorSceneGameObjectField } from '../services/fps-game-editor/scene-feature';
 import { loadSceneMainSource, saveSceneMainSource } from '../services/fps-game-editor/scene-feature';
 import { mountRuntimeDebugPanelContainer } from './framework/panel-layout';
 
 export interface CameraDebugPanelOptions {
   root?: HTMLElement;
-  getGame: () => Game | null;
+  getGame: () => GameWorld | null;
 }
 
 export type CameraDebugPanel = EditorRuntimeCameraDebugPanel;
@@ -112,7 +112,7 @@ export function mountCameraDebugPanel(options: CameraDebugPanelOptions): CameraD
   };
 }
 
-function readSnapshot(game: Game | null): CameraDebugSnapshot | null {
+function readSnapshot(game: GameWorld | null): CameraDebugSnapshot | null {
   const camera = game?.getCamera();
   if (!camera) return null;
   const binding = readEditorSceneRuntimeCameraBinding(camera.metadata) as EditorSceneRuntimeCameraBinding | null;
@@ -144,7 +144,7 @@ function readSnapshot(game: Game | null): CameraDebugSnapshot | null {
 }
 
 function applyRig(
-  game: Game | null,
+  game: GameWorld | null,
   snapshot: EditorSceneCameraDebugSnapshot,
   target?: EditorSceneVec3,
 ): void {
@@ -159,7 +159,7 @@ function applyRig(
 }
 
 function translateCameraOnPlane(
-  game: Game | null,
+  game: GameWorld | null,
   input: EditorRuntimeCameraDebugPanInput,
 ): EditorSceneCameraDebugSnapshot | null {
   const camera = game?.getCamera();
@@ -185,12 +185,12 @@ function translateCameraOnPlane(
   return snapshot ? cloneEditorSceneCameraDebugSnapshot(snapshot) : null;
 }
 
-function getCameraRenderingCanvas(game: Game | null): HTMLCanvasElement | null {
+function getCameraRenderingCanvas(game: GameWorld | null): HTMLCanvasElement | null {
   const canvas = game?.getScene()?.getEngine?.()?.getRenderingCanvas?.() as HTMLCanvasElement | null | undefined;
   return canvas ?? null;
 }
 
-function getCameraViewportRect(game: Game | null): { left: number; top: number; width: number; height: number } | null {
+function getCameraViewportRect(game: GameWorld | null): { left: number; top: number; width: number; height: number } | null {
   const scene = game?.getScene();
   const camera = game?.getCamera() ?? scene?.activeCamera ?? null;
   const engine = scene?.getEngine?.();
@@ -211,7 +211,7 @@ function getCameraViewportRect(game: Game | null): { left: number; top: number; 
 }
 
 function projectTargetToScreen(
-  game: Game | null,
+  game: GameWorld | null,
   target: EditorSceneVec3,
 ): { x: number; y: number; depth: number } | null {
   const scene = game?.getScene();
@@ -240,7 +240,7 @@ function projectTargetToScreen(
   return Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(depth) ? { x, y, depth } : null;
 }
 
-function createTargetMarker(scene: NonNullable<ReturnType<Game['getScene']>>): TransformNode {
+function createTargetMarker(scene: NonNullable<ReturnType<GameWorld['getScene']>>): TransformNode {
   const rootNode = new TransformNode('cameraDebugTargetMarker', scene);
   rootNode.metadata = {
     ...(rootNode.metadata && typeof rootNode.metadata === 'object' ? rootNode.metadata : {}),

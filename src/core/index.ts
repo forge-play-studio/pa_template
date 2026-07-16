@@ -2,5 +2,5 @@
  * Core 模块导出
  */
 
-export { Game } from './Game';
-export type { GameOptions } from './Game';
+export { Game, GameWorld } from './Game';
+export type { GameOptions, GameWorldOptions, GameWorldState } from './Game';

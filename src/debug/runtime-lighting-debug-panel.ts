@@ -8,7 +8,7 @@
  * the product scene-source services below.
  */
 import type { ColorRGB } from '../config';
-import type { Game } from '../core/Game';
+import type { GameWorld } from '../runtime/GameWorld';
 import {
   mountEditorRuntimeLightingDebugPanel,
   patchEditorSceneRuntimeLights,
@@ -26,7 +26,7 @@ import { mountRuntimeDebugPanelContainer } from './framework/panel-layout';
 
 export interface RuntimeLightingDebugPanelOptions {
   root?: HTMLElement;
-  getGame: () => Game | null;
+  getGame: () => GameWorld | null;
 }
 
 export type RuntimeLightingDebugPanel = EditorRuntimeLightingDebugPanel;
@@ -67,14 +67,14 @@ export function mountRuntimeLightingDebugPanel(options: RuntimeLightingDebugPane
   };
 }
 
-function applySnapshot(game: Game | null, snapshot: LightingDebugSnapshot): void {
+function applySnapshot(game: GameWorld | null, snapshot: LightingDebugSnapshot): void {
   const sceneBuilder = game?.getSceneBuilder();
   if (!sceneBuilder) return;
   sceneBuilder.applyHemisphericLight(snapshot.environment.light, { enabled: snapshot.environment.enabled });
   sceneBuilder.applyDirectionalLight(snapshot.directional.light, { enabled: snapshot.directional.enabled });
 }
 
-function readSnapshot(game: Game | null): LightingDebugSnapshot | null {
+function readSnapshot(game: GameWorld | null): LightingDebugSnapshot | null {
   const sceneBuilder = game?.getSceneBuilder();
   if (!sceneBuilder) return null;
   const environmentState = sceneBuilder.getSelectedHemisphericLightState();
@@ -115,7 +115,7 @@ function readSnapshot(game: Game | null): LightingDebugSnapshot | null {
   };
 }
 
-function readRuntimeShadowMode(game: Game | null): RuntimeShadowMode {
+function readRuntimeShadowMode(game: GameWorld | null): RuntimeShadowMode {
   const mode = game?.getShadowService()?.getShadowMode?.();
   return mode === 'dynamic' || mode === 'blob' || mode === 'static' || mode === 'planar' || mode === 'none'
     ? mode
