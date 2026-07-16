@@ -23,6 +23,7 @@
     "test:editor-ground-decal-authoring": "node scripts/check-editor-ground-decal-authoring.mjs",
     "test:editor-prefab-stage-fixture": "node scripts/check-editor-prefab-stage-fixture.mjs",
     "test:editor-ground-decal-live-fixture": "node scripts/check-editor-ground-decal-live-fixture.mjs",
+    "test:shadow-map-experiment-fixture": "node scripts/check-shadow-map-experiment-fixture.mjs",
     "test:editor-live-fixtures": "node scripts/check-editor-prefab-stage-fixture.mjs && node scripts/check-editor-ground-decal-live-fixture.mjs",
     "test:editor-bridge-plugin": "node scripts/check-bridge-plugin-optional.mjs",
     "editor:sync-live-fixtures": "node scripts/sync-editor-live-fixtures.mjs",

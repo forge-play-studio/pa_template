@@ -5,7 +5,7 @@
     "authoringSource": {
       "sourceId": "scene.main",
       "sourceType": "scene",
-      "revision": 78
+      "revision": 79
     }
   },
   "assets": [
@@ -422,6 +422,11 @@
             "opacity": 0.62,
             "softness": 0.25
           }
+        },
+        "shadowMapExperiment": {
+          "cast": "enabled",
+          "receive": "enabled",
+          "updateClass": "static"
         }
       },
       {
@@ -462,6 +467,11 @@
             "opacity": 0.62,
             "softness": 0.25
           }
+        },
+        "shadowMapExperiment": {
+          "cast": "enabled",
+          "receive": "enabled",
+          "updateClass": "static"
         }
       },
       {
@@ -594,6 +604,11 @@
             "opacity": 0.62,
             "softness": 0.25
           }
+        },
+        "shadowMapExperiment": {
+          "cast": "enabled",
+          "receive": "enabled",
+          "updateClass": "skinned"
         }
       },
       {
@@ -654,6 +669,11 @@
             "opacity": 0.62,
             "softness": 0.25
           }
+        },
+        "shadowMapExperiment": {
+          "cast": "enabled",
+          "receive": "enabled",
+          "updateClass": "skinned"
         }
       },
       {
@@ -752,6 +772,11 @@
             "opacity": 0.62,
             "softness": 0.25
           }
+        },
+        "shadowMapExperiment": {
+          "cast": "enabled",
+          "receive": "enabled",
+          "updateClass": "static"
         }
       },
       {
@@ -800,6 +825,11 @@
             "opacity": 0.62,
             "softness": 0.25
           }
+        },
+        "shadowMapExperiment": {
+          "cast": "enabled",
+          "receive": "enabled",
+          "updateClass": "static"
         }
       },
       {
@@ -848,6 +878,11 @@
             "opacity": 0.62,
             "softness": 0.25
           }
+        },
+        "shadowMapExperiment": {
+          "cast": "enabled",
+          "receive": "enabled",
+          "updateClass": "static"
         }
       },
       {
@@ -899,6 +934,11 @@
             "opacity": 0.62,
             "softness": 0.25
           }
+        },
+        "shadowMapExperiment": {
+          "cast": "enabled",
+          "receive": "enabled",
+          "updateClass": "static"
         }
       },
       {
@@ -947,6 +987,11 @@
             "opacity": 0.62,
             "softness": 0.25
           }
+        },
+        "shadowMapExperiment": {
+          "cast": "enabled",
+          "receive": "enabled",
+          "updateClass": "static"
         }
       },
       {
@@ -995,6 +1040,11 @@
             "opacity": 0.62,
             "softness": 0.25
           }
+        },
+        "shadowMapExperiment": {
+          "cast": "enabled",
+          "receive": "enabled",
+          "updateClass": "static"
         }
       },
       {
@@ -1043,6 +1093,11 @@
             "opacity": 0.62,
             "softness": 0.25
           }
+        },
+        "shadowMapExperiment": {
+          "cast": "enabled",
+          "receive": "enabled",
+          "updateClass": "skinned"
         }
       },
       {
@@ -1091,6 +1146,11 @@
             "opacity": 0.62,
             "softness": 0.25
           }
+        },
+        "shadowMapExperiment": {
+          "cast": "enabled",
+          "receive": "enabled",
+          "updateClass": "static"
         }
       },
       {
@@ -1139,6 +1199,11 @@
             "opacity": 0.62,
             "softness": 0.25
           }
+        },
+        "shadowMapExperiment": {
+          "cast": "enabled",
+          "receive": "enabled",
+          "updateClass": "static"
         }
       },
       {
