@@ -38,6 +38,8 @@ jobs:
       - name: Build and capture log
         id: build
         shell: bash
+        env:
+          BUNDLE_STATS: 'true'
         run: |
           set +e
           pnpm run build 2>&1 | tee build.log
@@ -56,10 +58,9 @@ jobs:
           name: bundle-report-${{ steps.report-date.outputs.date }}
           if-no-files-found: ignore
           path: |
-            dist/index.html
+            dist/**/*.html
             dist/stats.html
             dist/stats.json
-            dist/**/*.html
             build.log
             bundle-stats-report/**
 
@@ -67,9 +68,9 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: index-html-${{ steps.report-date.outputs.date }}
+          name: en-tracked-html-${{ steps.report-date.outputs.date }}
           if-no-files-found: error
-          path: dist/index.html
+          path: dist/EN/tracked/*.html
 
       - name: Upload bundle stats HTML
         if: always()
@@ -93,9 +94,9 @@ jobs:
           let result = '未知';
           try {
             const summary = JSON.parse(fs.readFileSync('bundle-stats-report/summary.json', 'utf8'));
-            const output = (summary.htmlOutputs || []).find((item) => item.file === 'dist/index.html') || summary.htmlOutputs?.[0];
-            if (output && Number.isFinite(output.bytes)) {
-              result = output.bytes > limitBytes ? '是' : '否';
+            const outputs = summary.htmlOutputs || [];
+            if (outputs.length > 0) {
+              result = outputs.some((output) => Number.isFinite(output.bytes) && output.bytes > limitBytes) ? '是' : '否';
             }
           } catch {
             result = '未知';
