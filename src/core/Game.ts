@@ -289,7 +289,6 @@ export class Game {
       !this.renderingService ||
       !this.sceneBuilder ||
       !this.vfxService ||
-      !this.shadowService ||
       !this.player ||
       !this.zoneSystem
     ) {

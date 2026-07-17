@@ -6,6 +6,8 @@ import { fileURLToPath } from 'node:url';
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const editorScene = JSON.parse(fs.readFileSync(path.join(projectRoot, 'src/config/editor-scene.json'), 'utf8'));
 const runtimeScene = JSON.parse(fs.readFileSync(path.join(projectRoot, 'src/config/scene.json'), 'utf8'));
+const gameSource = fs.readFileSync(path.join(projectRoot, 'src/core/Game.ts'), 'utf8');
+const gameplayTypesSource = fs.readFileSync(path.join(projectRoot, 'src/gameplay/types.ts'), 'utf8');
 
 const expectedCasters = [
   'capsule',
@@ -62,6 +64,21 @@ for (const id of expectedReceiverOnly) {
     `${id} must remain an automatic receiver without entering the caster budget`,
   );
 }
+
+assert.match(
+  gameplayTypesSource,
+  /shadowService:\s*ShadowService\s*\|\s*null/,
+  'the legacy ShadowService must remain optional while the ShadowMap experiment owns runtime shadows',
+);
+const gameplayDependencyGuard = gameSource.match(
+  /private async initGameplayModules\(\): Promise<void> \{[\s\S]*?\n\s*\}\n\n\s*this\.projectGameplayRuntime/,
+)?.[0];
+assert.ok(gameplayDependencyGuard, 'Game gameplay dependency guard must remain discoverable');
+assert.doesNotMatch(
+  gameplayDependencyGuard,
+  /!this\.shadowService/,
+  'enabling the ShadowMap experiment must not skip all gameplay modules and activity-source registration',
+);
 
 const runtimePlugin = runtimeScene.plugins.find(plugin => plugin.pluginId === 'fps.shadow-map-experiment');
 assert.ok(runtimePlugin, 'compiled runtime scene must contain the ShadowMap experiment plugin payload');

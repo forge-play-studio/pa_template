@@ -37,7 +37,7 @@ export interface GameplayRuntimeContext {
   renderingService: RenderingService;
   sceneBuilder: SceneBuilder;
   vfxService: VfxService;
-  shadowService: ShadowService;
+  shadowService: ShadowService | null;
   analytics: PlayableAnalyticsService;
   cta: PlayableCtaService;
   player: SimplePlayer;
