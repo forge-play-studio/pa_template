@@ -2,7 +2,11 @@ import type { Scene } from '@babylonjs/core/scene';
 import type { FrameContext } from './types.ts';
 
 export class RenderCoordinator {
-  constructor(private readonly scene: Scene) {}
+  private readonly scene: Scene;
+
+  constructor(scene: Scene) {
+    this.scene = scene;
+  }
 
   renderFrame(_frame: FrameContext): void {
     this.render();

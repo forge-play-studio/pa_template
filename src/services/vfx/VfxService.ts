@@ -22,6 +22,7 @@ import type {
 } from './types.ts';
 
 export class VfxService {
+  private readonly options: VfxServiceOptions;
   private readonly registrations = new Map<string, VfxEffectRegistration>();
   private readonly diagnostics = new VfxDiagnostics();
   private readonly poolManager: VfxPoolManager;
@@ -37,7 +38,8 @@ export class VfxService {
   private leaseSequence = 0;
   private budgetConflict: string | null = null;
 
-  constructor(private readonly options: VfxServiceOptions) {
+  constructor(options: VfxServiceOptions) {
+    this.options = options;
     this.renderWarmupFrame = options.renderWarmupFrame ?? (async () => undefined);
     this.poolManager = new VfxPoolManager(
       options.scene,

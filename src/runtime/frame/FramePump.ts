@@ -11,6 +11,7 @@ export interface FramePumpOptions {
 }
 
 export class FramePump {
+  private readonly options: FramePumpOptions;
   private running = false;
   private readonly now: () => number;
   private readonly renderLoop = (): void => {
@@ -19,7 +20,8 @@ export class FramePump {
     this.options.director.tick(frame, this.options.isSimulationPaused());
   };
 
-  constructor(private readonly options: FramePumpOptions) {
+  constructor(options: FramePumpOptions) {
+    this.options = options;
     this.now = options.now ?? (() => performance.now());
   }
 

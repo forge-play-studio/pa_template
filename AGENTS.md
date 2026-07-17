@@ -29,7 +29,7 @@ npm run dev:pa-template
 3. 面板位置：玩法、VFX、调参、diagnostics、quick action 面板默认注册到底部 dock；Camera / Lighting 这类 editor SDK 工具注册到 `right-rail`，按钮保持在右下角，面板打开时悬在按钮上方。
 4. 视觉样式：debug 入口按钮的马卡龙配色、圆角、间距、打开状态和顺序由 `RuntimeDebugPanelManager` 管理。外部容器只提供稳定 `id`、`aria-label` / title 和内容，不要覆盖 manager 的按钮样式。
 5. 阶段面板：builder 生成的 gameplay 阶段面板放在 `src/debug/runtime-<feature>-debug-panel.ts`，descriptor 注册到 `src/debug/panel-manifest.ts`，由 `src/debug/runtime-gameplay-debug-panels.ts` 统一 mount。
-6. dev-only：debug 面板只能通过 `src/main.ts` 的 dev-only dynamic import 链路加载。production-owned 文件不得静态 import debug module 的值；正式 gameplay 逻辑不得依赖 debug-only API、DOM 或 `window.__paDebugActions`。
+6. dev-only：debug 面板仍放在 `src/debug/**`，但只能通过 `src/dev/dev-entry.ts` / `src/dev/DevHost.ts` 的 dev-only dynamic import 链路加载；`src/main.ts` 只负责转发 `virtual:pa-app-entry`。production-owned 文件不得静态 import debug module 的值；正式 gameplay 逻辑不得依赖 debug-only API、DOM 或 `window.__paDebugActions`。
 7. 职责边界：debug 面板只负责调参、diagnostics、preview、Reset、Save 和 quick action UI。业务规则留在 `systems/`、`services/` 或 `entities/`；quick action 调正式 runtime API 或 dev-only `RuntimeDebugActionRegistry` action。
 8. 数值调参：numeric tuning 必须 live preview；可持久化数值必须 Save 回 checked-in source config，默认优先 `src/config/gameplay.json`，不能把 gameplay tuning 持久化到 browser storage。
 

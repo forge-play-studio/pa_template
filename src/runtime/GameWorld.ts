@@ -105,6 +105,7 @@ export class GameWorld {
   private gameplayModules: GameplayModule[] = [];
   private initializedGameplayModules: GameplayModule[] = [];
   private projectGameplayRuntime: ProjectGameplayRuntime | null = null;
+  private readonly options: GameWorldOptions;
 
   private readonly resizeHandler = (): void => {
     this.handleDevicePixelRatio();
@@ -116,7 +117,8 @@ export class GameWorld {
     this.frameClock?.resetTime();
   };
 
-  constructor(private readonly options: GameWorldOptions) {
+  constructor(options: GameWorldOptions) {
+    this.options = options;
     this.enableAudio = options.enableAudio ?? false;
   }
 
