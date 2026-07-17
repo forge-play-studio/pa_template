@@ -70,6 +70,12 @@ const runtimeAuthoredConfigConsumerPaths = new Set([
   'src/debug/camera-debug-panel.ts',
   'src/debug/runtime-lighting-debug-panel.ts',
 ]);
+const runtimeIntegrationConsumerPrefixes = [
+  // Production runtime imports the public SDK through this explicit adapter
+  // seam; it is not editor host/product assembly code and should not consume
+  // the project's editor integration line budget.
+  'src/runtime/integrations/fps-runtime/',
+];
 const editorSignalScanRoots = [
   'fps.config.ts',
   'vite.config.ts',
@@ -356,7 +362,8 @@ function isIgnoredSignalFile(filePath) {
 
 function isRuntimeAuthoredConfigConsumer(filePath) {
   const relativePath = toProjectPath(path.relative(projectRoot, filePath));
-  return runtimeAuthoredConfigConsumerPaths.has(relativePath);
+  return runtimeAuthoredConfigConsumerPaths.has(relativePath)
+    || runtimeIntegrationConsumerPrefixes.some(prefix => relativePath.startsWith(prefix));
 }
 
 function hasEditorIntegrationSignal(content) {

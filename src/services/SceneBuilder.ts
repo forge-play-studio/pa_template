@@ -70,7 +70,7 @@ import {
   resolveMaterialRuntimeKind,
   resolveMaterialOwnerNode,
   resolveMaterialSlotOwnerNodes,
-} from '@fps-games/editor/playable-sdk';
+} from '../runtime/integrations/fps-runtime/scene';
 
 const BABYLON_MATERIAL_RUNTIME = { Color3, MaterialPluginBase, Texture };
 

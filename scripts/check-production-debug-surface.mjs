@@ -24,6 +24,12 @@ const forbiddenTokens = [
   'runtime-debug-bootstrap',
   'debug-panel-layout',
   'RuntimeDebugActionRegistry',
+  'DevHost',
+  '__restartProjectGame',
+  'mountRuntimeDebug',
+  'mountLocalEditorModeSwitcher',
+  'createFpsGameEditorPlayableProjectHostAssembly',
+  'EditorSceneDocument',
 ];
 
 if (!existsSync(distRoot)) {

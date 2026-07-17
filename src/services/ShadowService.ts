@@ -33,7 +33,7 @@ import {
   type EditorShadowRuntimeTarget,
   type EditorShadowResolvedPlan,
   type EditorShadowSettings,
-} from '@fps-games/editor/playable-sdk';
+} from '../runtime/integrations/fps-runtime/shadows';
 import {
   createBlobShadowOptionsFromRenderingProfile,
   createPlanarShadowOptionsFromRenderingProfile,

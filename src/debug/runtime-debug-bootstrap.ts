@@ -7,7 +7,7 @@
  * `src/services/fps-game-editor/local-editor.ts`; this file
  * only imports and mounts that host together with debug panels.
  */
-import type { Game } from '../core/Game';
+import type { GameWorld } from '../runtime/GameWorld';
 import type { ProjectGameplayRuntime } from '../gameplay';
 import { mountCameraDebugPanel } from './camera-debug-panel';
 import { mountLocalEditorModeSwitcher } from '../services/fps-game-editor/local-editor';
@@ -20,7 +20,7 @@ import { createRuntimeDebugPanelManager } from './framework/panel-manager';
 
 export interface RuntimeDebugBootstrapOptions {
   root?: HTMLElement;
-  getGame: () => Game | null;
+  getGame: () => GameWorld | null;
   getGameplayRuntime: () => ProjectGameplayRuntime | null;
   disposeGameWorld: () => void | Promise<void>;
 }

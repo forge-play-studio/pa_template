@@ -16,6 +16,11 @@ interface VfxPoolEntry {
 }
 
 export class VfxEffectPool {
+  private readonly registration: VfxEffectRegistration;
+  private readonly scene: Scene;
+  private readonly renderWarmupFrame: () => Promise<void>;
+  private readonly onActiveChanged: (delta: number) => void;
+  private readonly onChanged: () => void;
   private readonly entries: VfxPoolEntry[] = [];
   private readonly idleEntries: VfxPoolEntry[] = [];
   private readonly activeByLease = new Map<string, VfxPoolEntry>();
@@ -32,12 +37,18 @@ export class VfxEffectPool {
   private lastError: string | undefined;
 
   constructor(
-    private readonly registration: VfxEffectRegistration,
-    private readonly scene: Scene,
-    private readonly renderWarmupFrame: () => Promise<void>,
-    private readonly onActiveChanged: (delta: number) => void,
-    private readonly onChanged: () => void,
-  ) {}
+    registration: VfxEffectRegistration,
+    scene: Scene,
+    renderWarmupFrame: () => Promise<void>,
+    onActiveChanged: (delta: number) => void,
+    onChanged: () => void,
+  ) {
+    this.registration = registration;
+    this.scene = scene;
+    this.renderWarmupFrame = renderWarmupFrame;
+    this.onActiveChanged = onActiveChanged;
+    this.onChanged = onChanged;
+  }
 
   setPrepared(durationMs: number): void {
     this.status = 'prepared';
