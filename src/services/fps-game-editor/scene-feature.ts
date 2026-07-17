@@ -179,6 +179,11 @@ export function createEditorSceneGroundDecalHierarchyOperations() {
     id: `pa-template.ground-decal.create-${uiKind}`,
     label: uiKind === 'delivery' ? '添加交付类地贴 UI' : '添加操作类地贴 UI',
     placement: 'after-create' as const,
+    menu: {
+      path: [{ id: 'create', label: 'Create', order: 20 }],
+      group: 'ground-decal',
+      order: uiKind === 'delivery' ? 20 : 10,
+    },
     effect: 'authoring' as const,
     targetPolicy: 'none' as const,
     visible: (context: { scope: { scopeType: string } }) => context.scope.scopeType === 'scene',
