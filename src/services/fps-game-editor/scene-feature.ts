@@ -178,14 +178,7 @@ export function createEditorSceneGroundDecalHierarchyOperations() {
   return paTemplateGroundDecalFeatureConfig.uiKinds.map((uiKind: string) => ({
     id: `pa-template.ground-decal.create-${uiKind}`,
     label: uiKind === 'delivery' ? '添加交付类地贴 UI' : '添加操作类地贴 UI',
-    menu: {
-      path: [
-        { id: 'create', label: 'Create', order: 20 },
-        { id: 'ground-decal-ui', label: 'Ground Decal UI', order: 40 },
-      ],
-      group: 'ground-decal',
-      order: uiKind === 'delivery' ? 0 : 10,
-    } as const,
+    placement: 'after-create' as const,
     effect: 'authoring' as const,
     targetPolicy: 'none' as const,
     visible: (context: { scope: { scopeType: string } }) => context.scope.scopeType === 'scene',
