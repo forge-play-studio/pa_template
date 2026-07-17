@@ -59,9 +59,21 @@ export function mountRuntimeDebug(options: RuntimeDebugBootstrapOptions): Runtim
     getGameplayRuntime: options.getGameplayRuntime,
     actions,
   }));
-  runtimePanels.use(mountRuntimeShadowMapStressHarness({
-    getGame: options.getGame,
-  }));
+  try {
+    runtimePanels.use(mountRuntimeShadowMapStressHarness({
+      getGame: options.getGame,
+    }));
+    delete document.documentElement.dataset.shadowStressError;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    document.documentElement.dataset.shadowStressError = message;
+    console.warn('[shadow-map-stress] mount failed', error);
+  }
+  runtimePanels.use({
+    dispose() {
+      delete document.documentElement.dataset.shadowStressError;
+    },
+  });
 
   let disposed = false;
   let disposal: Promise<void> | null = null;

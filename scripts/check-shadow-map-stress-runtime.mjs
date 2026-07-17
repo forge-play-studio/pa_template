@@ -11,6 +11,8 @@ const editorDynamic = new TransformNode('shadow_stress_editor_dynamic_0000', sce
 const sources = new Map();
 let registrationDisposeCount = 0;
 let registeredRuntimeObjects = [];
+let gameplayPauseCount = 0;
+let gameplayResumeCount = 0;
 
 const sceneBuilder = {
   sceneNodeRuntimes: new Map([
@@ -44,6 +46,8 @@ const game = {
   getScene: () => scene,
   getSceneBuilder: () => sceneBuilder,
   getShadowMapExperimentEvidence: () => ({ refreshCount: 0 }),
+  pause() { gameplayPauseCount += 1; },
+  resume() { gameplayResumeCount += 1; },
 };
 
 const controller = createShadowMapStressController(game);
@@ -62,6 +66,10 @@ for (const [key, source] of sources) {
 scene.onBeforeRenderObservable.notifyObservers(scene);
 controller.stopDynamic();
 for (const source of sources.values()) assert.equal(source.active, false);
+controller.pauseGameplay();
+controller.resumeGameplay();
+assert.equal(gameplayPauseCount, 1);
+assert.equal(gameplayResumeCount, 1);
 
 const cleared = controller.clearCodeGenerated();
 assert.equal(cleared.codeStaticCount, 0);
@@ -69,8 +77,11 @@ assert.equal(cleared.codeDynamicCount, 0);
 assert.equal(registrationDisposeCount, 1);
 
 controller.refreshEditorGenerated();
+controller.pauseGameplay();
 controller.dispose();
 controller.dispose();
+assert.equal(gameplayPauseCount, 2);
+assert.equal(gameplayResumeCount, 2);
 scene.dispose();
 engine.dispose();
 console.log('shadow-map stress runtime harness: ok');

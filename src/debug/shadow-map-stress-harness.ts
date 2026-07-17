@@ -15,6 +15,7 @@ const EDITOR_STATIC_PREFIX = 'shadow_stress_editor_static_';
 const EDITOR_DYNAMIC_PREFIX = 'shadow_stress_editor_dynamic_';
 const CODE_STATIC_PREFIX = 'shadow_stress_code_static_';
 const CODE_DYNAMIC_PREFIX = 'shadow_stress_code_dynamic_';
+const STRESS_PROBE_ID = 'shadow-map-stress-probe';
 const MAX_CASTER_COUNT_PER_CLASS = 2_000;
 const GRID_SPACING = 0.55;
 const BOX_SIZE = 0.34;
@@ -66,6 +67,8 @@ export interface ShadowMapStressController {
   startDynamic(): ShadowMapStressSnapshot;
   stopDynamic(): ShadowMapStressSnapshot;
   clearCodeGenerated(): ShadowMapStressSnapshot;
+  pauseGameplay(): ShadowMapStressSnapshot;
+  resumeGameplay(): ShadowMapStressSnapshot;
   sampleFrames(frameCount?: number): Promise<ShadowMapStressPerformanceSample>;
   getSnapshot(): ShadowMapStressSnapshot;
   dispose(): void;
@@ -79,12 +82,92 @@ export function mountRuntimeShadowMapStressHarness(options: {
   const controller = createShadowMapStressController(game);
   window.__PA_SHADOW_STRESS__?.dispose();
   window.__PA_SHADOW_STRESS__ = controller;
+  const probe = mountShadowMapStressProbe(controller);
   return {
     dispose() {
+      probe.remove();
       if (window.__PA_SHADOW_STRESS__ === controller) delete window.__PA_SHADOW_STRESS__;
       controller.dispose();
     },
   };
+}
+
+function mountShadowMapStressProbe(controller: ShadowMapStressController): HTMLDivElement {
+  document.getElementById(STRESS_PROBE_ID)?.remove();
+  const root = document.createElement('div');
+  root.id = STRESS_PROBE_ID;
+  root.style.cssText = 'position:fixed;left:2px;top:0;width:4px;height:2px;opacity:0.001;z-index:2147483647';
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.setAttribute('aria-label', 'Shadow Map stress command JSON');
+  input.style.cssText = 'width:2px;height:2px;padding:0;border:0';
+  const probe = document.createElement('button');
+  probe.type = 'button';
+  probe.setAttribute('aria-label', 'Run Shadow Map stress command');
+  probe.style.cssText = 'width:2px;height:2px;padding:0;border:0';
+  probe.addEventListener('click', async () => {
+    const request = parseStressProbeRequest(input.value);
+    if (!request) return;
+    root.dataset.status = `pending:${request.id}`;
+    try {
+      const value = await executeStressProbeRequest(controller, request);
+      root.dataset.result = JSON.stringify({ id: request.id, ok: true, value });
+    } catch (error) {
+      root.dataset.result = JSON.stringify({
+        id: request.id,
+        ok: false,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    } finally {
+      root.dataset.status = `complete:${request.id}`;
+    }
+  });
+  root.append(input, probe);
+  document.body.append(root);
+  return root;
+}
+
+type StressProbeRequest = {
+  id: string;
+  action: 'snapshot' | 'configureCodeGenerated' | 'refreshEditorGenerated'
+    | 'startDynamic' | 'stopDynamic' | 'clearCodeGenerated'
+    | 'pauseGameplay' | 'resumeGameplay' | 'sampleFrames' | 'stopDynamicAndSample';
+  input?: Record<string, unknown>;
+};
+
+function parseStressProbeRequest(value: string | undefined): StressProbeRequest | null {
+  if (!value) return null;
+  try {
+    const parsed = JSON.parse(value) as Partial<StressProbeRequest>;
+    if (typeof parsed.id !== 'string' || typeof parsed.action !== 'string') return null;
+    return parsed as StressProbeRequest;
+  } catch {
+    return null;
+  }
+}
+
+async function executeStressProbeRequest(
+  controller: ShadowMapStressController,
+  request: StressProbeRequest,
+): Promise<unknown> {
+  switch (request.action) {
+    case 'snapshot': return controller.getSnapshot();
+    case 'configureCodeGenerated': return controller.configureCodeGenerated({
+      staticCount: Number(request.input?.staticCount),
+      dynamicCount: Number(request.input?.dynamicCount),
+    });
+    case 'refreshEditorGenerated': return controller.refreshEditorGenerated();
+    case 'startDynamic': return controller.startDynamic();
+    case 'stopDynamic': return controller.stopDynamic();
+    case 'clearCodeGenerated': return controller.clearCodeGenerated();
+    case 'pauseGameplay': return controller.pauseGameplay();
+    case 'resumeGameplay': return controller.resumeGameplay();
+    case 'sampleFrames': return controller.sampleFrames(Number(request.input?.frameCount ?? 120));
+    case 'stopDynamicAndSample':
+      controller.stopDynamic();
+      return controller.sampleFrames(Number(request.input?.frameCount ?? 4));
+    default: throw new Error(`shadowMapStress.unknownProbeAction:${request.action}`);
+  }
 }
 
 export function createShadowMapStressController(game: Game): ShadowMapStressController {
@@ -99,6 +182,7 @@ export function createShadowMapStressController(game: Game): ShadowMapStressCont
   let codeRegistration: SceneRuntimeGeneratedShadowCasterRegistration | null = null;
   let codeMaterial: StandardMaterial | null = null;
   let dynamicActive = false;
+  let gameplayPausedByHarness = false;
   let movementElapsed = 0;
   let disposed = false;
 
@@ -272,6 +356,18 @@ export function createShadowMapStressController(game: Game): ShadowMapStressCont
       clearCodeGenerated();
       return controller.getSnapshot();
     },
+    pauseGameplay() {
+      assertUsable();
+      game.pause();
+      gameplayPausedByHarness = true;
+      return controller.getSnapshot();
+    },
+    resumeGameplay() {
+      assertUsable();
+      game.resume();
+      gameplayPausedByHarness = false;
+      return controller.getSnapshot();
+    },
     async sampleFrames(frameCount = 120) {
       assertUsable();
       const requestedFrames = Math.max(2, Math.min(600, Math.floor(frameCount)));
@@ -328,6 +424,10 @@ export function createShadowMapStressController(game: Game): ShadowMapStressCont
       editorNodes.clear();
       try { clearCodeGenerated(); } catch (error) { errors.push(error); }
       try { scene.onBeforeRenderObservable.remove(movementObserver); } catch (error) { errors.push(error); }
+      if (gameplayPausedByHarness) {
+        try { game.resume(); } catch (error) { errors.push(error); }
+        gameplayPausedByHarness = false;
+      }
       if (errors.length > 0) throw new AggregateError(errors, 'shadowMapStress.disposeFailed');
     },
   };
