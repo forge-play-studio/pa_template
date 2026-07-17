@@ -10,7 +10,6 @@
 import type { GameWorld } from '../runtime/GameWorld';
 import type { ProjectGameplayRuntime } from '../gameplay';
 import { mountCameraDebugPanel } from './camera-debug-panel';
-import { mountLocalEditorModeSwitcher } from '../services/fps-game-editor/local-editor';
 import { mountRuntimeAudioDebugPanel } from './runtime-audio-debug-panel';
 import { mountRuntimeGameplayDebugPanels } from './runtime-gameplay-debug-panels';
 import { mountRuntimeLightingDebugPanel } from './runtime-lighting-debug-panel';
@@ -66,23 +65,12 @@ export function mountRuntimeDebug(options: RuntimeDebugBootstrapOptions): Runtim
     if (runtimePanelsDetached) return;
     runtimePanelsDetached = true;
     runtimePanels.dispose();
-    editorSwitcher.detachForEditor();
   };
-  const editorSwitcher = mountLocalEditorModeSwitcher({
-    root,
-    disposeGameWorld: async () => {
-      detachRuntimePanelsForEditor();
-      await options.disposeGameWorld();
-    },
-    onBeforeEnterEditor: detachRuntimePanelsForEditor,
-    onBeforeReload: detachRuntimePanelsForEditor,
-  });
   async function disposeMountedEditor(): Promise<void> {
     if (disposed) return;
     if (disposal) return disposal;
     const pending = (async () => {
       runtimePanels.dispose();
-      await editorSwitcher.dispose();
       disposed = true;
     })();
     disposal = pending;
