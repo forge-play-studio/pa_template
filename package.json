@@ -12,6 +12,8 @@
     "test:vfx-usage": "node scripts/check-vfx-usage.mjs",
     "test:model-animation-service": "node --experimental-transform-types scripts/check-model-animation-service.mjs",
     "test:vfx-service": "node --experimental-transform-types scripts/check-vfx-service.mjs",
+    "test:gameworld-architecture": "node scripts/check-gameworld-architecture.mjs",
+    "test:gameworld-lifecycle": "node --experimental-transform-types scripts/check-gameworld-lifecycle.mjs",
     "asset:migrate-guid": "node scripts/asset-registry/migrate-asset-guid-catalog.mjs",
     "test:asset-guid-migration": "node scripts/check-asset-guid-migration.mjs",
     "test:asset-catalog-generator": "node scripts/check-asset-catalog-generator.mjs",
@@ -39,8 +41,8 @@
     "test:scene-walkthrough": "node scripts/check-scene-walkthrough-contract.mjs",
     "build": "./scripts/build-all.sh en applovin",
     "build:all": "./scripts/build-all.sh",
-    "build:single": "cross-env BUILD_MATRIX=false SCENE_WALKTHROUGH_BUILD=false npm run typecheck && cross-env BUILD_MATRIX=false SCENE_WALKTHROUGH_BUILD=false vite build && npm run check:scene-walkthrough-disabled && npm run check:prod-debug",
-    "build:scene-walkthrough": "cross-env NODE_ENV=production BUILD_MATRIX=false SCENE_WALKTHROUGH_BUILD=true npm run typecheck && npm run test:scene-walkthrough && cross-env NODE_ENV=production BUILD_MATRIX=false SCENE_WALKTHROUGH_BUILD=true vite build && npm run check:scene-walkthrough && npm run check:prod-debug",
+    "build:single": "cross-env BUILD_MATRIX=false SCENE_WALKTHROUGH_BUILD=false npm run typecheck && npm run test:gameworld-architecture && npm run test:gameworld-lifecycle && cross-env BUILD_MATRIX=false SCENE_WALKTHROUGH_BUILD=false vite build && npm run check:scene-walkthrough-disabled && npm run check:prod-debug",
+    "build:scene-walkthrough": "cross-env NODE_ENV=production BUILD_MATRIX=false SCENE_WALKTHROUGH_BUILD=true npm run typecheck && npm run test:gameworld-architecture && npm run test:gameworld-lifecycle && npm run test:scene-walkthrough && cross-env NODE_ENV=production BUILD_MATRIX=false SCENE_WALKTHROUGH_BUILD=true vite build && npm run check:scene-walkthrough && npm run check:prod-debug",
     "check:prod-debug": "node scripts/check-production-debug-surface.mjs",
     "check:scene-walkthrough": "node scripts/check-scene-walkthrough-build.mjs --enabled",
     "check:scene-walkthrough-disabled": "node scripts/check-scene-walkthrough-build.mjs --disabled",
@@ -58,6 +60,7 @@
   "license": "ISC",
   "devDependencies": {
     "@babylonjs/inspector": "8.52.1",
+    "@types/node": "^22.10.2",
     "cross-env": "^7.0.3",
     "rollup-plugin-visualizer": "^7.0.1",
     "terser": "^5.44.1",
@@ -68,7 +71,7 @@
   "dependencies": {
     "@babylonjs/core": "8.52.1",
     "@babylonjs/loaders": "8.52.1",
-    "@fps-games/editor": "0.1.8-beta.5",
+    "@fps-games/editor": "0.2.0-beta.4",
     "@fps-games/vfx": "0.3.21",
     "brotli-dec-wasm": "^2.3.2"
   },

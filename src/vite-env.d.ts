@@ -82,6 +82,8 @@ declare module '*.ktx2?url' {
   export default src;
 }
 
+declare module 'virtual:pa-app-entry';
+
 declare const __LITE_BUILD__: boolean;
 declare const __PROD_BUILD__: boolean;
 declare const __SCENE_WALKTHROUGH_BUILD__: boolean;

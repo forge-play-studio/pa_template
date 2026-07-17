@@ -70,7 +70,6 @@ const analyticsConfig = appConfig.analytics;
 const i18nConfig = appConfig.i18n;
 const liteBuild = process.env.LITE_BUILD === 'true';
 const isProduction = process.env.NODE_ENV === 'production';
-const enableDevDebugTooling = !isProduction;
 const bridgeEnabled = process.env.BRIDGE_ENABLED === 'true';
 const bundleStatsEnabled = process.env.BUNDLE_STATS === 'true';
 const buildMatrix = process.env.BUILD_MATRIX === 'true';
@@ -93,6 +92,7 @@ export function createPaTemplateViteConfig(integration: ProjectViteIntegration) 
 const projectRoot = resolve(__dirname, '..');
 const allowedThirdPartyPackages = ['@babylonjs/core', '@babylonjs/loaders', '@fps-games/vfx', ...integration.editorPackageIds];
 return defineConfig(({ command }) => {
+  const devServer = command === 'serve';
   if (sceneWalkthroughRequested && (command !== 'build' || !isProduction || buildMatrix)) {
     throw new Error('SCENE_WALKTHROUGH_BUILD is only valid for the dedicated non-matrix production build command');
   }
@@ -118,19 +118,19 @@ return defineConfig(({ command }) => {
   plugins: [
     // The legacy platform bridge is opt-in so ordinary local runs do not probe
     // the external bridge port.
-    bridgePlugin({
+    ...(devServer ? [bridgePlugin({
       port: 8080,
       delay: 2000,
       enabled: bridgeEnabled,
-    }),
+    })] : []),
     // Production builds do not inject Babylon Inspector UI.
-    ...(enableDevDebugTooling ? [inspectorPlugin()] : []),
+    ...(devServer ? [inspectorPlugin()] : []),
     integration.playableEditorVitePlugin(),
     integration.pluginManifestVitePlugin(),
-    ...(enableDevDebugTooling ? projectDebugApiPlugins({ projectRoot }) : []),
-    integration.projectAuthoringApiPlugin(),
+    ...(devServer ? projectDebugApiPlugins({ projectRoot }) : []),
+    ...(devServer ? [integration.projectAuthoringApiPlugin()] : []),
     // 开发模式模型强缓存 + URL 版本化（mtime）
-    modelCachePlugin({
+    ...(devServer ? [modelCachePlugin({
       extensions: [
         '.glb', '.gltf',
         '.png', '.jpg', '.jpeg',
@@ -138,7 +138,7 @@ return defineConfig(({ command }) => {
       ],
       roots: ['src'],
       cacheMaxAgeSeconds: 31536000,
-    }),
+    })] : []),
     thirdPartyWhitelistPlugin({
       allowedPackages: allowedThirdPartyPackages,
       projectRoot,
@@ -196,6 +196,13 @@ return defineConfig(({ command }) => {
   resolve: {
     alias: [
       { find: '@', replacement: resolve(__dirname, 'src') },
+      {
+        find: /^virtual:pa-app-entry$/,
+        replacement: resolve(
+          projectRoot,
+          command === 'build' ? 'src/entry/game-entry.ts' : 'src/dev/dev-entry.ts',
+        ),
+      },
     ],
     dedupe: [
       '@babylonjs/core',

@@ -2,10 +2,8 @@ import type { SceneConfig } from './types';
 import sceneJsonV2Rules from './scene-json-v2-rules.json';
 import {
   assertEditorShadowSettingsContract,
-} from '@fps-games/editor/playable-runtime';
-import {
   assertEditorSceneStaticShadowArtifactContract,
-} from '@fps-games/editor/playable-sdk';
+} from '../runtime/integrations/fps-runtime/validation';
 
 export interface SceneJsonValidationError {
   path: string;

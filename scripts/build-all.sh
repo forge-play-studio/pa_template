@@ -23,6 +23,9 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$PROJECT_DIR"
 
+npm run test:gameworld-architecture
+npm run test:gameworld-lifecycle
+
 read_json() {
   node -e "const p=require('./package.json'); console.log($1)"
 }
