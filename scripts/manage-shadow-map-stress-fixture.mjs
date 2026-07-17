@@ -5,8 +5,11 @@ import path from 'node:path';
 
 const EDITOR_STATIC_PREFIX = 'shadow_stress_editor_static_';
 const EDITOR_DYNAMIC_PREFIX = 'shadow_stress_editor_dynamic_';
+const EDITOR_SKINNED_PREFIX = 'shadow_stress_editor_skinned_';
+const WORKER_ASSET_ID = 'asset_ade25007e0964563b197b21c2759c027';
 const MAX_COUNT_PER_CLASS = 2_000;
 const GRID_SPACING = 0.55;
+const SKINNED_GRID_SPACING = 1.35;
 
 const args = parseArgs(process.argv.slice(2));
 const projectRoot = process.cwd();
@@ -18,6 +21,10 @@ const sdk = await import('@fps-games/editor/playable-sdk');
 let document = await readJson(editorScenePath);
 const previousSceneConfig = await readJson(scenePath);
 const assetManifest = await readJson(assetManifestPath);
+const assetLibrary = sdk.createEditorSceneAssetLibrary(assetManifest.map(entry => (
+  entry.kind === 'model' ? { ...entry, materialMode: entry.materialMode ?? 'shared' } : entry
+)));
+const workerAsset = assetLibrary.find(asset => asset.assetId === WORKER_ASSET_ID);
 const previousStressIds = document.scene.gameObjects
   .filter(object => isStressObjectId(object.id))
   .map(object => object.id);
@@ -62,14 +69,44 @@ if (!args.remove) {
       dynamic ? 'dynamic' : 'static',
     );
   }
+
+  if (args.skinnedCount > 0 && !workerAsset) {
+    throw new Error(`Unable to find skinned stress worker asset: ${WORKER_ASSET_ID}`);
+  }
+  const skinnedColumns = Math.min(8, Math.max(1, args.skinnedCount));
+  for (let index = 0; index < args.skinnedCount; index += 1) {
+    const expectedId = `${EDITOR_SKINNED_PREFIX}${String(index).padStart(4, '0')}`;
+    const position = createSkinnedGridPosition(index, args.skinnedCount, skinnedColumns);
+    const creation = sdk.createEditorSceneAssetPlacementPatch({
+      document,
+      asset: workerAsset,
+      hit: { position },
+      name: expectedId,
+    });
+    if (creation.createdId !== expectedId) {
+      throw new Error(`Editor skinned stress fixture identity drift: expected ${expectedId}, got ${creation.createdId}`);
+    }
+    document = sdk.applyEditorSceneDocumentMutationPatch({ document, patch: creation.patch });
+    document = sdk.patchEditorSceneGameObjectField(document, expectedId, 'transform.scale', {
+      x: 0.72,
+      y: 0.72,
+      z: 0.72,
+    });
+    document = sdk.patchEditorSceneGameObjectField(
+      document,
+      expectedId,
+      'metadata.shadowStressSource',
+      'editor-skinned',
+    );
+    document = sdk.patchEditorSceneGameObjectField(document, expectedId, 'shadowMapExperiment.cast', 'enabled');
+    document = sdk.patchEditorSceneGameObjectField(document, expectedId, 'shadowMapExperiment.receive', 'enabled');
+    document = sdk.patchEditorSceneGameObjectField(document, expectedId, 'shadowMapExperiment.updateClass', 'skinned');
+  }
 }
 
 const nextStressObjects = document.scene.gameObjects.filter(object => isStressObjectId(object.id));
 const changed = previousStressIds.length > 0 || nextStressObjects.length > 0;
 if (changed) document = sdk.bumpEditorSceneAuthoringSourceRevision(document);
-const assetLibrary = sdk.createEditorSceneAssetLibrary(assetManifest.map(entry => (
-  entry.kind === 'model' ? { ...entry, materialMode: entry.materialMode ?? 'shared' } : entry
-)));
 const hydrated = sdk.enrichEditorSceneDocumentAssets(document, assetLibrary);
 const compiled = sdk.compileEditorSceneDocumentToSceneConfig(hydrated, previousSceneConfig, {
   readCustomTransformRuntimeData: gameObject => (
@@ -83,7 +120,7 @@ const compiledPlan = compiled.sceneConfig.plugins?.find(
 )?.data;
 const compiledStressObjects = compiledPlan?.objects?.filter(object => isStressObjectId(object.entityId)) ?? [];
 
-const expectedCount = args.remove ? 0 : args.staticCount + args.dynamicCount;
+const expectedCount = args.remove ? 0 : args.staticCount + args.dynamicCount + args.skinnedCount;
 if (nextStressObjects.length !== expectedCount) {
   throw new Error(`Authored stress fixture count mismatch: expected ${expectedCount}, got ${nextStressObjects.length}`);
 }
@@ -101,6 +138,7 @@ console.log(JSON.stringify({
   remove: args.remove,
   editorStaticCount: nextStressObjects.filter(object => object.id.startsWith(EDITOR_STATIC_PREFIX)).length,
   editorDynamicCount: nextStressObjects.filter(object => object.id.startsWith(EDITOR_DYNAMIC_PREFIX)).length,
+  editorSkinnedCount: nextStressObjects.filter(object => object.id.startsWith(EDITOR_SKINNED_PREFIX)).length,
   compiledStressCasterCount: compiledStressObjects.length,
   authoringRevision: document.meta?.authoringSource?.revision ?? null,
 }));
@@ -110,10 +148,11 @@ function parseArgs(values) {
   const dryRun = values.includes('--dry-run');
   const staticCount = readCount(values, '--static', remove ? 0 : null);
   const dynamicCount = readCount(values, '--dynamic', remove ? 0 : null);
-  if (!remove && staticCount === 0 && dynamicCount === 0) {
-    throw new Error('Provide --static=<count> and/or --dynamic=<count>, or use --remove.');
+  const skinnedCount = readCount(values, '--skinned', remove ? 0 : null);
+  if (!remove && staticCount === 0 && dynamicCount === 0 && skinnedCount === 0) {
+    throw new Error('Provide --static=<count>, --dynamic=<count>, and/or --skinned=<count>, or use --remove.');
   }
-  return { remove, dryRun, staticCount, dynamicCount };
+  return { remove, dryRun, staticCount, dynamicCount, skinnedCount };
 }
 
 function readCount(values, name, fallback) {
@@ -135,9 +174,22 @@ function createGridPosition(index, total, columns) {
   };
 }
 
+function createSkinnedGridPosition(index, total, columns) {
+  const rows = Math.ceil(total / columns);
+  return {
+    x: (index % columns - (columns - 1) * 0.5) * SKINNED_GRID_SPACING,
+    y: 0,
+    z: 7.8 + Math.floor(index / columns) * SKINNED_GRID_SPACING - (rows - 1) * SKINNED_GRID_SPACING * 0.5,
+  };
+}
+
 function isStressObjectId(value) {
   return typeof value === 'string'
-    && (value.startsWith(EDITOR_STATIC_PREFIX) || value.startsWith(EDITOR_DYNAMIC_PREFIX));
+    && (
+      value.startsWith(EDITOR_STATIC_PREFIX)
+      || value.startsWith(EDITOR_DYNAMIC_PREFIX)
+      || value.startsWith(EDITOR_SKINNED_PREFIX)
+    );
 }
 
 function isGroundDecalUiConfig(value) {

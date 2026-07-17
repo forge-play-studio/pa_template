@@ -2,6 +2,7 @@ import { Color3 } from '@babylonjs/core/Maths/math.color.js';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial.js';
 import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder.js';
 import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh';
+import type { AnimationGroup } from '@babylonjs/core/Animations/animationGroup';
 import type { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import type { Observer } from '@babylonjs/core/Misc/observable';
 import type { Scene } from '@babylonjs/core/scene';
@@ -13,6 +14,7 @@ import type {
 
 const EDITOR_STATIC_PREFIX = 'shadow_stress_editor_static_';
 const EDITOR_DYNAMIC_PREFIX = 'shadow_stress_editor_dynamic_';
+const EDITOR_SKINNED_PREFIX = 'shadow_stress_editor_skinned_';
 const CODE_STATIC_PREFIX = 'shadow_stress_code_static_';
 const CODE_DYNAMIC_PREFIX = 'shadow_stress_code_dynamic_';
 const STRESS_PROBE_ID = 'shadow-map-stress-probe';
@@ -33,9 +35,18 @@ interface RuntimeStressNode extends StressNode {
   dynamic: boolean;
 }
 
+interface SkinnedStressEntry {
+  animations: AnimationGroup[];
+  activity: SceneShadowCasterActivityController;
+  clipName: string | null;
+}
+
 export interface ShadowMapStressSnapshot {
   editorStaticCount: number;
   editorDynamicCount: number;
+  editorSkinnedCount: number;
+  skinnedAnimationGroupCount: number;
+  playingSkinnedAnimationCount: number;
   codeStaticCount: number;
   codeDynamicCount: number;
   dynamicActive: boolean;
@@ -174,11 +185,13 @@ export function createShadowMapStressController(game: Game): ShadowMapStressCont
   const scene = game.getScene();
   const sceneBuilder = game.getSceneBuilder();
   if (!sceneBuilder) throw new Error('shadowMapStress.sceneBuilderUnavailable');
+  const modelAnimationService = game.getModelAnimationService();
 
   const codeNodes: RuntimeStressNode[] = [];
   const codeActivities = new Map<string, SceneShadowCasterActivityController>();
   const editorNodes = new Map<string, StressNode>();
   const editorActivities = new Map<string, SceneShadowCasterActivityController>();
+  const editorSkinnedEntries = new Map<string, SkinnedStressEntry>();
   let codeRegistration: SceneRuntimeGeneratedShadowCasterRegistration | null = null;
   let codeMaterial: StandardMaterial | null = null;
   let dynamicActive = false;
@@ -232,11 +245,76 @@ export function createShadowMapStressController(game: Game): ShadowMapStressCont
     if (errors.length > 0) throw new AggregateError(errors, 'shadowMapStress.codeCleanupFailed');
   };
 
+  const stopSkinnedAnimations = (): unknown[] => {
+    const errors: unknown[] = [];
+    for (const entry of editorSkinnedEntries.values()) {
+      try { entry.activity.setActive(false); } catch (error) { errors.push(error); }
+      if (entry.animations.length > 0) {
+        try { modelAnimationService?.stop(entry.animations); } catch (error) { errors.push(error); }
+      }
+      try { entry.activity.dispose(); } catch (error) { errors.push(error); }
+    }
+    editorSkinnedEntries.clear();
+    return errors;
+  };
+
+  const playSkinnedAnimations = (): void => {
+    if (editorSkinnedEntries.size > 0 && !modelAnimationService) {
+      throw new Error('shadowMapStress.modelAnimationServiceUnavailable');
+    }
+    const started: SkinnedStressEntry[] = [];
+    try {
+      let index = 0;
+      for (const entry of editorSkinnedEntries.values()) {
+        const clipName = entry.animations[0]?.name ?? null;
+        entry.clipName = clipName;
+        const animation = clipName
+          ? modelAnimationService?.play(entry.animations, clipName, {
+              loop: true,
+              speedRatio: 0.85 + (index++ % 5) * 0.075,
+            }) ?? null
+          : null;
+        entry.activity.setActive(animation !== null);
+        if (animation) started.push(entry);
+      }
+    } catch (error) {
+      for (const entry of started) {
+        try { modelAnimationService?.pause(entry.animations); } catch { /* Preserve the primary error. */ }
+        try { entry.activity.setActive(false); } catch { /* Preserve the primary error. */ }
+      }
+      throw error;
+    }
+  };
+
+  const pauseSkinnedAnimations = (): void => {
+    const errors: unknown[] = [];
+    for (const entry of editorSkinnedEntries.values()) {
+      try { modelAnimationService?.pause(entry.animations); } catch (error) { errors.push(error); }
+      try { entry.activity.setActive(false); } catch (error) { errors.push(error); }
+    }
+    if (errors.length > 0) throw new AggregateError(errors, 'shadowMapStress.skinnedPauseFailed');
+  };
+
   const refreshEditorGenerated = (): void => {
     const errors = disposeActivities(editorActivities);
+    errors.push(...stopSkinnedAnimations());
     editorNodes.clear();
     let phase = 0;
     for (const [entityId, node] of sceneBuilder.sceneNodeRuntimes) {
+      if (entityId.startsWith(EDITOR_SKINNED_PREFIX)) {
+        const activity = sceneBuilder.registerShadowCasterActivitySource({
+          entityId,
+          kind: 'animation',
+          sourceId: 'shadow-stress-editor-animation',
+        });
+        if (!activity) continue;
+        editorSkinnedEntries.set(entityId, {
+          animations: sceneBuilder.getSceneNodeAnimationGroups(entityId),
+          activity,
+          clipName: null,
+        });
+        continue;
+      }
       if (!entityId.startsWith(EDITOR_DYNAMIC_PREFIX)) continue;
       const activity = sceneBuilder.registerShadowCasterActivitySource({
         entityId,
@@ -249,6 +327,7 @@ export function createShadowMapStressController(game: Game): ShadowMapStressCont
     }
     if (dynamicActive) {
       try { setActivitiesActive(editorActivities, true); } catch (error) { errors.push(error); }
+      try { playSkinnedAnimations(); } catch (error) { errors.push(error); }
     }
     if (errors.length > 0) throw new AggregateError(errors, 'shadowMapStress.editorRefreshFailed');
   };
@@ -332,8 +411,11 @@ export function createShadowMapStressController(game: Game): ShadowMapStressCont
         setActivitiesActive(codeActivities, true);
         try {
           setActivitiesActive(editorActivities, true);
+          playSkinnedAnimations();
         } catch (error) {
           setActivitiesActive(codeActivities, false);
+          try { setActivitiesActive(editorActivities, false); } catch { /* Preserve the primary error. */ }
+          try { pauseSkinnedAnimations(); } catch { /* Preserve the primary error. */ }
           throw error;
         }
         dynamicActive = true;
@@ -346,6 +428,7 @@ export function createShadowMapStressController(game: Game): ShadowMapStressCont
         const errors: unknown[] = [];
         try { setActivitiesActive(codeActivities, false); } catch (error) { errors.push(error); }
         try { setActivitiesActive(editorActivities, false); } catch (error) { errors.push(error); }
+        try { pauseSkinnedAnimations(); } catch (error) { errors.push(error); }
         dynamicActive = false;
         if (errors.length > 0) throw new AggregateError(errors, 'shadowMapStress.stopFailed');
       }
@@ -398,13 +481,20 @@ export function createShadowMapStressController(game: Game): ShadowMapStressCont
       assertUsable();
       let editorStaticCount = 0;
       let editorDynamicCount = 0;
+      let editorSkinnedCount = 0;
       for (const entityId of sceneBuilder.sceneNodeRuntimes.keys()) {
         if (entityId.startsWith(EDITOR_STATIC_PREFIX)) editorStaticCount += 1;
         else if (entityId.startsWith(EDITOR_DYNAMIC_PREFIX)) editorDynamicCount += 1;
+        else if (entityId.startsWith(EDITOR_SKINNED_PREFIX)) editorSkinnedCount += 1;
       }
       return {
         editorStaticCount,
         editorDynamicCount,
+        editorSkinnedCount,
+        skinnedAnimationGroupCount: [...editorSkinnedEntries.values()]
+          .reduce((count, entry) => count + entry.animations.length, 0),
+        playingSkinnedAnimationCount: [...editorSkinnedEntries.values()]
+          .reduce((count, entry) => count + entry.animations.filter(animation => animation.isPlaying).length, 0),
         codeStaticCount: codeNodes.filter(entry => !entry.dynamic).length,
         codeDynamicCount: codeNodes.filter(entry => entry.dynamic).length,
         dynamicActive,
@@ -419,8 +509,10 @@ export function createShadowMapStressController(game: Game): ShadowMapStressCont
       const errors: unknown[] = [];
       try { setActivitiesActive(codeActivities, false); } catch (error) { errors.push(error); }
       try { setActivitiesActive(editorActivities, false); } catch (error) { errors.push(error); }
+      try { pauseSkinnedAnimations(); } catch (error) { errors.push(error); }
       dynamicActive = false;
       errors.push(...disposeActivities(editorActivities));
+      errors.push(...stopSkinnedAnimations());
       editorNodes.clear();
       try { clearCodeGenerated(); } catch (error) { errors.push(error); }
       try { scene.onBeforeRenderObservable.remove(movementObserver); } catch (error) { errors.push(error); }
