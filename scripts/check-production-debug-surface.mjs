@@ -12,6 +12,7 @@ const forbiddenTokens = [
   '__debug_panel_config',
   '__vfx_debug_overrides',
   '__vfx_usage_overrides',
+  '__PA_SHADOW_STRESS__',
   '@babylonjs/inspector',
   'ensureInspectorReady',
   'INSPECTOR_READY',
@@ -22,6 +23,7 @@ const forbiddenTokens = [
   'runtime-debug-panel',
   'runtime-vfx-debug-panel',
   'runtime-debug-bootstrap',
+  'shadow-map-stress-harness',
   'debug-panel-layout',
   'RuntimeDebugActionRegistry',
 ];

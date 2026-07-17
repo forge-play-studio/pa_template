@@ -15,6 +15,7 @@ import { mountRuntimeAudioDebugPanel } from './runtime-audio-debug-panel';
 import { mountRuntimeGameplayDebugPanels } from './runtime-gameplay-debug-panels';
 import { mountRuntimeLightingDebugPanel } from './runtime-lighting-debug-panel';
 import { mountRuntimeVfxDebugPanel } from './runtime-vfx-debug-panel';
+import { mountRuntimeShadowMapStressHarness } from './shadow-map-stress-harness';
 import { DisposableStack } from './framework/disposables';
 import { createRuntimeDebugPanelManager } from './framework/panel-manager';
 
@@ -57,6 +58,9 @@ export function mountRuntimeDebug(options: RuntimeDebugBootstrapOptions): Runtim
     getGame: options.getGame,
     getGameplayRuntime: options.getGameplayRuntime,
     actions,
+  }));
+  runtimePanels.use(mountRuntimeShadowMapStressHarness({
+    getGame: options.getGame,
   }));
 
   let disposed = false;
