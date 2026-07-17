@@ -68,12 +68,24 @@ export interface ShadowMapStressPerformanceSample {
   fps: number;
   longFrameCount: number;
   refreshDelta: number;
+  layerRefreshDelta: {
+    static: number;
+    dynamic: number;
+    composite: number;
+  };
+  coverageRevisionDelta: number;
+  cullingRebuildDelta: number;
   heapUsedBytes: number | null;
   snapshot: ShadowMapStressSnapshot;
 }
 
 export interface ShadowMapStressController {
-  configureCodeGenerated(input: { staticCount: number; dynamicCount: number }): ShadowMapStressSnapshot;
+  configureCodeGenerated(input: {
+    staticCount: number;
+    dynamicCount: number;
+    offsetX?: number;
+    offsetZ?: number;
+  }): ShadowMapStressSnapshot;
   refreshEditorGenerated(): ShadowMapStressSnapshot;
   startDynamic(): ShadowMapStressSnapshot;
   stopDynamic(): ShadowMapStressSnapshot;
@@ -166,6 +178,8 @@ async function executeStressProbeRequest(
     case 'configureCodeGenerated': return controller.configureCodeGenerated({
       staticCount: Number(request.input?.staticCount),
       dynamicCount: Number(request.input?.dynamicCount),
+      offsetX: Number(request.input?.offsetX ?? 0),
+      offsetZ: Number(request.input?.offsetZ ?? 0),
     });
     case 'refreshEditorGenerated': return controller.refreshEditorGenerated();
     case 'startDynamic': return controller.startDynamic();
@@ -339,6 +353,8 @@ export function createShadowMapStressController(game: Game): ShadowMapStressCont
       assertUsable();
       const staticCount = normalizeCount(input.staticCount, 'staticCount');
       const dynamicCount = normalizeCount(input.dynamicCount, 'dynamicCount');
+      const offsetX = normalizeOffset(input.offsetX ?? 0, 'offsetX');
+      const offsetZ = normalizeOffset(input.offsetZ ?? 0, 'offsetZ');
       clearCodeGenerated();
       if (staticCount + dynamicCount === 0) return controller.getSnapshot();
 
@@ -358,7 +374,7 @@ export function createShadowMapStressController(game: Game): ShadowMapStressCont
           mesh.name = entityId;
           mesh.material = codeMaterial;
           const position = createGridPosition(index, total, columns, 0.22);
-          mesh.position.set(position.x, position.y, position.z);
+          mesh.position.set(position.x + offsetX, position.y, position.z + offsetZ);
           mesh.metadata = {
             ...(mesh.metadata && typeof mesh.metadata === 'object' ? mesh.metadata : {}),
             shadowStress: { source: 'code', dynamic },
@@ -454,9 +470,9 @@ export function createShadowMapStressController(game: Game): ShadowMapStressCont
     async sampleFrames(frameCount = 120) {
       assertUsable();
       const requestedFrames = Math.max(2, Math.min(600, Math.floor(frameCount)));
-      const beforeRefresh = game.getShadowMapExperimentEvidence()?.refreshCount ?? 0;
+      const beforeRefresh = readShadowMapRefreshCounters(game.getShadowMapExperimentEvidence());
       const frameTimes = await collectFrameTimes(scene, requestedFrames);
-      const afterRefresh = game.getShadowMapExperimentEvidence()?.refreshCount ?? 0;
+      const afterRefresh = readShadowMapRefreshCounters(game.getShadowMapExperimentEvidence());
       const sorted = [...frameTimes].sort((left, right) => left - right);
       const durationMs = frameTimes.reduce((sum, value) => sum + value, 0);
       const averageFrameMs = durationMs / Math.max(1, frameTimes.length);
@@ -472,7 +488,14 @@ export function createShadowMapStressController(game: Game): ShadowMapStressCont
         maxFrameMs: sorted[sorted.length - 1] ?? 0,
         fps: averageFrameMs > 0 ? 1000 / averageFrameMs : 0,
         longFrameCount: frameTimes.filter(value => value > 33.34).length,
-        refreshDelta: afterRefresh - beforeRefresh,
+        refreshDelta: afterRefresh.total - beforeRefresh.total,
+        layerRefreshDelta: {
+          static: afterRefresh.static - beforeRefresh.static,
+          dynamic: afterRefresh.dynamic - beforeRefresh.dynamic,
+          composite: afterRefresh.composite - beforeRefresh.composite,
+        },
+        coverageRevisionDelta: afterRefresh.coverageRevision - beforeRefresh.coverageRevision,
+        cullingRebuildDelta: afterRefresh.cullingRebuild - beforeRefresh.cullingRebuild,
         heapUsedBytes: readHeapUsedBytes(),
         snapshot: controller.getSnapshot(),
       };
@@ -526,9 +549,36 @@ export function createShadowMapStressController(game: Game): ShadowMapStressCont
   return controller;
 }
 
+function readShadowMapRefreshCounters(
+  evidence: ReturnType<Game['getShadowMapExperimentEvidence']>,
+): {
+  total: number;
+  static: number;
+  dynamic: number;
+  composite: number;
+  coverageRevision: number;
+  cullingRebuild: number;
+} {
+  return {
+    total: evidence?.refreshCount ?? 0,
+    static: evidence?.depth?.static.refreshCount ?? 0,
+    dynamic: evidence?.depth?.dynamic.refreshCount ?? 0,
+    composite: evidence?.depth?.compositeRefreshCount ?? 0,
+    coverageRevision: evidence?.culling.coverageRevision ?? 0,
+    cullingRebuild: evidence?.culling.rebuildCount ?? 0,
+  };
+}
+
 function normalizeCount(value: number, field: string): number {
   if (!Number.isInteger(value) || value < 0 || value > MAX_CASTER_COUNT_PER_CLASS) {
     throw new Error(`shadowMapStress.invalidCount:${field}`);
+  }
+  return value;
+}
+
+function normalizeOffset(value: number, field: string): number {
+  if (!Number.isFinite(value) || Math.abs(value) > 1_000) {
+    throw new Error(`shadowMapStress.invalidOffset:${field}`);
   }
   return value;
 }

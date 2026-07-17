@@ -19,6 +19,18 @@ let gameplayResumeCount = 0;
 let animationPlayCount = 0;
 let animationPauseCount = 0;
 let animationStopCount = 0;
+let shadowEvidence = {
+  refreshCount: 10,
+  depth: {
+    static: { refreshCount: 2 },
+    dynamic: { refreshCount: 4 },
+    compositeRefreshCount: 6,
+  },
+  culling: {
+    coverageRevision: 3,
+    rebuildCount: 5,
+  },
+};
 
 const sceneBuilder = {
   sceneNodeRuntimes: new Map([
@@ -76,7 +88,7 @@ const modelAnimationService = {
 const game = {
   getScene: () => scene,
   getSceneBuilder: () => sceneBuilder,
-  getShadowMapExperimentEvidence: () => ({ refreshCount: 0 }),
+  getShadowMapExperimentEvidence: () => shadowEvidence,
   getModelAnimationService: () => modelAnimationService,
   pause() { gameplayPauseCount += 1; },
   resume() { gameplayResumeCount += 1; },
@@ -92,6 +104,7 @@ assert.equal(configured.codeStaticCount, 3);
 assert.equal(configured.codeDynamicCount, 2);
 assert.equal(registeredRuntimeObjects.length, 5);
 assert.equal(registeredRuntimeObjects.filter(object => object.updateClass === 'dynamic').length, 2);
+assert.equal(registeredRuntimeObjects[0].mesh.position.x, -0.55);
 
 controller.startDynamic();
 assert.equal(animationPlayCount, 1);
@@ -109,10 +122,38 @@ controller.resumeGameplay();
 assert.equal(gameplayPauseCount, 1);
 assert.equal(gameplayResumeCount, 1);
 
+const samplePromise = controller.sampleFrames(3);
+shadowEvidence = {
+  refreshCount: 13,
+  depth: {
+    static: { refreshCount: 2 },
+    dynamic: { refreshCount: 7 },
+    compositeRefreshCount: 9,
+  },
+  culling: {
+    coverageRevision: 4,
+    rebuildCount: 6,
+  },
+};
+scene.onAfterRenderObservable.notifyObservers(scene);
+scene.onAfterRenderObservable.notifyObservers(scene);
+scene.onAfterRenderObservable.notifyObservers(scene);
+const sample = await samplePromise;
+assert.equal(sample.refreshDelta, 3);
+assert.deepEqual(sample.layerRefreshDelta, { static: 0, dynamic: 3, composite: 3 });
+assert.equal(sample.coverageRevisionDelta, 1);
+assert.equal(sample.cullingRebuildDelta, 1);
+
 const cleared = controller.clearCodeGenerated();
 assert.equal(cleared.codeStaticCount, 0);
 assert.equal(cleared.codeDynamicCount, 0);
 assert.equal(registrationDisposeCount, 1);
+
+controller.configureCodeGenerated({ staticCount: 1, dynamicCount: 1, offsetX: 200, offsetZ: -100 });
+assert.equal(registeredRuntimeObjects[0].mesh.position.x, 199.725);
+assert.equal(registeredRuntimeObjects[0].mesh.position.z, -100);
+controller.clearCodeGenerated();
+assert.equal(registrationDisposeCount, 2);
 
 controller.refreshEditorGenerated();
 controller.pauseGameplay();
