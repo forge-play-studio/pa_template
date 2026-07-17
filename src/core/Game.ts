@@ -338,10 +338,14 @@ export class Game {
   }
 
   pause(): void {
+    if (this.isPaused) return;
+    this.notifyGameplayModules('pause');
     this.isPaused = true;
   }
 
   resume(): void {
+    if (!this.isPaused) return;
+    this.notifyGameplayModules('resume');
     this.isPaused = false;
     this.lastTime = performance.now();
   }
@@ -371,6 +375,21 @@ export class Game {
     this.zoneSystem?.update(deltaTime);
     for (const module of this.gameplayModules) {
       module.update?.(deltaTime);
+    }
+  }
+
+  private notifyGameplayModules(method: 'pause' | 'resume'): void {
+    const errors: unknown[] = [];
+    for (const module of this.gameplayModules) {
+      try {
+        module[method]?.();
+      } catch (error) {
+        errors.push(error);
+      }
+    }
+    if (errors.length === 1) throw errors[0];
+    if (errors.length > 1) {
+      throw Object.assign(new Error(`Gameplay module ${method} failed.`), { errors });
     }
   }
 

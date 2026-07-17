@@ -19,6 +19,8 @@ import type { ZoneSystem } from '../systems';
 
 export interface GameplayModule {
   init?(): void | Promise<void>;
+  pause?(): void;
+  resume?(): void;
   update?(deltaTime: number): void;
   dispose?(): void;
 }

@@ -52,6 +52,7 @@ let changed = false;
 changed = ensurePrefabStageFixture(editorScene) || changed;
 changed = ensureGroundDecalLiveFixtures(editorScene, assetManifest) || changed;
 changed = ensureShadowMapExperimentCasterFixtures(editorScene) || changed;
+changed = removeLegacyShadowMapRefreshPolicy(editorScene) || changed;
 
 if (changed || forceCompile) {
   if (changed) {
@@ -113,6 +114,13 @@ function ensureShadowMapExperimentCasterFixtures(document) {
     changed = true;
   }
   return changed;
+}
+
+function removeLegacyShadowMapRefreshPolicy(document) {
+  const advanced = document.scene?.shadowMapExperiment?.advanced;
+  if (!advanced || !Object.prototype.hasOwnProperty.call(advanced, 'dynamicRefresh')) return false;
+  delete advanced.dynamicRefresh;
+  return true;
 }
 
 function createGroundDecalFixtureGameObject(fixture, rootId, textureIds) {

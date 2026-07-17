@@ -39,6 +39,11 @@ const expectedReceiverOnly = [
 ].sort();
 
 assert.equal(editorScene.scene.shadowMapExperiment?.enabled, true);
+assert.equal(
+  Object.prototype.hasOwnProperty.call(editorScene.scene.shadowMapExperiment?.advanced ?? {}, 'dynamicRefresh'),
+  false,
+  'authoring fixture must not retain the removed frame-stride refresh policy',
+);
 const editorObjects = new Map(editorScene.scene.gameObjects.map(object => [object.id, object]));
 const authoredCasters = [...editorObjects.values()]
   .filter(object => object.shadowMapExperiment?.cast === 'enabled')
@@ -61,6 +66,11 @@ for (const id of expectedReceiverOnly) {
 const runtimePlugin = runtimeScene.plugins.find(plugin => plugin.pluginId === 'fps.shadow-map-experiment');
 assert.ok(runtimePlugin, 'compiled runtime scene must contain the ShadowMap experiment plugin payload');
 assert.equal(runtimePlugin.data.enabled, true);
+assert.equal(
+  Object.prototype.hasOwnProperty.call(runtimePlugin.data.generator ?? {}, 'dynamicRefreshStride'),
+  false,
+  'compiled runtime plan must be activity-driven rather than stride-driven',
+);
 assert.equal(
   runtimePlugin.data.revision,
   editorScene.meta.authoringSource.revision,

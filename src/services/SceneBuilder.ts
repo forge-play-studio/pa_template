@@ -74,6 +74,7 @@ import {
 import {
   createBabylonShadowMapExperimentSystem,
   type BabylonShadowMapExperimentSystem,
+  type ShadowMapExperimentActivityKind,
 } from '@fps-games/editor/playable-runtime/babylon';
 
 const BABYLON_MATERIAL_RUNTIME = { Color3, MaterialPluginBase, Texture };
@@ -93,6 +94,14 @@ export interface SceneRuntimeLightState<TLightConfig extends SceneHemisphericLig
   light: TLightConfig;
   enabled: boolean;
   source?: SceneRuntimeSourceBinding;
+}
+
+export type SceneShadowCasterActivityKind = ShadowMapExperimentActivityKind;
+
+export interface SceneShadowCasterActivityController {
+  setActive(active: boolean): boolean;
+  invalidate(): boolean;
+  dispose(): void;
 }
 
 type SceneBuilderMaterialSlotSourceDescriptor = {
@@ -292,6 +301,16 @@ export class SceneBuilder {
 
   getShadowMapExperimentEvidence() {
     return this.shadowMapExperimentSystem?.getEvidence() ?? null;
+  }
+
+  registerShadowCasterActivitySource(input: {
+    entityId: string;
+    kind: SceneShadowCasterActivityKind;
+    sourceId: string;
+  }): SceneShadowCasterActivityController | null {
+    const system = this.shadowMapExperimentSystem;
+    if (!system) return null;
+    return system.registerCasterActivitySource(input);
   }
 
   getSelectedHemisphericLightState(): SceneRuntimeLightState<SceneHemisphericLightConfig> {

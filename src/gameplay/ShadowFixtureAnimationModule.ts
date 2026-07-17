@@ -1,6 +1,7 @@
-import { Vector3 } from '@babylonjs/core/Maths/math.vector';
+import { Vector3 } from '@babylonjs/core/Maths/math.vector.js';
 import type { AnimationGroup } from '@babylonjs/core/Animations/animationGroup';
 import type { TransformNode } from '@babylonjs/core/Meshes/transformNode';
+import type { SceneShadowCasterActivityController } from '../services/SceneBuilder';
 import type { GameplayModule, GameplayRuntimeContext } from './types';
 
 export interface ShadowFixtureAnimationModuleOptions {
@@ -25,6 +26,9 @@ const MIN_TARGET_DISTANCE = 0.35;
 const PLAYER_IDLE_ANIMATION_CANDIDATES = ['idle', '待机', 'stand', 'wait'];
 const PLAYER_MOVE_ANIMATION_CANDIDATES = ['run', '跑', 'walk', 'move'];
 const WORKER_LOOP_ANIMATION_CANDIDATES = ['run', '跑', 'walk', 'move', 'idle', '待机'];
+const PLAYER_TRANSFORM_ACTIVITY_SOURCE_ID = 'shadow-fixture-player-root-motion';
+const PLAYER_ANIMATION_ACTIVITY_SOURCE_ID = 'shadow-fixture-player-animation';
+const WORKER_ANIMATION_ACTIVITY_SOURCE_ID = 'shadow-fixture-worker-animation';
 
 export class ShadowFixtureAnimationModule implements GameplayModule {
   private readonly playerNodeId: string;
@@ -34,6 +38,7 @@ export class ShadowFixtureAnimationModule implements GameplayModule {
   private readonly idleMinSec: number;
   private readonly idleMaxSec: number;
   private readonly random: () => number;
+  private readonly context: Pick<GameplayRuntimeContext, 'sceneBuilder' | 'modelAnimationService'>;
 
   private playerNode: TransformNode | null = null;
   private playerHome = Vector3.Zero();
@@ -50,11 +55,17 @@ export class ShadowFixtureAnimationModule implements GameplayModule {
   private workerLoopClipName: string | null = null;
   private currentPlayerAnimationName: string | null = null;
   private currentWorkerAnimationName: string | null = null;
+  private playerTransformActivity: SceneShadowCasterActivityController | null = null;
+  private playerAnimationActivity: SceneShadowCasterActivityController | null = null;
+  private workerAnimationActivity: SceneShadowCasterActivityController | null = null;
+  private paused = false;
+  private disposed = false;
 
   constructor(
-    private readonly context: Pick<GameplayRuntimeContext, 'sceneBuilder' | 'modelAnimationService'>,
+    context: Pick<GameplayRuntimeContext, 'sceneBuilder' | 'modelAnimationService'>,
     options: ShadowFixtureAnimationModuleOptions = {},
   ) {
+    this.context = context;
     this.playerNodeId = options.playerNodeId ?? DEFAULT_PLAYER_NODE_ID;
     this.workerNodeId = options.workerNodeId ?? DEFAULT_WORKER_NODE_ID;
     this.moveRadius = Math.max(0.1, options.playerMoveRadius ?? DEFAULT_MOVE_RADIUS);
@@ -65,23 +76,47 @@ export class ShadowFixtureAnimationModule implements GameplayModule {
   }
 
   init(): void {
-    this.playerNode = this.context.sceneBuilder.getSceneNodeRuntime(this.playerNodeId) ?? null;
-    this.playerAnimations = this.context.sceneBuilder.getSceneNodeAnimationGroups(this.playerNodeId);
-    this.playerIdleClipName = resolveFirstClipName(this.playerAnimations, PLAYER_IDLE_ANIMATION_CANDIDATES);
-    this.playerMoveClipName = resolveFirstClipName(this.playerAnimations, PLAYER_MOVE_ANIMATION_CANDIDATES);
-    if (this.playerNode) {
-      this.playerHome.copyFrom(this.playerNode.position);
-      this.beginNextPlayerMove();
-    }
+    if (this.disposed) throw new Error('shadowFixtureAnimation.moduleDisposed');
+    try {
+      this.playerTransformActivity = this.context.sceneBuilder.registerShadowCasterActivitySource({
+        entityId: this.playerNodeId,
+        kind: 'transform',
+        sourceId: PLAYER_TRANSFORM_ACTIVITY_SOURCE_ID,
+      });
+      this.playerAnimationActivity = this.context.sceneBuilder.registerShadowCasterActivitySource({
+        entityId: this.playerNodeId,
+        kind: 'animation',
+        sourceId: PLAYER_ANIMATION_ACTIVITY_SOURCE_ID,
+      });
+      this.workerAnimationActivity = this.context.sceneBuilder.registerShadowCasterActivitySource({
+        entityId: this.workerNodeId,
+        kind: 'animation',
+        sourceId: WORKER_ANIMATION_ACTIVITY_SOURCE_ID,
+      });
 
-    this.workerAnimations = this.context.sceneBuilder.getSceneNodeAnimationGroups(this.workerNodeId);
-    this.workerLoopClipName = resolveFirstClipName(this.workerAnimations, WORKER_LOOP_ANIMATION_CANDIDATES);
-    this.playWorkerLoop();
+      this.playerNode = this.context.sceneBuilder.getSceneNodeRuntime(this.playerNodeId) ?? null;
+      this.playerAnimations = this.context.sceneBuilder.getSceneNodeAnimationGroups(this.playerNodeId);
+      this.playerIdleClipName = resolveFirstClipName(this.playerAnimations, PLAYER_IDLE_ANIMATION_CANDIDATES);
+      this.playerMoveClipName = resolveFirstClipName(this.playerAnimations, PLAYER_MOVE_ANIMATION_CANDIDATES);
+      if (this.playerNode) {
+        this.playerHome.copyFrom(this.playerNode.position);
+        this.beginNextPlayerMove();
+      }
+
+      this.workerAnimations = this.context.sceneBuilder.getSceneNodeAnimationGroups(this.workerNodeId);
+      this.workerLoopClipName = resolveFirstClipName(this.workerAnimations, WORKER_LOOP_ANIMATION_CANDIDATES);
+      this.playWorkerLoop();
+    } catch (error) {
+      const cleanupErrors = this.cleanupOwnedRuntimeState(false);
+      attachCleanupErrors(error, cleanupErrors);
+      this.disposed = true;
+      throw error;
+    }
   }
 
   /** Advances only the fixture root transform; Babylon advances model clips. */
   update(deltaTime: number): void {
-    if (!this.playerNode || !Number.isFinite(deltaTime) || deltaTime <= 0) return;
+    if (this.paused || this.disposed || !this.playerNode || !Number.isFinite(deltaTime) || deltaTime <= 0) return;
     if (this.playerState === 'moving') {
       this.updatePlayerMove(deltaTime);
       return;
@@ -93,18 +128,86 @@ export class ShadowFixtureAnimationModule implements GameplayModule {
     }
   }
 
+  pause(): void {
+    if (this.paused || this.disposed) return;
+    this.playerTransformActivity?.setActive(false);
+    const errors: unknown[] = [];
+    try {
+      this.context.modelAnimationService.pause(this.playerAnimations);
+      this.playerAnimationActivity?.setActive(false);
+    } catch (error) {
+      errors.push(error);
+    }
+    try {
+      this.context.modelAnimationService.pause(this.workerAnimations);
+      this.workerAnimationActivity?.setActive(false);
+    } catch (error) {
+      errors.push(error);
+    }
+    if (errors.length > 0) {
+      this.playerTransformActivity?.setActive(this.playerNode !== null && this.playerState === 'moving');
+      throwCollectedErrors('pause', errors);
+    }
+    this.paused = true;
+  }
+
+  resume(): void {
+    if (!this.paused || this.disposed) return;
+    const errors: unknown[] = [];
+    try {
+      this.playerAnimationActivity?.setActive(
+        this.context.modelAnimationService.resume(this.playerAnimations) > 0,
+      );
+    } catch (error) {
+      this.playerAnimationActivity?.setActive(this.currentPlayerAnimationName !== null);
+      errors.push(error);
+    }
+    try {
+      this.workerAnimationActivity?.setActive(
+        this.context.modelAnimationService.resume(this.workerAnimations) > 0,
+      );
+    } catch (error) {
+      this.workerAnimationActivity?.setActive(this.currentWorkerAnimationName !== null);
+      errors.push(error);
+    }
+    throwCollectedErrors('resume', errors);
+    this.paused = false;
+    this.playerTransformActivity?.setActive(this.playerNode !== null && this.playerState === 'moving');
+  }
+
   dispose(): void {
+    if (this.disposed) return;
+    this.disposed = true;
+    const errors = this.cleanupOwnedRuntimeState(true);
+    throwCollectedErrors('dispose', errors);
+  }
+
+  private cleanupOwnedRuntimeState(restorePlayerPosition: boolean): unknown[] {
+    const errors: unknown[] = [];
+    const attempt = (operation: () => void): void => {
+      try { operation(); } catch (error) { errors.push(error); }
+    };
+    attempt(() => { this.playerTransformActivity?.setActive(false); });
+    attempt(() => { this.playerAnimationActivity?.setActive(false); });
+    attempt(() => { this.workerAnimationActivity?.setActive(false); });
     if (this.playerAnimations.length > 0) {
-      this.context.modelAnimationService.stop(this.playerAnimations);
+      attempt(() => { this.context.modelAnimationService.stop(this.playerAnimations); });
     }
     if (this.workerAnimations.length > 0) {
-      this.context.modelAnimationService.stop(this.workerAnimations);
+      attempt(() => { this.context.modelAnimationService.stop(this.workerAnimations); });
     }
     this.currentPlayerAnimationName = null;
     this.currentWorkerAnimationName = null;
-    if (this.playerNode) {
-      this.playerNode.position.copyFrom(this.playerHome);
+    if (restorePlayerPosition && this.playerNode) {
+      attempt(() => { this.playerNode?.position.copyFrom(this.playerHome); });
     }
+    attempt(() => { this.playerTransformActivity?.dispose(); });
+    attempt(() => { this.playerAnimationActivity?.dispose(); });
+    attempt(() => { this.workerAnimationActivity?.dispose(); });
+    this.playerTransformActivity = null;
+    this.playerAnimationActivity = null;
+    this.workerAnimationActivity = null;
+    return errors;
   }
 
   getDebugState(): {
@@ -128,20 +231,31 @@ export class ShadowFixtureAnimationModule implements GameplayModule {
   }
 
   private playWorkerLoop(): void {
-    const animation = this.playClip(this.workerAnimations, this.workerLoopClipName, 1);
+    const animation = this.playClip(
+      this.workerAnimations,
+      this.workerLoopClipName,
+      1,
+      this.workerAnimationActivity,
+    );
     this.currentWorkerAnimationName = animation?.name ?? null;
   }
 
   private beginNextPlayerMove(): void {
     if (!this.playerNode) return;
     this.playerState = 'moving';
+    this.playerTransformActivity?.setActive(true);
     this.playerMoveElapsed = 0;
     this.playerMoveStart.copyFrom(this.playerNode.position);
     this.playerMoveTarget.copyFrom(this.createRandomPlayerTarget(this.playerMoveStart));
     const distance = Vector3.Distance(this.playerMoveStart, this.playerMoveTarget);
     this.playerMoveDuration = Math.max(0.35, distance / this.moveSpeed);
     this.facePlayerMoveTarget();
-    const animation = this.playClip(this.playerAnimations, this.playerMoveClipName, 1);
+    const animation = this.playClip(
+      this.playerAnimations,
+      this.playerMoveClipName,
+      1,
+      this.playerAnimationActivity,
+    );
     this.currentPlayerAnimationName = animation?.name ?? null;
   }
 
@@ -159,8 +273,14 @@ export class ShadowFixtureAnimationModule implements GameplayModule {
 
     if (progress >= 1) {
       this.playerState = 'idle';
+      this.playerTransformActivity?.setActive(false);
       this.playerIdleRemaining = this.idleMinSec + (this.idleMaxSec - this.idleMinSec) * this.randomUnit();
-      const animation = this.playClip(this.playerAnimations, this.playerIdleClipName, 1);
+      const animation = this.playClip(
+        this.playerAnimations,
+        this.playerIdleClipName,
+        1,
+        this.playerAnimationActivity,
+      );
       this.currentPlayerAnimationName = animation?.name ?? null;
     }
   }
@@ -169,12 +289,18 @@ export class ShadowFixtureAnimationModule implements GameplayModule {
     animations: readonly AnimationGroup[],
     clipName: string | null,
     speedRatio: number,
+    activity: SceneShadowCasterActivityController | null,
   ): AnimationGroup | null {
-    if (!clipName) return null;
-    return this.context.modelAnimationService.play(animations, clipName, {
+    if (!clipName) {
+      activity?.setActive(false);
+      return null;
+    }
+    const animation = this.context.modelAnimationService.play(animations, clipName, {
       loop: true,
       speedRatio,
     });
+    activity?.setActive(animation !== null);
+    return animation;
   }
 
   private createRandomPlayerTarget(current: Vector3): Vector3 {
@@ -207,6 +333,21 @@ export class ShadowFixtureAnimationModule implements GameplayModule {
 
 function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
+}
+
+function throwCollectedErrors(operation: string, errors: readonly unknown[]): void {
+  if (errors.length === 0) return;
+  if (errors.length === 1) throw errors[0];
+  throw Object.assign(new Error(`Shadow fixture animation ${operation} failed.`), { errors: [...errors] });
+}
+
+function attachCleanupErrors(error: unknown, cleanupErrors: readonly unknown[]): void {
+  if (cleanupErrors.length === 0 || !error || typeof error !== 'object') return;
+  try {
+    Object.assign(error, { cleanupErrors: [...cleanupErrors] });
+  } catch {
+    // Cleanup diagnostics must not replace the primary initialization failure.
+  }
 }
 
 function resolveFirstClipName(

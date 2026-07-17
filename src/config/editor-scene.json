@@ -5,7 +5,7 @@
     "authoringSource": {
       "sourceId": "scene.main",
       "sourceType": "scene",
-      "revision": 80
+      "revision": 81
     }
   },
   "assets": [
@@ -2832,7 +2832,6 @@
       "advanced": {
         "resolution": 512,
         "filter": "hard",
-        "dynamicRefresh": "every-two-frames",
         "bias": 0.001,
         "normalBias": 0.02,
         "darkness": 0.25
