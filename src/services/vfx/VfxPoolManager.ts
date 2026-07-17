@@ -4,14 +4,21 @@ import type { VfxEffectDiagnostics, VfxEffectRegistration } from './types.ts';
 
 export class VfxPoolManager {
   private readonly pools = new Map<string, VfxEffectPool>();
+  private readonly scene: Scene;
+  private readonly renderWarmupFrame: () => Promise<void>;
+  private readonly onChanged: () => void;
   private activeCount = 0;
   private disposed = false;
 
   constructor(
-    private readonly scene: Scene,
-    private readonly renderWarmupFrame: () => Promise<void>,
-    private readonly onChanged: () => void,
-  ) {}
+    scene: Scene,
+    renderWarmupFrame: () => Promise<void>,
+    onChanged: () => void,
+  ) {
+    this.scene = scene;
+    this.renderWarmupFrame = renderWarmupFrame;
+    this.onChanged = onChanged;
+  }
 
   addPreparedRegistration(registration: VfxEffectRegistration, prepareMs: number): VfxEffectPool {
     if (this.disposed) throw new Error('VFX pool manager is disposed.');

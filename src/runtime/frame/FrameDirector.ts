@@ -1,7 +1,11 @@
 import type { FrameContext, FrameDirectorPhases } from './types.ts';
 
 export class FrameDirector {
-  constructor(private readonly phases: FrameDirectorPhases) {}
+  private readonly phases: FrameDirectorPhases;
+
+  constructor(phases: FrameDirectorPhases) {
+    this.phases = phases;
+  }
 
   tick(frame: FrameContext, simulationPaused: boolean): void {
     if (!simulationPaused) {
