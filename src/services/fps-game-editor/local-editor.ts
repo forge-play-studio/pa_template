@@ -18,7 +18,7 @@ import {
 } from './scene-types';
 import {
   createEditorSceneAssetActionPatch,
-  createEditorSceneGroundDecalHierarchyActions,
+  createEditorSceneGroundDecalHierarchyOperations,
   getEditorScenePrefabStageDescriptor,
   getEditorScenePrefabStageInspectorObject,
   getEditorScenePrefabStageProjectionNodeIdForNode,
@@ -88,6 +88,9 @@ export interface LocalEditorModeSwitcher {
 }
 
 export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOptions): LocalEditorModeSwitcher {
+  const hierarchyOperationCapability = {
+    hierarchyOperations: createEditorSceneGroundDecalHierarchyOperations(),
+  } as const;
   const hostAssembly = createFpsGameEditorPlayableProjectHostAssembly({
     scene: sceneAssembly,
     projection: projectionPreview,
@@ -97,7 +100,7 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
     prepareDocument: (document: EditorSceneDocument, assets: EditorSceneAssetLibraryItem[]) => { currentEditorAssetLibrary = assets; return preparePaTemplateEditorDocument(document, assets); },
     createAssetActionPatch: (input: any) => createEditorSceneAssetActionPatch(input),
     prefab: { getDescriptor: getEditorScenePrefabStageDescriptor, getProjectionNodes: getEditorScenePrefabStageProjectionNodes, getStructure: getEditorScenePrefabStageStructure, getInspectorObject: getEditorScenePrefabStageInspectorObject, resolvePreviewTarget: resolveEditorScenePrefabStagePreviewTarget, getProjectionNodeId: getEditorScenePrefabStageProjectionNodeIdForNode },
-    hierarchyContextActions: createEditorSceneGroundDecalHierarchyActions(),
+    ...hierarchyOperationCapability,
     loadingContent,
     runtimeWindow: window,
     loadBabylon: () => import('@babylonjs/core'),

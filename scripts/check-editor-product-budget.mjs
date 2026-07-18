@@ -60,6 +60,10 @@ const runtimeAuthoredConfigConsumerPaths = new Set([
   // the editor host, document authoring, or adapter implementation.
   'src/project-runtime-entry.ts',
   'src/debug/runtime-debug-bootstrap.ts',
+  // The development composition root owns the lazy local-editor switcher so
+  // the entry control can render before runtime debug panels finish loading.
+  'src/dev/DevHost.ts',
+  'src/dev/dev-entry.ts',
   'src/config/ConfigService.ts',
   'src/config/SceneJsonV2Validator.ts',
   'src/config/types.ts',

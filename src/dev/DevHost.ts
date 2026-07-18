@@ -13,12 +13,21 @@ type RenderCanvasPlacement = {
   nextSibling: ChildNode | null;
 };
 
+type LocalEditorModeSwitcher = {
+  enterEditor(): Promise<void>;
+  discardAndRunGame(): Promise<void>;
+  detachForEditor(): void;
+  dispose(): Promise<void>;
+};
+
 /** Development-only composition root for gameplay, debug UI and editor switching. */
 export class DevHost {
   private application: GameApplication | null = null;
   private gameValue: GameWorld | null = null;
   private runtimeDebug: RuntimeDebugBootstrap | null = null;
   private runtimeDebugDisposal: Promise<void> | null = null;
+  private editorSwitcher: LocalEditorModeSwitcher | null = null;
+  private editorSwitcherLoad: Promise<LocalEditorModeSwitcher> | null = null;
   private startPromise: Promise<void> | null = null;
 
   get game(): GameWorld | null {
@@ -45,8 +54,19 @@ export class DevHost {
     await this.start();
   }
 
+  async enterEditor(): Promise<void> {
+    await this.start();
+    const switcher = await this.ensureEditorSwitcher();
+    await switcher.enterEditor();
+  }
+
   async dispose(): Promise<void> {
     const errors: unknown[] = [];
+    try {
+      await this.disposeEditorSwitcher();
+    } catch (error) {
+      errors.push(error);
+    }
     try {
       await this.disposeRuntimeDebug();
     } catch (error) {
@@ -99,6 +119,33 @@ export class DevHost {
   private async disposeGameWorldForEditor(): Promise<void> {
     this.runtimeDebug?.detachForEditor();
     await this.disposeApplication();
+  }
+
+  private async ensureEditorSwitcher(): Promise<LocalEditorModeSwitcher> {
+    if (this.editorSwitcher) return this.editorSwitcher;
+    if (!this.editorSwitcherLoad) {
+      this.editorSwitcherLoad = import('../services/fps-game-editor/local-editor').then(({ mountLocalEditorModeSwitcher }) => {
+        const switcher = mountLocalEditorModeSwitcher({
+          root: document.body,
+          disposeGameWorld: () => this.disposeGameWorldForEditor(),
+          onBeforeEnterEditor: () => this.runtimeDebug?.detachForEditor(),
+          onBeforeReload: () => this.runtimeDebug?.detachForEditor(),
+        });
+        this.editorSwitcher = switcher;
+        return switcher;
+      }).finally(() => {
+        this.editorSwitcherLoad = null;
+      });
+    }
+    return this.editorSwitcherLoad;
+  }
+
+  private async disposeEditorSwitcher(): Promise<void> {
+    const pending = this.editorSwitcherLoad;
+    this.editorSwitcherLoad = null;
+    const loaded = this.editorSwitcher ?? await pending?.catch(() => null);
+    this.editorSwitcher = null;
+    await loaded?.dispose();
   }
 
   private async disposeRuntimeDebug(): Promise<void> {
