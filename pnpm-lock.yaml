@@ -802,6 +802,7 @@ packages:
       vite:
         optional: true
     bundledDependencies:
+      - '@babel/parser'
       - '@fps-games/babylon-renderer'
       - '@fps-games/editor-babylon'
       - '@fps-games/editor-browser'
