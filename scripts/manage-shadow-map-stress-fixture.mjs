@@ -28,6 +28,30 @@ const workerAsset = assetLibrary.find(asset => asset.assetId === WORKER_ASSET_ID
 const previousStressIds = document.scene.gameObjects
   .filter(object => isStressObjectId(object.id))
   .map(object => object.id);
+let shadowSettingsChanged = false;
+
+if (args.shadowQuality) {
+  const previousSettings = document.scene.shadowMapExperiment;
+  if (!previousSettings || typeof previousSettings !== 'object' || Array.isArray(previousSettings)) {
+    throw new Error('Unable to configure missing scene.shadowMapExperiment settings.');
+  }
+  const advanced = { ...(previousSettings.advanced ?? {}) };
+  delete advanced.resolution;
+  delete advanced.filter;
+  const nextSettings = {
+    ...previousSettings,
+    quality: args.shadowQuality,
+    ...(Object.keys(advanced).length > 0 ? { advanced } : {}),
+  };
+  shadowSettingsChanged = JSON.stringify(previousSettings) !== JSON.stringify(nextSettings);
+  document = {
+    ...document,
+    scene: {
+      ...document.scene,
+      shadowMapExperiment: nextSettings,
+    },
+  };
+}
 
 if (previousStressIds.length > 0) {
   const deletion = sdk.createEditorSceneDeleteSubtreePatch(document, {
@@ -105,7 +129,7 @@ if (!args.remove) {
 }
 
 const nextStressObjects = document.scene.gameObjects.filter(object => isStressObjectId(object.id));
-const changed = previousStressIds.length > 0 || nextStressObjects.length > 0;
+const changed = shadowSettingsChanged || previousStressIds.length > 0 || nextStressObjects.length > 0;
 if (changed) document = sdk.bumpEditorSceneAuthoringSourceRevision(document);
 const hydrated = sdk.enrichEditorSceneDocumentAssets(document, assetLibrary);
 const compiled = sdk.compileEditorSceneDocumentToSceneConfig(hydrated, previousSceneConfig, {
@@ -140,6 +164,9 @@ console.log(JSON.stringify({
   editorDynamicCount: nextStressObjects.filter(object => object.id.startsWith(EDITOR_DYNAMIC_PREFIX)).length,
   editorSkinnedCount: nextStressObjects.filter(object => object.id.startsWith(EDITOR_SKINNED_PREFIX)).length,
   compiledStressCasterCount: compiledStressObjects.length,
+  shadowQuality: document.scene.shadowMapExperiment?.quality ?? null,
+  compiledShadowResolution: compiledPlan?.generator?.resolution ?? null,
+  compiledShadowFilter: compiledPlan?.generator?.filter ?? null,
   authoringRevision: document.meta?.authoringSource?.revision ?? null,
 }));
 
@@ -149,10 +176,20 @@ function parseArgs(values) {
   const staticCount = readCount(values, '--static', remove ? 0 : null);
   const dynamicCount = readCount(values, '--dynamic', remove ? 0 : null);
   const skinnedCount = readCount(values, '--skinned', remove ? 0 : null);
+  const shadowQuality = readShadowQuality(values);
   if (!remove && staticCount === 0 && dynamicCount === 0 && skinnedCount === 0) {
     throw new Error('Provide --static=<count>, --dynamic=<count>, and/or --skinned=<count>, or use --remove.');
   }
-  return { remove, dryRun, staticCount, dynamicCount, skinnedCount };
+  return { remove, dryRun, staticCount, dynamicCount, skinnedCount, shadowQuality };
+}
+
+function readShadowQuality(values) {
+  const value = values.find(entry => entry.startsWith('--shadow-quality='))?.slice('--shadow-quality='.length);
+  if (value === undefined) return null;
+  if (value !== 'performance' && value !== 'balanced' && value !== 'quality') {
+    throw new Error('--shadow-quality must be performance, balanced, or quality.');
+  }
+  return value;
 }
 
 function readCount(values, name, fallback) {
