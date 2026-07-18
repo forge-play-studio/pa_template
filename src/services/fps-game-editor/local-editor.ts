@@ -76,6 +76,7 @@ const loadingContent: any = {
 export interface LocalEditorModeSwitcherOptions {
   root?: HTMLElement;
   disposeGameWorld: () => void | Promise<void>;
+  restartGame?: (context?: { reason?: string }) => void | Promise<void>;
   onBeforeEnterEditor?: () => void | Promise<void>;
   onBeforeReload?: () => void | Promise<void>;
 }
@@ -103,6 +104,7 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
     ...hierarchyOperationCapability,
     loadingContent,
     runtimeWindow: window,
+    gameModeEntryVisible: false,
     loadBabylon: () => import('@babylonjs/core'),
     world: { cameraTarget: { x: 0, y: 0.6, z: 0 }, cameraRadius: 12, clearColor: { r: 0.055, g: 0.07, b: 0.09, a: 1 }, useRightHandedSystem: true, selectionEdgesPrewarm: 'lazy' },
     reportError: (error: unknown) => console.error('[LocalEditorModeSwitcher] Forge Play mode change failed', error),
@@ -118,6 +120,7 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
     root: options.root,
     window,
     disposeGameWorld: options.disposeGameWorld,
+    restartGame: options.restartGame,
     onBeforeEnterEditor: options.onBeforeEnterEditor,
     onBeforeReload: options.onBeforeReload,
     agentBridgeSessionMetadata: __FPS_EDITOR_AGENT_SESSION_METADATA__,
