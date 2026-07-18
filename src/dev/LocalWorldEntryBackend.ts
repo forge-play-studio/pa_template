@@ -41,7 +41,10 @@ export interface LocalWorldEntryEnvironment<TWorld> {
     getGame: () => TWorld | null;
     disposeGameWorld: () => Promise<void>;
   }): LocalEditorEntryRuntimeDebug | Promise<LocalEditorEntryRuntimeDebug>;
-  mountEditorSwitcher(options: LocalEditorEntryModeSwitcherOptions): Promise<LocalEditorEntryModeSwitcher>;
+  mountEditorSwitcher(
+    options: LocalEditorEntryModeSwitcherOptions,
+    signal: AbortSignal,
+  ): Promise<LocalEditorEntryModeSwitcher>;
 }
 
 export interface LocalWorldEntryBackendOptions<TWorld> {
@@ -104,7 +107,7 @@ implements PlayableEditorEntryBackend<LocalWorldEntryPrepared> {
     throwIfAborted(signal);
     await this.startGameWorld();
     throwIfAborted(signal);
-    await this.ensureEditorSwitcher();
+    await this.ensureEditorSwitcher(signal);
     throwIfAborted(signal);
   }
 
@@ -112,7 +115,7 @@ implements PlayableEditorEntryBackend<LocalWorldEntryPrepared> {
     throwIfAborted(context.signal);
     await this.startGameWorld();
     throwIfAborted(context.signal);
-    const switcher = await this.ensureEditorSwitcher();
+    const switcher = await this.ensureEditorSwitcher(context.signal);
     throwIfAborted(context.signal);
     return Object.freeze({ switcher });
   }
@@ -208,7 +211,7 @@ implements PlayableEditorEntryBackend<LocalWorldEntryPrepared> {
     }
   }
 
-  private async ensureEditorSwitcher(): Promise<LocalEditorEntryModeSwitcher> {
+  private async ensureEditorSwitcher(signal: AbortSignal): Promise<LocalEditorEntryModeSwitcher> {
     this.assertActive();
     if (this.editorSwitcher) return this.editorSwitcher;
     if (!this.editorSwitcherLoad) {
@@ -217,7 +220,7 @@ implements PlayableEditorEntryBackend<LocalWorldEntryPrepared> {
         onBeforeEnterEditor: () => this.runtimeDebug?.detachForEditor(),
         onBeforeReload: () => this.runtimeDebug?.detachForEditor(),
         restartGame: context => this.restart(context),
-      }).then(async switcher => {
+      }, signal).then(async switcher => {
         if (this.disposed) {
           await switcher.dispose();
           throw createAbortError();

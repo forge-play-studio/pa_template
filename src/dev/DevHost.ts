@@ -1,6 +1,11 @@
 import {
   createPlayableEditorEntryController,
+  createPlayableEditorEntryModuleLoader,
+  createPlayableEditorEntryPerformanceTracker,
+  type PlayableEditorEntryBuildIdentity,
   type PlayableEditorEntryController,
+  type PlayableEditorEntryPerformanceMark,
+  type PlayableEditorEntryPerformanceMeasurement,
   type PlayableEditorEntryResult,
   type PlayableEditorEntryState,
 } from '@fps-games/editor/playable-sdk';
@@ -26,16 +31,29 @@ export interface DevHostEditorEntryViewState {
   readonly gameReady: boolean;
 }
 
+export interface DevHostEditorEntryDiagnostics {
+  readonly build: PlayableEditorEntryBuildIdentity | null;
+  readonly editorModuleImportAttempt: number;
+  readonly editorModuleWarmup: PlayableEditorEntryPerformanceMeasurement | null;
+  readonly enter: PlayableEditorEntryPerformanceMeasurement | null;
+}
+
 /** Development-only composition root for gameplay, debug UI and editor switching. */
 export class DevHost {
   private readonly backend: LocalWorldEntryBackend<GameWorld>;
   private readonly entryController: PlayableEditorEntryController;
   private readonly entryViewListeners = new Set<(state: DevHostEditorEntryViewState) => void>();
   private readonly unsubscribeEntryController: () => void;
+  private readonly entryPerformance = createPlayableEditorEntryPerformanceTracker();
+  private editorEnterMark: PlayableEditorEntryPerformanceMark | null = null;
+  private entryDiagnostics: DevHostEditorEntryDiagnostics = freezeEntryDiagnostics();
   private disposed = false;
 
   constructor() {
-    let editorModuleLoadAttempt = 0;
+    const editorModuleLoader = createPlayableEditorEntryModuleLoader<LocalEditorModule>({
+      baseUrl: window.location.href,
+      importModule: url => import(/* @vite-ignore */ url) as Promise<LocalEditorModule>,
+    });
     this.backend = new LocalWorldEntryBackend<GameWorld>({
       environment: {
         async prepareRuntime() {
@@ -69,11 +87,21 @@ export class DevHost {
             disposeGameWorld: input.disposeGameWorld,
           });
         },
-        async mountEditorSwitcher(options) {
-          const { mountLocalEditorModeSwitcher } = await loadLocalEditorModule(
-            ++editorModuleLoadAttempt,
-          );
-          return mountLocalEditorModeSwitcher({
+        mountEditorSwitcher: async (options, signal) => {
+          const mark = this.entryPerformance.mark();
+          let editorModule: LocalEditorModule;
+          try {
+            editorModule = await editorModuleLoader.load(signal);
+          } finally {
+            this.entryDiagnostics = freezeEntryDiagnostics({
+              build: editorModuleLoader.getManifest()?.build ?? null,
+              editorModuleImportAttempt: editorModuleLoader.getImportAttempt(),
+              editorModuleWarmup: this.entryPerformance.measure(mark),
+              enter: this.entryDiagnostics.enter,
+            });
+            this.publishEditorEntryDiagnostics();
+          }
+          return editorModule.mountLocalEditorModeSwitcher({
             root: document.body,
             ...options,
           });
@@ -94,8 +122,10 @@ export class DevHost {
       reportListenerError: error => console.error('[DevHost] editor entry listener failed', error),
     });
     this.unsubscribeEntryController = this.entryController.subscribe(() => {
+      this.recordEditorEntryPerformance(this.entryController.getState());
       this.emitEditorEntryViewState();
     });
+    this.publishEditorEntryDiagnostics();
   }
 
   get game(): GameWorld | null {
@@ -125,6 +155,10 @@ export class DevHost {
     });
   }
 
+  getEditorEntryDiagnostics(): DevHostEditorEntryDiagnostics {
+    return this.entryDiagnostics;
+  }
+
   subscribeEditorEntryView(
     listener: (state: DevHostEditorEntryViewState) => void,
   ): () => void {
@@ -141,7 +175,11 @@ export class DevHost {
     this.disposed = true;
     this.unsubscribeEntryController();
     this.entryViewListeners.clear();
-    await this.entryController.dispose();
+    try {
+      await this.entryController.dispose();
+    } finally {
+      window.__FPS_EDITOR_ENTRY_DIAGNOSTICS__ = undefined;
+    }
   }
 
   private handleReturnedToGame(): void {
@@ -166,18 +204,49 @@ export class DevHost {
       }
     }
   }
+
+  private recordEditorEntryPerformance(state: PlayableEditorEntryState): void {
+    if (state.phase === 'preparing') {
+      this.editorEnterMark = this.entryPerformance.mark();
+      this.entryDiagnostics = freezeEntryDiagnostics({
+        build: this.entryDiagnostics.build,
+        editorModuleImportAttempt: this.entryDiagnostics.editorModuleImportAttempt,
+        editorModuleWarmup: this.entryDiagnostics.editorModuleWarmup,
+        enter: null,
+      });
+      this.publishEditorEntryDiagnostics();
+      return;
+    }
+    const entrySettled = state.phase === 'editing'
+      || (state.phase === 'failed' && state.failure?.phase !== 'warmup');
+    if (!entrySettled || !this.editorEnterMark) return;
+    const mark = this.editorEnterMark;
+    this.editorEnterMark = null;
+    this.entryDiagnostics = freezeEntryDiagnostics({
+      build: this.entryDiagnostics.build,
+      editorModuleImportAttempt: this.entryDiagnostics.editorModuleImportAttempt,
+      editorModuleWarmup: this.entryDiagnostics.editorModuleWarmup,
+      enter: this.entryPerformance.measure(mark),
+    });
+    this.publishEditorEntryDiagnostics();
+  }
+
+  private publishEditorEntryDiagnostics(): void {
+    window.__FPS_EDITOR_ENTRY_DIAGNOSTICS__ = this.entryDiagnostics;
+  }
 }
 
 type LocalEditorModule = typeof import('../services/fps-game-editor/local-editor');
 
-async function loadLocalEditorModule(attempt: number): Promise<LocalEditorModule> {
-  // Browsers cache a failed dynamic-import promise by URL. Use a distinct URL
-  // per warmup attempt so a transient dev-server/network failure is retryable
-  // without reloading and destroying the still-running GameWorld.
-  const modulePath = '../services/fps-game-editor/local-editor.ts';
-  const moduleUrl = new URL(modulePath, import.meta.url);
-  moduleUrl.searchParams.set('fps-editor-entry-attempt', String(attempt));
-  return import(/* @vite-ignore */ moduleUrl.href) as Promise<LocalEditorModule>;
+function freezeEntryDiagnostics(
+  value: Partial<DevHostEditorEntryDiagnostics> = {},
+): DevHostEditorEntryDiagnostics {
+  return Object.freeze({
+    build: value.build ?? null,
+    editorModuleImportAttempt: value.editorModuleImportAttempt ?? 0,
+    editorModuleWarmup: value.editorModuleWarmup ?? null,
+    enter: value.enter ?? null,
+  });
 }
 
 function captureRenderCanvasPlacement(): RenderCanvasPlacement | null {
@@ -203,5 +272,6 @@ declare global {
     INSPECTOR?: unknown;
     __bridgeProjectRuntime?: unknown;
     __pendingEditorRuntime?: unknown;
+    __FPS_EDITOR_ENTRY_DIAGNOSTICS__?: DevHostEditorEntryDiagnostics;
   }
 }
