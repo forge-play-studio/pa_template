@@ -1,5 +1,4 @@
 // Project tool ownership: project-only | Reviewed: 2026-07-08 | Purpose: pa_template asset directory, generated output, and URL mapping config. | Migration: stays beside asset registry scripts; reusable registry behavior lives in @fps-games/editor/playable-sdk/vite.
-import fs from 'node:fs/promises';
 import path from 'node:path';
 import {
   resolvePlayableEditorAssetMetadata as resolveAssetMetadata,
@@ -18,7 +17,6 @@ export const projectAssetCatalogConfig = {
   manifestPath: path.join(generatedDir, 'asset-catalog.manifest.json'),
   registryPath: path.join(generatedDir, 'asset-catalog.generated.ts'),
   scenePath: path.resolve(cwd, 'src/config/scene.json'),
-  rulesPath: path.resolve(cwd, 'src/config/scene-json-v2-rules.json'),
   supportedExtensions: [
     '.glb', '.gltf',
     '.png', '.jpg', '.jpeg', '.webp',
@@ -28,9 +26,6 @@ export const projectAssetCatalogConfig = {
   commands: {
     register: 'npm run asset:register',
     unregister: 'npm run asset:unregister',
-  },
-  async loadRules() {
-    return JSON.parse(await fs.readFile(this.rulesPath, 'utf8'));
   },
   async resolveAssetMetadata({ kind, sourcePath, existingMetadata, payloadMetadata, guid, assetId }) {
     return resolveAssetMetadata({

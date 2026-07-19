@@ -65,7 +65,6 @@ const runtimeAuthoredConfigConsumerPaths = new Set([
   'src/dev/DevHost.ts',
   'src/dev/dev-entry.ts',
   'src/config/ConfigService.ts',
-  'src/config/SceneJsonV2Validator.ts',
   'src/config/types.ts',
   'src/rendering/rendering-profile.ts',
   'src/services/RenderingService.ts',

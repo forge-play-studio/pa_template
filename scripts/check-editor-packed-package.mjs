@@ -52,6 +52,7 @@ const editorVite = await import('@fps-games/editor/vite');
 await assertPackedPluginManifestModule(editorRoot, editorVite);
 await assertRetiredSubpathIsUnavailable('@fps-games/editor/playable-sdk/legacy-compat');
 const requiredFunctions = [
+  'assertPlayableEditorRuntimeSceneConfig',
   'normalizeEditorSceneMarkerGraph',
   'reduceEditorSceneMarkerGraph',
   'getEditorSceneMarkerTypeCatalogFromGraph',
@@ -71,6 +72,7 @@ const requiredFunctions = [
   'replaceEditorScenePrefabAsset',
   'normalizeEditorScenePrefabAssetFieldValue',
   'validateEditorScenePrefabAssetFieldValue',
+  'validatePlayableEditorRuntimeSceneConfig',
   'cleanupEditorScenePrefabDefaultShadow',
   'syncEditorScenePrefabRootNodeFields',
   'addEditorSceneMaterialAssetAndBindPrefabOverride',
@@ -146,6 +148,22 @@ for (const exportName of requiredFunctions) {
   if (typeof playableSdk[exportName] !== 'function') {
     throw new Error(`Expected @fps-games/editor/playable-sdk runtime export ${exportName} to be a function.`);
   }
+}
+
+const packedRuntimeSceneValidation = playableSdk.validatePlayableEditorRuntimeSceneConfig({
+  schemaVersion: 3,
+  gameplay: { opaqueProjectExtension: true },
+  scene: {
+    rootId: 'root',
+    assets: [],
+    nodes: [],
+    materialAssets: [],
+    materials: [],
+    textures: [],
+  },
+});
+if (!packedRuntimeSceneValidation.ok || packedRuntimeSceneValidation.errors.length !== 0) {
+  throw new Error('Expected packed canonical runtime SceneArtifact validator to accept a minimal v3 artifact.');
 }
 
 const forbiddenRootFunctions = [

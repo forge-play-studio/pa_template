@@ -2049,7 +2049,8 @@ function readSceneBuilderAssetAnalysisMeshName(
 ): string | null {
   if (!Number.isInteger(meshIndex)) return null;
   if (Array.isArray(asset?.materialSlots)) return null;
-  const assetAnalysis = isRecord(asset?.metadata?.assetAnalysis) ? asset.metadata.assetAnalysis : null;
+  const metadata = asset && 'metadata' in asset && isRecord(asset.metadata) ? asset.metadata : null;
+  const assetAnalysis = isRecord(metadata?.assetAnalysis) ? metadata.assetAnalysis : null;
   const meshes = Array.isArray(assetAnalysis?.meshes) ? assetAnalysis.meshes : [];
   const mesh = meshes.find((entry): entry is Record<string, unknown> => (
     isRecord(entry) && entry.meshIndex === meshIndex
@@ -2059,7 +2060,8 @@ function readSceneBuilderAssetAnalysisMeshName(
 
 function readSceneBuilderAssetMaterialSlots(asset: SceneAssetConfig): unknown[] {
   if (Array.isArray(asset.materialSlots)) return asset.materialSlots;
-  return Array.isArray(asset.metadata?.materialSlots) ? asset.metadata.materialSlots : [];
+  const metadata = 'metadata' in asset && isRecord(asset.metadata) ? asset.metadata : null;
+  return Array.isArray(metadata?.materialSlots) ? metadata.materialSlots : [];
 }
 
 function normalizeRuntimeMaterialOwnerName(value: string | null | undefined): string | null {

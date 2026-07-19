@@ -37,6 +37,7 @@
     "test:editor-packed-package": "node scripts/check-editor-packed-package.mjs",
     "test:editor-packed-vite-resolution": "node scripts/check-editor-packed-vite-resolution.mjs",
     "test:editor-vite-plugin-types": "tsc --noEmit --strict --skipLibCheck --module ESNext --moduleResolution Bundler --target ES2022 --types node scripts/check-editor-vite-plugin-types.ts",
+    "test:editor-runtime-scene-contract-types": "tsc --noEmit --strict --skipLibCheck --module ESNext --moduleResolution Bundler --target ES2022 scripts/check-editor-runtime-scene-contract-types.ts",
     "test:asset-registry-unregister": "node scripts/check-asset-registry-unregister-guard.mjs",
     "test:scene-walkthrough": "node scripts/check-scene-walkthrough-contract.mjs",
     "build": "./scripts/build-all.sh en applovin",
