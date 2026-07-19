@@ -242,6 +242,7 @@ async function assertPackedPluginManifestModule(editor, vite) {
     'fps.plugin.materials',
     'fps.plugin.rendering',
     'fps.plugin.shadows',
+    'fps.shadow-map-experiment',
     'fps.plugin.markers',
     'fps.renderer.babylon',
   ];
