@@ -1994,7 +1994,8 @@ function readRuntimeNodeDisplayName(node: any): string | null {
 
 function readSceneBuilderAssetMaterialSlots(asset: SceneAssetConfig): unknown[] {
   if (Array.isArray(asset.materialSlots)) return asset.materialSlots;
-  return Array.isArray(asset.metadata?.materialSlots) ? asset.metadata.materialSlots : [];
+  const metadata = 'metadata' in asset && isRecord(asset.metadata) ? asset.metadata : null;
+  return Array.isArray(metadata?.materialSlots) ? metadata.materialSlots : [];
 }
 
 function shouldLogSceneBuilderMaterialDiagnostics(): boolean {

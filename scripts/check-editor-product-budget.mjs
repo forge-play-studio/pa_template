@@ -68,7 +68,6 @@ const runtimeAuthoredConfigConsumerPaths = new Set([
   'src/dev/LocalWorldEntryBackend.ts',
   'src/dev/editor-entry-view.ts',
   'src/config/ConfigService.ts',
-  'src/config/SceneJsonV2Validator.ts',
   'src/config/types.ts',
   'src/rendering/rendering-profile.ts',
   'src/services/RenderingService.ts',

@@ -8,37 +8,77 @@
  */
 
 import type {
-  EditorShadowResolvedPlan,
-  EditorShadowSettings,
-  EditorSceneStaticShadowArtifact,
-} from '../runtime/integrations/fps-runtime/contracts';
+  EditorSceneArtistMaterialProfile,
+  EditorSceneCameraRig,
+  EditorSceneColorRgb,
+  EditorSceneDirectionalLight,
+  EditorSceneHemisphericLight,
+  EditorSceneMaterialAlphaMode,
+  EditorSceneMaterialAlphaProfile,
+  EditorSceneMaterialAsset,
+  EditorSceneMaterialAssetKind,
+  EditorSceneMaterialAssetOrigin,
+  EditorSceneMaterialAssetOriginType,
+  EditorSceneMaterialBaseColorProfile,
+  EditorSceneMaterialEmissionProfile,
+  EditorSceneMaterialLightingModel,
+  EditorSceneMaterialMetallicRoughnessProfile,
+  EditorSceneMaterialNormalProfile,
+  EditorSceneMaterialOcclusionProfile,
+  EditorSceneMaterialTextureRef,
+  EditorSceneVec3,
+  PlayableEditorRuntimeGroupNode,
+  PlayableEditorRuntimeGroundDecalColor,
+  PlayableEditorRuntimeGroundDecalColorLayer,
+  PlayableEditorRuntimeGroundDecalConfig,
+  PlayableEditorRuntimeGroundDecalLayer,
+  PlayableEditorRuntimeGroundDecalLayerBase,
+  PlayableEditorRuntimeGroundDecalLayerRole,
+  PlayableEditorRuntimeGroundDecalMaskConfig,
+  PlayableEditorRuntimeGroundDecalProgressLayer,
+  PlayableEditorRuntimeGroundDecalRect,
+  PlayableEditorRuntimeGroundDecalRenderingConfig,
+  PlayableEditorRuntimeGroundDecalTextLayer,
+  PlayableEditorRuntimeGroundDecalTextureLayer,
+  PlayableEditorRuntimeGroundDecalUiKind,
+  PlayableEditorRuntimeInstanceNode,
+  PlayableEditorRuntimeMaterialBindingConfig,
+  PlayableEditorRuntimeMaterialSlotConfig,
+  PlayableEditorRuntimeNodeBase,
+  PlayableEditorRuntimeNodeRenderingConfig,
+  PlayableEditorRuntimeNodeVisualOverrides,
+  PlayableEditorRuntimePrimitiveNode,
+  PlayableEditorRuntimeSceneAssetConfig,
+  PlayableEditorRuntimeSceneAssetConfigV2,
+  PlayableEditorRuntimeSceneAssetConfigV3,
+  PlayableEditorRuntimeSceneConfig,
+  PlayableEditorRuntimeSceneConfigV2,
+  PlayableEditorRuntimeSceneConfigV3,
+  PlayableEditorRuntimeSceneDocument,
+  PlayableEditorRuntimeSceneMarkerGeometry,
+  PlayableEditorRuntimeSceneMarkerTargetRef,
+  PlayableEditorRuntimeSharedMaterialConfig,
+  PlayableEditorRuntimeTransformConfig,
+  PlayableEditorRuntimeTransformNode,
+  PlayableEditorRuntimeTransformType,
+  PlayableEditorSceneCompiledArtifactProvenance,
+  PlayableEditorSceneRuntimeSourceBinding,
+} from '@fps-games/editor/playable-sdk';
 
 // ============================================================
 // 基础类型
 // ============================================================
 
-export interface Position3D {
-  x: number;
-  y: number;
-  z: number;
-}
+export type Position3D = EditorSceneVec3;
 
 export interface PositionXZ {
   x: number;
   z: number;
 }
 
-export interface Scale3D {
-  x: number;
-  y: number;
-  z: number;
-}
+export type Scale3D = EditorSceneVec3;
 
-export interface ColorRGB {
-  r: number;
-  g: number;
-  b: number;
-}
+export type ColorRGB = EditorSceneColorRgb;
 
 export interface ColorRGBA extends ColorRGB {
   a: number;
@@ -51,21 +91,15 @@ export interface ColorRGBA extends ColorRGB {
  * - rotationDeg 用角度便于策划配置
  * - rotation 用弧度（如果你更偏好在配置里写弧度，可以使用该字段）
  */
-export interface TransformConfig {
-  position?: Position3D;
-  rotationDeg?: Position3D;
-  rotation?: Position3D;
-  /** 统一缩放（number）或三维缩放（Scale3D） */
-  scale?: number | Scale3D;
-}
+export type TransformConfig = PlayableEditorRuntimeTransformConfig;
 
-export type TransformType = 'plain' | 'light' | 'camera' | 'groundDecal';
+export type TransformType = PlayableEditorRuntimeTransformType;
 
 export type ScenePrimitiveShape = 'cube' | 'sphere' | 'plane' | 'capsule';
 
 export type SceneCameraProjection = 'orthographic' | 'perspective';
 
-export interface SceneCameraRigConfig {
+export interface SceneCameraRigConfig extends EditorSceneCameraRig {
   projection?: SceneCameraProjection;
   alpha: number;
   beta: number;
@@ -86,19 +120,9 @@ export interface SceneCameraRigConfig {
   };
 }
 
-export interface SceneDirectionalLightConfig {
-  type: 'directional';
-  intensity: number;
-  direction: Position3D;
-  diffuseColor?: ColorRGB;
-}
+export type SceneDirectionalLightConfig = EditorSceneDirectionalLight;
 
-export interface SceneHemisphericLightConfig {
-  type: 'hemispheric';
-  intensity: number;
-  diffuseColor?: ColorRGB;
-  groundColor?: ColorRGB;
-}
+export type SceneHemisphericLightConfig = EditorSceneHemisphericLight;
 
 export type SceneLightConfig = SceneHemisphericLightConfig | SceneDirectionalLightConfig;
 
@@ -121,139 +145,61 @@ export interface AssetExternalRef {
   [key: string]: unknown;
 }
 
-export interface SceneAssetMaterialSlotConfig {
-  slotId: string;
-  ownerNodePath: string;
-  label?: string;
-  meshIndex?: number;
-  primitiveIndex?: number;
-  sourceMaterialIndices?: number[];
-  sourceMeshName?: string;
-}
+export type SceneAssetMaterialSlotConfig = PlayableEditorRuntimeMaterialSlotConfig;
 
-export interface SceneAssetConfig {
-  id: string;
-  guid?: string;
-  type: 'glb';
-  url?: string;
-  external?: AssetExternalRef;
-  displayName?: string;
-  category?: string;
-  warmupCount?: number;
-  singleton?: boolean;
-  materialMode?: SceneAssetMaterialMode;
-  defaults?: SceneAssetDefaults;
-  materialSlots?: SceneAssetMaterialSlotConfig[];
-  /** @deprecated Runtime schema v2 compatibility only. */
-  metadata?: Record<string, unknown>;
-}
+export type SceneAssetConfigV2 = PlayableEditorRuntimeSceneAssetConfigV2<
+  SceneAssetDefaults,
+  AssetExternalRef,
+  SceneAssetMaterialMode
+>;
 
-export type SceneAuthoringSourceType = 'scene' | 'effect' | 'material' | 'gameplay-config' | 'code';
+export type SceneAssetConfigV3 = PlayableEditorRuntimeSceneAssetConfigV3<
+  SceneAssetDefaults,
+  AssetExternalRef,
+  SceneAssetMaterialMode
+>;
 
-export interface SceneAuthoringSourceRef {
-  sourceId: string;
-  sourceType: SceneAuthoringSourceType | string;
-  revision?: number;
-}
+export type SceneAssetConfig = PlayableEditorRuntimeSceneAssetConfig<
+  SceneAssetDefaults,
+  AssetExternalRef,
+  SceneAssetMaterialMode
+>;
 
-export interface SceneCompiledArtifactProvenance extends SceneAuthoringSourceRef {
-  compilerId: string;
-  compilerVersion: string;
-  compiledAt: string;
-}
+export type SceneCompiledArtifactProvenance = PlayableEditorSceneCompiledArtifactProvenance;
 
-export interface SceneRuntimeSourceBinding extends SceneAuthoringSourceRef {
-  objectGuid?: string;
-  objectId?: string;
-  component?: string;
-  propertyPath?: string;
-}
+export type SceneRuntimeSourceBinding = PlayableEditorSceneRuntimeSourceBinding;
 
-export interface SceneNodeRenderingConfig {
-  renderingGroupId?: number;
-  alphaIndex?: number;
-}
+export type SceneNodeRenderingConfig = PlayableEditorRuntimeNodeRenderingConfig;
 
-export interface SceneNodeBase {
-  id: string;
-  name?: string;
-  kind: 'group' | 'instance' | 'transform' | 'primitive';
-  parentId?: string;
-  enabled?: boolean;
-  shadow?: EditorShadowSettings;
-  shadowPlan?: EditorShadowResolvedPlan;
-  rendering?: SceneNodeRenderingConfig;
-  transform?: TransformConfig;
-  source?: SceneRuntimeSourceBinding;
-}
+export type SceneNodeBase = PlayableEditorRuntimeNodeBase;
 
-export interface SceneGroupNode extends SceneNodeBase {
-  kind: 'group';
-}
+export type SceneGroupNode = PlayableEditorRuntimeGroupNode;
 
 export interface MaterialTextureOverrideConfig {
   url?: string;
   level?: number;
 }
 
-export interface ArtistMaterialTextureRef {
-  url?: string;
-  textureAssetId?: string;
-}
+export type ArtistMaterialTextureRef = EditorSceneMaterialTextureRef;
 
-export type ArtistMaterialAlphaMode = 'opaque' | 'mask' | 'blend';
-export type ArtistMaterialLightingModel = 'lit' | 'unlit';
+export type ArtistMaterialAlphaMode = EditorSceneMaterialAlphaMode;
+export type ArtistMaterialLightingModel = EditorSceneMaterialLightingModel;
 
-export interface ArtistBaseColorProfile {
-  color?: ColorRGB;
-  texture?: ArtistMaterialTextureRef | null;
-  brightness?: number;
-  saturation?: number;
-  contrast?: number;
-  hue?: number;
-}
+export type ArtistBaseColorProfile = EditorSceneMaterialBaseColorProfile;
 
-export interface ArtistNormalProfile {
-  texture?: ArtistMaterialTextureRef | null;
-  strength?: number;
-}
+export type ArtistNormalProfile = EditorSceneMaterialNormalProfile;
 
-export interface ArtistMetallicRoughnessProfile {
-  texture?: ArtistMaterialTextureRef | null;
-}
+export type ArtistMetallicRoughnessProfile = EditorSceneMaterialMetallicRoughnessProfile;
 
-export interface ArtistOcclusionProfile {
-  texture?: ArtistMaterialTextureRef | null;
-  strength?: number;
-}
+export type ArtistOcclusionProfile = EditorSceneMaterialOcclusionProfile;
 
-export interface ArtistEmissionProfile {
-  color?: ColorRGB;
-  intensity?: number;
-  texture?: ArtistMaterialTextureRef | null;
-  maskTexture?: ArtistMaterialTextureRef | null;
-}
+export type ArtistEmissionProfile = EditorSceneMaterialEmissionProfile;
 
-export interface ArtistAlphaProfile {
-  mode?: ArtistMaterialAlphaMode;
-  opacity?: number;
-  cutoff?: number;
-  texture?: ArtistMaterialTextureRef | null;
-}
+export type ArtistAlphaProfile = EditorSceneMaterialAlphaProfile;
 
-export interface ArtistMaterialProfile {
-  lightingModel?: ArtistMaterialLightingModel;
-  baseColor?: ArtistBaseColorProfile;
-  normal?: ArtistNormalProfile;
-  metallic?: number;
-  roughness?: number;
-  metallicRoughness?: ArtistMetallicRoughnessProfile;
-  occlusion?: ArtistOcclusionProfile;
-  emission?: ArtistEmissionProfile;
-  alpha?: ArtistAlphaProfile;
-}
+export type ArtistMaterialProfile = EditorSceneArtistMaterialProfile;
 
-export type SceneMaterialAssetKind = 'pbr' | 'standard';
+export type SceneMaterialAssetKind = Extract<EditorSceneMaterialAssetKind, 'pbr' | 'standard'>;
 export type SceneMaterialAssetSystemPreset = 'default-pbr' | 'default-standard';
 
 export interface SceneMaterialAssetSystemConfig {
@@ -261,21 +207,14 @@ export interface SceneMaterialAssetSystemConfig {
   preset?: SceneMaterialAssetSystemPreset;
 }
 
-export type SceneMaterialAssetOriginType = 'imported' | 'created' | 'duplicated' | 'preset';
+export type SceneMaterialAssetOriginType = Extract<
+  EditorSceneMaterialAssetOriginType,
+  'imported' | 'created' | 'duplicated' | 'preset'
+>;
 
-export interface SceneMaterialAssetOriginConfig {
-  type: SceneMaterialAssetOriginType;
-  sourceAssetGuid?: string;
-  sourceAssetId?: string;
-  sourceSlotId?: string;
-  sourceMaterialIndex?: number;
-  sourceMaterialName?: string;
-  sourceMaterialAssetId?: string;
-}
+export type SceneMaterialAssetOriginConfig = EditorSceneMaterialAssetOrigin;
 
-export interface SceneMaterialAssetConfig {
-  id: string;
-  guid?: string;
+export interface SceneMaterialAssetConfig extends EditorSceneMaterialAsset<ArtistMaterialProfile> {
   name: string;
   profile: ArtistMaterialProfile;
   materialKind?: SceneMaterialAssetKind;
@@ -283,10 +222,7 @@ export interface SceneMaterialAssetConfig {
   origin?: SceneMaterialAssetOriginConfig;
 }
 
-export interface SceneNodeMaterialBindingConfig {
-  materialAssetId?: string;
-  override?: ArtistMaterialProfile;
-}
+export type SceneNodeMaterialBindingConfig = PlayableEditorRuntimeMaterialBindingConfig<ArtistMaterialProfile>;
 
 export interface PbrMaterialLightingOverrideConfig {
   albedoColor?: ColorRGB;
@@ -340,14 +276,8 @@ export interface MaterialOverrideConfig {
 
 export type SceneMaterialScope = 'sharedAsset' | 'nodeMaterial';
 
-export interface SceneSharedMaterialConfig {
-  id: string;
+export interface SceneSharedMaterialConfig extends PlayableEditorRuntimeSharedMaterialConfig {
   scope?: SceneMaterialScope;
-  assetId?: string;
-  nodeId?: string;
-  materialName: string;
-  ownerNodePath?: string;
-  type?: string;
   properties: MaterialOverrideConfig;
 }
 
@@ -357,7 +287,7 @@ export interface OutlineOverrideConfig {
   outlineColor?: ColorRGB;
 }
 
-export interface SceneNodeVisualOverrides {
+export interface SceneNodeVisualOverrides extends PlayableEditorRuntimeNodeVisualOverrides {
   materialBinding?: SceneNodeMaterialBindingConfig;
   materialSlotBindings?: Record<string, SceneNodeMaterialBindingConfig>;
   material?: MaterialOverrideConfig;
@@ -366,186 +296,41 @@ export interface SceneNodeVisualOverrides {
   childOutlines?: Record<string, OutlineOverrideConfig>;
 }
 
-export interface SceneInstanceNode extends SceneNodeBase {
-  kind: 'instance';
-  instance: {
-    assetId: string;
-  };
+export interface SceneInstanceNode extends Omit<PlayableEditorRuntimeInstanceNode, 'overrides'> {
   overrides?: SceneNodeVisualOverrides;
 }
 
-export interface ScenePrimitiveNode extends SceneNodeBase {
-  kind: 'primitive';
+export interface ScenePrimitiveNode extends Omit<PlayableEditorRuntimePrimitiveNode, 'primitive' | 'overrides'> {
   primitive: {
     shape: ScenePrimitiveShape;
   };
   overrides?: SceneNodeVisualOverrides;
 }
 
-export interface SceneMarkerBoxGeometryConfig {
-  kind: 'box';
-}
+export type SceneMarkerBoxGeometryConfig = Extract<PlayableEditorRuntimeSceneMarkerGeometry, { kind: 'box' }>;
+export type SceneMarkerPointGeometryConfig = Extract<PlayableEditorRuntimeSceneMarkerGeometry, { kind: 'point' }>;
+export type SceneMarkerObjectBoundsGeometryConfig = Extract<PlayableEditorRuntimeSceneMarkerGeometry, { kind: 'object-bounds' }>;
+export type SceneMarkerPolyhedronGeometryConfig = Extract<PlayableEditorRuntimeSceneMarkerGeometry, { kind: 'polyhedron' }>;
+export type SceneMarkerGeometryConfig = PlayableEditorRuntimeSceneMarkerGeometry;
+export type SceneMarkerTargetRefConfig = PlayableEditorRuntimeSceneMarkerTargetRef;
+export type SceneMarkerLocalFrameConfig = NonNullable<SceneMarkerConfig['semanticFrame']>;
+export type SceneMarkerConfig = NonNullable<PlayableEditorRuntimeTransformNode['marker']>;
 
-export interface SceneMarkerPointGeometryConfig {
-  kind: 'point';
-  coordinateSpace?: 'world' | 'local';
-  position?: Position3D;
-  offset?: Position3D;
-  target?: SceneMarkerTargetRefConfig;
-}
+export type GroundDecalUiKind = PlayableEditorRuntimeGroundDecalUiKind;
+export type GroundDecalUiLayerRole = PlayableEditorRuntimeGroundDecalLayerRole;
+export type GroundDecalUiRect = PlayableEditorRuntimeGroundDecalRect;
+export type GroundDecalUiColor = PlayableEditorRuntimeGroundDecalColor;
+export type GroundDecalUiLayerBase = PlayableEditorRuntimeGroundDecalLayerBase;
+export type GroundDecalUiTextureLayer = PlayableEditorRuntimeGroundDecalTextureLayer;
+export type GroundDecalUiColorLayer = PlayableEditorRuntimeGroundDecalColorLayer;
+export type GroundDecalUiTextLayer = PlayableEditorRuntimeGroundDecalTextLayer;
+export type GroundDecalUiProgressLayer = PlayableEditorRuntimeGroundDecalProgressLayer;
+export type GroundDecalUiLayer = PlayableEditorRuntimeGroundDecalLayer;
+export type GroundDecalUiMaskConfig = PlayableEditorRuntimeGroundDecalMaskConfig;
+export type GroundDecalUiRenderingConfig = PlayableEditorRuntimeGroundDecalRenderingConfig;
+export type GroundDecalUiConfig = PlayableEditorRuntimeGroundDecalConfig;
 
-export interface SceneMarkerObjectBoundsGeometryConfig {
-  kind: 'object-bounds';
-  target: SceneMarkerTargetRefConfig;
-}
-
-export interface SceneMarkerPolyhedronGeometryConfig {
-  kind: 'polyhedron';
-  coordinateSpace?: 'world';
-  vertices: Position3D[];
-  faces?: number[][];
-}
-
-export type SceneMarkerGeometryConfig =
-  | SceneMarkerBoxGeometryConfig
-  | SceneMarkerPointGeometryConfig
-  | SceneMarkerObjectBoundsGeometryConfig
-  | SceneMarkerPolyhedronGeometryConfig;
-
-export interface SceneMarkerTargetRefConfig {
-  kind: string;
-  id: string;
-  label?: string;
-  path?: string;
-  metadata?: Record<string, unknown>;
-}
-
-export interface SceneMarkerLocalFrameConfig {
-  origin: Position3D;
-  forward?: Position3D;
-  right?: Position3D;
-  up?: Position3D;
-  label?: string;
-  description?: string;
-}
-
-export interface SceneMarkerConfig {
-  schemaVersion: 1;
-  label: string;
-  type: string;
-  kind?: string;
-  tags?: string[];
-  note?: string;
-  color?: ColorRGB;
-  target?: SceneMarkerTargetRefConfig;
-  semanticFrame?: SceneMarkerLocalFrameConfig;
-  geometry: SceneMarkerGeometryConfig;
-  metadata?: Record<string, unknown>;
-}
-
-export type GroundDecalUiKind = 'operation' | 'delivery';
-
-export type GroundDecalUiLayerRole =
-  | 'base'
-  | 'border'
-  | 'mainLogo'
-  | 'subLogo'
-  | 'amount'
-  | 'progressFill';
-
-export interface GroundDecalUiRect {
-  x: number;
-  z: number;
-  width: number;
-  depth: number;
-}
-
-export interface GroundDecalUiColor {
-  r: number;
-  g: number;
-  b: number;
-  a?: number;
-}
-
-export interface GroundDecalUiLayerBase {
-  id: string;
-  role: GroundDecalUiLayerRole;
-  enabled?: boolean;
-  zOrder: number;
-  rect: GroundDecalUiRect;
-  opacity?: number;
-}
-
-export interface GroundDecalUiTextureLayer extends GroundDecalUiLayerBase {
-  kind: 'texture';
-  textureId: string;
-  tint?: GroundDecalUiColor;
-}
-
-export interface GroundDecalUiColorLayer extends GroundDecalUiLayerBase {
-  kind: 'color';
-  color: GroundDecalUiColor;
-}
-
-export interface GroundDecalUiTextLayer extends GroundDecalUiLayerBase {
-  kind: 'text';
-  text: {
-    value: string;
-    fontFamily?: string;
-    fontSize?: number;
-    fontWeight?: string;
-    color: GroundDecalUiColor;
-    strokeColor?: GroundDecalUiColor;
-    strokeWidth?: number;
-    align?: 'left' | 'center' | 'right';
-    baseline?: 'top' | 'middle' | 'bottom';
-  };
-}
-
-export interface GroundDecalUiProgressLayer extends GroundDecalUiLayerBase {
-  kind: 'progress';
-  value: number;
-  editorPreviewPercent?: number;
-  direction?: 'leftToRight' | 'rightToLeft' | 'bottomToTop' | 'topToBottom';
-  color: GroundDecalUiColor;
-}
-
-export type GroundDecalUiLayer =
-  | GroundDecalUiTextureLayer
-  | GroundDecalUiColorLayer
-  | GroundDecalUiTextLayer
-  | GroundDecalUiProgressLayer;
-
-export interface GroundDecalUiMaskConfig {
-  enabled: boolean;
-  source: 'roundedRect' | 'borderAlpha' | 'texture';
-  textureId?: string;
-  cornerRadius?: number;
-  padding?: number;
-}
-
-export interface GroundDecalUiRenderingConfig {
-  textureWidth?: number;
-  textureHeight?: number;
-  alphaIndex?: number;
-  diffuseTextureLevel?: number;
-  emissiveTextureLevel?: number;
-}
-
-export interface GroundDecalUiConfig {
-  uiKind: GroundDecalUiKind;
-  size: {
-    width: number;
-    depth: number;
-  };
-  aspectSourceLayerId?: string;
-  lockAspectToBorder?: boolean;
-  layers: GroundDecalUiLayer[];
-  mask?: GroundDecalUiMaskConfig;
-  rendering?: GroundDecalUiRenderingConfig;
-}
-
-export interface SceneTransformNode extends SceneNodeBase {
+export interface SceneTransformNode extends PlayableEditorRuntimeTransformNode {
   kind: 'transform';
   transformType?: TransformType;
   overrides?: SceneNodeVisualOverrides;
@@ -553,18 +338,28 @@ export interface SceneTransformNode extends SceneNodeBase {
   groundDecal?: GroundDecalUiConfig;
   camera?: SceneCameraRigConfig;
   light?: SceneLightConfig;
+  [key: string]: unknown;
 }
 
 export type SceneNodeConfig = SceneGroupNode | SceneInstanceNode | SceneTransformNode | ScenePrimitiveNode;
 
-export interface SceneDocumentScene {
-  rootId: string;
-  assets: SceneAssetConfig[];
-  nodes: SceneNodeConfig[];
-  materialAssets?: SceneMaterialAssetConfig[];
+export type SceneDocumentSceneV2 = PlayableEditorRuntimeSceneDocument<
+  SceneAssetConfigV2,
+  SceneNodeConfig,
+  SceneMaterialAssetConfig
+> & {
   materials: SceneSharedMaterialConfig[];
-  textures: Record<string, unknown>[];
-}
+};
+
+export type SceneDocumentSceneV3 = PlayableEditorRuntimeSceneDocument<
+  SceneAssetConfigV3,
+  SceneNodeConfig,
+  SceneMaterialAssetConfig
+> & {
+  materials: SceneSharedMaterialConfig[];
+};
+
+export type SceneDocumentScene = SceneDocumentSceneV2 | SceneDocumentSceneV3;
 
 export interface LayoutPlaceholderSurfaceConfig {
   id: string;
@@ -639,7 +434,7 @@ export interface SceneRenderConfig {
   [key: string]: unknown;
 }
 
-export interface SceneConfigMeta extends Record<string, unknown> {
+export interface SceneConfigMeta extends NonNullable<PlayableEditorRuntimeSceneConfig['meta']> {
   generatedFrom?: SceneCompiledArtifactProvenance;
 }
 
@@ -647,14 +442,15 @@ export interface SceneConfigMeta extends Record<string, unknown> {
 // Root Config Files
 // ============================================================
 
-export interface SceneConfig {
-  schemaVersion?: number;
+interface SceneConfigProjectExtensions {
   meta?: SceneConfigMeta;
   gameplay?: SceneGameplayConfig;
-  scene?: SceneDocumentScene;
   render?: SceneRenderConfig;
-  staticShadows?: EditorSceneStaticShadowArtifact;
 }
+
+export type SceneConfig =
+  | (PlayableEditorRuntimeSceneConfigV2<SceneDocumentSceneV2> & SceneConfigProjectExtensions)
+  | (PlayableEditorRuntimeSceneConfigV3<SceneDocumentSceneV3> & SceneConfigProjectExtensions);
 
 export interface GameConfig {
   meta?: Record<string, unknown>;
