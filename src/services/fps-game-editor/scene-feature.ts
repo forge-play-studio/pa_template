@@ -33,13 +33,7 @@ import {
   removeGroundDecalUiDeliveryPair,
 } from './ground-decal-authored';
 import { PA_TEMPLATE_GROUND_DECAL_LAYER_PAIR_ACTIONS, paTemplateGroundDecalFeatureConfig } from './ground-decal-config';
-import type {
-  EditorSceneDocumentPatch,
-  EditorSceneAsset,
-  EditorSceneAssetLibraryItem,
-  EditorSceneDocument,
-  EditorSceneGameObject,
-} from './scene-types';
+import type { EditorSceneDocumentPatch, EditorSceneAsset, EditorSceneAssetLibraryItem, EditorSceneDocument, EditorSceneGameObject } from './scene-types';
 import { getEditorSceneRenderingProfile, setEditorSceneRenderingProfileReader } from './scene-types';
 import { EDITOR_SCENE_FIELD_SCHEMA, isEditorSceneFiniteNumber, type EditorSceneFieldSchemaEntry } from '@fps-games/editor/playable-sdk';
 
