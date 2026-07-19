@@ -433,10 +433,6 @@ export class Game {
     return this.shadowService;
   }
 
-  getShadowMapExperimentEvidence() {
-    return this.sceneBuilder?.getShadowMapExperimentEvidence() ?? null;
-  }
-
   getInputService(): InputService | null {
     return this.inputService;
   }

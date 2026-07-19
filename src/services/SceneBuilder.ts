@@ -311,10 +311,6 @@ export class SceneBuilder {
     return this.directionalLight;
   }
 
-  getShadowMapExperimentEvidence() {
-    return this.shadowMapExperimentSystem?.getEvidence() ?? null;
-  }
-
   registerShadowCasterActivitySource(input: {
     entityId: string;
     kind: SceneShadowCasterActivityKind;

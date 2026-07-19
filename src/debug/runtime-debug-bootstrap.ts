@@ -15,7 +15,6 @@ import { mountRuntimeAudioDebugPanel } from './runtime-audio-debug-panel';
 import { mountRuntimeGameplayDebugPanels } from './runtime-gameplay-debug-panels';
 import { mountRuntimeLightingDebugPanel } from './runtime-lighting-debug-panel';
 import { mountRuntimeVfxDebugPanel } from './runtime-vfx-debug-panel';
-import { mountRuntimeShadowMapStressHarness } from './shadow-map-stress-harness';
 import { DisposableStack } from './framework/disposables';
 import { createRuntimeDebugPanelManager } from './framework/panel-manager';
 
@@ -59,30 +58,14 @@ export function mountRuntimeDebug(options: RuntimeDebugBootstrapOptions): Runtim
     getGameplayRuntime: options.getGameplayRuntime,
     actions,
   }));
-  try {
-    runtimePanels.use(mountRuntimeShadowMapStressHarness({
-      getGame: options.getGame,
-    }));
-    delete document.documentElement.dataset.shadowStressError;
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    document.documentElement.dataset.shadowStressError = message;
-    console.warn('[shadow-map-stress] mount failed', error);
-  }
-  runtimePanels.use({
-    dispose() {
-      delete document.documentElement.dataset.shadowStressError;
-    },
-  });
-
   let disposed = false;
   let disposal: Promise<void> | null = null;
   let runtimePanelsDetached = false;
   const detachRuntimePanelsForEditor = () => {
     if (runtimePanelsDetached) return;
+    runtimePanelsDetached = true;
     runtimePanels.dispose();
     editorSwitcher.detachForEditor();
-    runtimePanelsDetached = true;
   };
   const editorSwitcher = mountLocalEditorModeSwitcher({
     root,
