@@ -58,6 +58,7 @@ export function mountRuntimeDebug(options: RuntimeDebugBootstrapOptions): Runtim
     getGameplayRuntime: options.getGameplayRuntime,
     actions,
   }));
+
   let disposed = false;
   let disposal: Promise<void> | null = null;
   let runtimePanelsDetached = false;

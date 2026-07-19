@@ -233,6 +233,7 @@ async function init(): Promise<void> {
     // 暴露给调试
     window.gameInstance = game;
     window.game = game;
+
     if (import.meta.env.DEV) {
       await mountRuntimeDebugForDev();
     }

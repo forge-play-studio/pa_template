@@ -8,10 +8,10 @@
     "generatedFrom": {
       "sourceId": "scene.main",
       "sourceType": "scene",
-      "revision": 89,
+      "revision": 76,
       "compilerId": "@fps-games/editor.playable-sdk.scene-compiler",
       "compilerVersion": "2",
-      "compiledAt": "2026-07-18T10:12:47.540Z"
+      "compiledAt": "2026-07-19T06:11:18.960Z"
     }
   },
   "gameplay": {
@@ -516,7 +516,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 89,
+          "revision": 76,
           "objectGuid": "go_2406b122-d63b-4971-bf66-7d78a8776543",
           "objectId": "main_camera",
           "component": "Transform"
@@ -572,7 +572,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 89,
+          "revision": 76,
           "objectGuid": "go_environment_light_default",
           "objectId": "environment_light",
           "component": "Transform"
@@ -618,7 +618,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 89,
+          "revision": 76,
           "objectGuid": "go_7017d029-9d69-4381-91ac-75093053caa9",
           "objectId": "sun_light",
           "component": "Transform"
@@ -688,7 +688,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 89,
+          "revision": 76,
           "objectGuid": "go_20efbb4a-c323-4ea3-911c-23c72827d7b9",
           "objectId": "plane",
           "component": "PrimitiveRenderer"
@@ -705,14 +705,210 @@
             "z": 0
           },
           "scale": {
-            "x": 240,
-            "y": 240,
-            "z": 240
+            "x": 24,
+            "y": 24,
+            "z": 24
           }
         },
         "kind": "primitive",
         "primitive": {
           "shape": "plane"
+        }
+      },
+      {
+        "id": "cube",
+        "name": "Cube",
+        "parentId": "root",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "receive": "none",
+          "params": {
+            "opacity": 0.65,
+            "softness": 0.28
+          }
+        },
+        "shadowPlan": {
+          "casterId": "cube",
+          "receiverIds": [
+            "asset_3"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.65,
+            "softness": 0.28,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 76,
+          "objectGuid": "go_ac4a2824-3625-468c-aeee-d7c75dedc814",
+          "objectId": "cube",
+          "component": "PrimitiveRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 4.5,
+            "y": 1.45,
+            "z": -3.2
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "primitive",
+        "primitive": {
+          "shape": "cube"
+        }
+      },
+      {
+        "id": "sphere",
+        "name": "Sphere",
+        "parentId": "root",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25
+          }
+        },
+        "shadowPlan": {
+          "casterId": "sphere",
+          "receiverIds": [
+            "asset_3"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 76,
+          "objectGuid": "go_cc80f1b1-57b9-4373-baba-eed140d90c8f",
+          "objectId": "sphere",
+          "component": "PrimitiveRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 2.4597,
+            "y": 0.4744,
+            "z": 2.6745
+          },
+          "rotation": {
+            "z": 0,
+            "x": 0,
+            "y": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "primitive",
+        "primitive": {
+          "shape": "sphere"
+        }
+      },
+      {
+        "id": "capsule",
+        "name": "Capsule",
+        "parentId": "root",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25
+          }
+        },
+        "shadowPlan": {
+          "casterId": "capsule",
+          "receiverIds": [
+            "asset_3"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 76,
+          "objectGuid": "go_68778bee-9b2d-44bb-9a37-cfa42efa2846",
+          "objectId": "capsule",
+          "component": "PrimitiveRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 3.2071,
+            "y": 0.9894,
+            "z": 4.6153
+          },
+          "rotation": {
+            "z": 0,
+            "x": 0,
+            "y": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "primitive",
+        "primitive": {
+          "shape": "capsule"
         }
       },
       {
@@ -722,7 +918,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 89,
+          "revision": 76,
           "objectGuid": "go_shadow_fixture_group",
           "objectId": "shadow_fixture_group",
           "component": "GameObject"
@@ -747,6 +943,81 @@
         "kind": "group"
       },
       {
+        "id": "shadow_fixture_player",
+        "name": "阴影测试-主角",
+        "parentId": "shadow_fixture_group",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "receive": "none"
+        },
+        "shadowPlan": {
+          "casterId": "shadow_fixture_player",
+          "receiverIds": [
+            "asset_3"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.5,
+            "softness": 0.58,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 76,
+          "objectGuid": "go_shadow_fixture_player",
+          "objectId": "shadow_fixture_player",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": -8,
+            "y": 0.01,
+            "z": -6
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0.35,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.7,
+            "y": 0.7,
+            "z": 0.7
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_699aee4da2b84a3eb07f4496872ad249"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_53300b02": {
+              "materialAssetId": "mat_6fc78e976ec74d04a1c791bd70c7902a"
+            },
+            "slot_427a5347": {
+              "materialAssetId": "mat_cd94c2cdcc94413aab94bfa7ca94be14"
+            },
+            "slot_417a51b4": {
+              "materialAssetId": "mat_ceae7442cfae45d5acae711ccdae72af"
+            }
+          }
+        }
+      },
+      {
         "id": "shadow_fixture_worker",
         "name": "阴影测试-工人",
         "parentId": "shadow_fixture_group",
@@ -761,7 +1032,9 @@
         },
         "shadowPlan": {
           "casterId": "shadow_fixture_worker",
-          "receiverIds": [],
+          "receiverIds": [
+            "asset_3"
+          ],
           "lightId": "sun_light",
           "backend": "projected",
           "mode": "projected",
@@ -777,19 +1050,12 @@
             "bakeSamples": 64,
             "blurKernel": 8
           },
-          "diagnostics": [
-            {
-              "code": "shadow.receiverNotFound",
-              "severity": "warning",
-              "message": "No shadow receiver was found for caster \"shadow_fixture_worker\".",
-              "casterId": "shadow_fixture_worker"
-            }
-          ]
+          "diagnostics": []
         },
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 89,
+          "revision": 76,
           "objectGuid": "go_shadow_fixture_worker",
           "objectId": "shadow_fixture_worker",
           "component": "ModelRenderer"
@@ -824,6 +1090,90 @@
         }
       },
       {
+        "id": "shadow_fixture_truck",
+        "name": "阴影测试-小蓝卡车",
+        "parentId": "shadow_fixture_group",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25
+          }
+        },
+        "shadowPlan": {
+          "casterId": "shadow_fixture_truck",
+          "receiverIds": [
+            "asset_3"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 76,
+          "objectGuid": "go_shadow_fixture_truck",
+          "objectId": "shadow_fixture_truck",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 0.3,
+            "y": 0,
+            "z": -6
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0.55,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.75,
+            "y": 0.75,
+            "z": 0.75
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_4b2358ee5d9441cd8cae8b389bb98c46"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_91c449a4": {
+              "materialAssetId": "mat_fee306e8ffe3487ba0e30a0e01e30ba1"
+            },
+            "slot_47f2cfb8": {
+              "materialAssetId": "mat_fee306e8ffe3487ba0e30a0e01e30ba1"
+            },
+            "slot_5278c34c": {
+              "materialAssetId": "mat_fee306e8ffe3487ba0e30a0e01e30ba1"
+            },
+            "slot_a58a01f0": {
+              "materialAssetId": "mat_fee306e8ffe3487ba0e30a0e01e30ba1"
+            },
+            "slot_ab17af44": {
+              "materialAssetId": "mat_fee306e8ffe3487ba0e30a0e01e30ba1"
+            }
+          }
+        }
+      },
+      {
         "id": "shadow_fixture_pine_tree",
         "name": "阴影测试-松树",
         "parentId": "shadow_fixture_group",
@@ -835,7 +1185,9 @@
         },
         "shadowPlan": {
           "casterId": "shadow_fixture_pine_tree",
-          "receiverIds": [],
+          "receiverIds": [
+            "asset_3"
+          ],
           "lightId": "sun_light",
           "backend": "projected",
           "mode": "projected",
@@ -851,19 +1203,12 @@
             "bakeSamples": 64,
             "blurKernel": 8
           },
-          "diagnostics": [
-            {
-              "code": "shadow.receiverNotFound",
-              "severity": "warning",
-              "message": "No shadow receiver was found for caster \"shadow_fixture_pine_tree\".",
-              "casterId": "shadow_fixture_pine_tree"
-            }
-          ]
+          "diagnostics": []
         },
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 89,
+          "revision": 76,
           "objectGuid": "go_shadow_fixture_pine_tree",
           "objectId": "shadow_fixture_pine_tree",
           "component": "ModelRenderer"
@@ -895,6 +1240,1194 @@
               "materialAssetId": "mat_0cd17a040dd14b97aed17d2a0fd17ebd"
             }
           }
+        }
+      },
+      {
+        "id": "shadow_fixture_bush",
+        "name": "阴影测试-阔叶灌木",
+        "parentId": "shadow_fixture_group",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25
+          }
+        },
+        "shadowPlan": {
+          "casterId": "shadow_fixture_bush",
+          "receiverIds": [
+            "asset_3"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 76,
+          "objectGuid": "go_shadow_fixture_bush",
+          "objectId": "shadow_fixture_bush",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": -8,
+            "y": 0,
+            "z": -1.5
+          },
+          "rotation": {
+            "x": 0,
+            "y": -0.25,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.8,
+            "y": 0.8,
+            "z": 0.8
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_af82a4f117d84ff58bedb41aa11bad5c"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_a3b38496": {
+              "materialAssetId": "mat_43f0690444f04a97a5f06c2a46f06dbd"
+            }
+          }
+        }
+      },
+      {
+        "id": "shadow_fixture_rocks",
+        "name": "阴影测试-岩石组",
+        "parentId": "shadow_fixture_group",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25
+          }
+        },
+        "shadowPlan": {
+          "casterId": "shadow_fixture_rocks",
+          "receiverIds": [
+            "asset_3"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 76,
+          "objectGuid": "go_shadow_fixture_rocks",
+          "objectId": "shadow_fixture_rocks",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": -4,
+            "y": 0.09,
+            "z": -1.5
+          },
+          "rotation": {
+            "x": 0,
+            "y": -0.6,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_2286fa2ec19e45df8b1b188717c7c4e9"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_0a33f1e4": {
+              "materialAssetId": "mat_7ac6a4c67bc64659a8c6a1a079c6a333"
+            }
+          }
+        }
+      },
+      {
+        "id": "shadow_fixture_fence",
+        "name": "阴影测试-栅栏",
+        "parentId": "shadow_fixture_group",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25
+          }
+        },
+        "shadowPlan": {
+          "casterId": "shadow_fixture_fence",
+          "receiverIds": [
+            "asset_3"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 76,
+          "objectGuid": "go_shadow_fixture_fence",
+          "objectId": "shadow_fixture_fence",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 0.5,
+            "y": 0.06,
+            "z": -1.6
+          },
+          "rotation": {
+            "x": 0,
+            "y": 1.5708,
+            "z": 0
+          },
+          "scale": {
+            "x": 1.2,
+            "y": 1.2,
+            "z": 1.2
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_e726be04042849088cf73e4f2f92c00f"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_134be123": {
+              "materialAssetId": "mat_9cf2c5419bf243aeaaf2c21b99f2c088"
+            }
+          }
+        }
+      },
+      {
+        "id": "shadow_fixture_log_bundle",
+        "name": "阴影测试-成捆木材",
+        "parentId": "shadow_fixture_group",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25
+          }
+        },
+        "shadowPlan": {
+          "casterId": "shadow_fixture_log_bundle",
+          "receiverIds": [
+            "asset_3"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 76,
+          "objectGuid": "go_shadow_fixture_log_bundle",
+          "objectId": "shadow_fixture_log_bundle",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 4.8,
+            "y": 0.36,
+            "z": -1.5
+          },
+          "rotation": {
+            "x": 0,
+            "y": 1.5708,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.7,
+            "y": 0.7,
+            "z": 0.7
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_52549a6dc9a34a5da036b7e771a907b3"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_786aa22c": {
+              "materialAssetId": "mat_e42b5114e52b42a7a62b543ae72b55cd"
+            },
+            "slot_796aa3bf": {
+              "materialAssetId": "mat_431236bf4212452ca51239e544123852"
+            }
+          }
+        }
+      },
+      {
+        "id": "shadow_fixture_crate",
+        "name": "阴影测试-箱子",
+        "parentId": "shadow_fixture_group",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25
+          }
+        },
+        "shadowPlan": {
+          "casterId": "shadow_fixture_crate",
+          "receiverIds": [
+            "asset_3"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 76,
+          "objectGuid": "go_shadow_fixture_crate",
+          "objectId": "shadow_fixture_crate",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": -8,
+            "y": 0.75,
+            "z": 3
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0.2,
+            "z": 0
+          },
+          "scale": {
+            "x": 3,
+            "y": 3,
+            "z": 3
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_759b595e81934517ba0251b16bd31061"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_8656a283": {
+              "materialAssetId": "mat_af644f91ae644dfead644c6bac644ad8"
+            }
+          }
+        }
+      },
+      {
+        "id": "shadow_fixture_barrel",
+        "name": "阴影测试-木桶",
+        "parentId": "shadow_fixture_group",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25
+          }
+        },
+        "shadowPlan": {
+          "casterId": "shadow_fixture_barrel",
+          "receiverIds": [
+            "asset_3"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 76,
+          "objectGuid": "go_shadow_fixture_barrel",
+          "objectId": "shadow_fixture_barrel",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": -4.4,
+            "y": 0,
+            "z": 3.2
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 2.2,
+            "y": 2.2,
+            "z": 2.2
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_7612f54e381044e4b035ea6a988bfb89"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_f3f14d2b": {
+              "materialAssetId": "mat_5af6dde959f64c56a8f6dac357f6d930"
+            }
+          }
+        }
+      },
+      {
+        "id": "shadow_fixture_chicken",
+        "name": "阴影测试-鸡",
+        "parentId": "shadow_fixture_group",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25
+          }
+        },
+        "shadowPlan": {
+          "casterId": "shadow_fixture_chicken",
+          "receiverIds": [
+            "asset_3"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 76,
+          "objectGuid": "go_shadow_fixture_chicken",
+          "objectId": "shadow_fixture_chicken",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": -0.8,
+            "y": 0.44,
+            "z": 3
+          },
+          "rotation": {
+            "x": 0,
+            "y": -0.8,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.45,
+            "y": 0.45,
+            "z": 0.45
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_97121f40170c40d1aaf63b8c2cf0bf24"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_db1ccc4e": {
+              "materialAssetId": "mat_0f3404b210344645ad34018c0e34031f"
+            }
+          }
+        }
+      },
+      {
+        "id": "shadow_fixture_hay_bale",
+        "name": "阴影测试-干草卷",
+        "parentId": "shadow_fixture_group",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25
+          }
+        },
+        "shadowPlan": {
+          "casterId": "shadow_fixture_hay_bale",
+          "receiverIds": [
+            "asset_3"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 76,
+          "objectGuid": "go_shadow_fixture_hay_bale",
+          "objectId": "shadow_fixture_hay_bale",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 2.4,
+            "y": 0,
+            "z": 3
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0.4,
+            "z": 0
+          },
+          "scale": {
+            "x": 1.4,
+            "y": 1.4,
+            "z": 1.4
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_26e79030d245465885b6e4349c9d81d9"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_c6401e21": {
+              "materialAssetId": "mat_d133a063d0334ed0a333a389d233a1f6"
+            }
+          }
+        }
+      },
+      {
+        "id": "shadow_fixture_counter",
+        "name": "阴影测试-收银台",
+        "parentId": "shadow_fixture_group",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25
+          }
+        },
+        "shadowPlan": {
+          "casterId": "shadow_fixture_counter",
+          "receiverIds": [
+            "asset_3"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 76,
+          "objectGuid": "go_shadow_fixture_counter",
+          "objectId": "shadow_fixture_counter",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 6.2,
+            "y": 0,
+            "z": 3.2
+          },
+          "rotation": {
+            "x": 0,
+            "y": -0.45,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.48,
+            "y": 0.48,
+            "z": 0.48
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_094bc5a89357455bb002b6b6a67e9295"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_5cd8df33": {
+              "materialAssetId": "mat_8f0c05718e0c43dead0c024b8c0c00b8"
+            }
+          }
+        }
+      },
+      {
+        "id": "asset",
+        "name": "接收测试-地板块",
+        "parentId": "root",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 76,
+          "objectGuid": "go_8c25b316-6074-41ae-a1f2-49f3709453ec",
+          "objectId": "asset",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": -3.8,
+            "y": 0.04,
+            "z": -3.2
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 2.5,
+            "y": 1,
+            "z": 2.5
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_07e860eb2bf04e6f9a81e0832cddc014"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_2e82b283": {
+              "materialAssetId": "mat_18ad2d3117ad4b9ea6ad2a0b15ad2878"
+            }
+          }
+        }
+      },
+      {
+        "id": "asset_2",
+        "name": "接收测试-真实地面",
+        "parentId": "root",
+        "shadow": {
+          "cast": "none",
+          "receive": "none",
+          "mode": "none"
+        },
+        "shadowPlan": {
+          "casterId": "asset_2",
+          "receiverIds": [],
+          "backend": "none",
+          "mode": "none",
+          "quality": "medium",
+          "params": {
+            "opacity": 0.42,
+            "softness": 0.4,
+            "bias": 0.001,
+            "normalBias": 0.01,
+            "maxDistance": 48,
+            "resolution": 1024,
+            "cascadeCount": 2,
+            "bakeSamples": 24,
+            "blurKernel": 4
+          },
+          "diagnostics": []
+        },
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 76,
+          "objectGuid": "go_1ecaee91-9738-4914-8fc2-5f2b69cc018a",
+          "objectId": "asset_2",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 1.5,
+            "y": 0.08,
+            "z": -3.2
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1.5,
+            "y": 1,
+            "z": 1.5
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_c52042a3dd6544d59408c015320ebc75"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_7cdede92": {
+              "materialAssetId": "mat_c556d410c65645a3a756d736c856d8c9"
+            }
+          }
+        }
+      },
+      {
+        "id": "asset_3",
+        "name": "接收测试-抬高木台",
+        "parentId": "root",
+        "shadow": {
+          "cast": "none",
+          "receive": "enabled",
+          "mode": "none"
+        },
+        "shadowPlan": {
+          "casterId": "asset_3",
+          "receiverIds": [],
+          "backend": "none",
+          "mode": "none",
+          "quality": "medium",
+          "params": {
+            "opacity": 0.42,
+            "softness": 0.4,
+            "bias": 0.001,
+            "normalBias": 0.01,
+            "maxDistance": 48,
+            "resolution": 1024,
+            "cascadeCount": 2,
+            "bakeSamples": 24,
+            "blurKernel": 4
+          },
+          "diagnostics": []
+        },
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 76,
+          "objectGuid": "go_cd724b70-f492-4014-ac1d-e51ef61cfc0d",
+          "objectId": "asset_3",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 4.5,
+            "y": 0.42,
+            "z": -3.2
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0.25,
+            "z": 0
+          },
+          "scale": {
+            "x": 1.2,
+            "y": 1.2,
+            "z": 1.2
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_96ed807ee58f4928bcfcc44004a44ef3"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_924b32f0": {
+              "materialAssetId": "mat_1756d8e218564a75a556d5bc1656d74f"
+            }
+          }
+        }
+      },
+      {
+        "id": "issue_444__04",
+        "name": "Issue_444_外墙04",
+        "parentId": "root",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 76,
+          "objectGuid": "go_cc0008ef-62dc-4a23-ba98-bced26f56a80",
+          "objectId": "issue_444__04",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": -2.8,
+            "y": 3.138,
+            "z": 4.2
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_6d7f108f88ba476cae5c2b10288aaa60"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_175932bc": {
+              "materialAssetId": "mat_0bef38240cef49b7adef3b4a0eef3cdd"
+            },
+            "slot_1859344f": {
+              "materialAssetId": "mat_6ad61dcf69d64c3cacd620f56bd61f62"
+            },
+            "slot_195935e2": {
+              "materialAssetId": "mat_e9bd35daeabd476da7bd32b4e8bd3447"
+            }
+          }
+        }
+      },
+      {
+        "id": "issue_444",
+        "name": "Issue_444_测试模型",
+        "parentId": "root",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 76,
+          "objectGuid": "go_22987ad9-9e4b-46ce-9978-1e72c24fbc53",
+          "objectId": "issue_444",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 0.5069,
+            "y": 0,
+            "z": 6.3799
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_872358ed71a247bba9bdf2c947ea0c71"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_f46c799b": {
+              "materialAssetId": "mat_7814dfeb77144e58aa14e3117914e17e"
+            },
+            "slot_f36c7808": {
+              "materialAssetId": "mat_792e91607a2e42f3ab2e94867c2e9619"
+            },
+            "slot_f66c7cc1": {
+              "materialAssetId": "mat_55e2dda154e24c0ea3e2da7b52e2d8e8"
+            },
+            "slot_f56c7b2e": {
+              "materialAssetId": "mat_55e2dda154e24c0ea3e2da7b52e2d8e8"
+            },
+            "slot_f86c7fe7": {
+              "materialAssetId": "mat_d6fbc596d7fb4729a4fbc270d5fbc403"
+            }
+          }
+        }
+      },
+      {
+        "id": "issue464_ground_decal_operation",
+        "name": "Issue 464 Operation Ground Decal Fixture",
+        "parentId": "root",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 76,
+          "objectGuid": "go_issue464_ground_decal_operation",
+          "objectId": "issue464_ground_decal_operation",
+          "component": "Transform"
+        },
+        "transform": {
+          "position": {
+            "x": -3.2,
+            "y": 0.02,
+            "z": 2.8
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "transform",
+        "transformType": "groundDecal",
+        "groundDecal": {
+          "uiKind": "operation",
+          "size": {
+            "width": 1.8,
+            "depth": 1.8
+          },
+          "aspectSourceLayerId": "border",
+          "lockAspectToBorder": true,
+          "mask": {
+            "enabled": true,
+            "source": "roundedRect",
+            "cornerRadius": 0.18,
+            "padding": 0.02
+          },
+          "rendering": {
+            "textureWidth": 512,
+            "textureHeight": 512,
+            "alphaIndex": 100,
+            "diffuseTextureLevel": 1,
+            "emissiveTextureLevel": 0
+          },
+          "layers": [
+            {
+              "id": "base",
+              "role": "base",
+              "kind": "color",
+              "color": {
+                "r": 0.08,
+                "g": 0.08,
+                "b": 0.08,
+                "a": 0.56
+              },
+              "zOrder": 0,
+              "rect": {
+                "x": 0,
+                "z": 0,
+                "width": 1,
+                "depth": 1
+              }
+            },
+            {
+              "id": "mainLogo",
+              "role": "mainLogo",
+              "kind": "texture",
+              "textureId": "texture_331e16209e8c47cc94217508d719cbbb",
+              "zOrder": 20,
+              "rect": {
+                "x": 0,
+                "z": 0,
+                "width": 1,
+                "depth": 1
+              }
+            },
+            {
+              "id": "border",
+              "role": "border",
+              "kind": "texture",
+              "textureId": "texture_969907ee4a1d453ea7b0ee3247cb6bb1",
+              "zOrder": 100,
+              "rect": {
+                "x": 0,
+                "z": 0,
+                "width": 1,
+                "depth": 1
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "issue464_ground_decal_delivery",
+        "name": "Issue 464 Delivery Ground Decal Fixture",
+        "parentId": "root",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 76,
+          "objectGuid": "go_issue464_ground_decal_delivery",
+          "objectId": "issue464_ground_decal_delivery",
+          "component": "Transform"
+        },
+        "transform": {
+          "position": {
+            "x": -1.2,
+            "y": 0.02,
+            "z": 2.8
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "transform",
+        "transformType": "groundDecal",
+        "groundDecal": {
+          "uiKind": "delivery",
+          "size": {
+            "width": 1.8,
+            "depth": 1.8
+          },
+          "aspectSourceLayerId": "border",
+          "lockAspectToBorder": true,
+          "mask": {
+            "enabled": true,
+            "source": "roundedRect",
+            "cornerRadius": 0.18,
+            "padding": 0.02
+          },
+          "rendering": {
+            "textureWidth": 512,
+            "textureHeight": 512,
+            "alphaIndex": 100,
+            "diffuseTextureLevel": 1,
+            "emissiveTextureLevel": 0
+          },
+          "layers": [
+            {
+              "id": "base",
+              "role": "base",
+              "kind": "color",
+              "color": {
+                "r": 0.08,
+                "g": 0.08,
+                "b": 0.08,
+                "a": 0.56
+              },
+              "zOrder": 0,
+              "rect": {
+                "x": 0,
+                "z": 0,
+                "width": 1,
+                "depth": 1
+              }
+            },
+            {
+              "id": "progressFill",
+              "role": "progressFill",
+              "kind": "progress",
+              "value": 0,
+              "direction": "bottomToTop",
+              "color": {
+                "r": 0.16,
+                "g": 0.56,
+                "b": 1,
+                "a": 0.88
+              },
+              "zOrder": 10,
+              "rect": {
+                "x": 0,
+                "z": 0,
+                "width": 1,
+                "depth": 1
+              }
+            },
+            {
+              "id": "mainLogo",
+              "role": "mainLogo",
+              "kind": "texture",
+              "textureId": "texture_ee97d50a7eb442b5905add9aaae74f2c",
+              "zOrder": 20,
+              "rect": {
+                "x": 0,
+                "z": 0,
+                "width": 1,
+                "depth": 1
+              }
+            },
+            {
+              "id": "subLogo",
+              "role": "subLogo",
+              "kind": "texture",
+              "textureId": "texture_331e16209e8c47cc94217508d719cbbb",
+              "zOrder": 25,
+              "rect": {
+                "x": -0.25,
+                "z": -0.25,
+                "width": 0.5,
+                "depth": 0.5
+              }
+            },
+            {
+              "id": "amount",
+              "role": "amount",
+              "kind": "text",
+              "text": {
+                "value": "30",
+                "fontFamily": "system-ui, Arial, sans-serif",
+                "fontSize": 96,
+                "fontWeight": "800",
+                "color": {
+                  "r": 1,
+                  "g": 1,
+                  "b": 1,
+                  "a": 1
+                },
+                "strokeColor": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 0.45
+                },
+                "strokeWidth": 8,
+                "align": "center",
+                "baseline": "middle"
+              },
+              "zOrder": 30,
+              "rect": {
+                "x": 0.2,
+                "z": -0.25,
+                "width": 0.28,
+                "depth": 0.22
+              }
+            },
+            {
+              "id": "border",
+              "role": "border",
+              "kind": "texture",
+              "textureId": "texture_969907ee4a1d453ea7b0ee3247cb6bb1",
+              "zOrder": 100,
+              "rect": {
+                "x": 0,
+                "z": 0,
+                "width": 1,
+                "depth": 1
+              }
+            }
+          ]
         }
       }
     ],
@@ -1975,15 +3508,15 @@
     "textures": []
   },
   "render": {},
-  "version": 79,
-  "updatedAt": "2026-07-18T06:28:00.607Z",
+  "version": 70,
+  "updatedAt": "2026-07-15T03:29:19.508Z",
   "plugins": [
     {
       "pluginId": "fps.shadow-map-experiment",
-      "schemaVersion": 2,
+      "schemaVersion": 3,
       "data": {
-        "schemaVersion": 2,
-        "revision": 89,
+        "schemaVersion": 3,
+        "revision": 76,
         "enabled": true,
         "scopeId": "root",
         "light": {
@@ -1994,17 +3527,17 @@
             -0.4005
           ]
         },
-        "qualityProfileId": "high",
+        "qualityProfileId": "balanced",
         "generator": {
           "maps": {
-            "staticResolution": 1024,
-            "dynamicResolution": 1024,
-            "compositeResolution": 1024
+            "staticResolution": 512,
+            "dynamicResolution": 512,
+            "compositeResolution": 512
           },
           "filter": "low-pcf",
-          "bias": 0.0005,
-          "normalBias": 0.005,
-          "darkness": 0.38,
+          "bias": 0.0008,
+          "normalBias": 0.01,
+          "darkness": 0.34,
           "bounds": {
             "mode": "fixed",
             "center": [
@@ -2034,11 +3567,188 @@
           "dynamicCasterCountWarning": 40,
           "renderableCountWarning": 240
         },
+        "behaviorProfiles": {
+          "default": {
+            "cast": true,
+            "receive": true,
+            "updateClass": "auto"
+          },
+          "dynamic-caster": {
+            "cast": true,
+            "receive": true,
+            "updateClass": "dynamic"
+          },
+          "receiver-static": {
+            "cast": false,
+            "receive": true,
+            "updateClass": "static"
+          },
+          "skinned-dynamic": {
+            "cast": true,
+            "receive": true,
+            "updateClass": "skinned"
+          },
+          "static-caster": {
+            "cast": true,
+            "receive": true,
+            "updateClass": "static"
+          }
+        },
         "objects": [
+          {
+            "entityId": "asset",
+            "renderableIds": [
+              "asset"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
+          {
+            "entityId": "asset_2",
+            "renderableIds": [
+              "asset_2"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
+          {
+            "entityId": "asset_3",
+            "renderableIds": [
+              "asset_3"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
+          {
+            "entityId": "capsule",
+            "renderableIds": [
+              "capsule"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
+          {
+            "entityId": "cube",
+            "renderableIds": [
+              "cube"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
+          {
+            "entityId": "issue_444",
+            "renderableIds": [
+              "issue_444"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
+          {
+            "entityId": "issue_444__04",
+            "renderableIds": [
+              "issue_444__04"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
           {
             "entityId": "plane",
             "renderableIds": [
               "plane"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
+          {
+            "entityId": "shadow_fixture_barrel",
+            "renderableIds": [
+              "shadow_fixture_barrel"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
+          {
+            "entityId": "shadow_fixture_bush",
+            "renderableIds": [
+              "shadow_fixture_bush"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
+          {
+            "entityId": "shadow_fixture_chicken",
+            "renderableIds": [
+              "shadow_fixture_chicken"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
+          {
+            "entityId": "shadow_fixture_counter",
+            "renderableIds": [
+              "shadow_fixture_counter"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
+          {
+            "entityId": "shadow_fixture_crate",
+            "renderableIds": [
+              "shadow_fixture_crate"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
+          {
+            "entityId": "shadow_fixture_fence",
+            "renderableIds": [
+              "shadow_fixture_fence"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
+          {
+            "entityId": "shadow_fixture_hay_bale",
+            "renderableIds": [
+              "shadow_fixture_hay_bale"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
+          {
+            "entityId": "shadow_fixture_log_bundle",
+            "renderableIds": [
+              "shadow_fixture_log_bundle"
             ],
             "cast": false,
             "receive": true,
@@ -2056,6 +3766,36 @@
             "behaviorProfileId": "static-caster"
           },
           {
+            "entityId": "shadow_fixture_player",
+            "renderableIds": [
+              "shadow_fixture_player"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
+          {
+            "entityId": "shadow_fixture_rocks",
+            "renderableIds": [
+              "shadow_fixture_rocks"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
+          {
+            "entityId": "shadow_fixture_truck",
+            "renderableIds": [
+              "shadow_fixture_truck"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
+          {
             "entityId": "shadow_fixture_worker",
             "renderableIds": [
               "shadow_fixture_worker"
@@ -2064,6 +3804,16 @@
             "receive": true,
             "updateClass": "skinned",
             "behaviorProfileId": "skinned-dynamic"
+          },
+          {
+            "entityId": "sphere",
+            "renderableIds": [
+              "sphere"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
           }
         ],
         "diagnostics": []

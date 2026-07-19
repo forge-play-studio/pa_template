@@ -17,10 +17,15 @@ const expectedCasters = [
 const expectedSkinnedCasters = ['shadow_fixture_worker'];
 const expectedReceiverOnly = ['plane'];
 
-assert.deepEqual(
+assert.equal(
   editorScene.scene.shadowMapExperiment,
-  { qualityProfile: 'high', behaviorProfile: 'default' },
-  'authoring fixture must reference profiles without embedding algorithm parameters',
+  undefined,
+  'the reference scene must inherit global quality instead of persisting experiment-only scene overrides',
+);
+assert.equal(
+  shadowsConfig.defaultBehaviorProfile,
+  'receiver-static',
+  'the full reference scene must remain receiver-only unless an object opts into casting',
 );
 const editorObjects = new Map(editorScene.scene.gameObjects.map(object => [object.id, object]));
 const authoredCasters = [...editorObjects.values()]
@@ -58,12 +63,17 @@ assert.doesNotMatch(
 
 const runtimePlugin = runtimeScene.plugins.find(plugin => plugin.pluginId === 'fps.shadow-map-experiment');
 assert.ok(runtimePlugin, 'compiled runtime scene must contain the ShadowMap experiment plugin payload');
-assert.equal(runtimePlugin.schemaVersion, 2);
-assert.equal(runtimePlugin.data.schemaVersion, 2);
+assert.equal(runtimePlugin.schemaVersion, 3);
+assert.equal(runtimePlugin.data.schemaVersion, 3);
 assert.equal(runtimePlugin.data.enabled, true);
-assert.equal(runtimePlugin.data.qualityProfileId, 'high');
-assert.deepEqual(runtimePlugin.data.generator.maps, shadowsConfig.qualityProfiles.high.maps);
-assert.equal(runtimePlugin.data.generator.filter, shadowsConfig.qualityProfiles.high.receiverFilter);
+assert.equal(runtimePlugin.data.qualityProfileId, 'balanced');
+assert.deepEqual(runtimePlugin.data.generator.maps, shadowsConfig.qualityProfiles.balanced.maps);
+assert.equal(runtimePlugin.data.generator.filter, shadowsConfig.qualityProfiles.balanced.receiverFilter);
+assert.deepEqual(
+  runtimePlugin.data.behaviorProfiles['receiver-static'],
+  { cast: false, receive: true, updateClass: 'static' },
+  'Plan v3 must carry the behavior profile catalog consumed by runtime registrations',
+);
 assert.equal(
   runtimePlugin.data.revision,
   editorScene.meta.authoringSource.revision,
@@ -91,4 +101,4 @@ for (const id of expectedReceiverOnly) {
   );
 }
 
-console.log('shadow-map experiment fixture: ok (2 casters, 1 skinned, profile-authored receiver)');
+console.log('shadow-map experiment fixture: ok (full scene, 2 casters, 1 skinned, receiver-only default)');

@@ -3,7 +3,7 @@
   "enabled": true,
   "lightRef": "sun_light",
   "defaultQualityProfile": "balanced",
-  "defaultBehaviorProfile": "default",
+  "defaultBehaviorProfile": "receiver-static",
   "qualityProfiles": {
     "balanced": {
       "maps": {

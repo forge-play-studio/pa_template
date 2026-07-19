@@ -7,6 +7,7 @@ const projectRoot = process.cwd();
 const editorScenePath = path.join(projectRoot, 'src/config/editor-scene.json');
 const scenePath = path.join(projectRoot, 'src/config/scene.json');
 const assetManifestPath = path.join(projectRoot, 'src/assets/generated/asset-catalog.manifest.json');
+const shadowsConfigPath = path.join(projectRoot, 'src/config/shadows.json');
 const playableSdk = await import('@fps-games/editor/playable-sdk');
 
 const PREFAB_FIXTURE = {
@@ -32,37 +33,33 @@ const GROUND_DECAL_FIXTURES = [
   },
 ];
 
-const SHADOW_MAP_EXPERIMENT_CASTER_FIXTURES = [
-  {
-    id: 'issue_444',
-    shadowMapExperiment: {
-      cast: 'enabled',
-      receive: 'enabled',
-      updateClass: 'static',
-    },
-  },
+const SHADOW_MAP_EXPERIMENT_PROFILES = [
+  { id: 'plane', behaviorProfile: 'receiver-static' },
+  { id: 'shadow_fixture_worker', behaviorProfile: 'skinned-dynamic' },
+  { id: 'shadow_fixture_pine_tree', behaviorProfile: 'static-caster' },
 ];
 
 let editorScene = await readJson(editorScenePath);
 const previousSceneConfig = await readJson(scenePath);
 const assetManifest = await readJson(assetManifestPath);
+const shadowsConfig = await readJson(shadowsConfigPath);
 const forceCompile = process.argv.includes('--compile');
 let changed = false;
 
 changed = ensurePrefabStageFixture(editorScene) || changed;
 changed = ensureGroundDecalLiveFixtures(editorScene, assetManifest) || changed;
-changed = ensureShadowMapExperimentCasterFixtures(editorScene) || changed;
-changed = removeLegacyShadowMapRefreshPolicy(editorScene) || changed;
+const shadowProfileResult = ensureShadowMapExperimentProfiles(editorScene);
+editorScene = shadowProfileResult.document;
+changed = shadowProfileResult.changed || changed;
 
 if (changed || forceCompile) {
-  if (changed) {
-    editorScene = playableSdk.bumpEditorSceneAuthoringSourceRevision?.(editorScene) ?? editorScene;
-  }
+  if (changed) editorScene = playableSdk.bumpEditorSceneAuthoringSourceRevision?.(editorScene) ?? editorScene;
   const assetLibrary = playableSdk.createEditorSceneAssetLibrary(assetManifest.map(entry => (
     entry.kind === 'model' ? { ...entry, materialMode: entry.materialMode ?? 'shared' } : entry
   )));
   const hydratedEditorScene = playableSdk.enrichEditorSceneDocumentAssets(editorScene, assetLibrary);
   const compiled = playableSdk.compileEditorSceneDocumentToSceneConfig(hydratedEditorScene, previousSceneConfig, {
+    shadowMapExperimentConfig: shadowsConfig,
     readCustomTransformRuntimeData: gameObject => (
       isGroundDecalUiConfig(gameObject.groundDecal)
         ? { groundDecal: structuredClone(gameObject.groundDecal) }
@@ -102,25 +99,22 @@ function ensureGroundDecalLiveFixtures(document, manifest) {
   return changed;
 }
 
-function ensureShadowMapExperimentCasterFixtures(document) {
+function ensureShadowMapExperimentProfiles(document) {
+  let nextDocument = document;
   let changed = false;
-  for (const fixture of SHADOW_MAP_EXPERIMENT_CASTER_FIXTURES) {
-    const gameObject = document.scene?.gameObjects?.find(candidate => candidate?.id === fixture.id);
-    if (!gameObject) {
-      throw new Error(`Unable to configure ShadowMap experiment caster: game object "${fixture.id}" was not found.`);
-    }
-    if (JSON.stringify(gameObject.shadowMapExperiment) === JSON.stringify(fixture.shadowMapExperiment)) continue;
-    gameObject.shadowMapExperiment = structuredClone(fixture.shadowMapExperiment);
+  for (const fixture of SHADOW_MAP_EXPERIMENT_PROFILES) {
+    const gameObject = nextDocument.scene?.gameObjects?.find(candidate => candidate?.id === fixture.id);
+    if (!gameObject) throw new Error(`Unable to configure Shadow Map profile: "${fixture.id}" was not found.`);
+    if (gameObject.shadowMapExperiment?.behaviorProfile === fixture.behaviorProfile) continue;
+    nextDocument = playableSdk.patchEditorSceneGameObjectField(
+      nextDocument,
+      fixture.id,
+      'shadowMapExperiment.behaviorProfile',
+      fixture.behaviorProfile,
+    );
     changed = true;
   }
-  return changed;
-}
-
-function removeLegacyShadowMapRefreshPolicy(document) {
-  const advanced = document.scene?.shadowMapExperiment?.advanced;
-  if (!advanced || !Object.prototype.hasOwnProperty.call(advanced, 'dynamicRefresh')) return false;
-  delete advanced.dynamicRefresh;
-  return true;
+  return { document: nextDocument, changed };
 }
 
 function createGroundDecalFixtureGameObject(fixture, rootId, textureIds) {
