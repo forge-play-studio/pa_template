@@ -1,26 +1,35 @@
+import { createFpsRuntimeDataFromCompiledScene } from '@fps-games/editor/playable-runtime';
 import {
-  createFpsPluginEnvironmentLifecycle,
-  createFpsRuntimeDataFromCompiledScene,
-  FPS_RUNTIME_DATA,
-} from '@fps-games/editor/playable-runtime';
+  createFpsBabylonGameWorldPluginLifecycle,
+  type FpsBabylonRendererContext,
+  type FpsBabylonRendererService,
+} from '@fps-games/editor/playable-runtime/babylon';
+import * as rendererPluginModule from 'virtual:fps-plugins/renderer';
 import * as runtimePluginModule from 'virtual:fps-plugins/runtime';
 import sceneConfig from '../../../config/scene.json';
 import renderingConfig from '../../../config/rendering.json';
 
-const runtimePlugins = createFpsPluginEnvironmentLifecycle({
-  module: runtimePluginModule,
+const gameWorldPlugins = createFpsBabylonGameWorldPluginLifecycle({
+  runtimeModule: runtimePluginModule,
+  rendererModule: rendererPluginModule,
+  runtimeData: createFpsRuntimeDataFromCompiledScene(sceneConfig, renderingConfig),
   apiVersion: 1,
-  scope: 'project',
-  initialServices: [{
-    token: FPS_RUNTIME_DATA,
-    value: createFpsRuntimeDataFromCompiledScene(sceneConfig, renderingConfig),
-  }],
 });
 
 export async function startProjectRuntimePlugins(): Promise<void> {
-  await runtimePlugins.start();
+  await gameWorldPlugins.startRuntime();
+}
+
+export async function attachProjectRenderer(
+  context: FpsBabylonRendererContext,
+): Promise<FpsBabylonRendererService> {
+  return gameWorldPlugins.attachRenderer(context);
+}
+
+export async function detachProjectRenderer(): Promise<void> {
+  await gameWorldPlugins.detachRenderer();
 }
 
 export async function disposeProjectRuntimePlugins(): Promise<void> {
-  await runtimePlugins.dispose();
+  await gameWorldPlugins.dispose();
 }

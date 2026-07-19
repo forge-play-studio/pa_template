@@ -19,6 +19,7 @@ import {
   type SpatialMarkerTypeDefinition,
   type SpatialRelationTypeDefinition,
   type EditorSceneAssetCatalogEntry as PlayableEditorSceneAssetCatalogEntry,
+  type ShadowMapExperimentConfig,
 } from '@fps-games/editor/playable-sdk';
 import { editorConfig } from '../../../fps.config';
 import baseSceneConfig from '../../config/scene.json';
@@ -32,13 +33,7 @@ import {
   removeGroundDecalUiDeliveryPair,
 } from './ground-decal-authored';
 import { PA_TEMPLATE_GROUND_DECAL_LAYER_PAIR_ACTIONS, paTemplateGroundDecalFeatureConfig } from './ground-decal-config';
-import type {
-  EditorSceneDocumentPatch,
-  EditorSceneAsset,
-  EditorSceneAssetLibraryItem,
-  EditorSceneDocument,
-  EditorSceneGameObject,
-} from './scene-types';
+import type { EditorSceneDocumentPatch, EditorSceneAsset, EditorSceneAssetLibraryItem, EditorSceneDocument, EditorSceneGameObject } from './scene-types';
 import { getEditorSceneRenderingProfile, setEditorSceneRenderingProfileReader } from './scene-types';
 import { EDITOR_SCENE_FIELD_SCHEMA, isEditorSceneFiniteNumber, type EditorSceneFieldSchemaEntry } from '@fps-games/editor/playable-sdk';
 
@@ -115,6 +110,13 @@ sceneAssembly = createFpsGameEditorStandardSceneAssembly<
 export const renderingRuntime = createFpsGameEditorProductRenderingRuntime<EditorSceneDocument, EditorSceneDocumentPatch>({
   initialConfig: renderingConfig,
   initialStaticShadowArtifact: configService.getStaticShadowArtifact(),
+  shadowMapExperiment: {
+    compileRuntimeScene: (document, config) => compileEditorSceneDocumentToSceneConfig(
+      document,
+      structuredClone(baseSceneConfig) as SceneConfig,
+      { shadowMapExperimentConfig: config },
+    ).sceneConfig,
+  },
   getTextureAssets: () => currentRenderingTextures,
   getGameObjects: document => document.scene.gameObjects,
   createAlphaIndexMigrationPatch: input => ({ kind: 'game-object.rendering-alpha-index-migration', ...input }),
@@ -126,7 +128,7 @@ setEditorSceneRenderingProfileReader(renderingRuntime.getProfile);
 export const sceneSource = createFpsGameEditorSceneSourceServices<EditorSceneDocument, SceneConfig, EditorSceneAssetLibraryItem>({
   compilerId: PLAYABLE_EDITOR_SCENE_COMPILER_ID,
   compilerVersion: PLAYABLE_EDITOR_SCENE_COMPILER_VERSION,
-  compileRuntimeScene: document => compileEditorSceneDocumentToSceneConfig(document, structuredClone(baseSceneConfig) as SceneConfig).sceneConfig,
+  compileRuntimeScene: document => compileEditorSceneDocumentToSceneConfig(document, structuredClone(baseSceneConfig) as SceneConfig, { shadowMapExperimentConfig: renderingRuntime.getShadowMapExperimentConfig() }).sceneConfig,
   isRuntimeScene: (value): value is SceneConfig => {
     const schemaVersion = !!value && typeof value === 'object'
       ? (value as SceneConfig).schemaVersion
@@ -136,6 +138,7 @@ export const sceneSource = createFpsGameEditorSceneSourceServices<EditorSceneDoc
   onRuntimeScene: value => configService.replaceSceneConfig(structuredClone(value)),
   renderingDraft: renderingRuntime.profileDraft,
   staticShadowDraft: renderingRuntime.staticShadowDraft,
+  shadowMapExperimentConfigSnapshot: renderingRuntime.shadowMapExperimentConfigSnapshot,
   castAssets: assets => assets as EditorSceneAssetLibraryItem[],
 });
 export const loadSceneMainSource = sceneSource.load;
@@ -253,19 +256,13 @@ export const mergeEditorSceneAssetWithLibraryItem = (
   libraryItem: EditorSceneAssetLibraryItem,
 ): EditorSceneAsset => mergePlayableEditorSceneAssetWithLibraryItem(asset, libraryItem) as EditorSceneAsset;
 
-export function compileEditorSceneDocumentToSceneConfig(
-  document: EditorSceneDocument,
-  baseSceneConfig: SceneConfig,
-) {
-  return compileSdkEditorSceneDocumentToSceneConfig(
-    syncEditorSceneMarkerGraphDocument(document),
-    baseSceneConfig,
-    {
-      readCustomTransformRuntimeData: gameObject => isGroundDecalUiConfig(gameObject.groundDecal)
-        ? { groundDecal: structuredClone(gameObject.groundDecal) }
-        : null,
-    },
-  );
+export function compileEditorSceneDocumentToSceneConfig(document: EditorSceneDocument, baseSceneConfig: SceneConfig, options?: { shadowMapExperimentConfig?: ShadowMapExperimentConfig | null }) {
+  return compileSdkEditorSceneDocumentToSceneConfig(syncEditorSceneMarkerGraphDocument(document), baseSceneConfig, {
+    shadowMapExperimentConfig: options?.shadowMapExperimentConfig ?? undefined,
+    readCustomTransformRuntimeData: gameObject => isGroundDecalUiConfig(gameObject.groundDecal)
+      ? { groundDecal: structuredClone(gameObject.groundDecal) }
+      : null,
+  });
 }
 
 function isGroundDecalObject(gameObject: EditorSceneGameObject): gameObject is EditorSceneGameObject & { groundDecal: ReturnType<typeof createDefaultGroundDecalUiConfig> } {

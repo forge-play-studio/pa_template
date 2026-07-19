@@ -8,10 +8,10 @@
     "generatedFrom": {
       "sourceId": "scene.main",
       "sourceType": "scene",
-      "revision": 75,
+      "revision": 76,
       "compilerId": "@fps-games/editor.playable-sdk.scene-compiler",
       "compilerVersion": "2",
-      "compiledAt": "2026-07-15T03:29:19.506Z"
+      "compiledAt": "2026-07-19T06:11:18.960Z"
     }
   },
   "gameplay": {
@@ -516,7 +516,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 75,
+          "revision": 76,
           "objectGuid": "go_2406b122-d63b-4971-bf66-7d78a8776543",
           "objectId": "main_camera",
           "component": "Transform"
@@ -572,7 +572,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 75,
+          "revision": 76,
           "objectGuid": "go_environment_light_default",
           "objectId": "environment_light",
           "component": "Transform"
@@ -618,7 +618,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 75,
+          "revision": 76,
           "objectGuid": "go_7017d029-9d69-4381-91ac-75093053caa9",
           "objectId": "sun_light",
           "component": "Transform"
@@ -688,7 +688,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 75,
+          "revision": 76,
           "objectGuid": "go_20efbb4a-c323-4ea3-911c-23c72827d7b9",
           "objectId": "plane",
           "component": "PrimitiveRenderer"
@@ -754,7 +754,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 75,
+          "revision": 76,
           "objectGuid": "go_ac4a2824-3625-468c-aeee-d7c75dedc814",
           "objectId": "cube",
           "component": "PrimitiveRenderer"
@@ -819,7 +819,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 75,
+          "revision": 76,
           "objectGuid": "go_cc80f1b1-57b9-4373-baba-eed140d90c8f",
           "objectId": "sphere",
           "component": "PrimitiveRenderer"
@@ -884,7 +884,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 75,
+          "revision": 76,
           "objectGuid": "go_68778bee-9b2d-44bb-9a37-cfa42efa2846",
           "objectId": "capsule",
           "component": "PrimitiveRenderer"
@@ -918,7 +918,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 75,
+          "revision": 76,
           "objectGuid": "go_shadow_fixture_group",
           "objectId": "shadow_fixture_group",
           "component": "GameObject"
@@ -977,7 +977,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 75,
+          "revision": 76,
           "objectGuid": "go_shadow_fixture_player",
           "objectId": "shadow_fixture_player",
           "component": "ModelRenderer"
@@ -1055,7 +1055,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 75,
+          "revision": 76,
           "objectGuid": "go_shadow_fixture_worker",
           "objectId": "shadow_fixture_worker",
           "component": "ModelRenderer"
@@ -1127,7 +1127,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 75,
+          "revision": 76,
           "objectGuid": "go_shadow_fixture_truck",
           "objectId": "shadow_fixture_truck",
           "component": "ModelRenderer"
@@ -1208,7 +1208,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 75,
+          "revision": 76,
           "objectGuid": "go_shadow_fixture_pine_tree",
           "objectId": "shadow_fixture_pine_tree",
           "component": "ModelRenderer"
@@ -1280,7 +1280,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 75,
+          "revision": 76,
           "objectGuid": "go_shadow_fixture_bush",
           "objectId": "shadow_fixture_bush",
           "component": "ModelRenderer"
@@ -1352,7 +1352,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 75,
+          "revision": 76,
           "objectGuid": "go_shadow_fixture_rocks",
           "objectId": "shadow_fixture_rocks",
           "component": "ModelRenderer"
@@ -1424,7 +1424,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 75,
+          "revision": 76,
           "objectGuid": "go_shadow_fixture_fence",
           "objectId": "shadow_fixture_fence",
           "component": "ModelRenderer"
@@ -1496,7 +1496,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 75,
+          "revision": 76,
           "objectGuid": "go_shadow_fixture_log_bundle",
           "objectId": "shadow_fixture_log_bundle",
           "component": "ModelRenderer"
@@ -1571,7 +1571,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 75,
+          "revision": 76,
           "objectGuid": "go_shadow_fixture_crate",
           "objectId": "shadow_fixture_crate",
           "component": "ModelRenderer"
@@ -1643,7 +1643,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 75,
+          "revision": 76,
           "objectGuid": "go_shadow_fixture_barrel",
           "objectId": "shadow_fixture_barrel",
           "component": "ModelRenderer"
@@ -1715,7 +1715,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 75,
+          "revision": 76,
           "objectGuid": "go_shadow_fixture_chicken",
           "objectId": "shadow_fixture_chicken",
           "component": "ModelRenderer"
@@ -1787,7 +1787,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 75,
+          "revision": 76,
           "objectGuid": "go_shadow_fixture_hay_bale",
           "objectId": "shadow_fixture_hay_bale",
           "component": "ModelRenderer"
@@ -1859,7 +1859,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 75,
+          "revision": 76,
           "objectGuid": "go_shadow_fixture_counter",
           "objectId": "shadow_fixture_counter",
           "component": "ModelRenderer"
@@ -1900,7 +1900,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 75,
+          "revision": 76,
           "objectGuid": "go_8c25b316-6074-41ae-a1f2-49f3709453ec",
           "objectId": "asset",
           "component": "ModelRenderer"
@@ -1965,7 +1965,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 75,
+          "revision": 76,
           "objectGuid": "go_1ecaee91-9738-4914-8fc2-5f2b69cc018a",
           "objectId": "asset_2",
           "component": "ModelRenderer"
@@ -2030,7 +2030,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 75,
+          "revision": 76,
           "objectGuid": "go_cd724b70-f492-4014-ac1d-e51ef61cfc0d",
           "objectId": "asset_3",
           "component": "ModelRenderer"
@@ -2071,7 +2071,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 75,
+          "revision": 76,
           "objectGuid": "go_cc0008ef-62dc-4a23-ba98-bced26f56a80",
           "objectId": "issue_444__04",
           "component": "ModelRenderer"
@@ -2118,7 +2118,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 75,
+          "revision": 76,
           "objectGuid": "go_22987ad9-9e4b-46ce-9978-1e72c24fbc53",
           "objectId": "issue_444",
           "component": "ModelRenderer"
@@ -2171,7 +2171,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 75,
+          "revision": 76,
           "objectGuid": "go_issue464_ground_decal_operation",
           "objectId": "issue464_ground_decal_operation",
           "component": "Transform"
@@ -2271,7 +2271,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 75,
+          "revision": 76,
           "objectGuid": "go_issue464_ground_decal_delivery",
           "objectId": "issue464_ground_decal_delivery",
           "component": "Transform"
@@ -3509,5 +3509,315 @@
   },
   "render": {},
   "version": 70,
-  "updatedAt": "2026-07-15T03:29:19.508Z"
+  "updatedAt": "2026-07-15T03:29:19.508Z",
+  "plugins": [
+    {
+      "pluginId": "fps.shadow-map-experiment",
+      "schemaVersion": 3,
+      "data": {
+        "schemaVersion": 3,
+        "revision": 76,
+        "enabled": true,
+        "scopeId": "root",
+        "light": {
+          "entityId": "sun_light",
+          "direction": [
+            0.4754,
+            -0.7833,
+            -0.4005
+          ]
+        },
+        "qualityProfileId": "balanced",
+        "generator": {
+          "maps": {
+            "staticResolution": 512,
+            "dynamicResolution": 512,
+            "compositeResolution": 512
+          },
+          "filter": "low-pcf",
+          "bias": 0.0008,
+          "normalBias": 0.01,
+          "darkness": 0.34,
+          "bounds": {
+            "mode": "fixed",
+            "center": [
+              0,
+              3,
+              -5
+            ],
+            "extent": [
+              14,
+              10,
+              14
+            ],
+            "near": 0.1,
+            "far": 40
+          },
+          "backend": {
+            "mode": "auto",
+            "fallback": "single-map"
+          }
+        },
+        "culling": {
+          "enabled": true,
+          "guardBandRatio": 0.2
+        },
+        "diagnosticThresholds": {
+          "staticCasterCountWarning": 120,
+          "dynamicCasterCountWarning": 40,
+          "renderableCountWarning": 240
+        },
+        "behaviorProfiles": {
+          "default": {
+            "cast": true,
+            "receive": true,
+            "updateClass": "auto"
+          },
+          "dynamic-caster": {
+            "cast": true,
+            "receive": true,
+            "updateClass": "dynamic"
+          },
+          "receiver-static": {
+            "cast": false,
+            "receive": true,
+            "updateClass": "static"
+          },
+          "skinned-dynamic": {
+            "cast": true,
+            "receive": true,
+            "updateClass": "skinned"
+          },
+          "static-caster": {
+            "cast": true,
+            "receive": true,
+            "updateClass": "static"
+          }
+        },
+        "objects": [
+          {
+            "entityId": "asset",
+            "renderableIds": [
+              "asset"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
+          {
+            "entityId": "asset_2",
+            "renderableIds": [
+              "asset_2"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
+          {
+            "entityId": "asset_3",
+            "renderableIds": [
+              "asset_3"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
+          {
+            "entityId": "capsule",
+            "renderableIds": [
+              "capsule"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
+          {
+            "entityId": "cube",
+            "renderableIds": [
+              "cube"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
+          {
+            "entityId": "issue_444",
+            "renderableIds": [
+              "issue_444"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
+          {
+            "entityId": "issue_444__04",
+            "renderableIds": [
+              "issue_444__04"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
+          {
+            "entityId": "plane",
+            "renderableIds": [
+              "plane"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
+          {
+            "entityId": "shadow_fixture_barrel",
+            "renderableIds": [
+              "shadow_fixture_barrel"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
+          {
+            "entityId": "shadow_fixture_bush",
+            "renderableIds": [
+              "shadow_fixture_bush"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
+          {
+            "entityId": "shadow_fixture_chicken",
+            "renderableIds": [
+              "shadow_fixture_chicken"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
+          {
+            "entityId": "shadow_fixture_counter",
+            "renderableIds": [
+              "shadow_fixture_counter"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
+          {
+            "entityId": "shadow_fixture_crate",
+            "renderableIds": [
+              "shadow_fixture_crate"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
+          {
+            "entityId": "shadow_fixture_fence",
+            "renderableIds": [
+              "shadow_fixture_fence"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
+          {
+            "entityId": "shadow_fixture_hay_bale",
+            "renderableIds": [
+              "shadow_fixture_hay_bale"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
+          {
+            "entityId": "shadow_fixture_log_bundle",
+            "renderableIds": [
+              "shadow_fixture_log_bundle"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
+          {
+            "entityId": "shadow_fixture_pine_tree",
+            "renderableIds": [
+              "shadow_fixture_pine_tree"
+            ],
+            "cast": true,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "static-caster"
+          },
+          {
+            "entityId": "shadow_fixture_player",
+            "renderableIds": [
+              "shadow_fixture_player"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
+          {
+            "entityId": "shadow_fixture_rocks",
+            "renderableIds": [
+              "shadow_fixture_rocks"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
+          {
+            "entityId": "shadow_fixture_truck",
+            "renderableIds": [
+              "shadow_fixture_truck"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
+          {
+            "entityId": "shadow_fixture_worker",
+            "renderableIds": [
+              "shadow_fixture_worker"
+            ],
+            "cast": true,
+            "receive": true,
+            "updateClass": "skinned",
+            "behaviorProfileId": "skinned-dynamic"
+          },
+          {
+            "entityId": "sphere",
+            "renderableIds": [
+              "sphere"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          }
+        ],
+        "diagnostics": []
+      }
+    }
+  ]
 }

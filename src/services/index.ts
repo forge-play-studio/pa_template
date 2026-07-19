@@ -28,7 +28,6 @@ export { SceneBuilder } from './SceneBuilder';
 export type { SceneEnvironment } from './SceneBuilder';
 
 export { RenderingService } from './RenderingService';
-export { ShadowService } from './ShadowService';
 export { MaterialConfigService } from './MaterialConfigService';
 export * from './vfx';
 export { PlayableAnalyticsService, playableAnalyticsService } from './PlayableAnalyticsService';

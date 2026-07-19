@@ -17,7 +17,6 @@ import {
   toEditorSceneRuntimeLightingPatches,
   type EditorRuntimeLightingDebugPanel,
   type EditorSceneLightingDebugSnapshot as LightingDebugSnapshot,
-  type EditorSceneRuntimeShadowMode as RuntimeShadowMode,
   type EditorSceneRuntimeLightingPatch,
 } from '@fps-games/editor/playable-sdk';
 import { patchEditorSceneGameObjectField } from '../services/fps-game-editor/scene-feature';
@@ -109,17 +108,10 @@ function readSnapshot(game: GameWorld | null): LightingDebugSnapshot | null {
       binding: readEditorSceneRuntimeLightBinding(directionalLight.metadata, 'directional') as RuntimeLightEditorBinding | null,
     },
     shadow: {
-      mode: readRuntimeShadowMode(game),
+      mode: 'unknown',
       projectedLengthMultiplier: readEditorSceneLightingProjectedLengthMultiplier(direction),
     },
   };
-}
-
-function readRuntimeShadowMode(game: GameWorld | null): RuntimeShadowMode {
-  const mode = game?.getShadowService()?.getShadowMode?.();
-  return mode === 'dynamic' || mode === 'blob' || mode === 'static' || mode === 'planar' || mode === 'none'
-    ? mode
-    : 'unknown';
 }
 
 function color3ToColor(value: unknown, fallback: ColorRGB): ColorRGB {

@@ -7,21 +7,40 @@ import { NullEngine } from '@babylonjs/core/Engines/nullEngine.js';
 import { Scene } from '@babylonjs/core/scene.js';
 import { ModelAnimationService } from '../src/services/ModelAnimationService.ts';
 
-assertOnlyPlayStopSurface();
+assertPlaybackControlSurface();
 assertInstanceIsolation();
 assertPlaybackOptionsAndReset();
+assertPauseResume();
 assertMissingAndDuplicateClipsAreRejected();
 
-console.log('Model animation play/stop checks passed');
+console.log('Model animation playback checks passed');
 
-function assertOnlyPlayStopSurface() {
+function assertPlaybackControlSurface() {
   const methods = Object.getOwnPropertyNames(ModelAnimationService.prototype)
     .filter(name => name !== 'constructor')
     .sort();
-  assert.deepEqual(methods, ['play', 'stop']);
+  assert.deepEqual(methods, ['pause', 'play', 'resume', 'stop']);
   const service = new ModelAnimationService();
   assert.equal('update' in service, false, 'model animation must not join the project update loop');
   assert.equal('crossFade' in service, false, 'project-facing model animation exposes no transition scheduler');
+}
+
+function assertPauseResume() {
+  withScene(scene => {
+    const service = new ModelAnimationService();
+    const idle = createGroup(scene, 'Idle');
+    const animations = [idle];
+    service.play(animations, 'idle');
+
+    assert.equal(service.pause(animations), 1);
+    assert.equal(idle.isStarted, true);
+    assert.equal(idle.isPlaying, false);
+    assert.equal(service.pause(animations), 0, 'pause must be idempotent');
+
+    assert.equal(service.resume(animations), 1);
+    assert.equal(idle.isPlaying, true);
+    assert.equal(service.resume(animations), 1, 'resume reports actual playback after an idempotent call');
+  });
 }
 
 function assertInstanceIsolation() {

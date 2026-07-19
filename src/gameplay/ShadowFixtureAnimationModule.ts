@@ -50,6 +50,8 @@ export class ShadowFixtureAnimationModule implements GameplayModule {
   private workerLoopClipName: string | null = null;
   private currentPlayerAnimationName: string | null = null;
   private currentWorkerAnimationName: string | null = null;
+  private paused = false;
+  private disposed = false;
 
   constructor(
     private readonly context: Pick<GameplayRuntimeContext, 'sceneBuilder' | 'modelAnimationService'>,
@@ -65,6 +67,7 @@ export class ShadowFixtureAnimationModule implements GameplayModule {
   }
 
   init(): void {
+    if (this.disposed) throw new Error('shadowFixtureAnimation.moduleDisposed');
     this.playerNode = this.context.sceneBuilder.getSceneNodeRuntime(this.playerNodeId) ?? null;
     this.playerAnimations = this.context.sceneBuilder.getSceneNodeAnimationGroups(this.playerNodeId);
     this.playerIdleClipName = resolveFirstClipName(this.playerAnimations, PLAYER_IDLE_ANIMATION_CANDIDATES);
@@ -81,7 +84,7 @@ export class ShadowFixtureAnimationModule implements GameplayModule {
 
   /** Advances only the fixture root transform; Babylon advances model clips. */
   update(deltaTime: number): void {
-    if (!this.playerNode || !Number.isFinite(deltaTime) || deltaTime <= 0) return;
+    if (this.paused || this.disposed || !this.playerNode || !Number.isFinite(deltaTime) || deltaTime <= 0) return;
     if (this.playerState === 'moving') {
       this.updatePlayerMove(deltaTime);
       return;
@@ -93,18 +96,61 @@ export class ShadowFixtureAnimationModule implements GameplayModule {
     }
   }
 
+  pause(): void {
+    if (this.paused || this.disposed) return;
+    const errors: unknown[] = [];
+    try { this.context.modelAnimationService.pause(this.playerAnimations); }
+    catch (error) { errors.push(error); }
+    try { this.context.modelAnimationService.pause(this.workerAnimations); }
+    catch (error) { errors.push(error); }
+    if (errors.length > 0) {
+      const rollbackErrors: unknown[] = [];
+      try { this.context.modelAnimationService.resume(this.playerAnimations); }
+      catch (error) { rollbackErrors.push(error); }
+      try { this.context.modelAnimationService.resume(this.workerAnimations); }
+      catch (error) { rollbackErrors.push(error); }
+      throwCollectedErrors('pause', errors, rollbackErrors);
+    }
+    this.paused = true;
+  }
+
+  resume(): void {
+    if (!this.paused || this.disposed) return;
+    const errors: unknown[] = [];
+    try { this.context.modelAnimationService.resume(this.playerAnimations); }
+    catch (error) { errors.push(error); }
+    try { this.context.modelAnimationService.resume(this.workerAnimations); }
+    catch (error) { errors.push(error); }
+    if (errors.length > 0) {
+      const rollbackErrors: unknown[] = [];
+      try { this.context.modelAnimationService.pause(this.playerAnimations); }
+      catch (error) { rollbackErrors.push(error); }
+      try { this.context.modelAnimationService.pause(this.workerAnimations); }
+      catch (error) { rollbackErrors.push(error); }
+      throwCollectedErrors('resume', errors, rollbackErrors);
+    }
+    this.paused = false;
+  }
+
   dispose(): void {
+    if (this.disposed) return;
+    this.disposed = true;
+    const errors: unknown[] = [];
     if (this.playerAnimations.length > 0) {
-      this.context.modelAnimationService.stop(this.playerAnimations);
+      try { this.context.modelAnimationService.stop(this.playerAnimations); }
+      catch (error) { errors.push(error); }
     }
     if (this.workerAnimations.length > 0) {
-      this.context.modelAnimationService.stop(this.workerAnimations);
+      try { this.context.modelAnimationService.stop(this.workerAnimations); }
+      catch (error) { errors.push(error); }
     }
     this.currentPlayerAnimationName = null;
     this.currentWorkerAnimationName = null;
     if (this.playerNode) {
-      this.playerNode.position.copyFrom(this.playerHome);
+      try { this.playerNode.position.copyFrom(this.playerHome); }
+      catch (error) { errors.push(error); }
     }
+    throwCollectedErrors('dispose', errors);
   }
 
   getDebugState(): {
@@ -207,6 +253,22 @@ export class ShadowFixtureAnimationModule implements GameplayModule {
 
 function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
+}
+
+function throwCollectedErrors(
+  operation: string,
+  errors: readonly unknown[],
+  rollbackErrors: readonly unknown[] = [],
+): void {
+  if (errors.length === 0) return;
+  const failure = errors.length === 1
+    ? errors[0]
+    : Object.assign(new Error(`Shadow fixture animation ${operation} failed.`), { errors: [...errors] });
+  if (rollbackErrors.length > 0 && failure && typeof failure === 'object') {
+    try { Object.assign(failure, { rollbackErrors: [...rollbackErrors] }); }
+    catch { /* Preserve the primary lifecycle failure. */ }
+  }
+  throw failure;
 }
 
 function resolveFirstClipName(

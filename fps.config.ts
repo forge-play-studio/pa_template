@@ -9,6 +9,7 @@ export const editorConfig = defineFpsGameEditorProject({
     editorScene: 'src/config/editor-scene.json',
     runtimeScene: 'src/config/scene.json',
     rendering: 'src/config/rendering.json',
+    shadows: 'src/config/shadows.json',
   },
   assets: {
     importedDir: 'src/assets/imported',
@@ -31,6 +32,7 @@ export const fpsConfig = Object.freeze({
     editorPlugins.materialsPlugin(),
     editorPlugins.renderingPlugin(),
     editorPlugins.shadowsPlugin(),
+    editorPlugins.shadowMapExperimentPlugin(),
     editorPlugins.markersPlugin(),
     editorPlugins.babylonRendererPlugin(),
   ]),
