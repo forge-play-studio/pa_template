@@ -1,8 +1,8 @@
 /**
  * ModelAnimationService - GLB / glTF model clip playback entry.
  *
- * The project triggers play/pause/resume/stop. Babylon advances AnimationGroup
- * state during Scene.render(); runtime transform motion belongs to gameplay systems.
+ * The project triggers play/pause/resume/stop. Babylon advances AnimationGroup state
+ * during Scene.render(); runtime transform motion belongs to gameplay systems.
  */
 
 import type { AnimationGroup } from '@babylonjs/core/Animations/animationGroup';

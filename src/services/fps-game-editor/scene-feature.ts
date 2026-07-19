@@ -24,7 +24,6 @@ import {
 import { editorConfig } from '../../../fps.config';
 import baseSceneConfig from '../../config/scene.json';
 import renderingConfig from '../../config/rendering.json';
-import shadowsConfig from '../../config/shadows.json';
 import { configService } from '../../config/ConfigService';
 import type { AssetExternalRef, GroundDecalUiKind, SceneConfig } from '../../config';
 import {
@@ -43,8 +42,6 @@ import type {
 } from './scene-types';
 import { getEditorSceneRenderingProfile, setEditorSceneRenderingProfileReader } from './scene-types';
 import { EDITOR_SCENE_FIELD_SCHEMA, isEditorSceneFiniteNumber, type EditorSceneFieldSchemaEntry } from '@fps-games/editor/playable-sdk';
-
-const shadowMapExperimentConfig = shadowsConfig as unknown as ShadowMapExperimentConfig;
 
 export interface EditorSceneInspectorTextureAsset {
   id: string;
@@ -86,8 +83,6 @@ let sceneAssembly: ReturnType<typeof createFpsGameEditorStandardSceneAssembly<
   EditorSceneInspectorContext
 >>;
 
-type ProjectRenderingRuntime = ReturnType<typeof createFpsGameEditorProductRenderingRuntime<EditorSceneDocument, EditorSceneDocumentPatch>>;
-
 sceneAssembly = createFpsGameEditorStandardSceneAssembly<
   EditorSceneDocument,
   EditorSceneGameObject,
@@ -118,21 +113,22 @@ sceneAssembly = createFpsGameEditorStandardSceneAssembly<
   },
 });
 
-export const renderingRuntime: ProjectRenderingRuntime = createFpsGameEditorProductRenderingRuntime<EditorSceneDocument, EditorSceneDocumentPatch>({
+export const renderingRuntime = createFpsGameEditorProductRenderingRuntime<EditorSceneDocument, EditorSceneDocumentPatch>({
   initialConfig: renderingConfig,
   initialStaticShadowArtifact: configService.getStaticShadowArtifact(),
-  shadowMapExperimentConfig,
+  shadowMapExperiment: {
+    compileRuntimeScene: (document, config) => compileEditorSceneDocumentToSceneConfig(
+      document,
+      structuredClone(baseSceneConfig) as SceneConfig,
+      { shadowMapExperimentConfig: config },
+    ).sceneConfig,
+  },
   getTextureAssets: () => currentRenderingTextures,
   getGameObjects: document => document.scene.gameObjects,
   createAlphaIndexMigrationPatch: input => ({ kind: 'game-object.rendering-alpha-index-migration', ...input }),
-  createShadowMapExperimentProfilesPatch: input => ({ patch: { kind: 'scene.shadow-map-experiment.profiles', ...(Object.prototype.hasOwnProperty.call(input, 'qualityProfile') ? { qualityProfile: input.qualityProfile } : {}), ...(Object.prototype.hasOwnProperty.call(input, 'behaviorProfile') ? { behaviorProfile: input.behaviorProfile } : {}) }, label: 'Set scene Shadow Map profiles', reprojectIds: input.document.scene.gameObjects.map(gameObject => gameObject.id) }),
   directionalLightNodeId: 'sun_light',
   isDirectionalLightEnabled: document => document.scene.gameObjects.find(entry => entry.id === 'sun_light')?.active !== false,
   resolveLanguage: document => document.scene.gameObjects.find(entry => entry.id === 'sun_light')?.light?.inspectorLanguage === 'en' ? 'en' : 'zh',
-  getShadowMapExperimentPlan: document => {
-    const compiled = compileEditorSceneDocumentToSceneConfig(document, structuredClone(baseSceneConfig) as SceneConfig, { shadowMapExperimentConfig: renderingRuntime.getShadowMapExperimentConfig() }).sceneConfig;
-    return (compiled.plugins?.find(entry => entry.pluginId === 'fps.shadow-map-experiment')?.data ?? null) as never;
-  },
 });
 setEditorSceneRenderingProfileReader(renderingRuntime.getProfile);
 export const sceneSource = createFpsGameEditorSceneSourceServices<EditorSceneDocument, SceneConfig, EditorSceneAssetLibraryItem>({

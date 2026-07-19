@@ -25,14 +25,9 @@ export { InputService } from './InputService';
 export type { MovementInputSource, MovementInputState } from './InputService';
 
 export { SceneBuilder } from './SceneBuilder';
-export type {
-  SceneEnvironment,
-  SceneShadowCasterActivityController,
-  SceneShadowCasterActivityKind,
-} from './SceneBuilder';
+export type { SceneEnvironment } from './SceneBuilder';
 
 export { RenderingService } from './RenderingService';
-export { ShadowService } from './ShadowService';
 export { MaterialConfigService } from './MaterialConfigService';
 export * from './vfx';
 export { PlayableAnalyticsService, playableAnalyticsService } from './PlayableAnalyticsService';

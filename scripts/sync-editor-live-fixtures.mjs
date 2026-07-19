@@ -7,7 +7,6 @@ const projectRoot = process.cwd();
 const editorScenePath = path.join(projectRoot, 'src/config/editor-scene.json');
 const scenePath = path.join(projectRoot, 'src/config/scene.json');
 const assetManifestPath = path.join(projectRoot, 'src/assets/generated/asset-catalog.manifest.json');
-const shadowsConfigPath = path.join(projectRoot, 'src/config/shadows.json');
 const playableSdk = await import('@fps-games/editor/playable-sdk');
 
 const PREFAB_FIXTURE = {
@@ -33,42 +32,26 @@ const GROUND_DECAL_FIXTURES = [
   },
 ];
 
-const SHADOW_MAP_EXPERIMENT_PROFILES = [
-  { id: 'plane', behaviorProfile: 'receiver-static' },
-  { id: 'shadow_fixture_worker', behaviorProfile: 'skinned-dynamic' },
-  { id: 'shadow_fixture_pine_tree', behaviorProfile: 'static-caster' },
-];
-
 let editorScene = await readJson(editorScenePath);
 const previousSceneConfig = await readJson(scenePath);
 const assetManifest = await readJson(assetManifestPath);
-const shadowsConfig = await readJson(shadowsConfigPath);
-const forceCompile = process.argv.includes('--compile');
 let changed = false;
 
 changed = ensurePrefabStageFixture(editorScene) || changed;
 changed = ensureGroundDecalLiveFixtures(editorScene, assetManifest) || changed;
-const shadowProfileResult = ensureShadowMapExperimentProfiles(editorScene);
-editorScene = shadowProfileResult.document;
-changed = shadowProfileResult.changed || changed;
 
-if (changed || forceCompile) {
-  if (changed) editorScene = playableSdk.bumpEditorSceneAuthoringSourceRevision?.(editorScene) ?? editorScene;
-  const assetLibrary = playableSdk.createEditorSceneAssetLibrary(assetManifest.map(entry => (
-    entry.kind === 'model' ? { ...entry, materialMode: entry.materialMode ?? 'shared' } : entry
-  )));
-  const hydratedEditorScene = playableSdk.enrichEditorSceneDocumentAssets(editorScene, assetLibrary);
-  const compiled = playableSdk.compileEditorSceneDocumentToSceneConfig(hydratedEditorScene, previousSceneConfig, {
-    shadowMapExperimentConfig: shadowsConfig,
+if (changed) {
+  editorScene = playableSdk.bumpEditorSceneAuthoringSourceRevision?.(editorScene) ?? editorScene;
+  const compiled = playableSdk.compileEditorSceneDocumentToSceneConfig(editorScene, previousSceneConfig, {
     readCustomTransformRuntimeData: gameObject => (
       isGroundDecalUiConfig(gameObject.groundDecal)
         ? { groundDecal: structuredClone(gameObject.groundDecal) }
         : null
     ),
   });
-  if (changed) await writeJson(editorScenePath, editorScene);
+  await writeJson(editorScenePath, editorScene);
   await writeJson(scenePath, compiled.sceneConfig);
-  console.log(changed ? 'editor live fixtures synchronized' : 'editor live fixture runtime scene recompiled');
+  console.log('editor live fixtures synchronized');
 } else {
   console.log('editor live fixtures already synchronized');
 }
@@ -97,24 +80,6 @@ function ensureGroundDecalLiveFixtures(document, manifest) {
     changed = true;
   }
   return changed;
-}
-
-function ensureShadowMapExperimentProfiles(document) {
-  let nextDocument = document;
-  let changed = false;
-  for (const fixture of SHADOW_MAP_EXPERIMENT_PROFILES) {
-    const gameObject = nextDocument.scene?.gameObjects?.find(candidate => candidate?.id === fixture.id);
-    if (!gameObject) throw new Error(`Unable to configure Shadow Map profile: "${fixture.id}" was not found.`);
-    if (gameObject.shadowMapExperiment?.behaviorProfile === fixture.behaviorProfile) continue;
-    nextDocument = playableSdk.patchEditorSceneGameObjectField(
-      nextDocument,
-      fixture.id,
-      'shadowMapExperiment.behaviorProfile',
-      fixture.behaviorProfile,
-    );
-    changed = true;
-  }
-  return { document: nextDocument, changed };
 }
 
 function createGroundDecalFixtureGameObject(fixture, rootId, textureIds) {
