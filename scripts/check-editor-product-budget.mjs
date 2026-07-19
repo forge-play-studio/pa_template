@@ -60,8 +60,14 @@ const runtimeAuthoredConfigConsumerPaths = new Set([
   // the editor host, document authoring, or adapter implementation.
   'src/project-runtime-entry.ts',
   'src/debug/runtime-debug-bootstrap.ts',
+  // Development-only editor entry composition is an explicit host seam, not
+  // project editor semantics. The controller remains SDK-owned while these
+  // exact files adapt local GameWorld lifetime and render its state.
+  'src/dev/DevHost.ts',
+  'src/dev/dev-entry.ts',
+  'src/dev/LocalWorldEntryBackend.ts',
+  'src/dev/editor-entry-view.ts',
   'src/config/ConfigService.ts',
-  'src/config/SceneJsonV2Validator.ts',
   'src/config/types.ts',
   'src/rendering/rendering-profile.ts',
   'src/services/RenderingService.ts',
@@ -70,6 +76,12 @@ const runtimeAuthoredConfigConsumerPaths = new Set([
   'src/debug/camera-debug-panel.ts',
   'src/debug/runtime-lighting-debug-panel.ts',
 ]);
+const runtimeIntegrationConsumerPrefixes = [
+  // Production runtime imports the public SDK through this explicit adapter
+  // seam; it is not editor host/product assembly code and should not consume
+  // the project's editor integration line budget.
+  'src/runtime/integrations/fps-runtime/',
+];
 const editorSignalScanRoots = [
   'fps.config.ts',
   'vite.config.ts',
@@ -356,7 +368,8 @@ function isIgnoredSignalFile(filePath) {
 
 function isRuntimeAuthoredConfigConsumer(filePath) {
   const relativePath = toProjectPath(path.relative(projectRoot, filePath));
-  return runtimeAuthoredConfigConsumerPaths.has(relativePath);
+  return runtimeAuthoredConfigConsumerPaths.has(relativePath)
+    || runtimeIntegrationConsumerPrefixes.some(prefix => relativePath.startsWith(prefix));
 }
 
 function hasEditorIntegrationSignal(content) {

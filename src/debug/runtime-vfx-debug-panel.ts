@@ -1,4 +1,4 @@
-import type { Game } from '../core/Game';
+import type { GameWorld } from '../runtime/GameWorld';
 import type { VfxPlaybackHandle, VfxService } from '../services';
 import { mountRuntimeDebugPanel } from './debug-panel-layout';
 import {
@@ -12,7 +12,7 @@ import type { Disposable } from './framework/disposables';
 
 export interface RuntimeVfxDebugPanelOptions {
   root?: HTMLElement;
-  getGame: () => Game | null;
+  getGame: () => GameWorld | null;
 }
 
 export function mountRuntimeVfxDebugPanel(options: RuntimeVfxDebugPanelOptions): Disposable {

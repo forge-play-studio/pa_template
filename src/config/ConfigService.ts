@@ -41,7 +41,7 @@ import type {
 import sceneConfigJson from './scene.json';
 import gameConfigJson from './game.json';
 import renderingConfigJson from './rendering.json';
-import { assertSceneJson } from './SceneJsonV2Validator';
+import { assertPlayableEditorRuntimeSceneConfig } from '@fps-games/editor/playable-sdk';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value);
@@ -53,7 +53,7 @@ function readNonEmptyString(value: unknown): string | undefined {
 }
 
 export function resolveSceneAssetRuntimeUrl(asset: SceneAssetConfig): string | undefined {
-  const metadata = isRecord(asset.metadata) ? asset.metadata : undefined;
+  const metadata = 'metadata' in asset && isRecord(asset.metadata) ? asset.metadata : undefined;
   return readNonEmptyString(asset.url)
     ?? readNonEmptyString(metadata?.url)
     ?? readNonEmptyString(metadata?.relativePath)
@@ -628,7 +628,7 @@ export class ConfigService {
   private sceneNodeMap = new Map<string, SceneNodeConfig>();
 
   constructor() {
-    assertSceneJson(sceneConfigJson as SceneConfig);
+    assertPlayableEditorRuntimeSceneConfig(sceneConfigJson);
     this.sceneConfig = sceneConfigJson as SceneConfig;
     this.gameConfig = gameConfigJson as GameConfig;
 
@@ -763,7 +763,7 @@ export class ConfigService {
   }
 
   replaceSceneConfig(sceneConfig: SceneConfig): void {
-    assertSceneJson(sceneConfig);
+    assertPlayableEditorRuntimeSceneConfig(sceneConfig);
     this.sceneConfig = sceneConfig;
     this.buildIndexes();
   }

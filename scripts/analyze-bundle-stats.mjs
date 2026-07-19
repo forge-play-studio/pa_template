@@ -8,6 +8,7 @@ const buildExitCode = Number(args.buildExitCode ?? process.env.BUILD_EXIT_CODE ?
 const reportDir = String(args.reportDir ?? 'bundle-stats-report');
 const statsPath = String(args.statsPath ?? 'dist/stats.json');
 const buildLogPath = String(args.buildLog ?? 'build.log');
+const bundleLimitBytes = 5 * 1024 * 1024;
 
 const artAssetExtensions = new Set([
   '.avif',
@@ -40,6 +41,14 @@ const refName = process.env.GITHUB_REF_NAME ?? '';
 const sha = process.env.GITHUB_SHA ?? '';
 const commit = sha ? sha.slice(0, 7) : 'unknown';
 const generatedAt = formatBeijingTime(new Date());
+const packageConfig = readPackageConfig();
+const representative = {
+  locale: 'EN',
+  tracking: true,
+  channel: packageConfig?.appConfig?.analytics?.adNetwork ?? 'applovin',
+  statsHtmlFile: 'dist/stats.html',
+  statsFile: normalizePath(statsPath),
+};
 
 const htmlOutputs = listHtmlOutputs('dist');
 const artAssets = analyzeArtAssets(['src/assets', 'public']);
@@ -51,6 +60,8 @@ const result = {
   commit,
   runUrl,
   buildExitCode,
+  bundleLimitBytes,
+  representative,
   htmlOutputs,
   artAssets,
   stats: null,
@@ -96,11 +107,14 @@ function parseArgs(rawArgs) {
 }
 
 function readPackageName() {
+  return readPackageConfig()?.name ?? 'unknown';
+}
+
+function readPackageConfig() {
   try {
-    const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-    return pkg.name ?? 'unknown';
+    return JSON.parse(fs.readFileSync('package.json', 'utf8'));
   } catch {
-    return 'unknown';
+    return null;
   }
 }
 
@@ -125,6 +139,7 @@ function listHtmlOutputs(dir) {
       bytes: data.length,
       gzipBytes: gzipSync(data).length,
       brotliBytes: brotliCompressSync(data).length,
+      overLimit: data.length > bundleLimitBytes,
     };
   });
 }
@@ -321,15 +336,22 @@ function buildIssueBody(data) {
     return lines.join('\n');
   }
 
-  const indexOutput = data.htmlOutputs.find((output) => output.file === 'dist/index.html');
-  lines.push('## Index HTML Size', '');
-  if (indexOutput) {
-    lines.push('| File | Raw |');
-    lines.push('|---|---:|');
-    lines.push(`| \`${indexOutput.file}\` | ${formatBytes(indexOutput.bytes)} |`);
+  lines.push('## Delivery HTML Sizes', '');
+  lines.push(`Limit: ${formatBytes(data.bundleLimitBytes)} (${data.bundleLimitBytes} bytes).`);
+  lines.push('');
+  if (data.htmlOutputs.length > 0) {
+    lines.push('| File | Raw | Over 5 MiB |');
+    lines.push('|---|---:|:---:|');
+    for (const output of data.htmlOutputs) {
+      lines.push(`| \`${output.file}\` | ${formatBytes(output.bytes)} | ${output.overLimit ? 'YES' : 'NO'} |`);
+    }
   } else {
-    lines.push('`dist/index.html` was not found in the build output.');
+    lines.push('No delivery HTML files were found under `dist`.');
   }
+  lines.push('');
+
+  lines.push('## Representative Rollup Stats', '');
+  lines.push(`Detailed module analysis uses ${data.representative.locale} / tracked / ${data.representative.channel}: \`${data.representative.statsFile}\`.`);
   lines.push('');
 
   lines.push('## Art Assets', '');
@@ -375,7 +397,7 @@ function buildIssueBody(data) {
   }
 
   lines.push('---');
-  lines.push('Workflow artifacts include standalone attachments for the playable HTML and visual bundle report, plus the full `bundle-stats-*` report bundle.');
+  lines.push('Workflow artifacts include all delivery HTML files, the EN tracked representative `dist/stats.html` / `dist/stats.json`, and the full `bundle-stats-*` report bundle.');
   return lines.join('\n');
 }
 

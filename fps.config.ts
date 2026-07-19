@@ -1,14 +1,5 @@
 import { defineFpsGameEditorProject, groundDecalFeature } from '@fps-games/editor/playable-sdk';
-import {
-  assetsPlugin,
-  babylonRendererPlugin,
-  markersPlugin,
-  materialsPlugin,
-  renderingPlugin,
-  scenePlugin,
-  shadowMapExperimentPlugin,
-  shadowsPlugin,
-} from '@fps-games/editor';
+import * as editorPlugins from '@fps-games/editor';
 import { paTemplateGroundDecalFeatureConfig } from './src/services/fps-game-editor/ground-decal-config';
 
 export const editorConfig = defineFpsGameEditorProject({
@@ -28,17 +19,22 @@ export const editorConfig = defineFpsGameEditorProject({
   features: [groundDecalFeature(paTemplateGroundDecalFeatureConfig)],
 });
 
+const hierarchyPluginReference = (editorPlugins as unknown as {
+  hierarchyPlugin?: () => ReturnType<typeof editorPlugins.scenePlugin>;
+}).hierarchyPlugin?.();
+
 export const fpsConfig = Object.freeze({
   editor: editorConfig,
   plugins: Object.freeze([
-    scenePlugin(),
-    assetsPlugin(),
-    materialsPlugin(),
-    renderingPlugin(),
-    shadowsPlugin(),
-    shadowMapExperimentPlugin(),
-    markersPlugin(),
-    babylonRendererPlugin(),
+    ...(hierarchyPluginReference ? [hierarchyPluginReference] : []),
+    editorPlugins.scenePlugin(),
+    editorPlugins.assetsPlugin(),
+    editorPlugins.materialsPlugin(),
+    editorPlugins.renderingPlugin(),
+    editorPlugins.shadowsPlugin(),
+    editorPlugins.shadowMapExperimentPlugin(),
+    editorPlugins.markersPlugin(),
+    editorPlugins.babylonRendererPlugin(),
   ]),
 });
 

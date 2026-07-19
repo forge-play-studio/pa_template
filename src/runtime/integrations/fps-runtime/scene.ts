@@ -1,0 +1,18 @@
+export {
+  applyArtistMaterialProfileToRuntimeMaterial,
+  applyBabylonRenderingToNodeTree,
+  applyMaterialValueToRuntimeMaterial,
+  applyPlayableBabylonOutlineOverrideToRuntimeNode,
+  collectBabylonMaterialOwnerCandidates,
+  createMaterialSlotOwnerPathMatchKey,
+  isMaterialOwnerResolutionPointerVerified,
+  normalizeMaterialSlotOwnerPath,
+  resolveEditorSceneArtistMaterialBinding,
+  resolveEditorSceneGameObjectRendering,
+  resolveMaterialOwner,
+  resolveMaterialOwnerNode,
+  resolveMaterialRuntimeKind,
+  resolveMaterialSlotOwnerNodes,
+  type BabylonMaterialOwnerTarget,
+  type MaterialOwnerResolution,
+} from '@fps-games/editor/playable-sdk';
