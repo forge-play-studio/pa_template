@@ -6,7 +6,18 @@ import path from 'node:path';
 const EDITOR_STATIC_PREFIX = 'shadow_stress_editor_static_';
 const EDITOR_DYNAMIC_PREFIX = 'shadow_stress_editor_dynamic_';
 const EDITOR_SKINNED_PREFIX = 'shadow_stress_editor_skinned_';
+const EDITOR_ORDINARY_PREFIX = 'shadow_stress_editor_ordinary_';
+const EDITOR_FOLIAGE_PREFIX = 'shadow_stress_editor_foliage_';
+const EDITOR_COMPLEX_PREFIX = 'shadow_stress_editor_complex_';
 const WORKER_ASSET_ID = 'asset_ade25007e0964563b197b21c2759c027';
+const CHICKEN_ASSET_ID = 'asset_97121f40170c40d1aaf63b8c2cf0bf24';
+const ORDINARY_ASSET_ID = 'asset_759b595e81934517ba0251b16bd31061';
+const FOLIAGE_ASSET_IDS = [
+  'asset_edc2f992438c4450afc1c6354ec21500',
+  'asset_af82a4f117d84ff58bedb41aa11bad5c',
+  'asset_e726be04042849088cf73e4f2f92c00f',
+];
+const COMPLEX_ASSET_ID = 'asset_9e7f1093a530405798a4140705e6bbea';
 const MAX_COUNT_PER_CLASS = 2_000;
 const GRID_SPACING = 0.55;
 const SKINNED_GRID_SPACING = 1.35;
@@ -16,32 +27,47 @@ const projectRoot = process.cwd();
 const editorScenePath = path.join(projectRoot, 'src/config/editor-scene.json');
 const scenePath = path.join(projectRoot, 'src/config/scene.json');
 const assetManifestPath = path.join(projectRoot, 'src/assets/generated/asset-catalog.manifest.json');
+const shadowsConfigPath = path.join(projectRoot, 'src/config/shadows.json');
 const sdk = await import('@fps-games/editor/playable-sdk');
 
 let document = await readJson(editorScenePath);
 const previousSceneConfig = await readJson(scenePath);
 const assetManifest = await readJson(assetManifestPath);
-const assetLibrary = sdk.createEditorSceneAssetLibrary(assetManifest.map(entry => (
-  entry.kind === 'model' ? { ...entry, materialMode: entry.materialMode ?? 'shared' } : entry
-)));
+let shadowMapExperimentConfig = await readJson(shadowsConfigPath);
+const assetLibrary = sdk.createEditorSceneAssetLibrary(assetManifest.map(normalizeStressAssetCatalogEntry));
 const workerAsset = assetLibrary.find(asset => asset.assetId === WORKER_ASSET_ID);
+const chickenAsset = assetLibrary.find(asset => asset.assetId === CHICKEN_ASSET_ID);
+const ordinaryAsset = assetLibrary.find(asset => asset.assetId === ORDINARY_ASSET_ID);
+const foliageAssets = FOLIAGE_ASSET_IDS.map(assetId => assetLibrary.find(asset => asset.assetId === assetId));
+const complexAsset = assetLibrary.find(asset => asset.assetId === COMPLEX_ASSET_ID);
 const previousStressIds = document.scene.gameObjects
   .filter(object => isStressObjectId(object.id))
   .map(object => object.id);
 let shadowSettingsChanged = false;
+
+if (args.stressProfile) {
+  const resolved = createTemporaryStressProfile(shadowMapExperimentConfig, args.stressProfile);
+  shadowMapExperimentConfig = resolved.config;
+  const previousSettings = document.scene.shadowMapExperiment ?? {};
+  const nextSettings = {
+    ...previousSettings,
+    qualityProfile: resolved.qualityProfileId,
+  };
+  shadowSettingsChanged = JSON.stringify(previousSettings) !== JSON.stringify(nextSettings);
+  document = {
+    ...document,
+    scene: { ...document.scene, shadowMapExperiment: nextSettings },
+  };
+}
 
 if (args.shadowQuality) {
   const previousSettings = document.scene.shadowMapExperiment;
   if (!previousSettings || typeof previousSettings !== 'object' || Array.isArray(previousSettings)) {
     throw new Error('Unable to configure missing scene.shadowMapExperiment settings.');
   }
-  const advanced = { ...(previousSettings.advanced ?? {}) };
-  delete advanced.resolution;
-  delete advanced.filter;
   const nextSettings = {
     ...previousSettings,
-    quality: args.shadowQuality,
-    ...(Object.keys(advanced).length > 0 ? { advanced } : {}),
+    qualityProfile: args.shadowQuality,
   };
   shadowSettingsChanged = JSON.stringify(previousSettings) !== JSON.stringify(nextSettings);
   document = {
@@ -84,13 +110,11 @@ if (!args.remove) {
     document = sdk.patchEditorSceneGameObjectField(document, expectedId, 'transform.position', position);
     document = sdk.patchEditorSceneGameObjectField(document, expectedId, 'transform.scale', 0.34);
     document = sdk.patchEditorSceneGameObjectField(document, expectedId, 'metadata.shadowStressSource', 'editor');
-    document = sdk.patchEditorSceneGameObjectField(document, expectedId, 'shadowMapExperiment.cast', 'enabled');
-    document = sdk.patchEditorSceneGameObjectField(document, expectedId, 'shadowMapExperiment.receive', 'enabled');
     document = sdk.patchEditorSceneGameObjectField(
       document,
       expectedId,
-      'shadowMapExperiment.updateClass',
-      dynamic ? 'dynamic' : 'static',
+      'shadowMapExperiment.behaviorProfile',
+      dynamic ? 'dynamic-caster' : 'static-caster',
     );
   }
 
@@ -101,9 +125,10 @@ if (!args.remove) {
   for (let index = 0; index < args.skinnedCount; index += 1) {
     const expectedId = `${EDITOR_SKINNED_PREFIX}${String(index).padStart(4, '0')}`;
     const position = createSkinnedGridPosition(index, args.skinnedCount, skinnedColumns);
+    const skinnedAsset = index % 2 === 0 ? workerAsset : chickenAsset ?? workerAsset;
     const creation = sdk.createEditorSceneAssetPlacementPatch({
       document,
-      asset: workerAsset,
+      asset: skinnedAsset,
       hit: { position },
       name: expectedId,
     });
@@ -122,10 +147,43 @@ if (!args.remove) {
       'metadata.shadowStressSource',
       'editor-skinned',
     );
-    document = sdk.patchEditorSceneGameObjectField(document, expectedId, 'shadowMapExperiment.cast', 'enabled');
-    document = sdk.patchEditorSceneGameObjectField(document, expectedId, 'shadowMapExperiment.receive', 'enabled');
-    document = sdk.patchEditorSceneGameObjectField(document, expectedId, 'shadowMapExperiment.updateClass', 'skinned');
+    document = sdk.patchEditorSceneGameObjectField(
+      document,
+      expectedId,
+      'shadowMapExperiment.behaviorProfile',
+      'skinned-dynamic',
+    );
   }
+
+  document = addAssetStressObjects(document, {
+    sdk,
+    asset: ordinaryAsset,
+    count: args.ordinaryCount,
+    prefix: EDITOR_ORDINARY_PREFIX,
+    behaviorProfile: 'static-caster',
+    scale: 0.35,
+    rowOffset: 0,
+  });
+  for (let index = 0; index < args.foliageCount; index += 1) {
+    document = addAssetStressObjects(document, {
+      sdk,
+      asset: foliageAssets[index % foliageAssets.length],
+      count: 1,
+      prefix: `${EDITOR_FOLIAGE_PREFIX}${String(index).padStart(4, '0')}_`,
+      behaviorProfile: 'static-caster',
+      scale: 0.28,
+      rowOffset: 2.5 + index * 0.03,
+    });
+  }
+  document = addAssetStressObjects(document, {
+    sdk,
+    asset: complexAsset,
+    count: args.complexCount,
+    prefix: EDITOR_COMPLEX_PREFIX,
+    behaviorProfile: 'static-caster',
+    scale: 0.08,
+    rowOffset: 5,
+  });
 }
 
 const nextStressObjects = document.scene.gameObjects.filter(object => isStressObjectId(object.id));
@@ -133,6 +191,7 @@ const changed = shadowSettingsChanged || previousStressIds.length > 0 || nextStr
 if (changed) document = sdk.bumpEditorSceneAuthoringSourceRevision(document);
 const hydrated = sdk.enrichEditorSceneDocumentAssets(document, assetLibrary);
 const compiled = sdk.compileEditorSceneDocumentToSceneConfig(hydrated, previousSceneConfig, {
+  shadowMapExperimentConfig,
   readCustomTransformRuntimeData: gameObject => (
     isGroundDecalUiConfig(gameObject.groundDecal)
       ? { groundDecal: structuredClone(gameObject.groundDecal) }
@@ -144,12 +203,14 @@ const compiledPlan = compiled.sceneConfig.plugins?.find(
 )?.data;
 const compiledStressObjects = compiledPlan?.objects?.filter(object => isStressObjectId(object.entityId)) ?? [];
 
-const expectedCount = args.remove ? 0 : args.staticCount + args.dynamicCount + args.skinnedCount;
+const expectedCount = args.remove ? 0 : args.staticCount + args.dynamicCount + args.skinnedCount
+  + args.ordinaryCount + args.foliageCount + args.complexCount;
 if (nextStressObjects.length !== expectedCount) {
   throw new Error(`Authored stress fixture count mismatch: expected ${expectedCount}, got ${nextStressObjects.length}`);
 }
-if (compiledStressObjects.length !== expectedCount || compiledStressObjects.some(object => object.cast !== true)) {
-  throw new Error(`Compiled stress fixture mismatch: expected ${expectedCount} active caster policies.`);
+const expectedCompiledCount = args.stressProfile === 'disabled' ? 0 : expectedCount;
+if (compiledStressObjects.length !== expectedCompiledCount || compiledStressObjects.some(object => object.cast !== true)) {
+  throw new Error(`Compiled stress fixture mismatch: expected ${expectedCompiledCount} active caster policies.`);
 }
 
 if (!args.dryRun) {
@@ -163,9 +224,13 @@ console.log(JSON.stringify({
   editorStaticCount: nextStressObjects.filter(object => object.id.startsWith(EDITOR_STATIC_PREFIX)).length,
   editorDynamicCount: nextStressObjects.filter(object => object.id.startsWith(EDITOR_DYNAMIC_PREFIX)).length,
   editorSkinnedCount: nextStressObjects.filter(object => object.id.startsWith(EDITOR_SKINNED_PREFIX)).length,
+  editorOrdinaryCount: nextStressObjects.filter(object => object.id.startsWith(EDITOR_ORDINARY_PREFIX)).length,
+  editorFoliageCount: nextStressObjects.filter(object => object.id.startsWith(EDITOR_FOLIAGE_PREFIX)).length,
+  editorComplexCount: nextStressObjects.filter(object => object.id.startsWith(EDITOR_COMPLEX_PREFIX)).length,
   compiledStressCasterCount: compiledStressObjects.length,
-  shadowQuality: document.scene.shadowMapExperiment?.quality ?? null,
-  compiledShadowResolution: compiledPlan?.generator?.resolution ?? null,
+  stressProfile: args.stressProfile,
+  shadowQuality: document.scene.shadowMapExperiment?.qualityProfile ?? null,
+  compiledShadowResolution: compiledPlan?.generator?.maps?.compositeResolution ?? null,
   compiledShadowFilter: compiledPlan?.generator?.filter ?? null,
   authoringRevision: document.meta?.authoringSource?.revision ?? null,
 }));
@@ -176,18 +241,65 @@ function parseArgs(values) {
   const staticCount = readCount(values, '--static', remove ? 0 : null);
   const dynamicCount = readCount(values, '--dynamic', remove ? 0 : null);
   const skinnedCount = readCount(values, '--skinned', remove ? 0 : null);
+  const ordinaryCount = readCount(values, '--ordinary', 0);
+  const foliageCount = readCount(values, '--foliage', 0);
+  const complexCount = readCount(values, '--complex', 0);
   const shadowQuality = readShadowQuality(values);
-  if (!remove && staticCount === 0 && dynamicCount === 0 && skinnedCount === 0) {
-    throw new Error('Provide --static=<count>, --dynamic=<count>, and/or --skinned=<count>, or use --remove.');
+  const stressProfile = readStressProfile(values);
+  if (!remove && staticCount === 0 && dynamicCount === 0 && skinnedCount === 0
+    && ordinaryCount === 0 && foliageCount === 0 && complexCount === 0) {
+    throw new Error('Provide at least one stress object count, or use --remove.');
   }
-  return { remove, dryRun, staticCount, dynamicCount, skinnedCount, shadowQuality };
+  return {
+    remove,
+    dryRun,
+    staticCount,
+    dynamicCount,
+    skinnedCount,
+    ordinaryCount,
+    foliageCount,
+    complexCount,
+    shadowQuality,
+    stressProfile,
+  };
+}
+
+function readStressProfile(values) {
+  const value = values.find(entry => entry.startsWith('--stress-profile='))?.slice('--stress-profile='.length);
+  if (value === undefined) return null;
+  if (!['disabled', 'hard-512', 'balanced-512', 'high-1024'].includes(value)) {
+    throw new Error('--stress-profile must be disabled, hard-512, balanced-512, or high-1024.');
+  }
+  return value;
+}
+
+function createTemporaryStressProfile(config, profile) {
+  const next = structuredClone(config);
+  if (profile === 'disabled') {
+    next.enabled = false;
+    return { config: next, qualityProfileId: next.defaultQualityProfile };
+  }
+  const baseProfileId = profile === 'high-1024' ? 'high' : 'balanced';
+  const base = next.qualityProfiles[baseProfileId];
+  if (!base) throw new Error(`Missing base Shadow Map quality profile: ${baseProfileId}`);
+  const qualityProfileId = `stress-${profile}`;
+  next.qualityProfiles[qualityProfileId] = {
+    ...structuredClone(base),
+    maps: {
+      staticResolution: profile === 'high-1024' ? 1024 : 512,
+      dynamicResolution: profile === 'high-1024' ? 1024 : 512,
+      compositeResolution: profile === 'high-1024' ? 1024 : 512,
+    },
+    receiverFilter: profile === 'hard-512' ? 'hard' : 'low-pcf',
+  };
+  return { config: next, qualityProfileId };
 }
 
 function readShadowQuality(values) {
   const value = values.find(entry => entry.startsWith('--shadow-quality='))?.slice('--shadow-quality='.length);
   if (value === undefined) return null;
-  if (value !== 'performance' && value !== 'balanced' && value !== 'quality') {
-    throw new Error('--shadow-quality must be performance, balanced, or quality.');
+  if (!['balanced', 'high'].includes(value)) {
+    throw new Error('--shadow-quality must be balanced or high.');
   }
   return value;
 }
@@ -226,7 +338,76 @@ function isStressObjectId(value) {
       value.startsWith(EDITOR_STATIC_PREFIX)
       || value.startsWith(EDITOR_DYNAMIC_PREFIX)
       || value.startsWith(EDITOR_SKINNED_PREFIX)
+      || value.startsWith(EDITOR_ORDINARY_PREFIX)
+      || value.startsWith(EDITOR_FOLIAGE_PREFIX)
+      || value.startsWith(EDITOR_COMPLEX_PREFIX)
     );
+}
+
+function addAssetStressObjects(document, options) {
+  if (options.count === 0) return document;
+  if (!options.asset) throw new Error(`Unable to resolve stress asset for ${options.prefix}`);
+  let nextDocument = document;
+  const columns = Math.min(12, Math.max(1, options.count));
+  for (let index = 0; index < options.count; index += 1) {
+    const expectedId = `${options.prefix}${String(index).padStart(4, '0')}`;
+    const position = {
+      x: (index % columns - (columns - 1) * 0.5) * 0.9,
+      y: 0,
+      z: -9 + options.rowOffset + Math.floor(index / columns) * 0.8,
+    };
+    const creation = options.sdk.createEditorSceneAssetPlacementPatch({
+      document: nextDocument,
+      asset: options.asset,
+      hit: { position },
+      name: expectedId,
+    });
+    if (creation.createdId !== expectedId) {
+      throw new Error(`Editor asset stress fixture identity drift: expected ${expectedId}, got ${creation.createdId}`);
+    }
+    nextDocument = options.sdk.applyEditorSceneDocumentMutationPatch({
+      document: nextDocument,
+      patch: creation.patch,
+    });
+    nextDocument = options.sdk.patchEditorSceneGameObjectField(
+      nextDocument,
+      expectedId,
+      'transform.scale',
+      { x: options.scale, y: options.scale, z: options.scale },
+    );
+    nextDocument = options.sdk.patchEditorSceneGameObjectField(
+      nextDocument,
+      expectedId,
+      'metadata.shadowStressSource',
+      'editor-mixed',
+    );
+    nextDocument = options.sdk.patchEditorSceneGameObjectField(
+      nextDocument,
+      expectedId,
+      'shadowMapExperiment.behaviorProfile',
+      options.behaviorProfile,
+    );
+  }
+  return nextDocument;
+}
+
+function normalizeStressAssetCatalogEntry(entry) {
+  if (entry.kind !== 'model') return entry;
+  const materialSlots = entry.metadata?.materialSlots;
+  return {
+    ...entry,
+    materialMode: entry.materialMode ?? 'shared',
+    ...(Array.isArray(materialSlots) ? {
+      metadata: {
+        ...entry.metadata,
+        materialSlots: materialSlots.map(slot => (
+          Number.isInteger(slot.meshIndex) && typeof slot.sourceMeshName !== 'string'
+            ? { ...slot, sourceMeshName: slot.label || slot.ownerNodePath }
+            : slot
+        )),
+      },
+    } : {}),
+  };
 }
 
 function isGroundDecalUiConfig(value) {

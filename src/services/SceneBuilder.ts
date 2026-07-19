@@ -14,7 +14,6 @@ import { Scene } from '@babylonjs/core/scene';
 import type { AnimationGroup } from '@babylonjs/core/Animations/animationGroup';
 import { Vector2, Vector3 } from '@babylonjs/core/Maths/math.vector';
 import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
-import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh';
 import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
 import { PBRMaterial } from '@babylonjs/core/Materials/PBR/pbrMaterial';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
@@ -74,7 +73,10 @@ import {
 } from '@fps-games/editor/playable-sdk';
 import {
   createBabylonShadowMapExperimentSystem,
+  readBabylonRuntimeShadowObjectsRecoveryOwner,
   type BabylonShadowMapExperimentSystem,
+  type BabylonRuntimeShadowObjectsOwner,
+  type BabylonRuntimeShadowObjectsRegistration,
   type ShadowMapExperimentActivityKind,
 } from '@fps-games/editor/playable-runtime/babylon';
 
@@ -105,22 +107,13 @@ export interface SceneShadowCasterActivityController {
   dispose(): void;
 }
 
-export interface SceneRuntimeGeneratedShadowCaster {
-  entityId: string;
-  renderableId: string;
-  mesh: AbstractMesh;
-  behaviorProfileId: string;
-  updateClass: 'static' | 'dynamic' | 'skinned';
-  receive?: boolean;
-}
+export type SceneRuntimeShadowObjectsRegistration = BabylonRuntimeShadowObjectsRegistration;
+export type SceneRuntimeShadowObjectsOwner = BabylonRuntimeShadowObjectsOwner;
 
-export interface SceneRuntimeGeneratedShadowCasterRegistration {
-  dispose(): void;
-}
-
-export interface SceneRuntimeGeneratedShadowCasterRegistrationFailure extends Error {
-  registration?: SceneRuntimeGeneratedShadowCasterRegistration;
-  rollbackError?: unknown;
+export function readSceneRuntimeShadowObjectsRecoveryOwner(
+  error: unknown,
+): SceneRuntimeShadowObjectsOwner | null {
+  return readBabylonRuntimeShadowObjectsRecoveryOwner(error);
 }
 
 type SceneBuilderMaterialSlotSourceDescriptor = {
@@ -332,102 +325,11 @@ export class SceneBuilder {
     return system.registerCasterActivitySource(input);
   }
 
-  registerRuntimeGeneratedShadowCasters(
-    inputs: readonly SceneRuntimeGeneratedShadowCaster[],
-  ): SceneRuntimeGeneratedShadowCasterRegistration | null {
+  registerRuntimeShadowObjects(
+    input: SceneRuntimeShadowObjectsRegistration,
+  ): SceneRuntimeShadowObjectsOwner | null {
     const system = this.shadowMapExperimentSystem;
-    const previousPlan = system?.getPlan() ?? null;
-    if (!system || !previousPlan?.enabled) return null;
-    if (inputs.length === 0) return { dispose() {} };
-
-    const entityIds = new Set<string>();
-    const renderableIds = new Set<string>();
-    const existingEntityIds = new Set(previousPlan.objects.map(object => object.entityId));
-    const existingRenderableIds = new Set(previousPlan.objects.flatMap(object => object.renderableIds));
-    for (const input of inputs) {
-      if (!input.entityId.trim() || input.entityId !== input.entityId.trim()) {
-        throw new Error('shadowMapExperiment.runtimeEntityIdInvalid');
-      }
-      if (!input.renderableId.trim() || input.renderableId !== input.renderableId.trim()) {
-        throw new Error('shadowMapExperiment.runtimeRenderableIdInvalid');
-      }
-      if (!input.behaviorProfileId.trim() || input.behaviorProfileId !== input.behaviorProfileId.trim()) {
-        throw new Error('shadowMapExperiment.runtimeBehaviorProfileIdInvalid');
-      }
-      if (input.mesh.getScene() !== this.scene) {
-        throw new Error(`shadowMapExperiment.runtimeMeshSceneMismatch:${input.renderableId}`);
-      }
-      if (input.mesh.id !== input.renderableId && input.mesh.name !== input.renderableId) {
-        throw new Error(`shadowMapExperiment.runtimeMeshIdentityMismatch:${input.renderableId}`);
-      }
-      if (entityIds.has(input.entityId) || existingEntityIds.has(input.entityId)) {
-        throw new Error(`shadowMapExperiment.runtimeEntityConflict:${input.entityId}`);
-      }
-      if (renderableIds.has(input.renderableId) || existingRenderableIds.has(input.renderableId)) {
-        throw new Error(`shadowMapExperiment.runtimeRenderableConflict:${input.renderableId}`);
-      }
-      entityIds.add(input.entityId);
-      renderableIds.add(input.renderableId);
-    }
-
-    const nextPlan = {
-      ...previousPlan,
-      revision: previousPlan.revision + 1,
-      objects: [
-        ...previousPlan.objects,
-        ...inputs.map(input => ({
-          entityId: input.entityId,
-          renderableIds: [input.renderableId],
-          behaviorProfileId: input.behaviorProfileId,
-          cast: true,
-          receive: input.receive !== false,
-          updateClass: input.updateClass,
-        })),
-      ].sort((left, right) => left.entityId.localeCompare(right.entityId)),
-    };
-
-    system.setPlan(nextPlan);
-    let disposed = false;
-    const registration: SceneRuntimeGeneratedShadowCasterRegistration = {
-      dispose: () => {
-        if (disposed) return;
-        const activeSystem = this.shadowMapExperimentSystem;
-        const activePlan = activeSystem?.getPlan() ?? null;
-        if (!activeSystem || !activePlan) {
-          disposed = true;
-          return;
-        }
-        const objects = activePlan.objects.filter(object => !entityIds.has(object.entityId));
-        if (objects.length === activePlan.objects.length) {
-          disposed = true;
-          return;
-        }
-        activeSystem.setPlan({
-          ...activePlan,
-          revision: activePlan.revision + 1,
-          objects,
-        });
-        disposed = true;
-      },
-    };
-    const attachedRenderableIds = new Set(
-      system.getEvidence().registry?.records
-        .filter(record => record.renderableReady)
-        .map(record => record.renderableId) ?? [],
-    );
-    const missingRenderableId = inputs.find(input => !attachedRenderableIds.has(input.renderableId))?.renderableId;
-    if (missingRenderableId) {
-      try {
-        registration.dispose();
-      } catch (rollbackError) {
-        throw Object.assign(
-          new Error(`shadowMapExperiment.runtimeMeshRegistrationFailed:${missingRenderableId}`),
-          { rollbackError, registration },
-        );
-      }
-      throw new Error(`shadowMapExperiment.runtimeMeshRegistrationFailed:${missingRenderableId}`);
-    }
-    return registration;
+    return system?.registerRuntimeShadowObjects(input) ?? null;
   }
 
   getSelectedHemisphericLightState(): SceneRuntimeLightState<SceneHemisphericLightConfig> {

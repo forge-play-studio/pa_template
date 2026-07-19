@@ -1,22 +1,29 @@
 import { Color3 } from '@babylonjs/core/Maths/math.color.js';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial.js';
 import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder.js';
+import { VertexBuffer } from '@babylonjs/core/Buffers/buffer.js';
+import { MorphTarget } from '@babylonjs/core/Morph/morphTarget.js';
+import { MorphTargetManager } from '@babylonjs/core/Morph/morphTargetManager.js';
 import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh';
 import type { AnimationGroup } from '@babylonjs/core/Animations/animationGroup';
 import type { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import type { Observer } from '@babylonjs/core/Misc/observable';
 import type { Scene } from '@babylonjs/core/scene';
+import { EngineInstrumentation } from '@babylonjs/core/Instrumentation/engineInstrumentation.js';
+import { SceneInstrumentation } from '@babylonjs/core/Instrumentation/sceneInstrumentation.js';
 import type { Game } from '../core/Game';
 import type {
-  SceneRuntimeGeneratedShadowCaster,
-  SceneRuntimeGeneratedShadowCasterRegistration,
-  SceneRuntimeGeneratedShadowCasterRegistrationFailure,
+  SceneRuntimeShadowObjectsOwner,
+  SceneRuntimeShadowObjectsRegistration,
   SceneShadowCasterActivityController,
 } from '../services/SceneBuilder';
 
 const EDITOR_STATIC_PREFIX = 'shadow_stress_editor_static_';
 const EDITOR_DYNAMIC_PREFIX = 'shadow_stress_editor_dynamic_';
 const EDITOR_SKINNED_PREFIX = 'shadow_stress_editor_skinned_';
+const EDITOR_ORDINARY_PREFIX = 'shadow_stress_editor_ordinary_';
+const EDITOR_FOLIAGE_PREFIX = 'shadow_stress_editor_foliage_';
+const EDITOR_COMPLEX_PREFIX = 'shadow_stress_editor_complex_';
 const CODE_STATIC_PREFIX = 'shadow_stress_code_static_';
 const CODE_DYNAMIC_PREFIX = 'shadow_stress_code_dynamic_';
 const STRESS_PROBE_ID = 'shadow-map-stress-probe';
@@ -24,6 +31,14 @@ const MAX_CASTER_COUNT_PER_CLASS = 2_000;
 const GRID_SPACING = 0.55;
 const BOX_SIZE = 0.34;
 const MOVE_AMPLITUDE = 0.12;
+
+function readRuntimeShadowObjectsRecoveryOwner(error: unknown): SceneRuntimeShadowObjectsOwner | null {
+  if (!error || (typeof error !== 'object' && typeof error !== 'function')) return null;
+  const owner = (error as { runtimeShadowObjectsRecoveryOwner?: unknown }).runtimeShadowObjectsRecoveryOwner;
+  return owner && typeof owner === 'object' && typeof (owner as SceneRuntimeShadowObjectsOwner).dispose === 'function'
+    ? owner as SceneRuntimeShadowObjectsOwner
+    : null;
+}
 
 interface StressNode {
   node: TransformNode;
@@ -35,6 +50,17 @@ interface RuntimeStressNode extends StressNode {
   mesh: AbstractMesh;
   entityId: string;
   dynamic: boolean;
+  activityKind?: 'transform' | 'morph' | 'physics';
+  morphTarget?: MorphTarget;
+}
+
+export interface ShadowMapMixedStressCounts {
+  primitiveStatic: number;
+  primitiveDynamic: number;
+  instanceStatic: number;
+  instanceDynamic: number;
+  morph: number;
+  physics: number;
 }
 
 interface SkinnedStressEntry {
@@ -47,6 +73,9 @@ export interface ShadowMapStressSnapshot {
   editorStaticCount: number;
   editorDynamicCount: number;
   editorSkinnedCount: number;
+  editorOrdinaryCount: number;
+  editorFoliageCount: number;
+  editorComplexCount: number;
   skinnedAnimationGroupCount: number;
   playingSkinnedAnimationCount: number;
   codeStaticCount: number;
@@ -75,9 +104,20 @@ export interface ShadowMapStressPerformanceSample {
     dynamic: number;
     composite: number;
   };
+  layerRenderDelta: {
+    static: number;
+    dynamic: number;
+    composite: number;
+  };
   coverageRevisionDelta: number;
   cullingRebuildDelta: number;
   heapUsedBytes: number | null;
+  instrumentation: {
+    gpuFrameMs: number | null;
+    renderTargetsMs: number | null;
+    activeMeshesMs: number | null;
+    drawCallsPerFrame: number | null;
+  };
   snapshot: ShadowMapStressSnapshot;
 }
 
@@ -87,6 +127,11 @@ export interface ShadowMapStressController {
     dynamicCount: number;
     offsetX?: number;
     offsetZ?: number;
+  }): ShadowMapStressSnapshot;
+  configureMixed(input: ShadowMapMixedStressCounts & {
+    offsetX?: number;
+    offsetZ?: number;
+    registerShadows?: boolean;
   }): ShadowMapStressSnapshot;
   refreshEditorGenerated(): ShadowMapStressSnapshot;
   startDynamic(): ShadowMapStressSnapshot;
@@ -163,7 +208,7 @@ function mountShadowMapStressProbe(controller: ShadowMapStressController): HTMLD
 
 type StressProbeRequest = {
   id: string;
-  action: 'snapshot' | 'configureCodeGenerated' | 'refreshEditorGenerated'
+  action: 'snapshot' | 'configureCodeGenerated' | 'configureMixed' | 'refreshEditorGenerated'
     | 'startDynamic' | 'stopDynamic' | 'clearCodeGenerated'
     | 'pauseGameplay' | 'resumeGameplay' | 'sampleFrames' | 'stopDynamicAndSample';
   input?: Record<string, unknown>;
@@ -192,6 +237,17 @@ async function executeStressProbeRequest(
       offsetX: Number(request.input?.offsetX ?? 0),
       offsetZ: Number(request.input?.offsetZ ?? 0),
     });
+    case 'configureMixed': return controller.configureMixed({
+      primitiveStatic: Number(request.input?.primitiveStatic),
+      primitiveDynamic: Number(request.input?.primitiveDynamic),
+      instanceStatic: Number(request.input?.instanceStatic),
+      instanceDynamic: Number(request.input?.instanceDynamic),
+      morph: Number(request.input?.morph),
+      physics: Number(request.input?.physics),
+      offsetX: Number(request.input?.offsetX ?? 0),
+      offsetZ: Number(request.input?.offsetZ ?? 0),
+      registerShadows: request.input?.registerShadows !== false,
+    });
     case 'refreshEditorGenerated': return controller.refreshEditorGenerated();
     case 'startDynamic': return controller.startDynamic();
     case 'stopDynamic': return controller.stopDynamic();
@@ -211,13 +267,26 @@ export function createShadowMapStressController(game: Game): ShadowMapStressCont
   const sceneBuilder = game.getSceneBuilder();
   if (!sceneBuilder) throw new Error('shadowMapStress.sceneBuilderUnavailable');
   const modelAnimationService = game.getModelAnimationService();
+  const engine = scene.getEngine();
+  const engineInstrumentation = new EngineInstrumentation(engine);
+  const sceneInstrumentation = new SceneInstrumentation(scene);
+  let gpuTimingAvailable = false;
+  try {
+    engineInstrumentation.captureGPUFrameTime = true;
+    gpuTimingAvailable = engineInstrumentation.captureGPUFrameTime;
+  } catch {
+    gpuTimingAvailable = false;
+  }
+  sceneInstrumentation.captureRenderTargetsRenderTime = true;
+  sceneInstrumentation.captureActiveMeshesEvaluationTime = true;
 
   const codeNodes: RuntimeStressNode[] = [];
+  const codeSupportMeshes: AbstractMesh[] = [];
   const codeActivities = new Map<string, SceneShadowCasterActivityController>();
   const editorNodes = new Map<string, StressNode>();
   const editorActivities = new Map<string, SceneShadowCasterActivityController>();
   const editorSkinnedEntries = new Map<string, SkinnedStressEntry>();
-  let codeRegistration: SceneRuntimeGeneratedShadowCasterRegistration | null = null;
+  const codeRegistrations: SceneRuntimeShadowObjectsOwner[] = [];
   let codeMaterial: StandardMaterial | null = null;
   let dynamicActive = false;
   let gameplayPausedByHarness = false;
@@ -227,7 +296,15 @@ export function createShadowMapStressController(game: Game): ShadowMapStressCont
   const movementObserver = scene.onBeforeRenderObservable.add(() => {
     if (!dynamicActive || disposed) return;
     movementElapsed += Math.min(0.1, Math.max(0, scene.getEngine().getDeltaTime() / 1000));
-    updateMovingNodes(codeNodes.filter(entry => entry.dynamic), movementElapsed);
+    updateMovingNodes(
+      codeNodes.filter(entry => entry.activityKind === 'transform' || entry.activityKind === 'physics'),
+      movementElapsed,
+    );
+    for (const entry of codeNodes) {
+      if (entry.activityKind === 'morph' && entry.morphTarget) {
+        entry.morphTarget.influence = 0.5 + Math.sin(movementElapsed * 2.1 + entry.phase) * 0.45;
+      }
+    }
     updateMovingNodes([...editorNodes.values()], movementElapsed);
   });
 
@@ -263,16 +340,19 @@ export function createShadowMapStressController(game: Game): ShadowMapStressCont
   };
 
   const clearCodeGenerated = (): void => {
-    const errors = disposeActivities(codeActivities);
-    if (codeRegistration) {
+    const errors: unknown[] = [];
+    try { setActivitiesActive(codeActivities, false); } catch (error) { errors.push(error); }
+    for (let index = codeRegistrations.length - 1; index >= 0; index -= 1) {
+      const registration = codeRegistrations[index]!;
       try {
-        codeRegistration.dispose();
-        codeRegistration = null;
+        registration.dispose();
+        codeRegistrations.splice(index, 1);
       } catch (error) {
         errors.push(error);
       }
     }
-    if (codeRegistration || codeActivities.size > 0) {
+    if (codeRegistrations.length === 0) codeActivities.clear();
+    if (codeRegistrations.length > 0 || codeActivities.size > 0) {
       throw new AggregateError(errors, 'shadowMapStress.codeCleanupFailed');
     }
     for (let index = codeNodes.length - 1; index >= 0; index -= 1) {
@@ -284,7 +364,15 @@ export function createShadowMapStressController(game: Game): ShadowMapStressCont
         errors.push(error);
       }
     }
-    if (codeNodes.length === 0 && codeMaterial) {
+    for (let index = codeSupportMeshes.length - 1; index >= 0; index -= 1) {
+      try {
+        codeSupportMeshes[index]!.dispose();
+        codeSupportMeshes.splice(index, 1);
+      } catch (error) {
+        errors.push(error);
+      }
+    }
+    if (codeNodes.length === 0 && codeSupportMeshes.length === 0 && codeMaterial) {
       try {
         codeMaterial.dispose();
         codeMaterial = null;
@@ -400,7 +488,7 @@ export function createShadowMapStressController(game: Game): ShadowMapStressCont
       codeMaterial.specularColor = new Color3(0.04, 0.04, 0.04);
       const total = staticCount + dynamicCount;
       const columns = Math.ceil(Math.sqrt(total));
-      const inputs: SceneRuntimeGeneratedShadowCaster[] = [];
+      const objects: SceneRuntimeShadowObjectsRegistration['objects'][number][] = [];
       try {
         for (let index = 0; index < total; index += 1) {
           const dynamic = index >= staticCount;
@@ -424,31 +512,162 @@ export function createShadowMapStressController(game: Game): ShadowMapStressCont
             homeY: mesh.position.y,
             phase: index * 0.37,
           });
-          inputs.push({
+          objects.push({
             entityId,
-            renderableId: entityId,
-            mesh,
             behaviorProfileId: dynamic ? 'dynamic-caster' : 'static-caster',
-            updateClass: dynamic ? 'dynamic' as const : 'static' as const,
-            receive: true,
+            renderables: [{ renderableId: entityId, mesh }],
+            ...(dynamic ? {
+              activities: [{
+                kind: 'transform' as const,
+                sourceId: 'shadow-stress-code-transform',
+                initiallyActive: dynamicActive,
+              }],
+            } : {}),
           });
         }
-        codeRegistration = sceneBuilder.registerRuntimeGeneratedShadowCasters(inputs);
+        const codeRegistration = sceneBuilder.registerRuntimeShadowObjects({ objects });
         if (!codeRegistration) throw new Error('shadowMapStress.experimentUnavailable');
+        codeRegistrations.push(codeRegistration);
         for (const entry of codeNodes) {
           if (!entry.dynamic) continue;
-          const activity = sceneBuilder.registerShadowCasterActivitySource({
-            entityId: entry.entityId,
-            kind: 'transform',
-            sourceId: 'shadow-stress-code-transform',
-          });
+          const activity = codeRegistration.getActivityController(
+            entry.entityId,
+            'shadow-stress-code-transform',
+          );
           if (!activity) throw new Error(`shadowMapStress.activityUnavailable:${entry.entityId}`);
           codeActivities.set(entry.entityId, activity);
         }
-        if (dynamicActive) setActivitiesActive(codeActivities, true);
       } catch (error) {
-        const recoveryRegistration = readRuntimeGeneratedShadowCasterRecoveryRegistration(error);
-        if (recoveryRegistration) codeRegistration = recoveryRegistration;
+        const recoveryRegistration = readRuntimeShadowObjectsRecoveryOwner(error);
+        if (recoveryRegistration && !codeRegistrations.includes(recoveryRegistration)) {
+          codeRegistrations.push(recoveryRegistration);
+        }
+        try { clearCodeGenerated(); } catch (cleanupError) {
+          if (error && typeof error === 'object') Object.assign(error, { cleanupError });
+        }
+        throw error;
+      }
+      return controller.getSnapshot();
+    },
+    configureMixed(input) {
+      assertUsable();
+      const counts: ShadowMapMixedStressCounts = {
+        primitiveStatic: normalizeCount(input.primitiveStatic, 'primitiveStatic'),
+        primitiveDynamic: normalizeCount(input.primitiveDynamic, 'primitiveDynamic'),
+        instanceStatic: normalizeCount(input.instanceStatic, 'instanceStatic'),
+        instanceDynamic: normalizeCount(input.instanceDynamic, 'instanceDynamic'),
+        morph: normalizeCount(input.morph, 'morph'),
+        physics: normalizeCount(input.physics, 'physics'),
+      };
+      const offsetX = normalizeOffset(input.offsetX ?? 0, 'offsetX');
+      const offsetZ = normalizeOffset(input.offsetZ ?? 0, 'offsetZ');
+      const registerShadows = input.registerShadows !== false;
+      clearCodeGenerated();
+      const total = Object.values(counts).reduce((sum, value) => sum + value, 0);
+      if (total === 0) return controller.getSnapshot();
+
+      codeMaterial = new StandardMaterial('shadow_stress_code_material', scene);
+      codeMaterial.diffuseColor = new Color3(0.24, 0.62, 0.88);
+      codeMaterial.specularColor = new Color3(0.04, 0.04, 0.04);
+      const columns = Math.ceil(Math.sqrt(total));
+      const objects: SceneRuntimeShadowObjectsRegistration['objects'][number][] = [];
+      let instanceSource: ReturnType<typeof MeshBuilder.CreateBox> | null = null;
+      if (counts.instanceStatic + counts.instanceDynamic > 0) {
+        instanceSource = MeshBuilder.CreateBox('shadow_stress_instance_source', { size: BOX_SIZE }, scene);
+        instanceSource.material = codeMaterial;
+        instanceSource.position.set(10_000, 10_000, 10_000);
+        codeSupportMeshes.push(instanceSource);
+      }
+      let globalIndex = 0;
+      const addEntries = (
+        category: string,
+        count: number,
+        dynamic: boolean,
+        activityKind?: 'transform' | 'morph' | 'physics',
+      ): void => {
+        for (let index = 0; index < count; index += 1) {
+          const entityId = `shadow_stress_code_${category}_${String(index).padStart(4, '0')}`;
+          const mesh = category.startsWith('instance')
+            ? instanceSource!.createInstance(entityId)
+            : category === 'morph'
+              ? MeshBuilder.CreateSphere(entityId, { diameter: BOX_SIZE, segments: 6 }, scene)
+              : MeshBuilder.CreateBox(entityId, { size: BOX_SIZE }, scene);
+          mesh.id = entityId;
+          mesh.name = entityId;
+          if (!category.startsWith('instance')) mesh.material = codeMaterial;
+          const position = createGridPosition(globalIndex, total, columns, 0.22);
+          mesh.position.set(position.x + offsetX, position.y, position.z + offsetZ);
+          let morphTarget: MorphTarget | undefined;
+          if (category === 'morph') {
+            const positions = mesh.getVerticesData(VertexBuffer.PositionKind);
+            if (!positions) throw new Error(`shadowMapStress.morphPositionsUnavailable:${entityId}`);
+            const targetPositions = [...positions];
+            for (let vertex = 1; vertex < targetPositions.length; vertex += 3) {
+              targetPositions[vertex] = targetPositions[vertex]! * 1.6;
+            }
+            const manager = new MorphTargetManager(scene, entityId);
+            morphTarget = new MorphTarget(`${entityId}-target`, 0, scene, manager);
+            morphTarget.setPositions(targetPositions);
+            manager.addTarget(morphTarget);
+            mesh.morphTargetManager = manager;
+          }
+          mesh.metadata = {
+            ...(mesh.metadata && typeof mesh.metadata === 'object' ? mesh.metadata : {}),
+            shadowStress: { source: 'code-mixed', category, dynamic },
+          };
+          codeNodes.push({
+            node: mesh,
+            mesh,
+            entityId,
+            dynamic,
+            ...(activityKind ? { activityKind } : {}),
+            ...(morphTarget ? { morphTarget } : {}),
+            homeY: mesh.position.y,
+            phase: globalIndex * 0.37,
+          });
+          objects.push({
+            entityId,
+            behaviorProfileId: category === 'morph'
+              ? 'skinned-dynamic'
+              : dynamic ? 'dynamic-caster' : 'static-caster',
+            renderables: [{ renderableId: entityId, mesh }],
+            ...(activityKind ? {
+              activities: [{
+                kind: activityKind,
+                sourceId: `shadow-stress-code-${activityKind}`,
+                initiallyActive: dynamicActive,
+              }],
+            } : {}),
+          });
+          globalIndex += 1;
+        }
+      };
+
+      try {
+        addEntries('primitive_static', counts.primitiveStatic, false);
+        addEntries('primitive_dynamic', counts.primitiveDynamic, true, 'transform');
+        addEntries('instance_static', counts.instanceStatic, false);
+        addEntries('instance_dynamic', counts.instanceDynamic, true, 'transform');
+        addEntries('morph', counts.morph, true, 'morph');
+        addEntries('physics', counts.physics, true, 'physics');
+        if (!registerShadows) return controller.getSnapshot();
+        const registration = sceneBuilder.registerRuntimeShadowObjects({ objects });
+        if (!registration) throw new Error('shadowMapStress.experimentUnavailable');
+        codeRegistrations.push(registration);
+        for (const entry of codeNodes) {
+          if (!entry.activityKind) continue;
+          const activity = registration.getActivityController(
+            entry.entityId,
+            `shadow-stress-code-${entry.activityKind}`,
+          );
+          if (!activity) throw new Error(`shadowMapStress.activityUnavailable:${entry.entityId}`);
+          codeActivities.set(entry.entityId, activity);
+        }
+      } catch (error) {
+        const recoveryRegistration = readRuntimeShadowObjectsRecoveryOwner(error);
+        if (recoveryRegistration && !codeRegistrations.includes(recoveryRegistration)) {
+          codeRegistrations.push(recoveryRegistration);
+        }
         try { clearCodeGenerated(); } catch (cleanupError) {
           if (error && typeof error === 'object') Object.assign(error, { cleanupError });
         }
@@ -511,8 +730,10 @@ export function createShadowMapStressController(game: Game): ShadowMapStressCont
       assertUsable();
       const requestedFrames = Math.max(2, Math.min(600, Math.floor(frameCount)));
       const beforeRefresh = readShadowMapRefreshCounters(game.getShadowMapExperimentEvidence());
+      const instrumentationBefore = readInstrumentationTotals(engineInstrumentation, sceneInstrumentation);
       const frameTimes = await collectFrameTimes(scene, requestedFrames);
       const afterRefresh = readShadowMapRefreshCounters(game.getShadowMapExperimentEvidence());
+      const instrumentationAfter = readInstrumentationTotals(engineInstrumentation, sceneInstrumentation);
       const sorted = [...frameTimes].sort((left, right) => left - right);
       const durationMs = frameTimes.reduce((sum, value) => sum + value, 0);
       const averageFrameMs = durationMs / Math.max(1, frameTimes.length);
@@ -534,9 +755,19 @@ export function createShadowMapStressController(game: Game): ShadowMapStressCont
           dynamic: afterRefresh.dynamic - beforeRefresh.dynamic,
           composite: afterRefresh.composite - beforeRefresh.composite,
         },
+        layerRenderDelta: {
+          static: afterRefresh.staticRender - beforeRefresh.staticRender,
+          dynamic: afterRefresh.dynamicRender - beforeRefresh.dynamicRender,
+          composite: afterRefresh.compositeRender - beforeRefresh.compositeRender,
+        },
         coverageRevisionDelta: afterRefresh.coverageRevision - beforeRefresh.coverageRevision,
         cullingRebuildDelta: afterRefresh.cullingRebuild - beforeRefresh.cullingRebuild,
         heapUsedBytes: readHeapUsedBytes(),
+        instrumentation: createInstrumentationSample(
+          instrumentationBefore,
+          instrumentationAfter,
+          gpuTimingAvailable,
+        ),
         snapshot: controller.getSnapshot(),
       };
     },
@@ -545,15 +776,24 @@ export function createShadowMapStressController(game: Game): ShadowMapStressCont
       let editorStaticCount = 0;
       let editorDynamicCount = 0;
       let editorSkinnedCount = 0;
+      let editorOrdinaryCount = 0;
+      let editorFoliageCount = 0;
+      let editorComplexCount = 0;
       for (const entityId of sceneBuilder.sceneNodeRuntimes.keys()) {
         if (entityId.startsWith(EDITOR_STATIC_PREFIX)) editorStaticCount += 1;
         else if (entityId.startsWith(EDITOR_DYNAMIC_PREFIX)) editorDynamicCount += 1;
         else if (entityId.startsWith(EDITOR_SKINNED_PREFIX)) editorSkinnedCount += 1;
+        else if (entityId.startsWith(EDITOR_ORDINARY_PREFIX)) editorOrdinaryCount += 1;
+        else if (entityId.startsWith(EDITOR_FOLIAGE_PREFIX)) editorFoliageCount += 1;
+        else if (entityId.startsWith(EDITOR_COMPLEX_PREFIX)) editorComplexCount += 1;
       }
       return {
         editorStaticCount,
         editorDynamicCount,
         editorSkinnedCount,
+        editorOrdinaryCount,
+        editorFoliageCount,
+        editorComplexCount,
         skinnedAnimationGroupCount: [...editorSkinnedEntries.values()]
           .reduce((count, entry) => count + entry.animations.length, 0),
         playingSkinnedAnimationCount: [...editorSkinnedEntries.values()]
@@ -578,6 +818,8 @@ export function createShadowMapStressController(game: Game): ShadowMapStressCont
       editorNodes.clear();
       try { clearCodeGenerated(); } catch (error) { errors.push(error); }
       try { scene.onBeforeRenderObservable.remove(movementObserver); } catch (error) { errors.push(error); }
+      try { engineInstrumentation.dispose(); } catch (error) { errors.push(error); }
+      try { sceneInstrumentation.dispose(); } catch (error) { errors.push(error); }
       if (gameplayPausedByHarness) {
         try { game.resume(); } catch (error) { errors.push(error); }
         gameplayPausedByHarness = false;
@@ -607,20 +849,94 @@ export function createShadowMapStressController(game: Game): ShadowMapStressCont
   return controller;
 }
 
+interface StressInstrumentationTotals {
+  gpuTotal: number;
+  gpuCount: number;
+  renderTargetsTotal: number;
+  renderTargetsCount: number;
+  activeMeshesTotal: number;
+  activeMeshesCount: number;
+  drawCallsTotal: number;
+  drawCallsCount: number;
+}
+
+function readInstrumentationTotals(
+  engineInstrumentation: EngineInstrumentation,
+  sceneInstrumentation: SceneInstrumentation,
+): StressInstrumentationTotals {
+  const gpu = readPerformanceCounter(() => engineInstrumentation.gpuFrameTimeCounter);
+  const renderTargets = readPerformanceCounter(() => sceneInstrumentation.renderTargetsRenderTimeCounter);
+  const activeMeshes = readPerformanceCounter(() => sceneInstrumentation.activeMeshesEvaluationTimeCounter);
+  const drawCalls = readPerformanceCounter(() => sceneInstrumentation.drawCallsCounter);
+  return {
+    gpuTotal: gpu.total,
+    gpuCount: gpu.count,
+    renderTargetsTotal: renderTargets.total,
+    renderTargetsCount: renderTargets.count,
+    activeMeshesTotal: activeMeshes.total,
+    activeMeshesCount: activeMeshes.count,
+    drawCallsTotal: drawCalls.total,
+    drawCallsCount: drawCalls.count,
+  };
+}
+
+function readPerformanceCounter(read: () => { total: number; count: number }): { total: number; count: number } {
+  try {
+    const counter = read();
+    return { total: counter.total, count: counter.count };
+  } catch {
+    return { total: 0, count: 0 };
+  }
+}
+
+function createInstrumentationSample(
+  before: StressInstrumentationTotals,
+  after: StressInstrumentationTotals,
+  gpuTimingAvailable: boolean,
+): ShadowMapStressPerformanceSample['instrumentation'] {
+  return {
+    gpuFrameMs: gpuTimingAvailable
+      ? averageCounterDelta(before.gpuTotal, before.gpuCount, after.gpuTotal, after.gpuCount, 1e-6)
+      : null,
+    renderTargetsMs: averageCounterDelta(
+      before.renderTargetsTotal,
+      before.renderTargetsCount,
+      after.renderTargetsTotal,
+      after.renderTargetsCount,
+    ),
+    activeMeshesMs: averageCounterDelta(
+      before.activeMeshesTotal,
+      before.activeMeshesCount,
+      after.activeMeshesTotal,
+      after.activeMeshesCount,
+    ),
+    drawCallsPerFrame: averageCounterDelta(
+      before.drawCallsTotal,
+      before.drawCallsCount,
+      after.drawCallsTotal,
+      after.drawCallsCount,
+    ),
+  };
+}
+
+function averageCounterDelta(
+  beforeTotal: number,
+  beforeCount: number,
+  afterTotal: number,
+  afterCount: number,
+  scale = 1,
+): number | null {
+  const count = afterCount - beforeCount;
+  const total = afterTotal - beforeTotal;
+  return count > 0 && Number.isFinite(total) ? total / count * scale : null;
+}
+
 function readShadowMapStressControllerRecovery(error: unknown): ShadowMapStressController | null {
   if (!error || typeof error !== 'object') return null;
   const controller = (error as { controller?: unknown }).controller;
   return controller && typeof controller === 'object' && typeof (controller as ShadowMapStressController).dispose === 'function'
     ? controller as ShadowMapStressController
     : null;
-}
-
-function readRuntimeGeneratedShadowCasterRecoveryRegistration(
-  error: unknown,
-): SceneRuntimeGeneratedShadowCasterRegistration | null {
-  if (!error || typeof error !== 'object') return null;
-  const registration = (error as SceneRuntimeGeneratedShadowCasterRegistrationFailure).registration;
-  return registration && typeof registration.dispose === 'function' ? registration : null;
 }
 
 function readShadowMapRefreshCounters(
@@ -630,6 +946,9 @@ function readShadowMapRefreshCounters(
   static: number;
   dynamic: number;
   composite: number;
+  staticRender: number;
+  dynamicRender: number;
+  compositeRender: number;
   coverageRevision: number;
   cullingRebuild: number;
 } {
@@ -638,6 +957,9 @@ function readShadowMapRefreshCounters(
     static: evidence?.depth?.static.refreshCount ?? 0,
     dynamic: evidence?.depth?.dynamic.refreshCount ?? 0,
     composite: evidence?.depth?.compositeRefreshCount ?? 0,
+    staticRender: evidence?.depth?.static.renderCount ?? 0,
+    dynamicRender: evidence?.depth?.dynamic.renderCount ?? 0,
+    compositeRender: evidence?.depth?.compositeRenderCount ?? 0,
     coverageRevision: evidence?.culling.coverageRevision ?? 0,
     cullingRebuild: evidence?.culling.rebuildCount ?? 0,
   };

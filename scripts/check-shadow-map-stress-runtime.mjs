@@ -13,6 +13,7 @@ const editorSkinned = new TransformNode('shadow_stress_editor_skinned_0000', sce
 const skinnedAnimation = new AnimationGroup('idle', scene);
 const sources = new Map();
 let registrationDisposeCount = 0;
+let runtimeRegistrationCallCount = 0;
 let registeredRuntimeObjects = [];
 let gameplayPauseCount = 0;
 let gameplayResumeCount = 0;
@@ -41,10 +42,35 @@ const sceneBuilder = {
   getSceneNodeAnimationGroups(entityId) {
     return entityId === editorSkinned.id ? [skinnedAnimation] : [];
   },
-  registerRuntimeGeneratedShadowCasters(inputs) {
-    registeredRuntimeObjects = [...inputs];
+  registerRuntimeShadowObjects(input) {
+    runtimeRegistrationCallCount += 1;
+    registeredRuntimeObjects = [...input.objects];
+    const ownedSourceKeys = [];
+    for (const object of registeredRuntimeObjects) {
+      for (const activity of object.activities ?? []) {
+        const key = `${object.entityId}\0${activity.sourceId}`;
+        ownedSourceKeys.push(key);
+        const source = this.registerShadowCasterActivitySource({
+          entityId: object.entityId,
+          kind: activity.kind,
+          sourceId: activity.sourceId,
+        });
+        source.setActive(activity.initiallyActive === true);
+      }
+    }
     return {
-      dispose() { registrationDisposeCount += 1; },
+      entityIds: registeredRuntimeObjects.map(object => object.entityId),
+      renderableIds: registeredRuntimeObjects.flatMap(object => object.renderables.map(renderable => renderable.renderableId)),
+      getBehaviorProfileId(entityId) {
+        return registeredRuntimeObjects.find(object => object.entityId === entityId)?.behaviorProfileId ?? null;
+      },
+      getActivityController(entityId, sourceId) {
+        return sources.get(`${entityId}\0${sourceId}`) ?? null;
+      },
+      dispose() {
+        registrationDisposeCount += 1;
+        for (const key of ownedSourceKeys) sources.get(key)?.dispose();
+      },
     };
   },
   registerShadowCasterActivitySource(input) {
@@ -103,8 +129,9 @@ assert.equal(configured.skinnedAnimationGroupCount, 1);
 assert.equal(configured.codeStaticCount, 3);
 assert.equal(configured.codeDynamicCount, 2);
 assert.equal(registeredRuntimeObjects.length, 5);
-assert.equal(registeredRuntimeObjects.filter(object => object.updateClass === 'dynamic').length, 2);
-assert.equal(registeredRuntimeObjects[0].mesh.position.x, -0.55);
+assert.equal(registeredRuntimeObjects.filter(object => object.behaviorProfileId === 'dynamic-caster').length, 2);
+assert.equal(registeredRuntimeObjects.some(object => 'updateClass' in object || 'cast' in object || 'receive' in object), false);
+assert.equal(registeredRuntimeObjects[0].renderables[0].mesh.position.x, -0.55);
 
 controller.startDynamic();
 assert.equal(animationPlayCount, 1);
@@ -150,10 +177,62 @@ assert.equal(cleared.codeDynamicCount, 0);
 assert.equal(registrationDisposeCount, 1);
 
 controller.configureCodeGenerated({ staticCount: 1, dynamicCount: 1, offsetX: 200, offsetZ: -100 });
-assert.equal(registeredRuntimeObjects[0].mesh.position.x, 199.725);
-assert.equal(registeredRuntimeObjects[0].mesh.position.z, -100);
+assert.equal(registeredRuntimeObjects[0].renderables[0].mesh.position.x, 199.725);
+assert.equal(registeredRuntimeObjects[0].renderables[0].mesh.position.z, -100);
 controller.clearCodeGenerated();
 assert.equal(registrationDisposeCount, 2);
+
+const mixed = controller.configureMixed({
+  primitiveStatic: 1,
+  primitiveDynamic: 1,
+  instanceStatic: 1,
+  instanceDynamic: 1,
+  morph: 1,
+  physics: 1,
+});
+assert.equal(mixed.codeStaticCount, 2);
+assert.equal(mixed.codeDynamicCount, 4);
+assert.equal(registeredRuntimeObjects.length, 6);
+assert.equal(registeredRuntimeObjects.filter(object => object.behaviorProfileId === 'static-caster').length, 2);
+assert.equal(registeredRuntimeObjects.filter(object => object.behaviorProfileId === 'skinned-dynamic').length, 1);
+assert.deepEqual(
+  registeredRuntimeObjects.flatMap(object => object.activities?.map(activity => activity.kind) ?? []).sort(),
+  ['morph', 'physics', 'transform', 'transform'],
+);
+controller.startDynamic();
+scene.onBeforeRenderObservable.notifyObservers(scene);
+controller.stopDynamic();
+controller.clearCodeGenerated();
+assert.equal(registrationDisposeCount, 3);
+assert.equal(controller.getSnapshot().codeStaticCount, 0);
+assert.equal(controller.getSnapshot().codeDynamicCount, 0);
+
+const disabledBaselineMeshCount = scene.meshes.length;
+const disabledBaselineRegistrationCalls = runtimeRegistrationCallCount;
+const disabledMixed = controller.configureMixed({
+  primitiveStatic: 1,
+  primitiveDynamic: 1,
+  instanceStatic: 1,
+  instanceDynamic: 1,
+  morph: 1,
+  physics: 1,
+  registerShadows: false,
+});
+assert.equal(disabledMixed.codeStaticCount, 2);
+assert.equal(disabledMixed.codeDynamicCount, 4);
+assert.equal(runtimeRegistrationCallCount, disabledBaselineRegistrationCalls);
+controller.startDynamic();
+scene.onBeforeRenderObservable.notifyObservers(scene);
+const disabledSamplePromise = controller.sampleFrames(2);
+scene.onAfterRenderObservable.notifyObservers(scene);
+scene.onAfterRenderObservable.notifyObservers(scene);
+const disabledSample = await disabledSamplePromise;
+assert.deepEqual(disabledSample.layerRefreshDelta, { static: 0, dynamic: 0, composite: 0 });
+assert.deepEqual(disabledSample.layerRenderDelta, { static: 0, dynamic: 0, composite: 0 });
+controller.stopDynamic();
+controller.clearCodeGenerated();
+assert.equal(scene.meshes.length, disabledBaselineMeshCount);
+assert.equal(runtimeRegistrationCallCount, disabledBaselineRegistrationCalls);
 
 controller.refreshEditorGenerated();
 controller.pauseGameplay();
