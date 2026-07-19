@@ -63,13 +63,17 @@ import {
   applyArtistMaterialProfileToRuntimeMaterial as applyPlayableArtistMaterialProfileToRuntimeMaterial,
   applyPlayableBabylonOutlineOverrideToRuntimeNode,
   applyMaterialValueToRuntimeMaterial,
+  collectBabylonMaterialOwnerCandidates,
   createMaterialSlotOwnerPathMatchKey,
+  isMaterialOwnerResolutionPointerVerified,
   normalizeMaterialSlotOwnerPath,
+  resolveMaterialOwner,
   resolveEditorSceneGameObjectRendering,
   resolveEditorSceneArtistMaterialBinding,
   resolveMaterialRuntimeKind,
   resolveMaterialOwnerNode,
-  resolveMaterialSlotOwnerNodes,
+  type BabylonMaterialOwnerTarget,
+  type MaterialOwnerResolution,
 } from '../runtime/integrations/fps-runtime/scene';
 
 const BABYLON_MATERIAL_RUNTIME = { Color3, MaterialPluginBase, Texture };
@@ -109,6 +113,8 @@ type SceneBuilderMaterialSlotSourceDescriptor = {
 type SceneBuilderMaterialSlotTarget = {
   material: any;
 };
+
+type SceneBuilderMaterialOwnerResolution = MaterialOwnerResolution<BabylonMaterialOwnerTarget>;
 
 export class SceneBuilder {
   private scene: Scene;
@@ -1099,11 +1105,11 @@ export class SceneBuilder {
       return;
     }
 
-    for (const node of this.collectMaterialNodes(rootNode)) {
-      const material = node?.material;
-      if (!material || material.name !== materialName) continue;
-      this.applyMaterialPropertiesToRuntimeMaterial(material, properties);
-    }
+    const matches = this.collectMaterialNodes(rootNode).filter((node) => (
+      node?.material?.name === materialName
+    ));
+    if (matches.length !== 1) return;
+    this.applyMaterialPropertiesToRuntimeMaterial(matches[0]!.material, properties);
   }
 
   private applyNodeMaterialEntry(
@@ -1115,11 +1121,14 @@ export class SceneBuilder {
     const properties = materialEntry.properties;
     if (!materialName || !properties) return;
 
+    const materialNameMatches = ownerNodePath
+      ? []
+      : this.collectMaterialNodes(rootNode).filter((node) => node?.material?.name === materialName);
     const ownerNode = ownerNodePath
       ? this.resolveNodeMaterialOwner(rootNode, ownerNodePath)
-      : this.collectMaterialNodes(rootNode).find((node) => node?.material?.name === materialName)
-        ?? this.collectMaterialNodes(rootNode).find((node) => !!node?.material)
-        ?? null;
+      : materialNameMatches.length === 1
+        ? materialNameMatches[0]
+        : null;
     if (!ownerNode?.material) return;
 
     this.applyMaterialPropertiesToRuntimeMaterial(ownerNode.material, properties);
@@ -1237,13 +1246,20 @@ export class SceneBuilder {
   }
 
   private detachOverrideMaterial(node: any, sceneNodeId: string, ownerNodePath: string): void {
+    const clonedMaterial = this.cloneOverrideMaterial(node, sceneNodeId, ownerNodePath);
+    if (clonedMaterial) node.material = clonedMaterial;
+  }
+
+  private cloneOverrideMaterial(node: any, sceneNodeId: string, ownerNodePath: string): any | null {
     const sourceMaterial = node?.material;
-    if (!sourceMaterial || typeof sourceMaterial.clone !== 'function') return;
+    if (!sourceMaterial || typeof sourceMaterial.clone !== 'function') return null;
     const cloneSuffix = ownerNodePath ? `${sceneNodeId}_${ownerNodePath.replace(/[^a-zA-Z0-9_-]+/g, '_')}` : sceneNodeId;
     const baseName = String(sourceMaterial.name ?? sourceMaterial.id ?? 'material');
-    const clonedMaterial = sourceMaterial.clone(`${baseName}_override_${cloneSuffix}`);
-    if (!clonedMaterial) return;
-    node.material = clonedMaterial;
+    try {
+      return sourceMaterial.clone(`${baseName}_override_${cloneSuffix}`) ?? null;
+    } catch {
+      return null;
+    }
   }
 
   private resolveParentRuntime(parentId?: string): TransformNode {
@@ -1333,17 +1349,12 @@ export class SceneBuilder {
 
   private resolveNodeMaterialOwner(rootNode: TransformNode, ownerNodePath: string): any | null {
     const normalizedOwnerNodePath = this.normalizeSharedOwnerNodePath(ownerNodePath);
-    const resolved = resolveMaterialOwnerNode(rootNode, normalizedOwnerNodePath || ownerNodePath);
-    if (resolved) return resolved;
-
-    const normalizedTarget = (normalizedOwnerNodePath || ownerNodePath).trim();
-    const rootName = String((rootNode as any)?.name ?? '').trim();
-    const rootId = String((rootNode as any)?.id ?? '').trim();
-    if (!normalizedTarget) return null;
-    if (normalizedTarget === `${rootName}_mesh` || normalizedTarget === `${rootId}_mesh`) {
-      return rootNode as any;
-    }
-    return null;
+    const descriptor = { ownerNodePath: normalizedOwnerNodePath || ownerNodePath };
+    const resolution = resolveMaterialOwner(
+      descriptor,
+      this.collectCanonicalMaterialOwnerCandidates(rootNode, 'legacy-material-entry'),
+    );
+    return resolution.status === 'resolved' ? resolution.target.materialOwner : null;
   }
 
   private syncSceneAssetIndex(): void {
@@ -1526,7 +1537,7 @@ export class SceneBuilder {
     sceneNodeId: string,
     asset?: SceneAssetConfig,
   ): void {
-    const ownerNodes = this.resolveMaterialOverrideOwnerNodes(rootNode, ownerNodePath);
+    const ownerNodes = this.resolveMaterialOverrideOwnerNodes(rootNode, ownerNodePath, sceneNodeId);
     if (ownerNodes.length === 0) return;
 
     for (const ownerNode of ownerNodes) {
@@ -1544,7 +1555,7 @@ export class SceneBuilder {
     sceneNodeId: string,
     asset?: SceneAssetConfig,
   ): void {
-    const ownerNodes = this.resolveMaterialOverrideOwnerNodes(rootNode, ownerNodePath);
+    const ownerNodes = this.resolveMaterialOverrideOwnerNodes(rootNode, ownerNodePath, sceneNodeId);
     if (ownerNodes.length === 0) return;
 
     const { profile } = resolveEditorSceneArtistMaterialBinding(this.getMaterialAssetCatalog(), binding);
@@ -1565,26 +1576,29 @@ export class SceneBuilder {
     sceneNodeId: string,
     asset?: SceneAssetConfig,
   ): void {
-    const ownerNodes = this.resolveMaterialSlotBindingOwnerNodes(rootNode, materialSlot, {
+    const ownerResolution = this.resolveMaterialSlotBindingOwner(rootNode, materialSlot, {
       sceneNodeId,
       asset,
       materialAssetId: readSceneNodeMaterialBindingAssetId(binding),
     });
-    if (ownerNodes.length === 0) return;
+    if (!ownerResolution) return;
 
     const { profile } = resolveEditorSceneArtistMaterialBinding(this.getMaterialAssetCatalog(), binding);
     if (Object.keys(profile).length === 0) return;
 
-    for (const ownerNode of ownerNodes) {
-      const target = this.resolveMaterialSlotRuntimeMaterialTarget(ownerNode, materialSlot, {
-        sceneNodeId,
-        detachSharedMaterial: !!asset && this.shouldShareAssetMaterials(asset),
-        primitiveSingleMaterialFallbackAllowed:
-          ownerNodes.length === 1 && this.isSinglePrimitiveSceneAssetMaterialSlot(asset, materialSlot, sceneNodeId),
-      });
-      if (!target) continue;
-      this.applyArtistMaterialProfileToRuntimeMaterial(target.material, profile);
-    }
+    const ownerNode = ownerResolution.target.materialOwner;
+    const target = this.resolveMaterialSlotRuntimeMaterialTarget(ownerNode, materialSlot, {
+      sceneNodeId,
+      detachSharedMaterial: !!asset && this.shouldShareAssetMaterials(asset),
+      primitiveOwnerResolvedByPointer: isMaterialOwnerResolutionPointerVerified(
+        materialSlot,
+        ownerResolution,
+      ),
+      primitiveSingleMaterialFallbackAllowed:
+        this.isSinglePrimitiveSceneAssetMaterialSlot(asset, materialSlot, sceneNodeId),
+    });
+    if (!target) return;
+    this.applyArtistMaterialProfileToRuntimeMaterial(target.material, profile);
   }
 
   private resolveMaterialSlotRuntimeMaterialTarget(
@@ -1593,6 +1607,7 @@ export class SceneBuilder {
     context: {
       sceneNodeId: string;
       detachSharedMaterial: boolean;
+      primitiveOwnerResolvedByPointer: boolean;
       primitiveSingleMaterialFallbackAllowed: boolean;
     },
   ): SceneBuilderMaterialSlotTarget | null {
@@ -1600,27 +1615,42 @@ export class SceneBuilder {
     let material = ownerNode.material;
     if (materialSlot.primitiveIndex == null) {
       if (context.detachSharedMaterial) {
-        this.detachOverrideMaterial(ownerNode, context.sceneNodeId, materialSlot.ownerNodePath);
+        const clonedMaterial = this.cloneOverrideMaterial(ownerNode, context.sceneNodeId, materialSlot.ownerNodePath);
+        if (!clonedMaterial) return null;
+        ownerNode.material = clonedMaterial;
       }
       return { material: ownerNode.material };
     }
     if (!Array.isArray(material?.subMaterials)) {
-      if (!isSceneBuilderRuntimeSplitPrimitiveOwnerNode(ownerNode, materialSlot)
+      if (!context.primitiveOwnerResolvedByPointer
         && (materialSlot.primitiveIndex !== 0 || !context.primitiveSingleMaterialFallbackAllowed)) return null;
       if (context.detachSharedMaterial) {
-        this.detachOverrideMaterial(ownerNode, context.sceneNodeId, materialSlot.ownerNodePath);
+        const clonedMaterial = this.cloneOverrideMaterial(ownerNode, context.sceneNodeId, materialSlot.ownerNodePath);
+        if (!clonedMaterial) return null;
+        ownerNode.material = clonedMaterial;
       }
       return { material: ownerNode.material };
     }
+    let detachedMaterial: any | null = null;
     if (context.detachSharedMaterial) {
-      this.detachOverrideMaterial(ownerNode, context.sceneNodeId, materialSlot.ownerNodePath);
-      material = ownerNode.material;
+      detachedMaterial = this.cloneOverrideMaterial(ownerNode, context.sceneNodeId, materialSlot.ownerNodePath);
+      if (!detachedMaterial || !Array.isArray(detachedMaterial.subMaterials)) {
+        safelyDisposeSceneBuilderMaterial(detachedMaterial);
+        return null;
+      }
+      material = detachedMaterial;
     }
-    const subMaterial = this.detachMaterialSlotPrimitiveSubMaterial(material, materialSlot, context.sceneNodeId);
-    return subMaterial ? { material: subMaterial } : null;
+    const subMaterial = this.cloneMaterialSlotPrimitiveSubMaterial(material, materialSlot, context.sceneNodeId);
+    if (!subMaterial) {
+      safelyDisposeSceneBuilderMaterial(detachedMaterial);
+      return null;
+    }
+    material.subMaterials[materialSlot.primitiveIndex!] = subMaterial;
+    if (detachedMaterial) ownerNode.material = detachedMaterial;
+    return { material: subMaterial };
   }
 
-  private detachMaterialSlotPrimitiveSubMaterial(
+  private cloneMaterialSlotPrimitiveSubMaterial(
     material: any,
     materialSlot: SceneBuilderMaterialSlotSourceDescriptor,
     sceneNodeId: string,
@@ -1631,10 +1661,11 @@ export class SceneBuilder {
     const subMaterial = material.subMaterials[primitiveIndex];
     if (!subMaterial || typeof subMaterial !== 'object' || typeof subMaterial.clone !== 'function') return null;
     const cloneName = createSceneBuilderMaterialSlotSubMaterialName(subMaterial, materialSlot, sceneNodeId, primitiveIndex);
-    const clonedSubMaterial = subMaterial.clone(cloneName);
-    if (!clonedSubMaterial) return null;
-    material.subMaterials[primitiveIndex] = clonedSubMaterial;
-    return clonedSubMaterial;
+    try {
+      return subMaterial.clone(cloneName) ?? null;
+    } catch {
+      return null;
+    }
   }
 
   private getMaterialAssetCatalog(): { scene: { materialAssets: NonNullable<ReturnType<typeof configService.getSceneDocument>['scene']>['materialAssets'] } } {
@@ -1730,7 +1761,7 @@ export class SceneBuilder {
     return matchingPrimitiveSlots.length === 1 && matchingPrimitiveSlots[0]?.primitiveIndex === 0;
   }
 
-  private resolveMaterialSlotBindingOwnerNodes(
+  private resolveMaterialSlotBindingOwner(
     rootNode: TransformNode,
     materialSlot: SceneBuilderMaterialSlotSourceDescriptor,
     context: {
@@ -1738,15 +1769,12 @@ export class SceneBuilder {
       asset?: SceneAssetConfig;
       materialAssetId: string | null;
     },
-  ): any[] {
-    const ownerNodes = resolveMaterialSlotOwnerNodes(rootNode, materialSlot, {
-      projectionNodeId: context.sceneNodeId,
-    })
-      .filter((ownerNode: any) => !!ownerNode?.material);
-    if (ownerNodes.length > 0) return ownerNodes;
-
-    const fallbackOwnerNodes = this.resolveMaterialSlotBindingFallbackOwnerNodes(rootNode, materialSlot, context);
-    if (fallbackOwnerNodes.length > 0) return fallbackOwnerNodes;
+  ): Extract<SceneBuilderMaterialOwnerResolution, { status: 'resolved' }> | null {
+    const candidates = this.collectCanonicalMaterialOwnerCandidates(rootNode, context.sceneNodeId);
+    const resolution = resolveMaterialOwner(materialSlot, candidates, {
+      explicitSlotBinding: true,
+    });
+    if (resolution.status === 'resolved') return resolution;
 
     this.logMaterialSlotOwnerResolutionFailure(rootNode, {
       sceneNodeId: context.sceneNodeId,
@@ -1755,38 +1783,44 @@ export class SceneBuilder {
       ownerNodePath: materialSlot.ownerNodePath,
       materialAssetId: context.materialAssetId,
       projectionNodeId: context.sceneNodeId,
-      reason: 'owner-node-not-found',
+      reason: resolution.diagnostic.code,
+      ownerResolution: resolution,
     });
-    return [];
+    return null;
   }
 
-  private resolveMaterialSlotBindingFallbackOwnerNodes(
+  private collectCanonicalMaterialOwnerCandidates(
     rootNode: TransformNode,
-    materialSlot: SceneBuilderMaterialSlotSourceDescriptor,
-    context: {
-      sceneNodeId: string;
-      asset?: SceneAssetConfig;
-    },
-  ): any[] {
-    const candidates = collectMaterialOwnerCandidateNodes(rootNode);
-    if (candidates.length === 0) return [];
-    const expectedNames = collectSceneBuilderMaterialSlotOwnerFallbackNames(materialSlot, context.asset);
-    const namedMatches = candidates.filter((candidate: any) => {
-      const candidateNames = collectRuntimeNodeMatchNames(candidate);
-      return candidateNames.some(candidateName => expectedNames.has(candidateName));
+    projectionNodeId: string,
+  ): ReturnType<typeof collectBabylonMaterialOwnerCandidates> {
+    return collectBabylonMaterialOwnerCandidates(rootNode, {
+      readPathSegment: node => {
+        const rawSegment = typeof node?.name === 'string' && node.name.trim()
+          ? node.name
+          : typeof node?.id === 'string'
+            ? node.id
+            : '';
+        const normalized = normalizeMaterialSlotOwnerPath(rawSegment, {
+          projectionNodeId,
+        });
+        return normalized || null;
+      },
     });
-    if (namedMatches.length === 1) return namedMatches;
-    return [];
   }
 
-  private resolveMaterialOverrideOwnerNodes(rootNode: TransformNode, ownerNodePath: string): any[] {
-    const ownerNode = resolveMaterialOwnerNode(rootNode, ownerNodePath);
-    if (!ownerNode) return [];
-    if ((ownerNode as any).material) return [ownerNode];
-    const childMeshes = typeof (ownerNode as any).getChildMeshes === 'function'
-      ? (ownerNode as any).getChildMeshes(false)
-      : [];
-    return childMeshes.filter((mesh: any) => !!mesh?.material);
+  private resolveMaterialOverrideOwnerNodes(
+    rootNode: TransformNode,
+    ownerNodePath: string,
+    projectionNodeId: string,
+  ): any[] {
+    if (!ownerNodePath.trim()) {
+      return this.collectMaterialNodes(rootNode).filter((node: any) => !!node?.material);
+    }
+    const resolution = resolveMaterialOwner(
+      { ownerNodePath },
+      this.collectCanonicalMaterialOwnerCandidates(rootNode, projectionNodeId),
+    );
+    return resolution.status === 'resolved' ? [resolution.target.materialOwner] : [];
   }
 
   private logMaterialSlotOwnerResolutionFailure(
@@ -1799,6 +1833,7 @@ export class SceneBuilder {
       materialAssetId: string | null;
       projectionNodeId: string;
       reason: string;
+      ownerResolution?: Exclude<SceneBuilderMaterialOwnerResolution, { status: 'resolved' }>;
     },
   ): void {
     if (!shouldLogSceneBuilderMaterialDiagnostics()) return;
@@ -1813,6 +1848,7 @@ export class SceneBuilder {
       normalizedOwnerPath,
       matchKey: createMaterialSlotOwnerPathMatchKey(diagnostic.ownerNodePath, resolveContext),
       candidateMeshNames: collectMaterialOwnerCandidateNames(rootNode),
+      ownerCandidates: diagnostic.ownerResolution?.candidates ?? [],
       materialAssetId: diagnostic.materialAssetId,
     });
   }
@@ -1864,6 +1900,14 @@ function resolveSceneBuilderMaterialTextureAssetUrl(
   if (textureAssetId) return resolveTextureAssetUrl(textureAssetId) ?? null;
   const textureUrl = typeof texture.url === 'string' ? texture.url.trim() : '';
   return textureUrl || null;
+}
+
+function safelyDisposeSceneBuilderMaterial(material: any): void {
+  try {
+    material?.dispose?.();
+  } catch {
+    // Best-effort cleanup for a clone that was never committed to the runtime owner.
+  }
 }
 
 function readFiniteNumber(value: unknown, fallback: number): number {
@@ -1941,49 +1985,6 @@ function collectMaterialOwnerCandidateNames(rootNode: TransformNode): string[] {
     .slice(0, 80);
 }
 
-function collectSceneBuilderMaterialSlotOwnerFallbackNames(
-  materialSlot: SceneBuilderMaterialSlotSourceDescriptor,
-  asset: SceneAssetConfig | undefined,
-): Set<string> {
-  const names = new Set<string>();
-  const baseNames = [
-    materialSlot.ownerNodePath,
-    readMaterialSlotOwnerPathLastSegment(materialSlot.ownerNodePath),
-    stripPrimitiveSuffix(materialSlot.label),
-    materialSlot.label,
-    materialSlot.sourceMeshName,
-    readSceneBuilderAssetAnalysisMeshName(asset, materialSlot.meshIndex),
-  ];
-  for (const name of baseNames) {
-    addSceneBuilderMaterialSlotFallbackName(names, name);
-    if (materialSlot.primitiveIndex != null) {
-      addSceneBuilderMaterialSlotFallbackName(names, appendPrimitiveOwnerSuffix(name, materialSlot.primitiveIndex));
-    }
-  }
-  return names;
-}
-
-function addSceneBuilderMaterialSlotFallbackName(names: Set<string>, value: string | null | undefined): void {
-  const normalized = normalizeRuntimeMaterialOwnerName(value);
-  if (normalized) names.add(normalized);
-}
-
-function collectRuntimeNodeMatchNames(node: any): string[] {
-  const rawNames = [
-    typeof node?.name === 'string' ? node.name : null,
-    typeof node?.id === 'string' ? node.id : null,
-    readRuntimeNodeDisplayName(node),
-  ];
-  const names = new Set<string>();
-  for (const rawName of rawNames) {
-    addSceneBuilderMaterialSlotFallbackName(names, rawName);
-    for (const tailName of collectRuntimeMaterialOwnerTailNames(rawName)) {
-      addSceneBuilderMaterialSlotFallbackName(names, tailName);
-    }
-  }
-  return [...names];
-}
-
 function readRuntimeNodeDisplayName(node: any): string | null {
   const name = typeof node?.name === 'string' ? node.name.trim() : '';
   const id = typeof node?.id === 'string' ? node.id.trim() : '';
@@ -1991,83 +1992,10 @@ function readRuntimeNodeDisplayName(node: any): string | null {
   return name || id || null;
 }
 
-function readMaterialSlotOwnerPathLastSegment(ownerNodePath: string): string | null {
-  const segments = ownerNodePath.split('/').map(segment => segment.trim()).filter(Boolean);
-  return segments.length > 0 ? segments[segments.length - 1] ?? null : null;
-}
-
-function stripPrimitiveSuffix(value: string | null | undefined): string | null {
-  if (typeof value !== 'string') return null;
-  const stripped = value.replace(/\s*\/\s*Primitive\s+\d+\s*$/i, '').trim();
-  return stripped || null;
-}
-
-function appendPrimitiveOwnerSuffix(value: string | null | undefined, primitiveIndex: number): string | null {
-  if (typeof value !== 'string') return null;
-  const baseName = stripPrimitiveSuffix(value) ?? value.trim();
-  return baseName ? `${baseName}_primitive${primitiveIndex}` : null;
-}
-
-function isSceneBuilderRuntimeSplitPrimitiveOwnerNode(
-  ownerNode: any,
-  materialSlot: SceneBuilderMaterialSlotSourceDescriptor,
-): boolean {
-  if (materialSlot.primitiveIndex == null) return false;
-  const primitiveNames = new Set<string>();
-  for (const baseName of [
-    materialSlot.ownerNodePath,
-    readMaterialSlotOwnerPathLastSegment(materialSlot.ownerNodePath),
-    stripPrimitiveSuffix(materialSlot.label),
-    materialSlot.label,
-    materialSlot.sourceMeshName,
-  ]) {
-    addSceneBuilderMaterialSlotFallbackName(
-      primitiveNames,
-      appendPrimitiveOwnerSuffix(baseName, materialSlot.primitiveIndex),
-    );
-  }
-  return collectRuntimeNodeMatchNames(ownerNode).some(name => primitiveNames.has(name));
-}
-
-function collectRuntimeMaterialOwnerTailNames(value: string | null | undefined): string[] {
-  const raw = typeof value === 'string' ? value.trim() : '';
-  if (!raw) return [];
-  const names = new Set<string>();
-  const withoutClonePrefix = raw.replace(/^Clone of\s+/i, '').trim();
-  for (const candidate of [raw, withoutClonePrefix]) {
-    const colonTail = candidate.includes(':') ? candidate.split(':').pop() : '';
-    const dotTail = candidate.includes('.') ? candidate.split('.').pop() : '';
-    if (colonTail) names.add(colonTail);
-    if (dotTail) names.add(dotTail);
-  }
-  return [...names];
-}
-
-function readSceneBuilderAssetAnalysisMeshName(
-  asset: SceneAssetConfig | undefined,
-  meshIndex: number | undefined,
-): string | null {
-  if (!Number.isInteger(meshIndex)) return null;
-  if (Array.isArray(asset?.materialSlots)) return null;
-  const metadata = asset && 'metadata' in asset && isRecord(asset.metadata) ? asset.metadata : null;
-  const assetAnalysis = isRecord(metadata?.assetAnalysis) ? metadata.assetAnalysis : null;
-  const meshes = Array.isArray(assetAnalysis?.meshes) ? assetAnalysis.meshes : [];
-  const mesh = meshes.find((entry): entry is Record<string, unknown> => (
-    isRecord(entry) && entry.meshIndex === meshIndex
-  ));
-  return typeof mesh?.name === 'string' ? mesh.name : null;
-}
-
 function readSceneBuilderAssetMaterialSlots(asset: SceneAssetConfig): unknown[] {
   if (Array.isArray(asset.materialSlots)) return asset.materialSlots;
   const metadata = 'metadata' in asset && isRecord(asset.metadata) ? asset.metadata : null;
   return Array.isArray(metadata?.materialSlots) ? metadata.materialSlots : [];
-}
-
-function normalizeRuntimeMaterialOwnerName(value: string | null | undefined): string | null {
-  const trimmed = typeof value === 'string' ? value.trim() : '';
-  if (!trimmed) return null;
-  return createMaterialSlotOwnerPathMatchKey(trimmed);
 }
 
 function shouldLogSceneBuilderMaterialDiagnostics(): boolean {

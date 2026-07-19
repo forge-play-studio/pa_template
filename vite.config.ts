@@ -41,6 +41,7 @@ const scene = createFpsGameEditorProjectSceneAuthoringServices(editorConfig, {
 const integration = createFpsGameEditorViteAdapter(editorConfig, {
   projectRoot: __dirname,
   localEditorRepo: null,
+  editorEntry: { url: '/src/services/fps-game-editor/local-editor.ts', cache: 'revalidate' },
   logger: console,
   extendAgentBridgeSessionMetadata: metadata => ({ ...metadata, paTemplateRoot: metadata.projectRoot }),
   createProjectAuthoringApiPlugin: () => createFpsGameEditorProjectAuthoringApiPlugin({

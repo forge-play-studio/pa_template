@@ -60,10 +60,13 @@ const runtimeAuthoredConfigConsumerPaths = new Set([
   // the editor host, document authoring, or adapter implementation.
   'src/project-runtime-entry.ts',
   'src/debug/runtime-debug-bootstrap.ts',
-  // The development composition root owns the lazy local-editor switcher so
-  // the entry control can render before runtime debug panels finish loading.
+  // Development-only editor entry composition is an explicit host seam, not
+  // project editor semantics. The controller remains SDK-owned while these
+  // exact files adapt local GameWorld lifetime and render its state.
   'src/dev/DevHost.ts',
   'src/dev/dev-entry.ts',
+  'src/dev/LocalWorldEntryBackend.ts',
+  'src/dev/editor-entry-view.ts',
   'src/config/ConfigService.ts',
   'src/config/types.ts',
   'src/rendering/rendering-profile.ts',
