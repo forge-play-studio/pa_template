@@ -223,6 +223,10 @@ export function validateSceneJson(
       validateCameraRig(node.camera, `${path}.camera`, add);
       validateSceneLight(node.light, `${path}.light`, add);
     }
+    if (Object.prototype.hasOwnProperty.call(node, 'marker')) {
+      if (node.kind !== 'transform') add(`${path}.marker`, 'marker is only allowed on transform nodes');
+      else validateSceneMarker(node.marker, `${path}.marker`, add);
+    }
     if (node.kind === 'instance' || node.kind === 'transform' || node.kind === 'primitive') {
       validateNodeVisualOverrides(
         node.overrides,
@@ -679,6 +683,135 @@ function validateTransform(transform: unknown, path: string, add: (path: string,
     if (!Number.isFinite(transform.scale)) add(`${path}.scale`, 'scale number must be finite');
   } else {
     validateVec3(transform.scale, `${path}.scale`, add);
+  }
+}
+
+function validateSceneMarker(value: unknown, path: string, add: (path: string, message: string) => void): void {
+  if (!isRecord(value)) {
+    add(path, 'marker must be an object');
+    return;
+  }
+  validateAllowedFields(value, [
+    'schemaVersion', 'label', 'type', 'kind', 'tags', 'note', 'color',
+    'target', 'semanticFrame', 'geometry', 'metadata',
+  ], path, add);
+  if (value.schemaVersion !== 1) add(`${path}.schemaVersion`, 'marker.schemaVersion must be 1');
+  if (!nonEmptyString(value.label)) add(`${path}.label`, 'marker.label must be a non-empty string');
+  if (!nonEmptyString(value.type)) add(`${path}.type`, 'marker.type must be a non-empty string');
+  if (value.kind != null && !nonEmptyString(value.kind)) add(`${path}.kind`, 'marker.kind must be a non-empty string when present');
+  if (value.tags != null) {
+    if (!Array.isArray(value.tags)) add(`${path}.tags`, 'marker.tags must be an array when present');
+    else value.tags.forEach((entry, index) => {
+      if (typeof entry !== 'string') add(`${path}.tags[${index}]`, 'marker tag must be a string');
+    });
+  }
+  if (value.note != null && typeof value.note !== 'string') add(`${path}.note`, 'marker.note must be a string when present');
+  if (value.color != null) validateMarkerColor(value.color, `${path}.color`, add);
+  if (value.target != null) validateSceneMarkerTarget(value.target, `${path}.target`, add);
+  if (value.semanticFrame != null) validateSceneMarkerFrame(value.semanticFrame, `${path}.semanticFrame`, add);
+  validateSceneMarkerGeometry(value.geometry, `${path}.geometry`, add);
+  if (value.metadata != null && !isRecord(value.metadata)) add(`${path}.metadata`, 'marker.metadata must be an object when present');
+}
+
+function validateSceneMarkerTarget(value: unknown, path: string, add: (path: string, message: string) => void): void {
+  if (!isRecord(value)) {
+    add(path, 'marker target must be an object');
+    return;
+  }
+  validateAllowedFields(value, ['kind', 'id', 'label', 'path', 'metadata'], path, add);
+  if (!nonEmptyString(value.kind)) add(`${path}.kind`, 'marker target kind must be a non-empty string');
+  if (!nonEmptyString(value.id)) add(`${path}.id`, 'marker target id must be a non-empty string');
+  for (const key of ['label', 'path']) {
+    if (value[key] != null && typeof value[key] !== 'string') add(`${path}.${key}`, `marker target ${key} must be a string when present`);
+  }
+  if (value.metadata != null && !isRecord(value.metadata)) add(`${path}.metadata`, 'marker target metadata must be an object when present');
+}
+
+function validateSceneMarkerFrame(value: unknown, path: string, add: (path: string, message: string) => void): void {
+  if (!isRecord(value)) {
+    add(path, 'marker semanticFrame must be an object');
+    return;
+  }
+  validateAllowedFields(value, ['origin', 'forward', 'right', 'up', 'label', 'description'], path, add);
+  if (!isRecord(value.origin)) add(`${path}.origin`, 'marker semanticFrame.origin must be a vector object');
+  else validateVec3(value.origin, `${path}.origin`, add);
+  for (const key of ['forward', 'right', 'up']) {
+    if (value[key] != null) validateVec3(value[key], `${path}.${key}`, add);
+  }
+  for (const key of ['label', 'description']) {
+    if (value[key] != null && typeof value[key] !== 'string') add(`${path}.${key}`, `marker semanticFrame ${key} must be a string when present`);
+  }
+}
+
+function validateSceneMarkerGeometry(value: unknown, path: string, add: (path: string, message: string) => void): void {
+  if (!isRecord(value)) {
+    add(path, 'marker.geometry must be an object');
+    return;
+  }
+  if (value.kind === 'box') {
+    validateAllowedFields(value, ['kind'], path, add);
+    return;
+  }
+  if (value.kind === 'point') {
+    validateAllowedFields(value, ['kind', 'coordinateSpace', 'position', 'offset', 'target'], path, add);
+    if (value.coordinateSpace != null && value.coordinateSpace !== 'world' && value.coordinateSpace !== 'local') {
+      add(`${path}.coordinateSpace`, 'point marker coordinateSpace must be world or local');
+    }
+    if (value.position != null) validateVec3(value.position, `${path}.position`, add);
+    if (value.offset != null) validateVec3(value.offset, `${path}.offset`, add);
+    if (value.target != null) validateSceneMarkerTarget(value.target, `${path}.target`, add);
+    return;
+  }
+  if (value.kind === 'object-bounds') {
+    validateAllowedFields(value, ['kind', 'target'], path, add);
+    validateSceneMarkerTarget(value.target, `${path}.target`, add);
+    return;
+  }
+  if (value.kind === 'polyhedron') {
+    validateAllowedFields(value, ['kind', 'coordinateSpace', 'vertices', 'faces'], path, add);
+    if (value.coordinateSpace != null && value.coordinateSpace !== 'world') {
+      add(`${path}.coordinateSpace`, 'polyhedron marker coordinateSpace must be world');
+    }
+    if (!Array.isArray(value.vertices)) add(`${path}.vertices`, 'polyhedron marker vertices must be an array');
+    else value.vertices.forEach((entry, index) => {
+      const vertexPath = `${path}.vertices[${index}]`;
+      if (!isRecord(entry)) add(vertexPath, 'polyhedron marker vertex must be a vector object');
+      else validateVec3(entry, vertexPath, add);
+    });
+    if (value.faces != null) {
+      if (!Array.isArray(value.faces)) add(`${path}.faces`, 'polyhedron marker faces must be an array when present');
+      else value.faces.forEach((face, faceIndex) => {
+        if (!Array.isArray(face)) add(`${path}.faces[${faceIndex}]`, 'polyhedron marker face must be an array');
+        else face.forEach((entry, index) => {
+          if (!Number.isInteger(entry) || entry < 0) add(`${path}.faces[${faceIndex}][${index}]`, 'polyhedron marker index must be a non-negative integer');
+        });
+      });
+    }
+    return;
+  }
+  add(`${path}.kind`, 'marker.geometry.kind must be box, point, object-bounds, or polyhedron');
+}
+
+function validateMarkerColor(value: unknown, path: string, add: (path: string, message: string) => void): void {
+  if (!isRecord(value)) {
+    add(path, 'marker color must be an object');
+    return;
+  }
+  validateAllowedFields(value, ['r', 'g', 'b'], path, add);
+  for (const key of ['r', 'g', 'b']) {
+    if (!isUnitRangeNumber(value[key])) add(`${path}.${key}`, 'marker color component must be between 0 and 1');
+  }
+}
+
+function validateAllowedFields(
+  value: Record<string, any>,
+  allowed: readonly string[],
+  path: string,
+  add: (path: string, message: string) => void,
+): void {
+  const allowedFields = new Set(allowed);
+  for (const key of Object.keys(value)) {
+    if (!allowedFields.has(key)) add(`${path}.${key}`, `field is not allowed: ${key}`);
   }
 }
 
