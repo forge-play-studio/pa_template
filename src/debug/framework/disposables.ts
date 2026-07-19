@@ -17,13 +17,16 @@ export class DisposableStack implements Disposable {
   }
 
   dispose(): void {
+    const errors: unknown[] = [];
     for (let index = this.disposables.length - 1; index >= 0; index -= 1) {
       try {
         this.disposables[index]?.dispose();
+        this.disposables.splice(index, 1);
       } catch (error) {
         console.warn('[debug] dispose failed', error);
+        errors.push(error);
       }
     }
-    this.disposables.length = 0;
+    if (errors.length > 0) throw new AggregateError(errors, 'debug.disposableStackDisposeFailed');
   }
 }

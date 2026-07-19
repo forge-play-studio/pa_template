@@ -109,12 +109,18 @@ export interface SceneRuntimeGeneratedShadowCaster {
   entityId: string;
   renderableId: string;
   mesh: AbstractMesh;
+  behaviorProfileId: string;
   updateClass: 'static' | 'dynamic' | 'skinned';
   receive?: boolean;
 }
 
 export interface SceneRuntimeGeneratedShadowCasterRegistration {
   dispose(): void;
+}
+
+export interface SceneRuntimeGeneratedShadowCasterRegistrationFailure extends Error {
+  registration?: SceneRuntimeGeneratedShadowCasterRegistration;
+  rollbackError?: unknown;
 }
 
 type SceneBuilderMaterialSlotSourceDescriptor = {
@@ -345,6 +351,9 @@ export class SceneBuilder {
       if (!input.renderableId.trim() || input.renderableId !== input.renderableId.trim()) {
         throw new Error('shadowMapExperiment.runtimeRenderableIdInvalid');
       }
+      if (!input.behaviorProfileId.trim() || input.behaviorProfileId !== input.behaviorProfileId.trim()) {
+        throw new Error('shadowMapExperiment.runtimeBehaviorProfileIdInvalid');
+      }
       if (input.mesh.getScene() !== this.scene) {
         throw new Error(`shadowMapExperiment.runtimeMeshSceneMismatch:${input.renderableId}`);
       }
@@ -369,6 +378,7 @@ export class SceneBuilder {
         ...inputs.map(input => ({
           entityId: input.entityId,
           renderableIds: [input.renderableId],
+          behaviorProfileId: input.behaviorProfileId,
           cast: true,
           receive: input.receive !== false,
           updateClass: input.updateClass,
@@ -377,6 +387,29 @@ export class SceneBuilder {
     };
 
     system.setPlan(nextPlan);
+    let disposed = false;
+    const registration: SceneRuntimeGeneratedShadowCasterRegistration = {
+      dispose: () => {
+        if (disposed) return;
+        const activeSystem = this.shadowMapExperimentSystem;
+        const activePlan = activeSystem?.getPlan() ?? null;
+        if (!activeSystem || !activePlan) {
+          disposed = true;
+          return;
+        }
+        const objects = activePlan.objects.filter(object => !entityIds.has(object.entityId));
+        if (objects.length === activePlan.objects.length) {
+          disposed = true;
+          return;
+        }
+        activeSystem.setPlan({
+          ...activePlan,
+          revision: activePlan.revision + 1,
+          objects,
+        });
+        disposed = true;
+      },
+    };
     const attachedRenderableIds = new Set(
       system.getEvidence().registry?.records
         .filter(record => record.renderableReady)
@@ -385,33 +418,16 @@ export class SceneBuilder {
     const missingRenderableId = inputs.find(input => !attachedRenderableIds.has(input.renderableId))?.renderableId;
     if (missingRenderableId) {
       try {
-        system.setPlan(previousPlan);
+        registration.dispose();
       } catch (rollbackError) {
         throw Object.assign(
           new Error(`shadowMapExperiment.runtimeMeshRegistrationFailed:${missingRenderableId}`),
-          { rollbackError },
+          { rollbackError, registration },
         );
       }
       throw new Error(`shadowMapExperiment.runtimeMeshRegistrationFailed:${missingRenderableId}`);
     }
-
-    let disposed = false;
-    return {
-      dispose: () => {
-        if (disposed) return;
-        disposed = true;
-        const activeSystem = this.shadowMapExperimentSystem;
-        const activePlan = activeSystem?.getPlan() ?? null;
-        if (!activeSystem || !activePlan?.enabled) return;
-        const objects = activePlan.objects.filter(object => !entityIds.has(object.entityId));
-        if (objects.length === activePlan.objects.length) return;
-        activeSystem.setPlan({
-          ...activePlan,
-          revision: activePlan.revision + 1,
-          objects,
-        });
-      },
-    };
+    return registration;
   }
 
   getSelectedHemisphericLightState(): SceneRuntimeLightState<SceneHemisphericLightConfig> {

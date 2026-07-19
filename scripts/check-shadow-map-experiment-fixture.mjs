@@ -6,61 +6,37 @@ import { fileURLToPath } from 'node:url';
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const editorScene = JSON.parse(fs.readFileSync(path.join(projectRoot, 'src/config/editor-scene.json'), 'utf8'));
 const runtimeScene = JSON.parse(fs.readFileSync(path.join(projectRoot, 'src/config/scene.json'), 'utf8'));
+const shadowsConfig = JSON.parse(fs.readFileSync(path.join(projectRoot, 'src/config/shadows.json'), 'utf8'));
 const gameSource = fs.readFileSync(path.join(projectRoot, 'src/core/Game.ts'), 'utf8');
 const gameplayTypesSource = fs.readFileSync(path.join(projectRoot, 'src/gameplay/types.ts'), 'utf8');
 
 const expectedCasters = [
-  'capsule',
-  'cube',
-  'issue_444',
-  'shadow_fixture_barrel',
-  'shadow_fixture_bush',
-  'shadow_fixture_chicken',
-  'shadow_fixture_counter',
-  'shadow_fixture_crate',
-  'shadow_fixture_fence',
-  'shadow_fixture_hay_bale',
-  'shadow_fixture_log_bundle',
   'shadow_fixture_pine_tree',
-  'shadow_fixture_player',
-  'shadow_fixture_rocks',
-  'shadow_fixture_truck',
-  'shadow_fixture_worker',
-  'sphere',
-].sort();
-const expectedSkinnedCasters = [
-  'shadow_fixture_chicken',
-  'shadow_fixture_player',
-  'shadow_fixture_truck',
   'shadow_fixture_worker',
 ].sort();
-const expectedReceiverOnly = [
-  'asset_3',
-  'plane',
-  'shadow_map_experiment_vertical_receiver',
-].sort();
+const expectedSkinnedCasters = ['shadow_fixture_worker'];
+const expectedReceiverOnly = ['plane'];
 
-assert.equal(editorScene.scene.shadowMapExperiment?.enabled, true);
-assert.equal(
-  Object.prototype.hasOwnProperty.call(editorScene.scene.shadowMapExperiment?.advanced ?? {}, 'dynamicRefresh'),
-  false,
-  'authoring fixture must not retain the removed frame-stride refresh policy',
+assert.deepEqual(
+  editorScene.scene.shadowMapExperiment,
+  { qualityProfile: 'high', behaviorProfile: 'default' },
+  'authoring fixture must reference profiles without embedding algorithm parameters',
 );
 const editorObjects = new Map(editorScene.scene.gameObjects.map(object => [object.id, object]));
 const authoredCasters = [...editorObjects.values()]
-  .filter(object => object.shadowMapExperiment?.cast === 'enabled')
+  .filter(object => ['static-caster', 'skinned-dynamic'].includes(object.shadowMapExperiment?.behaviorProfile))
   .map(object => object.id)
   .sort();
 assert.deepEqual(authoredCasters, expectedCasters, 'authoring fixture must explicitly register every intended caster');
 assert.deepEqual(
-  authoredCasters.filter(id => editorObjects.get(id)?.shadowMapExperiment?.updateClass === 'skinned'),
+  authoredCasters.filter(id => editorObjects.get(id)?.shadowMapExperiment?.behaviorProfile === 'skinned-dynamic'),
   expectedSkinnedCasters,
-  'skinned caster update classes must match asset analysis',
+  'skinned caster behavior profiles must match asset analysis',
 );
 for (const id of expectedReceiverOnly) {
   assert.deepEqual(
     editorObjects.get(id)?.shadowMapExperiment,
-    { cast: 'disabled', receive: 'enabled', updateClass: 'static' },
+    { behaviorProfile: 'receiver-static' },
     `${id} must remain an automatic receiver without entering the caster budget`,
   );
 }
@@ -82,12 +58,12 @@ assert.doesNotMatch(
 
 const runtimePlugin = runtimeScene.plugins.find(plugin => plugin.pluginId === 'fps.shadow-map-experiment');
 assert.ok(runtimePlugin, 'compiled runtime scene must contain the ShadowMap experiment plugin payload');
+assert.equal(runtimePlugin.schemaVersion, 2);
+assert.equal(runtimePlugin.data.schemaVersion, 2);
 assert.equal(runtimePlugin.data.enabled, true);
-assert.equal(
-  Object.prototype.hasOwnProperty.call(runtimePlugin.data.generator ?? {}, 'dynamicRefreshStride'),
-  false,
-  'compiled runtime plan must be activity-driven rather than stride-driven',
-);
+assert.equal(runtimePlugin.data.qualityProfileId, 'high');
+assert.deepEqual(runtimePlugin.data.generator.maps, shadowsConfig.qualityProfiles.high.maps);
+assert.equal(runtimePlugin.data.generator.filter, shadowsConfig.qualityProfiles.high.receiverFilter);
 assert.equal(
   runtimePlugin.data.revision,
   editorScene.meta.authoringSource.revision,
@@ -115,4 +91,4 @@ for (const id of expectedReceiverOnly) {
   );
 }
 
-console.log('shadow-map experiment fixture: ok (17 casters, 4 skinned, automatic planar/vertical receivers)');
+console.log('shadow-map experiment fixture: ok (2 casters, 1 skinned, profile-authored receiver)');

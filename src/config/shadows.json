@@ -1,0 +1,98 @@
+{
+  "schemaVersion": 1,
+  "enabled": true,
+  "lightRef": "sun_light",
+  "defaultQualityProfile": "balanced",
+  "defaultBehaviorProfile": "default",
+  "qualityProfiles": {
+    "balanced": {
+      "maps": {
+        "staticResolution": 512,
+        "dynamicResolution": 512,
+        "compositeResolution": 512
+      },
+      "receiverFilter": "low-pcf",
+      "bias": 0.0008,
+      "normalBias": 0.01,
+      "darkness": 0.34,
+      "bounds": {
+        "mode": "fixed",
+        "center": [0, 3, -5],
+        "extent": [14, 10, 14],
+        "near": 0.1,
+        "far": 40
+      },
+      "backend": {
+        "mode": "auto",
+        "fallback": "single-map"
+      },
+      "culling": {
+        "enabled": true,
+        "guardBandRatio": 0.2
+      },
+      "diagnostics": {
+        "staticCasterCountWarning": 120,
+        "dynamicCasterCountWarning": 40,
+        "renderableCountWarning": 240
+      }
+    },
+    "high": {
+      "maps": {
+        "staticResolution": 1024,
+        "dynamicResolution": 1024,
+        "compositeResolution": 1024
+      },
+      "receiverFilter": "low-pcf",
+      "bias": 0.0005,
+      "normalBias": 0.005,
+      "darkness": 0.38,
+      "bounds": {
+        "mode": "fixed",
+        "center": [0, 3, -5],
+        "extent": [14, 10, 14],
+        "near": 0.1,
+        "far": 40
+      },
+      "backend": {
+        "mode": "auto",
+        "fallback": "single-map"
+      },
+      "culling": {
+        "enabled": true,
+        "guardBandRatio": 0.2
+      },
+      "diagnostics": {
+        "staticCasterCountWarning": 120,
+        "dynamicCasterCountWarning": 40,
+        "renderableCountWarning": 240
+      }
+    }
+  },
+  "behaviorProfiles": {
+    "default": {
+      "cast": "enabled",
+      "receive": "enabled",
+      "updateClass": "auto"
+    },
+    "receiver-static": {
+      "cast": "disabled",
+      "receive": "enabled",
+      "updateClass": "static"
+    },
+    "static-caster": {
+      "cast": "enabled",
+      "receive": "enabled",
+      "updateClass": "static"
+    },
+    "dynamic-caster": {
+      "cast": "enabled",
+      "receive": "enabled",
+      "updateClass": "dynamic"
+    },
+    "skinned-dynamic": {
+      "cast": "enabled",
+      "receive": "enabled",
+      "updateClass": "skinned"
+    }
+  }
+}

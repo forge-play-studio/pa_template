@@ -18,6 +18,7 @@ export const editorConfig = defineFpsGameEditorProject({
     editorScene: 'src/config/editor-scene.json',
     runtimeScene: 'src/config/scene.json',
     rendering: 'src/config/rendering.json',
+    shadows: 'src/config/shadows.json',
   },
   assets: {
     importedDir: 'src/assets/imported',

@@ -80,9 +80,9 @@ export function mountRuntimeDebug(options: RuntimeDebugBootstrapOptions): Runtim
   let runtimePanelsDetached = false;
   const detachRuntimePanelsForEditor = () => {
     if (runtimePanelsDetached) return;
-    runtimePanelsDetached = true;
     runtimePanels.dispose();
     editorSwitcher.detachForEditor();
+    runtimePanelsDetached = true;
   };
   const editorSwitcher = mountLocalEditorModeSwitcher({
     root,

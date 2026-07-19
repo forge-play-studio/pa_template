@@ -8,7 +8,9 @@ import type { Observer } from '@babylonjs/core/Misc/observable';
 import type { Scene } from '@babylonjs/core/scene';
 import type { Game } from '../core/Game';
 import type {
+  SceneRuntimeGeneratedShadowCaster,
   SceneRuntimeGeneratedShadowCasterRegistration,
+  SceneRuntimeGeneratedShadowCasterRegistrationFailure,
   SceneShadowCasterActivityController,
 } from '../services/SceneBuilder';
 
@@ -102,15 +104,24 @@ export function mountRuntimeShadowMapStressHarness(options: {
 }): { dispose(): void } {
   const game = options.getGame();
   if (!game) throw new Error('shadowMapStress.gameUnavailable');
-  const controller = createShadowMapStressController(game);
-  window.__PA_SHADOW_STRESS__?.dispose();
+  const previousController = window.__PA_SHADOW_STRESS__;
+  previousController?.dispose();
+  if (window.__PA_SHADOW_STRESS__ === previousController) delete window.__PA_SHADOW_STRESS__;
+  let controller: ShadowMapStressController;
+  try {
+    controller = createShadowMapStressController(game);
+  } catch (error) {
+    const recoveryController = readShadowMapStressControllerRecovery(error);
+    if (recoveryController) window.__PA_SHADOW_STRESS__ = recoveryController;
+    throw error;
+  }
   window.__PA_SHADOW_STRESS__ = controller;
   const probe = mountShadowMapStressProbe(controller);
   return {
     dispose() {
       probe.remove();
-      if (window.__PA_SHADOW_STRESS__ === controller) delete window.__PA_SHADOW_STRESS__;
       controller.dispose();
+      if (window.__PA_SHADOW_STRESS__ === controller) delete window.__PA_SHADOW_STRESS__;
     },
   };
 }
@@ -239,36 +250,62 @@ export function createShadowMapStressController(game: Game): ShadowMapStressCont
     activities: Map<string, SceneShadowCasterActivityController>,
   ): unknown[] => {
     const errors: unknown[] = [];
-    for (const activity of activities.values()) {
+    for (const [entityId, activity] of activities) {
       try { activity.setActive(false); } catch (error) { errors.push(error); }
-      try { activity.dispose(); } catch (error) { errors.push(error); }
+      try {
+        activity.dispose();
+        activities.delete(entityId);
+      } catch (error) {
+        errors.push(error);
+      }
     }
-    activities.clear();
     return errors;
   };
 
   const clearCodeGenerated = (): void => {
     const errors = disposeActivities(codeActivities);
-    try { codeRegistration?.dispose(); } catch (error) { errors.push(error); }
-    codeRegistration = null;
-    for (const entry of codeNodes.splice(0)) {
-      try { entry.mesh.dispose(); } catch (error) { errors.push(error); }
+    if (codeRegistration) {
+      try {
+        codeRegistration.dispose();
+        codeRegistration = null;
+      } catch (error) {
+        errors.push(error);
+      }
     }
-    try { codeMaterial?.dispose(); } catch (error) { errors.push(error); }
-    codeMaterial = null;
+    if (codeRegistration || codeActivities.size > 0) {
+      throw new AggregateError(errors, 'shadowMapStress.codeCleanupFailed');
+    }
+    for (let index = codeNodes.length - 1; index >= 0; index -= 1) {
+      const entry = codeNodes[index]!;
+      try {
+        entry.mesh.dispose();
+        codeNodes.splice(index, 1);
+      } catch (error) {
+        errors.push(error);
+      }
+    }
+    if (codeNodes.length === 0 && codeMaterial) {
+      try {
+        codeMaterial.dispose();
+        codeMaterial = null;
+      } catch (error) {
+        errors.push(error);
+      }
+    }
     if (errors.length > 0) throw new AggregateError(errors, 'shadowMapStress.codeCleanupFailed');
   };
 
   const stopSkinnedAnimations = (): unknown[] => {
     const errors: unknown[] = [];
-    for (const entry of editorSkinnedEntries.values()) {
-      try { entry.activity.setActive(false); } catch (error) { errors.push(error); }
+    for (const [entityId, entry] of editorSkinnedEntries) {
+      let failed = false;
+      try { entry.activity.setActive(false); } catch (error) { errors.push(error); failed = true; }
       if (entry.animations.length > 0) {
-        try { modelAnimationService?.stop(entry.animations); } catch (error) { errors.push(error); }
+        try { modelAnimationService?.stop(entry.animations); } catch (error) { errors.push(error); failed = true; }
       }
-      try { entry.activity.dispose(); } catch (error) { errors.push(error); }
+      try { entry.activity.dispose(); } catch (error) { errors.push(error); failed = true; }
+      if (!failed) editorSkinnedEntries.delete(entityId);
     }
-    editorSkinnedEntries.clear();
     return errors;
   };
 
@@ -312,10 +349,12 @@ export function createShadowMapStressController(game: Game): ShadowMapStressCont
   const refreshEditorGenerated = (): void => {
     const errors = disposeActivities(editorActivities);
     errors.push(...stopSkinnedAnimations());
+    if (errors.length > 0) throw new AggregateError(errors, 'shadowMapStress.editorRefreshFailed');
     editorNodes.clear();
     let phase = 0;
     for (const [entityId, node] of sceneBuilder.sceneNodeRuntimes) {
       if (entityId.startsWith(EDITOR_SKINNED_PREFIX)) {
+        const animations = sceneBuilder.getSceneNodeAnimationGroups(entityId);
         const activity = sceneBuilder.registerShadowCasterActivitySource({
           entityId,
           kind: 'animation',
@@ -323,7 +362,7 @@ export function createShadowMapStressController(game: Game): ShadowMapStressCont
         });
         if (!activity) continue;
         editorSkinnedEntries.set(entityId, {
-          animations: sceneBuilder.getSceneNodeAnimationGroups(entityId),
+          animations,
           activity,
           clipName: null,
         });
@@ -346,8 +385,6 @@ export function createShadowMapStressController(game: Game): ShadowMapStressCont
     if (errors.length > 0) throw new AggregateError(errors, 'shadowMapStress.editorRefreshFailed');
   };
 
-  refreshEditorGenerated();
-
   const controller: ShadowMapStressController = {
     configureCodeGenerated(input) {
       assertUsable();
@@ -363,7 +400,7 @@ export function createShadowMapStressController(game: Game): ShadowMapStressCont
       codeMaterial.specularColor = new Color3(0.04, 0.04, 0.04);
       const total = staticCount + dynamicCount;
       const columns = Math.ceil(Math.sqrt(total));
-      const inputs = [];
+      const inputs: SceneRuntimeGeneratedShadowCaster[] = [];
       try {
         for (let index = 0; index < total; index += 1) {
           const dynamic = index >= staticCount;
@@ -391,6 +428,7 @@ export function createShadowMapStressController(game: Game): ShadowMapStressCont
             entityId,
             renderableId: entityId,
             mesh,
+            behaviorProfileId: dynamic ? 'dynamic-caster' : 'static-caster',
             updateClass: dynamic ? 'dynamic' as const : 'static' as const,
             receive: true,
           });
@@ -409,6 +447,8 @@ export function createShadowMapStressController(game: Game): ShadowMapStressCont
         }
         if (dynamicActive) setActivitiesActive(codeActivities, true);
       } catch (error) {
+        const recoveryRegistration = readRuntimeGeneratedShadowCasterRecoveryRegistration(error);
+        if (recoveryRegistration) codeRegistration = recoveryRegistration;
         try { clearCodeGenerated(); } catch (cleanupError) {
           if (error && typeof error === 'object') Object.assign(error, { cleanupError });
         }
@@ -445,8 +485,8 @@ export function createShadowMapStressController(game: Game): ShadowMapStressCont
         try { setActivitiesActive(codeActivities, false); } catch (error) { errors.push(error); }
         try { setActivitiesActive(editorActivities, false); } catch (error) { errors.push(error); }
         try { pauseSkinnedAnimations(); } catch (error) { errors.push(error); }
-        dynamicActive = false;
         if (errors.length > 0) throw new AggregateError(errors, 'shadowMapStress.stopFailed');
+        dynamicActive = false;
       }
       return controller.getSnapshot();
     },
@@ -528,7 +568,6 @@ export function createShadowMapStressController(game: Game): ShadowMapStressCont
     },
     dispose() {
       if (disposed) return;
-      disposed = true;
       const errors: unknown[] = [];
       try { setActivitiesActive(codeActivities, false); } catch (error) { errors.push(error); }
       try { setActivitiesActive(editorActivities, false); } catch (error) { errors.push(error); }
@@ -544,9 +583,44 @@ export function createShadowMapStressController(game: Game): ShadowMapStressCont
         gameplayPausedByHarness = false;
       }
       if (errors.length > 0) throw new AggregateError(errors, 'shadowMapStress.disposeFailed');
+      disposed = true;
     },
   };
+  try {
+    refreshEditorGenerated();
+  } catch (error) {
+    try {
+      controller.dispose();
+    } catch (cleanupError) {
+      if (error && typeof error === 'object') {
+        Object.assign(error, { controller, cleanupError });
+      } else {
+        throw Object.assign(new Error('shadowMapStress.controllerCreationFailed'), {
+          cause: error,
+          controller,
+          cleanupError,
+        });
+      }
+    }
+    throw error;
+  }
   return controller;
+}
+
+function readShadowMapStressControllerRecovery(error: unknown): ShadowMapStressController | null {
+  if (!error || typeof error !== 'object') return null;
+  const controller = (error as { controller?: unknown }).controller;
+  return controller && typeof controller === 'object' && typeof (controller as ShadowMapStressController).dispose === 'function'
+    ? controller as ShadowMapStressController
+    : null;
+}
+
+function readRuntimeGeneratedShadowCasterRecoveryRegistration(
+  error: unknown,
+): SceneRuntimeGeneratedShadowCasterRegistration | null {
+  if (!error || typeof error !== 'object') return null;
+  const registration = (error as SceneRuntimeGeneratedShadowCasterRegistrationFailure).registration;
+  return registration && typeof registration.dispose === 'function' ? registration : null;
 }
 
 function readShadowMapRefreshCounters(
