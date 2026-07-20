@@ -3,13 +3,13 @@
   "enabled": true,
   "lightRef": "sun_light",
   "defaultQualityProfile": "balanced",
-  "defaultBehaviorProfile": "receiver-static",
+  "defaultBehaviorProfile": "receiver-auto",
   "qualityProfiles": {
     "balanced": {
       "maps": {
-        "staticResolution": 512,
-        "dynamicResolution": 512,
-        "compositeResolution": 512
+        "staticResolution": 1024,
+        "dynamicResolution": 1024,
+        "compositeResolution": 1024
       },
       "receiverFilter": "low-pcf",
       "bias": 0.0008,
@@ -38,9 +38,9 @@
     },
     "high": {
       "maps": {
-        "staticResolution": 1024,
-        "dynamicResolution": 1024,
-        "compositeResolution": 1024
+        "staticResolution": 2048,
+        "dynamicResolution": 2048,
+        "compositeResolution": 2048
       },
       "receiverFilter": "low-pcf",
       "bias": 0.0005,
@@ -71,6 +71,11 @@
   "behaviorProfiles": {
     "default": {
       "cast": "enabled",
+      "receive": "enabled",
+      "updateClass": "auto"
+    },
+    "receiver-auto": {
+      "cast": "disabled",
       "receive": "enabled",
       "updateClass": "auto"
     },
