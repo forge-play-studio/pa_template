@@ -147,32 +147,7 @@ export const setEditorRenderingTextures = (textures: any[]) => { currentRenderin
 
 export { sceneAssembly, migrateEditorSceneMarkerGraphMarkersToGameObjects, syncEditorSceneMarkerGraph };
 export const createEditorSceneAssetActionPatch = (input: any) => createFpsGameEditorStandardAssetActionPatch(input, createGroundDecalAssetActionPatch);
-export const DEFAULT_EDITOR_SCENE_CAMERA = sceneAssembly.defaults.camera;
-export const DEFAULT_EDITOR_SCENE_SUN_LIGHT = sceneAssembly.defaults.sunLight;
-export const DEFAULT_EDITOR_SCENE_ENVIRONMENT_LIGHT = sceneAssembly.defaults.environmentLight;
-export const reduceEditorSceneDocument = sceneAssembly.reduceDocument;
-export const ensureEditorSceneEnvironmentDefaults = sceneAssembly.ensureEnvironmentDefaults;
-export const isEditorSceneSelectableHierarchyId = sceneAssembly.isSelectableHierarchyId;
-export const getEditorSceneHierarchyItems = sceneAssembly.getHierarchyItems;
 export const normalizeEditorSceneHierarchyDocument = sceneAssembly.normalizeHierarchyDocument;
-export const createEditorSceneRenamePatch = sceneAssembly.createRenamePatch;
-export const createEditorSceneCreateGroupPatch = sceneAssembly.createCreateGroupPatch;
-export const createEditorSceneCreatePrimitivePatch = sceneAssembly.createCreatePrimitivePatch;
-export const createEditorSceneDeleteSubtreePatch = sceneAssembly.createDeleteSubtreePatch;
-export const createEditorSceneReparentPatch = sceneAssembly.createReparentPatch;
-export const createEditorSceneHierarchyMovePatch = sceneAssembly.createHierarchyMovePatch;
-export const createEditorSceneGroupSelectionPatch = sceneAssembly.createGroupSelectionPatch;
-export const createEditorSceneDuplicateSelectionPatch = sceneAssembly.createDuplicateSelectionPatch;
-export function createEditorScenePlacedAssetPatch(
-  input: Record<string, unknown> & { document: EditorSceneDocument; asset?: EditorSceneAssetLibraryItem },
-) {
-  return sceneAssembly.createPlacedAssetPatch(
-    input as Parameters<typeof sceneAssembly.createPlacedAssetPatch>[0],
-  );
-}
-export const validateEditorSceneReparent = sceneAssembly.validateReparent;
-export const validateEditorSceneHierarchyMove = sceneAssembly.validateHierarchyMove;
-export const validateEditorSceneGroupSelection = sceneAssembly.validateGroupSelection;
 export const createEditorSceneGroundDecalUiPatch = (
   document: EditorSceneDocument,
   uiKind: GroundDecalUiKind,
@@ -195,33 +170,8 @@ export function createEditorSceneGroundDecalHierarchyOperations() {
     ),
   }));
 }
-export const createEditorSceneInspectorPropertyPatch = sceneAssembly.createInspectorPropertyPatch;
 export const patchEditorSceneGameObjectField = sceneAssembly.patchGameObjectField;
-export const patchEditorSceneGameObjectsField = sceneAssembly.patchGameObjectsField;
-export const canCreateEditorSceneSerializedMultiPropertyPatch = sceneAssembly.canCreateSerializedMultiPropertyPatch;
-export const createEditorSceneSerializedMultiPropertyPatch = sceneAssembly.createSerializedMultiPropertyPatch;
-export const createEditorSceneBrowserAssetItems = sceneAssembly.createBrowserAssetItems;
-export const getEditorSceneInspectorObject = sceneAssembly.getInspectorObject;
-export const getEditorSceneInspectorMultiObject = sceneAssembly.getInspectorMultiObject;
-export const getEditorScenePrefabStageInspectorObject = sceneAssembly.getPrefabStageInspectorObject;
-export const getEditorSceneRuntimeInspectorSections = sceneAssembly.getRuntimeInspectorSections;
-export const getEditorSceneMarkerGraph = sceneAssembly.getMarkerGraph;
-export const getEditorSceneMarkerTypeCatalog = sceneAssembly.getMarkerTypeCatalog;
-export const getEditorSceneRelationTypeCatalog = sceneAssembly.getRelationTypeCatalog;
-export const createEditorSceneMarkerGraphPatch = sceneAssembly.createMarkerGraphPatch;
-export const reduceEditorSceneMarkerGraphPatch = sceneAssembly.reduceMarkerGraphPatch;
 export const syncEditorSceneMarkerGraphDocument = sceneAssembly.syncMarkerGraphDocument;
-export const resolveEditorSceneMarkerKind = sceneAssembly.resolveMarkerKind;
-export const assertEditorSceneMaterialAssetIntegrity = sceneAssembly.assertMaterialAssetIntegrity;
-
-export {
-  createEditorScenePrefabStageMaterialSlotItems,
-  getEditorScenePrefabStageDescriptor,
-  getEditorScenePrefabStageProjectionNodeIdForNode,
-  getEditorScenePrefabStageProjectionNodes,
-  getEditorScenePrefabStageStructure,
-  resolveEditorScenePrefabStagePreviewTarget,
-} from '@fps-games/editor/playable-sdk';
 
 export {
   bumpEditorSceneAuthoringSourceRevision,
@@ -229,9 +179,6 @@ export {
   detectEditorSceneRuntimeInputDrift,
   ensureEditorSceneAuthoringSource,
 } from '@fps-games/editor/playable-sdk';
-
-export const EDITOR_SCENE_COMPILER_ID = PLAYABLE_EDITOR_SCENE_COMPILER_ID;
-export const EDITOR_SCENE_COMPILER_VERSION = PLAYABLE_EDITOR_SCENE_COMPILER_VERSION;
 
 export interface ProjectEditorAssetCatalogEntry extends PlayableEditorSceneAssetCatalogEntry<AssetExternalRef> {
   guid: string;

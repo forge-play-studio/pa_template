@@ -3,8 +3,11 @@ import {
   createFpsGameEditorProductProjectHostServices,
   createFpsGameEditorProductProjectionPreview,
   readFpsGameEditorPlatformAssetLookup,
-  mountFpsGameEditorProductLocalEditor,
+  mountFpsGameEditorProductLocalEditorFromEnvironmentModule,
+  type FpsGameEditorLocalEditorEntryMountOptions,
+  type FpsGameEditorProductLocalEditorModeSwitcher,
 } from '@fps-games/editor/playable-sdk';
+import * as editorPluginModule from 'virtual:fps-plugins/editor';
 import * as editorAssets from '../../assets';
 import type { GroundDecalUiConfig } from '../../config';
 import { createGroundDecalUiDynamicTexture, isGroundDecalUiConfig } from '../GroundDecalUiService';
@@ -19,20 +22,13 @@ import {
 import {
   createEditorSceneAssetActionPatch,
   createEditorSceneGroundDecalHierarchyOperations,
-  getEditorScenePrefabStageDescriptor,
-  getEditorScenePrefabStageInspectorObject,
-  getEditorScenePrefabStageProjectionNodeIdForNode,
-  getEditorScenePrefabStageProjectionNodes,
-  getEditorScenePrefabStageStructure,
   normalizeEditorSceneHierarchyDocument,
-  resolveEditorScenePrefabStagePreviewTarget,
   sceneAssembly,
   sceneSource,
   renderingRuntime,
   setEditorRenderingTextures,
   enrichEditorSceneDocumentAssets,
 } from './scene-feature';
-import { editorPluginHost } from './plugin-host';
 
 const projectionPreview = createFpsGameEditorProductProjectionPreview<EditorSceneDocument, EditorSceneGameObject, EditorSceneAssetLibraryItem, GroundDecalUiConfig>({
   assetsModule: editorAssets,
@@ -60,38 +56,13 @@ const hostServices = createFpsGameEditorProductProjectHostServices<EditorSceneDo
   hasModelRenderer: object => !!findEditorSceneModelRenderer(object),
   resolveDomainRole: object => object.groundDecal ? 'ground-decal' : null,
   findExistingAsset: async payload => { const lookup = readFpsGameEditorPlatformAssetLookup(payload); const match = editorAssets.getAssetCatalogEntries({ kind: lookup.kind }).find(entry => lookup.projectAssetId === entry.assetId || lookup.platformAssetId === entry.external?.platformAssetId || lookup.assetPath === entry.external?.assetPath); return match ? { guid: match.guid, assetId: match.assetId, external: match.external } : null; },
-  projectDropPoint: projectDropPointToGround,
 });
 export const describeEditorSceneAgentObject = (document: EditorSceneDocument, objectId: string) => hostServices.agentContext.describeSceneObject({ document, objectId });
 export const describeEditorSceneAgentObjectSet = (document: EditorSceneDocument, objectIds: string[]) => hostServices.agentContext.describeSceneObjectSet({ document, objectIds });
 
-const loadingContent: any = {
-  enter: { title: '正在进入编辑界面…', description: '正在加载场景数据和编辑器，请稍候' },
-  saveScene: { title: '正在保存场景…', description: '正在写入场景数据，请稍候' },
-  saveAndRunGame: { title: '正在保存并退出…', description: '正在写入场景并返回游戏，请稍候' },
-  discardAndRunGame: { title: '正在放弃变更并退出…', description: '正在恢复游戏场景，请稍候' },
-  assetImport: { title: '正在添加资源…', description: '正在检查资产库并实例化资源，请稍候' },
-};
-
-export interface LocalEditorModeSwitcherOptions {
-  root?: HTMLElement;
-  disposeGameWorld: () => void | Promise<void>;
-  restartGame?: (context?: { reason?: string }) => void | Promise<void>;
-  onBeforeEnterEditor?: () => void | Promise<void>;
-  onBeforeReload?: () => void | Promise<void>;
-}
-
-export interface LocalEditorModeSwitcher {
-  enterEditor(): Promise<void>;
-  discardAndRunGame(): Promise<void>;
-  detachForEditor(): void;
-  dispose(): Promise<void>;
-}
-
-export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOptions): LocalEditorModeSwitcher {
-  const hierarchyOperationCapability = {
-    hierarchyOperations: createEditorSceneGroundDecalHierarchyOperations(),
-  } as const;
+export function mountLocalEditorModeSwitcher(
+  options: FpsGameEditorLocalEditorEntryMountOptions & { root?: HTMLElement },
+): Promise<FpsGameEditorProductLocalEditorModeSwitcher<EditorSceneDocument>> {
   const hostAssembly = createFpsGameEditorPlayableProjectHostAssembly({
     scene: sceneAssembly,
     projection: projectionPreview,
@@ -100,9 +71,7 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
     projectServices: hostServices,
     prepareDocument: (document: EditorSceneDocument, assets: EditorSceneAssetLibraryItem[]) => { currentEditorAssetLibrary = assets; return preparePaTemplateEditorDocument(document, assets); },
     createAssetActionPatch: (input: any) => createEditorSceneAssetActionPatch(input),
-    prefab: { getDescriptor: getEditorScenePrefabStageDescriptor, getProjectionNodes: getEditorScenePrefabStageProjectionNodes, getStructure: getEditorScenePrefabStageStructure, getInspectorObject: getEditorScenePrefabStageInspectorObject, resolvePreviewTarget: resolveEditorScenePrefabStagePreviewTarget, getProjectionNodeId: getEditorScenePrefabStageProjectionNodeIdForNode },
-    ...hierarchyOperationCapability,
-    loadingContent,
+    hierarchyOperations: createEditorSceneGroundDecalHierarchyOperations(),
     runtimeWindow: window,
     gameModeEntryVisible: false,
     loadBabylon: () => import('@babylonjs/core'),
@@ -110,38 +79,24 @@ export function mountLocalEditorModeSwitcher(options: LocalEditorModeSwitcherOpt
     reportError: (error: unknown) => console.error('[LocalEditorModeSwitcher] Forge Play mode change failed', error),
   });
 
-  const switcher = mountFpsGameEditorProductLocalEditor<
+  return mountFpsGameEditorProductLocalEditorFromEnvironmentModule<
     EditorSceneDocument,
     EditorSceneDocumentPatch,
     EditorSceneAssetLibraryItem
   >({
     project: editorConfig,
-    compatibilityTag: 'integration/fps-game-editor-lab',
     root: options.root,
     window,
-    disposeGameWorld: options.disposeGameWorld,
-    restartGame: options.restartGame,
-    onBeforeEnterEditor: options.onBeforeEnterEditor,
-    onBeforeReload: options.onBeforeReload,
+    projectMode: options.projectMode,
+    getCanvas: options.getCanvas,
     agentBridgeSessionMetadata: __FPS_EDITOR_AGENT_SESSION_METADATA__,
-    pluginHost: editorPluginHost,
+    pluginModule: editorPluginModule,
+    reportPluginDiagnostic(diagnostic) {
+      const method = diagnostic.severity === 'error' ? 'error' : diagnostic.severity === 'warning' ? 'warn' : 'info';
+      console[method](`[Plugin:${diagnostic.pluginId ?? 'host'}] ${diagnostic.code}: ${diagnostic.message}`);
+    },
     hostAssembly,
   });
-  return {
-    enterEditor: () => switcher.enterEditor(),
-    discardAndRunGame: () => switcher.discardAndRunGame(),
-    detachForEditor: () => switcher.detachForEditor(),
-    async dispose() { await switcher.dispose(); },
-  };
-}
-
-function projectDropPointToGround(point: { x: number; y: number } | null) {
-  const babylon = (window as any).BABYLON; const scene = babylon?.EngineStore?.LastCreatedScene; const camera = scene?.activeCamera; const canvas = document.getElementById('renderCanvas');
-  if (!point || !babylon || !scene || !camera || !(canvas instanceof HTMLCanvasElement)) return null;
-  const rect = canvas.getBoundingClientRect(); const x = (point.x <= 1 ? point.x * innerWidth : point.x) - rect.left; const y = (point.y <= 1 ? point.y * innerHeight : point.y) - rect.top;
-  const ray = scene.createPickingRay(x, y, babylon.Matrix.Identity(), camera, false); if (!ray?.direction || Math.abs(ray.direction.y) < 0.000001) return null;
-  const distance = -ray.origin.y / ray.direction.y; if (!Number.isFinite(distance) || distance < 0) return null;
-  const hit = ray.origin.add(ray.direction.scale(distance)); return { x: hit.x, y: 0, z: hit.z };
 }
 
 export function preparePaTemplateEditorDocument(
