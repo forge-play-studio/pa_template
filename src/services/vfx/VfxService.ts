@@ -216,6 +216,15 @@ export class VfxService {
       .sort((left, right) => left.effectId.localeCompare(right.effectId));
   }
 
+  /** Applies a verified dev-panel template save through the public VFX API. */
+  setDebugDefaultParams(effectId: string, params: Record<string, unknown>): boolean {
+    const registration = this.registrations.get(effectId);
+    if (!registration) return false;
+    this.registrations.set(effectId, { ...registration, defaultParams: { ...params } });
+    this.emitDiagnostics();
+    return true;
+  }
+
   getDiagnostics(): VfxDiagnosticsSnapshot {
     const active = this.poolManager.getActiveCount();
     const effects = this.createEffectDiagnostics();

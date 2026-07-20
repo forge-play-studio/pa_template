@@ -46,6 +46,7 @@ export function mountRuntimeDebug(options: RuntimeDebugBootstrapOptions): Runtim
   runtimePanels.use(mountRuntimeVfxDebugPanel({
     root,
     getGame: options.getGame,
+    getGameplayRuntime: options.getGameplayRuntime,
   }));
   runtimePanels.use(mountRuntimeAudioDebugPanel({
     root,
