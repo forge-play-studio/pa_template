@@ -9,7 +9,6 @@
 import type {
   SceneConfig,
   GameConfig,
-  WorldBoundsConfig,
   SceneAssetConfig,
   SceneAssetMaterialMode,
   SceneCameraRigConfig,
@@ -33,30 +32,32 @@ import type {
   SceneSharedMaterialConfig,
   SceneNodeConfig,
   StandardMaterialLightingOverrideConfig,
-  SceneVfxConfig,
   LayoutPlaceholderSurfaceConfig,
   GroundOverlayPlaneConfig,
   GameplayBindingConfig,
   SceneTransformNode,
   TransformConfig,
 } from './types';
-import {
-  normalizeEditorSceneMaterialSlotOwnerPath,
-} from '@fps-games/editor/playable-sdk';
-
 import sceneConfigJson from './scene.json';
 import gameConfigJson from './game.json';
 import renderingConfigJson from './rendering.json';
-
-const DEFAULT_WORLD_BOUNDS: WorldBoundsConfig = {
-  minX: -10,
-  maxX: 10,
-  minZ: -10,
-  maxZ: 10,
-};
+import { assertSceneJson } from './SceneJsonV2Validator';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+
+function readNonEmptyString(value: unknown): string | undefined {
+  const normalized = typeof value === 'string' ? value.trim() : '';
+  return normalized || undefined;
+}
+
+export function resolveSceneAssetRuntimeUrl(asset: SceneAssetConfig): string | undefined {
+  const metadata = isRecord(asset.metadata) ? asset.metadata : undefined;
+  return readNonEmptyString(asset.url)
+    ?? readNonEmptyString(metadata?.url)
+    ?? readNonEmptyString(metadata?.relativePath)
+    ?? readNonEmptyString(asset.external?.assetUrl);
 }
 
 function normalizeColorRGB(value: unknown): ColorRGB | undefined {
@@ -529,17 +530,6 @@ function normalizeOutlineOverride(value: unknown): OutlineOverrideConfig | undef
   return Object.keys(normalized).length > 0 ? normalized : undefined;
 }
 
-function normalizeMaterialOverrideMap(value: unknown): Record<string, MaterialOverrideConfig> | undefined {
-  if (!isRecord(value)) return undefined;
-
-  const normalized = Object.fromEntries(
-    Object.entries(value)
-      .map(([path, override]) => [path, normalizeMaterialOverride(override)] as const)
-      .filter((entry): entry is [string, MaterialOverrideConfig] => !!entry[1]),
-  );
-  return Object.keys(normalized).length > 0 ? normalized : undefined;
-}
-
 function normalizeOutlineOverrideMap(value: unknown): Record<string, OutlineOverrideConfig> | undefined {
   if (!isRecord(value)) return undefined;
 
@@ -570,12 +560,8 @@ function normalizeSceneNodeOverrides(value: unknown): SceneNodeVisualOverrides |
   if (materialBinding) normalized.materialBinding = materialBinding;
   const materialSlotBindings = normalizeSceneNodeMaterialBindingMap(value.materialSlotBindings);
   if (materialSlotBindings) normalized.materialSlotBindings = materialSlotBindings;
-  const childMaterialBindings = normalizeSceneNodeMaterialBindingMap(value.childMaterialBindings);
-  if (childMaterialBindings) normalized.childMaterialBindings = childMaterialBindings;
   const material = normalizeMaterialOverride(value.material);
   if (material) normalized.material = material;
-  const childMaterials = normalizeMaterialOverrideMap(value.childMaterials);
-  if (childMaterials) normalized.childMaterials = childMaterials;
   const childTransforms = normalizeTransformOverrideMap(value.childTransforms);
   if (childTransforms) normalized.childTransforms = childTransforms;
   const outline = normalizeOutlineOverride(value.outline);
@@ -584,79 +570,6 @@ function normalizeSceneNodeOverrides(value: unknown): SceneNodeVisualOverrides |
   if (childOutlines) normalized.childOutlines = childOutlines;
 
   return Object.keys(normalized).length > 0 ? normalized : undefined;
-}
-
-function migrateSceneMaterialSlotBindings(scene: NonNullable<SceneConfig['scene']>): void {
-  const assetById = new Map(scene.assets.map(asset => [asset.id, asset]));
-  for (const node of scene.nodes) {
-    if (node.kind !== 'instance') continue;
-    const overrides = node.overrides;
-    if (!overrides?.childMaterialBindings) continue;
-    const asset = assetById.get(node.instance.assetId);
-    const slots = collectSceneMaterialSlotMigrationDescriptors(asset);
-    if (slots.length === 0) continue;
-    const materialSlotBindings = {
-      ...(overrides.materialSlotBindings ?? {}),
-    };
-    const legacyChildMaterialBindings = {
-      ...overrides.childMaterialBindings,
-    };
-    const nextChildMaterialBindings = {
-      ...overrides.childMaterialBindings,
-    };
-    const migratedLegacyOwnerPaths = new Set<string>();
-    let changed = false;
-    for (const slot of slots) {
-      const legacy = findLegacySceneMaterialSlotBinding(legacyChildMaterialBindings, slot.ownerNodePath);
-      const legacyBinding = legacy?.binding;
-      if (!legacyBinding || materialSlotBindings[slot.slotId]) continue;
-      materialSlotBindings[slot.slotId] = structuredClone(legacyBinding);
-      migratedLegacyOwnerPaths.add(legacy.ownerNodePath);
-      changed = true;
-    }
-    if (!changed) continue;
-    for (const ownerNodePath of migratedLegacyOwnerPaths) {
-      delete nextChildMaterialBindings[ownerNodePath];
-    }
-    overrides.materialSlotBindings = materialSlotBindings;
-    if (Object.keys(nextChildMaterialBindings).length > 0) overrides.childMaterialBindings = nextChildMaterialBindings;
-    else delete overrides.childMaterialBindings;
-  }
-}
-
-function collectSceneMaterialSlotMigrationDescriptors(
-  asset: SceneAssetConfig | undefined,
-): Array<{ slotId: string; ownerNodePath: string }> {
-  const rawSlots = Array.isArray(asset?.metadata?.materialSlots) ? asset.metadata.materialSlots : [];
-  const slots: Array<{ slotId: string; ownerNodePath: string }> = [];
-  for (const rawSlot of rawSlots) {
-    if (!isRecord(rawSlot)) continue;
-    const slotId = typeof rawSlot.slotId === 'string' ? rawSlot.slotId.trim() : '';
-    const ownerNodePath = normalizeEditorSceneMaterialSlotOwnerPath(
-      typeof rawSlot.ownerNodePath === 'string'
-        ? rawSlot.ownerNodePath
-        : typeof rawSlot.path === 'string'
-          ? rawSlot.path
-          : '',
-    );
-    if (slotId && ownerNodePath) slots.push({ slotId, ownerNodePath });
-  }
-  return slots;
-}
-
-function findLegacySceneMaterialSlotBinding(
-  childMaterialBindings: Record<string, SceneNodeMaterialBindingConfig>,
-  ownerNodePath: string,
-): { ownerNodePath: string; binding: SceneNodeMaterialBindingConfig } | null {
-  const exact = childMaterialBindings[ownerNodePath];
-  if (exact) return { ownerNodePath, binding: exact };
-  const normalizedOwnerNodePath = normalizeEditorSceneMaterialSlotOwnerPath(ownerNodePath);
-  for (const [legacyOwnerNodePath, binding] of Object.entries(childMaterialBindings)) {
-    if (normalizeEditorSceneMaterialSlotOwnerPath(legacyOwnerNodePath) === normalizedOwnerNodePath) {
-      return { ownerNodePath: legacyOwnerNodePath, binding };
-    }
-  }
-  return null;
 }
 
 function normalizeSceneSharedMaterial(value: unknown): SceneSharedMaterialConfig | undefined {
@@ -715,6 +628,7 @@ export class ConfigService {
   private sceneNodeMap = new Map<string, SceneNodeConfig>();
 
   constructor() {
+    assertSceneJson(sceneConfigJson as SceneConfig);
     this.sceneConfig = sceneConfigJson as SceneConfig;
     this.gameConfig = gameConfigJson as GameConfig;
 
@@ -754,7 +668,6 @@ export class ConfigService {
     for (const node of scene.nodes) {
       this.normalizeSceneNode(node);
     }
-    migrateSceneMaterialSlotBindings(scene);
     return scene;
   }
 
@@ -850,6 +763,7 @@ export class ConfigService {
   }
 
   replaceSceneConfig(sceneConfig: SceneConfig): void {
+    assertSceneJson(sceneConfig);
     this.sceneConfig = sceneConfig;
     this.buildIndexes();
   }
@@ -937,14 +851,6 @@ export class ConfigService {
   getGameplayBindings(): GameplayBindingConfig[] {
     const bindings = this.sceneConfig.gameplay?.gameplayBindings;
     return Array.isArray(bindings) ? bindings : [];
-  }
-
-  getWorldBounds(): WorldBoundsConfig {
-    return this.sceneConfig.gameplay?.worldBounds ?? DEFAULT_WORLD_BOUNDS;
-  }
-
-  getSceneVfxConfig(): SceneVfxConfig | undefined {
-    return this.sceneConfig.gameplay?.tuning?.sceneVfx;
   }
 
   getLayoutPlaceholderSurfaces(): LayoutPlaceholderSurfaceConfig[] {

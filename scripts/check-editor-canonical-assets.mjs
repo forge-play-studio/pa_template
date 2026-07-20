@@ -2,10 +2,8 @@
 
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
-import os from 'node:os';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
-import ts from 'typescript';
+import { createEditorSceneAssetLibrary } from '@fps-games/editor/playable-sdk';
 
 const root = process.cwd();
 const catalogPath = path.join(root, 'src/assets/generated/asset-catalog.manifest.json');
@@ -20,6 +18,20 @@ const scene = JSON.parse(await fs.readFile(scenePath, 'utf8'));
 assert(Array.isArray(editorScene.assets), 'editor scene assets must be an array');
 for (const [index, asset] of editorScene.assets.entries()) {
   assert.equal(Object.hasOwn(asset, 'sourceId'), false, `editorScene.assets[${index}] must not contain sourceId`);
+  if (asset.type === 'prefab' || asset.kind === 'prefab' || asset.prefab) {
+    assert.equal(asset.type, 'prefab', `editorScene.assets[${index}] prefab asset must use type prefab`);
+    assert(
+      asset.kind == null || asset.kind === 'prefab',
+      `editorScene.assets[${index}] prefab asset kind must be absent or prefab`,
+    );
+    assert(asset.prefab && typeof asset.prefab === 'object', `editorScene.assets[${index}] prefab asset must contain prefab definition`);
+    const sourceAssetId = asset.prefab.sourceAssetId;
+    assert.equal(typeof sourceAssetId, 'string', `editorScene.assets[${index}] prefab asset must reference sourceAssetId`);
+    const sourceEntry = catalogById.get(sourceAssetId);
+    assert(sourceEntry, `editorScene.assets[${index}] prefab sourceAssetId must reference catalog assetId`);
+    assert.equal(sourceEntry.kind, 'model', `editorScene.assets[${index}] prefab sourceAssetId must reference a model asset`);
+    continue;
+  }
   const entry = catalogById.get(asset.id);
   assert(entry, `editorScene.assets[${index}] must reference catalog assetId`);
   assert.equal(entry.kind, 'model', `editorScene.assets[${index}] must reference a model asset`);
@@ -47,13 +59,15 @@ for (const [index, gameObject] of editorScene.scene.gameObjects.entries()) {
 await assertEditorAssetLibraryRuntime();
 
 const sourceChecks = [
-  ['src/fps-game-editor-adapter/editor-scene-document.ts', /\bsourceId\b/, false],
-  ['src/fps-game-editor-adapter/editor-asset-library.ts', /\bsourceId\b/, false],
-  ['src/fps-game-editor-adapter/editor-scene-compiler.ts', /sourceId:\s*asset\.sourceId/, false],
-  ['src/fps-game-editor-adapter/editor-scene-session.ts', /assetItem\.sourceId|asset\.sourceId|textureId:\s*assetItem\.sourceId/, false],
-  ['src/debug/local-editor-mode-switcher.ts', /asset\.sourceId|sourceId:\s*groundDecalTextureId|readOptionalString\(value\.sourceId\)/, false],
+  ['src/services/fps-game-editor/scene-feature.ts', /sourceId:\s*asset\.sourceId/, false],
+  ['src/services/fps-game-editor/local-editor.ts', /asset\.sourceId|sourceId:\s*groundDecalTextureId|readOptionalString\(value\.sourceId\)/, false],
   ['vite.config.ts', /createProjectEditorAssetLibrary\(modelIds|manifestBySourceId|textureManifestBySourceId/, false],
 ];
+
+await assert.rejects(
+  fs.access(path.join(root, 'src/fps-game-editor-adapter')),
+  'retired adapter root must stay deleted',
+);
 
 for (const [relativePath, pattern, shouldMatch] of sourceChecks) {
   const text = await fs.readFile(path.join(root, relativePath), 'utf8');
@@ -79,24 +93,7 @@ function collectGroundDecalTextureRefs(groundDecal, basePath) {
 }
 
 async function assertEditorAssetLibraryRuntime() {
-  const sourcePath = path.join(root, 'src/fps-game-editor-adapter/editor-asset-library.ts');
-  const source = await fs.readFile(sourcePath, 'utf8');
-  const output = ts.transpileModule(source, {
-    compilerOptions: {
-      module: ts.ModuleKind.ESNext,
-      target: ts.ScriptTarget.ES2022,
-    },
-  }).outputText;
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'editor-asset-library-check-'));
-  const modulePath = path.join(tempDir, 'editor-asset-library.mjs');
-  const editorPackagePath = path.join(root, 'node_modules/@fps-games/editor');
-  const editorPackageLink = path.join(tempDir, 'node_modules/@fps-games/editor');
-  await fs.mkdir(path.dirname(editorPackageLink), { recursive: true });
-  await fs.symlink(editorPackagePath, editorPackageLink, 'dir');
-  await fs.writeFile(modulePath, output);
-  try {
-    const module = await import(pathToFileURL(modulePath).href);
-    const library = module.createProjectEditorAssetLibrary([
+    const library = createEditorSceneAssetLibrary([
       {
         guid: '11111111-2222-4333-8444-555555555555',
         assetId: 'asset_11111111222243338444555555555555',
@@ -129,7 +126,4 @@ async function assertEditorAssetLibraryRuntime() {
     assert.equal(texture.type, 'texture');
     assert.equal(texture.kind, 'texture');
     assert.equal(Object.hasOwn(texture, 'sourceId'), false);
-  } finally {
-    await fs.rm(tempDir, { recursive: true, force: true });
-  }
 }

@@ -1,4 +1,4 @@
-import type { Game } from '../core/Game';
+import type { GameWorld } from '../runtime/GameWorld';
 import type { MovementInputSource, MovementInputState } from '../services';
 
 const WALKTHROUGH_BUILD_ATTRIBUTE = 'data-scene-walkthrough-build';
@@ -9,26 +9,23 @@ export interface SceneWalkthroughHandle {
   dispose(): void;
 }
 
-/**
- * Test-build-only input for walking the template's SimplePlayer through a scene.
- *
- * This module must only be dynamically imported behind
- * __SCENE_WALKTHROUGH_BUILD__, so regular dev and release bundles do not mount
- * keyboard listeners or include this test control path.
- */
-export function mountSceneWalkthrough(game: Game): SceneWalkthroughHandle {
+/** Dedicated-build-only keyboard source for inspecting the authored scene. */
+export function mountSceneWalkthrough(game: GameWorld): SceneWalkthroughHandle {
   const inputService = game.getInputService();
   if (!inputService) return { dispose() {} };
 
+  const previousSource = inputService.getMovementSource();
   const input = new KeyboardWalkthroughInput(window, document);
   inputService.setMovementSource(input);
   document.body?.setAttribute(WALKTHROUGH_BUILD_ATTRIBUTE, WALKTHROUGH_BUILD_VALUE);
-  console.info('[SceneWalkthrough] WASD movement is enabled for this test build.');
+  console.info('[SceneWalkthrough] WASD movement is enabled for this dedicated build.');
 
   return {
     dispose() {
-      inputService.clearMovementSource();
       input.dispose();
+      if (inputService.getMovementSource() === input) {
+        inputService.setMovementSource(previousSource);
+      }
       if (document.body?.getAttribute(WALKTHROUGH_BUILD_ATTRIBUTE) === WALKTHROUGH_BUILD_VALUE) {
         document.body.removeAttribute(WALKTHROUGH_BUILD_ATTRIBUTE);
       }
@@ -36,7 +33,7 @@ export function mountSceneWalkthrough(game: Game): SceneWalkthroughHandle {
   };
 }
 
-class KeyboardWalkthroughInput implements MovementInputSource {
+export class KeyboardWalkthroughInput implements MovementInputSource {
   private readonly pressedKeys = new Set<string>();
   private readonly input: MovementInputState = { x: 0, y: 0, magnitude: 0, isActive: false };
 

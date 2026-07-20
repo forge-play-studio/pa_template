@@ -4,26 +4,26 @@
 
 This document explains how `pa_template` integrates with the `fps-game-editor` SDK and how the ESM (ECMAScript Modules) compatibility is maintained.
 
-## Two Usage Modes
+## One Package Contract
 
-### 1. SDK Development Mode (Current Setup)
+### SDK Development Mode
 
 **Location**: `.local/pa_template` within the `fps-game-editor` repository
 
 **Purpose**: Test and validate SDK changes during development
 
 **Configuration**:
-- `package.json` uses `link:` protocol to reference local packages:
+- `package.json` keeps an exact public package version:
   ```json
   {
-    "@fps-games/editor": "link:../../packages/editor"
+    "@fps-games/editor": "0.1.8-beta.1"
   }
   ```
 - `vite.config.ts` imports from the public API:
   ```typescript
   import { ... } from '@fps-games/editor/playable-sdk';
   ```
-- When `FPS_GAME_EDITOR_REPO` env var is set, Vite aliases runtime imports to source files
+- The editor repository builds, packs, and installs the current package before starting Vite.
 
 **How to run**:
 ```bash
@@ -31,7 +31,7 @@ This document explains how `pa_template` integrates with the `fps-game-editor` S
 npm run dev:pa-template
 ```
 
-### 2. User Project Mode
+### User Project Mode
 
 **Location**: Copied out as a standalone project
 
@@ -41,7 +41,7 @@ npm run dev:pa-template
 - `package.json` uses version numbers:
   ```json
   {
-    "@fps-games/editor": "0.1.7"
+    "@fps-games/editor": "0.1.8-beta.1"
   }
   ```
 - `vite.config.ts` remains unchanged (uses public API)
@@ -90,7 +90,7 @@ This script runs after `tsc -b` and:
 
 ### Why This Works
 
-1. **SDK Development**: `link:` points to local packages, which have fixed dist files
+1. **SDK Development**: the locally packed package contains the current fixed dist files
 2. **User Projects**: npm packages are published with fixed dist files
 3. **vite.config.ts**: Uses public API path, which is properly exported
 4. **Runtime Code**: Vite handles module resolution during bundling
@@ -128,7 +128,7 @@ npm run dev:pa-template
 ### For User Projects
 ```bash
 # Update package.json
-npm install @fps-games/editor@0.1.7
+npm install @fps-games/editor@0.1.8-beta.1
 
 # Or use npm update
 npm update @fps-games/editor
@@ -139,12 +139,11 @@ npm update @fps-games/editor
 To verify ESM compatibility:
 
 ```bash
-# Build SDK
-npm run build
+# From the editor repository, build and install the local public tarball
+npm run prepare:pa-template-packed-package
 
-# Check imports are fixed
-head packages/editor-playable-sdk/dist/index.js
-# Should see: export * from './document/index.js';
+# From pa_template, verify the installed package matches that tarball
+pnpm --ignore-workspace run test:editor-packed-package
 
 # Start pa_template
 npm run dev:pa-template
@@ -165,17 +164,17 @@ npm run dev:pa-template
 
 **Fix**: The fix-esm-imports script now handles this automatically
 
-### Error: "Port 3006 is already in use"
+### Error: "Port 3011 is already in use"
 
 **Fix**: Kill the existing process:
 ```bash
-lsof -ti:3006 | xargs kill -9
+lsof -ti:3011 | xargs kill -9
 ```
 
 ## Architecture Benefits
 
 1. **Stable Routine Upgrades**: User projects use standard npm packages and the `@fps-games/editor/playable-sdk` facade
-2. **Fast Development**: SDK developers see changes immediately via `link:`
+2. **Reliable Development**: SDK developers refresh one local tarball and exercise the public package contract
 3. **Type Safety**: TypeScript paths work in both modes
 4. **ESM Compliant**: All dist files work in Node.js ESM strict mode
 5. **Maintainable**: Single source of truth for public APIs

@@ -2,26 +2,24 @@ import type { ArcRotateCamera } from '@babylonjs/core/Cameras/arcRotateCamera';
 import type { Scene } from '@babylonjs/core/scene';
 import type { SimplePlayer } from '../entities';
 import type {
-  AnimationService,
   AssetLoader,
   AudioService,
   InputService,
   MaterialConfigService,
+  ModelAnimationService,
   ModelPool,
   PlayableAnalyticsService,
   PlayableCtaService,
   RenderingService,
   SceneBuilder,
-  SceneVfxService,
   ShadowService,
+  VfxService,
 } from '../services';
 import type { ZoneSystem } from '../systems';
-import type { DeterminismContext } from '../core/determinism';
 
 export interface GameplayModule {
   init?(): void | Promise<void>;
   update?(deltaTime: number): void;
-  isBootSettled?(): boolean;
   dispose?(): void;
 }
 
@@ -29,18 +27,17 @@ export interface GameplayRuntimeContext {
   scene: Scene;
   camera: ArcRotateCamera | null;
   assetLoader: AssetLoader;
-  animationService: AnimationService;
+  modelAnimationService: ModelAnimationService;
   audioService: AudioService | null;
   inputService: InputService;
   materialConfigService: MaterialConfigService;
   modelPool: ModelPool;
   renderingService: RenderingService;
   sceneBuilder: SceneBuilder;
-  sceneVfxService: SceneVfxService;
+  vfxService: VfxService;
   shadowService: ShadowService;
   analytics: PlayableAnalyticsService;
   cta: PlayableCtaService;
   player: SimplePlayer;
   zoneSystem: ZoneSystem;
-  determinism: DeterminismContext;
 }

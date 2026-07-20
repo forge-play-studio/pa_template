@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import {
-  createAssetId,
-} from './asset-registry/core.mjs';
+  createPlayableEditorAssetId as createAssetId,
+} from '@fps-games/editor/playable-sdk/vite';
 
 const manifest = await readJson('src/assets/generated/asset-catalog.manifest.json');
 assert.ok(Array.isArray(manifest), 'asset catalog manifest must be an array');
@@ -26,8 +26,6 @@ const runtimeFiles = [
   'src/services/AssetLoader.ts',
   'src/services/ConfigValidator.ts',
   'src/services/SceneBuilder.ts',
-  'src/services/assets/adapters/BabylonRuntimeAssetAdapter.ts',
-  'src/fps-game-editor-adapter/document.ts',
 ];
 
 for (const file of runtimeFiles) {

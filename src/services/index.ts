@@ -12,8 +12,11 @@ export {
 export { ModelPool } from './ModelPool';
 export type { PooledInstance, ModelConfig, ModelWarmupAssetConfig, ModelWarmupResult } from './ModelPool';
 
-export { AnimationService } from './AnimationService';
-export type { PlayOptions } from './AnimationService';
+export { ModelAnimationService } from './ModelAnimationService';
+export type {
+  ModelAnimationPlayer,
+  ModelAnimationPlayOptions,
+} from './ModelAnimationService';
 
 export { AudioService } from './AudioService';
 export type { AudioDebugState, AudioPlayOptions, AudioSoundId } from './AudioService';
@@ -27,7 +30,7 @@ export type { SceneEnvironment } from './SceneBuilder';
 export { RenderingService } from './RenderingService';
 export { ShadowService } from './ShadowService';
 export { MaterialConfigService } from './MaterialConfigService';
-export { SceneVfxService } from './SceneVfxService';
+export * from './vfx';
 export { PlayableAnalyticsService, playableAnalyticsService } from './PlayableAnalyticsService';
 export type { AnalyticsLike } from './PlayableAnalyticsService';
 export { PlayableCtaService, playableCtaService } from './PlayableCtaService';
@@ -40,33 +43,6 @@ export type {
   RuntimeBindingIssueType,
   RuntimeBindingReadinessReport,
 } from './RuntimeNodeService';
-export {
-  ASSET_MANAGER_ERROR_CODES,
-  planAssetRegistration,
-  planAssetUnregistration,
-  resolveAssetReference,
-} from './AssetManager';
-export type {
-  AssetManagerErrorCode,
-  AssetReference,
-  AssetReferenceParams,
-  AssetTransportPlan,
-  AssetTransportWrite,
-} from './AssetManager';
-export {
-  createAssetInstance,
-  removeAssetInstance,
-} from './SceneAssetPlacement';
-export type {
-  AssetInstanceCreateParams,
-  AssetInstancePlacementResult,
-} from './SceneAssetPlacement';
-export {
-  assertSceneAssetUnused,
-  findSceneAssetUsageByAssetId,
-} from './SceneAssetUsage';
-export type { SceneAssetUsage } from './SceneAssetUsage';
-
 // 配置服务（便于服务层直接引用）
 export { configService, ConfigService } from '../config';
 

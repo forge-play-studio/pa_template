@@ -3,7 +3,13 @@ import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { AssetRegistryError, createAssetId, registerAsset, unregisterAsset, loadManifest } from './asset-registry/core.mjs';
+import {
+  PlayableEditorAssetRegistryError as AssetRegistryError,
+  createPlayableEditorAssetId as createAssetId,
+  loadPlayableEditorAssetManifest as loadManifest,
+  registerPlayableEditorAsset as registerAsset,
+  unregisterPlayableEditorAsset as unregisterAsset,
+} from '@fps-games/editor/playable-sdk/vite';
 import { projectAssetCatalogConfig } from './asset-registry/project-asset-catalog-config.mjs';
 
 const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'asset-catalog-check-'));

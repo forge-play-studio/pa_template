@@ -32,6 +32,26 @@ declare module '*.mp3?url' {
   export default src;
 }
 
+declare module '*.ogg?url' {
+  const src: string;
+  export default src;
+}
+
+declare module '*.flac?url' {
+  const src: string;
+  export default src;
+}
+
+declare module '*.aac?url' {
+  const src: string;
+  export default src;
+}
+
+declare module '*.m4a?url' {
+  const src: string;
+  export default src;
+}
+
 declare module '*.wasm?url' {
   const src: string;
   export default src;
@@ -61,6 +81,8 @@ declare module '*.ktx2?url' {
   const src: string;
   export default src;
 }
+
+declare module 'virtual:pa-app-entry';
 
 declare const __LITE_BUILD__: boolean;
 declare const __PROD_BUILD__: boolean;

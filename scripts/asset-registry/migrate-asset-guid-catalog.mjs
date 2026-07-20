@@ -1,15 +1,21 @@
+/**
+ * Project tool ownership: migration-only
+ * Reviewed: 2026-07-06
+ * Purpose: one-time pa_template migration from old manual asset registries to the guid catalog.
+ * Migration: Keep outside fps-game-editor-adapter; extract only reusable registry primitives once another consumer repeats the same need.
+ */
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 import {
-  createAssetGuid,
-  createAssetId,
-  generateAssetCatalogModule,
-  normalizeCodeKey,
-  normalizeDisplayName,
-  stripKnownAssetExtension,
-} from './core.mjs';
+  createPlayableEditorAssetGuid as createAssetGuid,
+  createPlayableEditorAssetId as createAssetId,
+  generatePlayableEditorAssetCatalogModule as generateAssetCatalogModule,
+  normalizePlayableEditorAssetCodeKey as normalizeCodeKey,
+  normalizePlayableEditorAssetDisplayName as normalizeDisplayName,
+  stripKnownPlayableEditorAssetExtension as stripKnownAssetExtension,
+} from '@fps-games/editor/playable-sdk/vite';
 import { projectAssetCatalogConfig } from './project-asset-catalog-config.mjs';
 
 const MODEL_MAP_NAME = 'MANUAL_MODEL_URL_MAP';

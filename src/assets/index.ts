@@ -24,7 +24,14 @@ export type AssetCatalogEntry = GeneratedAssetCatalogEntry;
 
 export { ASSET_IDS };
 
-export const ASSET_CATALOG: Record<string, AssetCatalogEntry> = GENERATED_ASSET_CATALOG;
+export const ASSET_CATALOG: Record<string, AssetCatalogEntry> = Object.fromEntries(
+  Object.entries(GENERATED_ASSET_CATALOG).map(([assetId, entry]) => [
+    assetId,
+    entry.kind === 'model'
+      ? { ...entry, materialMode: entry.materialMode ?? 'shared' }
+      : entry,
+  ]),
+);
 export const ASSET_URL_MAP: Record<string, string> = GENERATED_ASSET_URL_MAP;
 export const MODEL_ASSET_URL_MAP: Record<string, string> = GENERATED_MODEL_ASSET_URL_MAP;
 export const TEXTURE_ASSET_URL_MAP: Record<string, string> = GENERATED_TEXTURE_ASSET_URL_MAP;

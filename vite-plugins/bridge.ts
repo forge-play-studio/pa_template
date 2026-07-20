@@ -4,12 +4,14 @@ export interface BridgePluginOptions {
   port?: number;
   enabled?: boolean;
   delay?: number;
+  debug?: boolean;
 }
 
 export function bridgePlugin(opts: BridgePluginOptions = {}): Plugin {
   const port = opts.port ?? 8080;
-  const enabled = opts.enabled ?? true;
+  const enabled = opts.enabled ?? false;
   const delay = opts.delay ?? 2000;
+  const debug = opts.debug ?? false;
 
   return {
     name: 'vite-plugin-game-bridge',
@@ -28,7 +30,9 @@ export function bridgePlugin(opts: BridgePluginOptions = {}): Plugin {
       : 'http://localhost:${port}/script/bridge.js';
     var s = document.createElement('script');
     s.src = url; s.async = true;
-    s.onerror = function() { console.log('[GameBridge] MCP Server not available'); };
+    s.onerror = function() {
+      if (${JSON.stringify(debug)}) console.debug('[GameBridge] optional bridge script not available', url);
+    };
     document.head.appendChild(s);
   }, ${delay});
 })();

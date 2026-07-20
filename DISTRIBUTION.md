@@ -9,7 +9,7 @@
 - Keep project-owned gameplay, compiler, assets, Babylon runtime services, and debug DOM panels in the project.
 - Avoid direct project dependencies on editor internal packages such as `@fps-games/editor-core`, `@fps-games/editor-babylon`, or `@fps-games/babylon-renderer`.
 
-The local lab branch may use source aliases for SDK development, but those aliases are development tooling only. They are not part of the distributed project contract.
+The local lab consumes a locally packed `@fps-games/editor` tarball so development and distribution exercise the same public package contract.
 
 ## Modes
 
@@ -17,12 +17,12 @@ The local lab branch may use source aliases for SDK development, but those alias
 
 Used by this repository through `.local/pa_template`.
 
-`package.json` keeps only the public editor dependency:
+`package.json` keeps only the exact public editor dependency:
 
 ```json
 {
   "dependencies": {
-    "@fps-games/editor": "link:../../packages/editor"
+    "@fps-games/editor": "0.1.8-beta.1"
   }
 }
 ```
@@ -41,7 +41,7 @@ through the package export from `@fps-games/editor`.
 }
 ```
 
-`tsconfig.fps-editor-local.json` is the focused local-source verification config. It may point editor internal package ids at `../../packages/*/src` so the lab can typecheck against the current source tree. This file is not a template distribution contract.
+The editor repository prepares a local tarball and installs it into this worktree before local development. Do not add a source-only tsconfig or editor-internal path mappings; package smoke and normal typecheck must observe the same exported declarations.
 
 ### Mode 2: Standalone Project
 
@@ -52,7 +52,7 @@ Use a versioned public dependency:
 ```json
 {
   "dependencies": {
-    "@fps-games/editor": "0.1.7"
+    "@fps-games/editor": "0.1.8-beta.1"
   }
 }
 ```
@@ -73,10 +73,12 @@ Those are editor package implementation details. If project code needs a stable 
 When preparing a standalone project:
 
 1. Replace any local editor link with a versioned `@fps-games/editor`.
-2. Keep imports on the new local editor path limited to `@fps-games/editor/playable-sdk`.
-3. Remove `tsconfig.fps-editor-local.json` unless the project intentionally participates in source-linked SDK development.
+2. Use `@fps-games/editor/playable-sdk` for runtime code,
+   `@fps-games/editor/playable-sdk/vite` for Vite integration, and the Node-only
+   `@fps-games/editor/playable-sdk/upgrade-doctor` only from root project scripts.
+3. Keep editor-internal TypeScript path aliases out of the project.
 4. Ensure normal `tsconfig.json` does not point to `../../packages/*` or nested `node_modules/@fps-games/editor/node_modules/*`.
-5. Keep legacy `src/fps-game-editor-adapter/runtime.ts` disabled unless a compatibility build explicitly opts into `VITE_ENABLE_LEGACY_RUNTIME_EDITOR=true`.
+5. Do not restore the retired legacy runtime bridge; editor integration should use the productized SDK host/config APIs.
 
 ## Verification
 
@@ -95,13 +97,13 @@ pnpm exec tsc --noEmit
 pnpm run build
 ```
 
-For source-linked SDK development only:
+For local SDK development, rebuild and install the real packed package baseline:
 
 ```bash
-pnpm run typecheck:editor-local
-pnpm run build:single:editor-local
+pnpm run prepare:editor-packed-package
+pnpm run test:editor-packed-package
+pnpm run typecheck
 ```
-
 ## Common Issues
 
 ### `Cannot find module '@fps-games/babylon-renderer'`
@@ -110,14 +112,10 @@ Project code should not import this package directly. Use `@fps-games/editor/pla
 
 ### `@fps-games/editor/playable-sdk` cannot be resolved
 
-Install a package version that exposes the `./playable-sdk` export, or use `FPS_GAME_EDITOR_REPO` source-link mode during local SDK development.
+Install a package version that exposes the `./playable-sdk` export. In the companion worktree, rerun `npm run prepare:pa-template-packed-package` from the editor repository to refresh the local package.
 
-### Legacy runtime bridge activates unexpectedly
+### Legacy runtime bridge imports are missing
 
-The legacy runtime bridge should only be enabled through:
-
-```bash
-VITE_ENABLE_LEGACY_RUNTIME_EDITOR=true
-```
-
-New local editor integration should use `createPlayableLocalEditorHost()` from `@fps-games/editor/playable-sdk`.
+That is expected. The project-side legacy runtime bridge has been retired. Use
+the productized `defineFpsGameEditorProject()` / `createFpsGameEditorAdapter()`
+path from `@fps-games/editor/playable-sdk`.

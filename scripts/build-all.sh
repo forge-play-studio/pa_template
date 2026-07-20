@@ -23,6 +23,9 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$PROJECT_DIR"
 
+npm run test:gameworld-architecture
+npm run test:gameworld-lifecycle
+
 read_json() {
   node -e "const p=require('./package.json'); console.log($1)"
 }
@@ -37,6 +40,7 @@ MATERIAL_ID="$(read_json "p.appConfig.naming.materialId")"
 CREATOR="$(read_json "p.appConfig.naming.creator")"
 VENDOR="$(read_json "p.appConfig.naming.vendor")"
 MATERIAL_NAME="$(read_json "p.appConfig.naming.materialName")"
+DEFAULT_CHANNEL="$(read_json "p.appConfig.analytics.adNetwork || 'applovin'")"
 BUILD_DATE=$(date +%Y%m%d)
 
 TARGET="${1:-all}"
@@ -79,9 +83,20 @@ build_variant() {
 
   rm -rf "dist/_build"
 
-  if LOCALE="$locale" CHANNEL="$channel" TRACKING="$tracking" BUILD_MATRIX=true npm run typecheck && LOCALE="$locale" CHANNEL="$channel" TRACKING="$tracking" BUILD_MATRIX=true npx vite build && node scripts/check-scene-walkthrough-build.mjs --disabled dist/_build/index.html && npm run check:prod-debug; then
+  if LOCALE="$locale" CHANNEL="$channel" TRACKING="$tracking" BUILD_MATRIX=true SCENE_WALKTHROUGH_BUILD=false npm run typecheck && LOCALE="$locale" CHANNEL="$channel" TRACKING="$tracking" BUILD_MATRIX=true SCENE_WALKTHROUGH_BUILD=false npx vite build && node scripts/check-scene-walkthrough-build.mjs --disabled dist/_build/index.html && npm run check:prod-debug; then
     mkdir -p "$out_dir"
     mv "dist/_build/index.html" "${out_dir}/${filename}"
+
+    # Keep one stable visual/raw Rollup report for bundle diagnosis. The
+    # representative build is EN + tracked + the project's default channel;
+    # later variants must not overwrite it.
+    if [ "${BUNDLE_STATS:-false}" = "true" ] && [ "$locale" = "EN" ] && [ "$tracking" = "true" ] && [ "$channel" = "$DEFAULT_CHANNEL" ]; then
+      test -f "dist/_build/stats.html"
+      test -f "dist/_build/stats.json"
+      mv "dist/_build/stats.html" "dist/stats.html"
+      mv "dist/_build/stats.json" "dist/stats.json"
+    fi
+
     rm -rf "dist/_build"
     BUILD_COUNT=$((BUILD_COUNT + 1))
   else

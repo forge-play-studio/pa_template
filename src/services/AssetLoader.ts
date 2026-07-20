@@ -24,6 +24,13 @@ export interface LoadProgress {
   currentAsset: string;
 }
 
+interface RuntimeModelUrlRegistration {
+  url: string;
+  owner: object | null;
+}
+
+type ImportedMeshResult = Awaited<ReturnType<typeof SceneLoader.ImportMeshAsync>>;
+
 /**
  * AssetLoader 服务
  */
@@ -33,14 +40,24 @@ export class AssetLoader {
   // AssetContainer 缓存
   private containers = new Map<string, AssetContainer>();
 
+  // 清理失败的旧资源仍由 AssetLoader 持有，后续 clearCache 会重试。
+  private pendingContainerDisposals = new Set<AssetContainer>();
+  private pendingImportedMeshDisposals = new Set<ImportedMeshResult>();
+
   // 正在加载的 Promise（防止重复加载）
   private loadingPromises = new Map<string, Promise<AssetContainer>>();
+
+  // 资产 URL 变化时递增；防止旧的异步加载结果重新写回缓存。
+  private sourceRevisions = new Map<string, number>();
+
+  // clearCache 时递增；旧任务必须清理并结束，不能自动重载或复活缓存。
+  private cacheGeneration = 0;
 
   // 路径信息缓存
   private pathInfoCache = new Map<string, ModelPathInfo>();
 
   // 编辑期动态注册的模型 URL。正式持久化后以 asset catalog 为准。
-  private runtimeModelUrls = new Map<string, string>();
+  private runtimeModelUrls = new Map<string, RuntimeModelUrlRegistration>();
 
   constructor(scene: Scene) {
     this.scene = scene;
@@ -56,6 +73,7 @@ export class AssetLoader {
     assetIds: string[],
     onProgress?: (progress: LoadProgress) => void
   ): Promise<void> {
+    const cacheGeneration = this.cacheGeneration;
     // 开发模式下检查灯光是否存在
     if (import.meta.env.DEV) {
       this.assertLightsExist();
@@ -63,18 +81,27 @@ export class AssetLoader {
 
     const total = assetIds.length;
     let loaded = 0;
+    const assertCurrentCacheGeneration = (assetId: string): void => {
+      if (this.cacheGeneration !== cacheGeneration) {
+        throw this.createCacheInvalidatedError(assetId);
+      }
+    };
 
     for (const assetId of assetIds) {
+      assertCurrentCacheGeneration(assetId);
       onProgress?.({ loaded, total, currentAsset: assetId });
+      assertCurrentCacheGeneration(assetId);
 
       try {
         await this.loadAssetContainer(assetId);
         loaded++;
       } catch (error) {
+        assertCurrentCacheGeneration(assetId);
         loaded++;
       }
 
       onProgress?.({ loaded, total, currentAsset: assetId });
+      assertCurrentCacheGeneration(assetId);
     }
   }
 
@@ -83,10 +110,20 @@ export class AssetLoader {
    */
   async loadAssetContainer(assetId: string): Promise<AssetContainer> {
     const normalizedId = this.normalizeModelAssetId(assetId);
+    const sourceRevision = this.sourceRevisions.get(normalizedId) ?? 0;
+    const cacheGeneration = this.cacheGeneration;
 
     // 已缓存
-    if (this.containers.has(normalizedId)) {
-      return this.containers.get(normalizedId)!;
+    const cachedContainer = this.containers.get(normalizedId);
+    if (cachedContainer) {
+      await Promise.resolve();
+      if (this.cacheGeneration !== cacheGeneration) {
+        throw this.createCacheInvalidatedError(normalizedId);
+      }
+      if ((this.sourceRevisions.get(normalizedId) ?? 0) !== sourceRevision) {
+        return this.loadAssetContainer(normalizedId);
+      }
+      return cachedContainer;
     }
 
     // 正在加载中
@@ -94,16 +131,48 @@ export class AssetLoader {
       return this.loadingPromises.get(normalizedId)!;
     }
 
-    // 开始加载
-    const promise = this.doLoadContainer(normalizedId);
+    // 开始加载。URL 在加载期间变化时，丢弃旧结果并转接到当前 source。
+    const isCurrentSource = (): boolean => (
+      (this.sourceRevisions.get(normalizedId) ?? 0) === sourceRevision
+    );
+    const promise = this.doLoadContainer(
+      normalizedId,
+      sourceRevision,
+      cacheGeneration,
+    ).then(async container => {
+      if (this.cacheGeneration !== cacheGeneration) {
+        try {
+          this.disposeContainer(container);
+        } catch {
+          // 保留在 pendingContainerDisposals，由下一次 clearCache 重试。
+        }
+        throw this.createCacheInvalidatedError(normalizedId);
+      }
+      if (!isCurrentSource()) {
+        try {
+          this.disposeContainer(container);
+        } catch {
+          // 保留在 pendingContainerDisposals；source 切换不能被旧资源清理失败阻塞。
+        }
+        return this.loadAssetContainer(normalizedId);
+      }
+      this.containers.set(normalizedId, container);
+      return container;
+    }, error => {
+      if (this.cacheGeneration !== cacheGeneration) {
+        throw this.createCacheInvalidatedError(normalizedId);
+      }
+      if (!isCurrentSource()) return this.loadAssetContainer(normalizedId);
+      throw error;
+    });
     this.loadingPromises.set(normalizedId, promise);
 
     try {
-      const container = await promise;
-      this.containers.set(normalizedId, container);
-      return container;
+      return await promise;
     } finally {
-      this.loadingPromises.delete(normalizedId);
+      if (this.loadingPromises.get(normalizedId) === promise) {
+        this.loadingPromises.delete(normalizedId);
+      }
     }
   }
 
@@ -111,16 +180,53 @@ export class AssetLoader {
    * 加载模型为 TransformNode（一次性使用）
    */
   async loadModel(assetId: string): Promise<TransformNode> {
-    const pathInfo = await this.getPathInfo(assetId);
+    const normalizedId = this.normalizeModelAssetId(assetId);
+    const sourceRevision = this.sourceRevisions.get(normalizedId) ?? 0;
+    const cacheGeneration = this.cacheGeneration;
+    const pathInfo = await this.getPathInfo(normalizedId);
+    if (this.cacheGeneration !== cacheGeneration) {
+      throw this.createCacheInvalidatedError(normalizedId);
+    }
+    if ((this.sourceRevisions.get(normalizedId) ?? 0) !== sourceRevision) {
+      return this.loadModel(normalizedId);
+    }
 
-    const result = await SceneLoader.ImportMeshAsync(
-      '',
-      pathInfo.path,
-      pathInfo.filename,
-      this.scene,
-      undefined,
-      pathInfo.isDataUrl || pathInfo.isCompressed ? '.glb' : undefined
-    );
+    let result: ImportedMeshResult;
+    try {
+      result = await SceneLoader.ImportMeshAsync(
+        '',
+        pathInfo.path,
+        pathInfo.filename,
+        this.scene,
+        undefined,
+        pathInfo.isDataUrl || pathInfo.isCompressed ? '.glb' : undefined
+      );
+    } catch (error) {
+      if (this.cacheGeneration !== cacheGeneration) {
+        throw this.createCacheInvalidatedError(normalizedId);
+      }
+      if ((this.sourceRevisions.get(normalizedId) ?? 0) !== sourceRevision) {
+        return this.loadModel(normalizedId);
+      }
+      throw error;
+    }
+
+    if (this.cacheGeneration !== cacheGeneration) {
+      try {
+        this.disposeImportedMeshResultWithRetryOwnership(result);
+      } catch {
+        // 保留在 pendingImportedMeshDisposals，由下一次 clearCache 重试。
+      }
+      throw this.createCacheInvalidatedError(normalizedId);
+    }
+    if ((this.sourceRevisions.get(normalizedId) ?? 0) !== sourceRevision) {
+      try {
+        this.disposeImportedMeshResultWithRetryOwnership(result);
+      } catch {
+        // 保留在 pendingImportedMeshDisposals；继续转接当前 source。
+      }
+      return this.loadModel(normalizedId);
+    }
 
     if (result.meshes.length > 0) {
       return result.meshes[0] as TransformNode;
@@ -150,21 +256,40 @@ export class AssetLoader {
    */
   getModelUrl(assetId: string): string | undefined {
     const normalizedId = this.normalizeModelAssetId(assetId);
-    return this.runtimeModelUrls.get(normalizedId) ?? resolveModelAssetUrl(normalizedId);
+    return this.runtimeModelUrls.get(normalizedId)?.url ?? resolveModelAssetUrl(normalizedId);
   }
 
   registerRuntimeModelUrl(assetId: string, url: string): void {
+    this.setRuntimeModelUrl(assetId, url, null);
+  }
+
+  registerOwnedRuntimeModelUrl(assetId: string, url: string, owner: object): void {
+    this.setRuntimeModelUrl(assetId, url, owner);
+  }
+
+  private setRuntimeModelUrl(assetId: string, url: string, owner: object | null): void {
     const normalizedId = this.normalizeModelAssetId(assetId);
     const normalizedUrl = url.trim();
     if (!normalizedId || !normalizedUrl) return;
-    this.runtimeModelUrls.set(normalizedId, normalizedUrl);
-    this.pathInfoCache.delete(normalizedId);
+    const previousUrl = this.getModelUrl(normalizedId);
+    this.runtimeModelUrls.set(normalizedId, { url: normalizedUrl, owner });
+    if (previousUrl !== normalizedUrl) this.invalidateModelSource(normalizedId);
   }
 
   unregisterRuntimeModelUrl(assetId: string): void {
     const normalizedId = this.normalizeModelAssetId(assetId);
+    if (!this.runtimeModelUrls.has(normalizedId)) return;
+    const previousUrl = this.getModelUrl(normalizedId);
     this.runtimeModelUrls.delete(normalizedId);
-    this.pathInfoCache.delete(normalizedId);
+    if (previousUrl !== this.getModelUrl(normalizedId)) this.invalidateModelSource(normalizedId);
+  }
+
+  unregisterOwnedRuntimeModelUrl(assetId: string, owner: object): boolean {
+    const normalizedId = this.normalizeModelAssetId(assetId);
+    const registration = this.runtimeModelUrls.get(normalizedId);
+    if (!registration || registration.owner !== owner) return false;
+    this.unregisterRuntimeModelUrl(normalizedId);
+    return true;
   }
 
   /**
@@ -178,11 +303,47 @@ export class AssetLoader {
    * 清除缓存
    */
   clearCache(): void {
-    for (const container of this.containers.values()) {
-      container.dispose();
-    }
+    this.cacheGeneration += 1;
+    this.loadingPromises.clear();
+    const errors: unknown[] = [];
+    const containers = new Set([
+      ...this.containers.values(),
+      ...this.pendingContainerDisposals,
+    ]);
     this.containers.clear();
+    for (const container of containers) {
+      try {
+        this.disposeContainer(container);
+      } catch (error) {
+        errors.push(error);
+      }
+    }
+    for (const result of [...this.pendingImportedMeshDisposals]) {
+      try {
+        this.disposeImportedMeshResultWithRetryOwnership(result);
+      } catch (error) {
+        errors.push(error);
+      }
+    }
     this.pathInfoCache.clear();
+    if (errors.length > 0) {
+      throw new AggregateError(errors, '[AssetLoader] cache disposal failed');
+    }
+  }
+
+  private invalidateModelSource(assetId: string): void {
+    const cachedContainer = this.containers.get(assetId);
+    this.containers.delete(assetId);
+    this.pathInfoCache.delete(assetId);
+    this.loadingPromises.delete(assetId);
+    this.sourceRevisions.set(assetId, (this.sourceRevisions.get(assetId) ?? 0) + 1);
+    if (cachedContainer) this.disposeContainer(cachedContainer);
+  }
+
+  private disposeContainer(container: AssetContainer): void {
+    this.pendingContainerDisposals.add(container);
+    container.dispose();
+    this.pendingContainerDisposals.delete(container);
   }
 
   /**
@@ -192,8 +353,18 @@ export class AssetLoader {
    * - 常规 URL: path + filename 分开传递
    * - Data URL: 需要指定 pluginExtension 告诉加载器文件类型
    */
-  private async doLoadContainer(assetId: string): Promise<AssetContainer> {
+  private async doLoadContainer(
+    assetId: string,
+    sourceRevision: number,
+    cacheGeneration: number,
+  ): Promise<AssetContainer> {
     const pathInfo = await this.getPathInfo(assetId);
+    if (this.cacheGeneration !== cacheGeneration) {
+      throw this.createCacheInvalidatedError(assetId);
+    }
+    if ((this.sourceRevisions.get(assetId) ?? 0) !== sourceRevision) {
+      throw new Error(`[AssetLoader] Source changed during load: ${assetId}`);
+    }
 
 
     // 使用与旧系统相同的调用方式：path 和 filename 分开传递
@@ -226,12 +397,61 @@ export class AssetLoader {
     if (!url) {
       throw new Error(`[AssetLoader] Unknown model assetId: ${assetId}`);
     }
+    const sourceRevision = this.sourceRevisions.get(normalizedId) ?? 0;
+    const cacheGeneration = this.cacheGeneration;
 
     // 解析路径（处理压缩 GLB）
-    const pathInfo = await getModelPathAndFileAsync(url);
+    const pathInfo = await this.resolvePathInfo(url);
+    if (this.cacheGeneration !== cacheGeneration) return pathInfo;
+    if (
+      (this.sourceRevisions.get(normalizedId) ?? 0) !== sourceRevision
+      || this.getModelUrl(normalizedId) !== url
+    ) {
+      return this.getPathInfo(normalizedId);
+    }
     this.pathInfoCache.set(normalizedId, pathInfo);
 
     return pathInfo;
+  }
+
+  private resolvePathInfo(url: string): Promise<ModelPathInfo> {
+    return getModelPathAndFileAsync(url);
+  }
+
+  private createCacheInvalidatedError(assetId: string): Error {
+    return new Error(`[AssetLoader] Load invalidated by clearCache: ${assetId}`);
+  }
+
+  private disposeImportedMeshResultWithRetryOwnership(result: ImportedMeshResult): void {
+    this.pendingImportedMeshDisposals.add(result);
+    const errors: unknown[] = [];
+    const attempt = (dispose: () => void): void => {
+      try {
+        dispose();
+      } catch (error) {
+        errors.push(error);
+      }
+    };
+    for (const animationGroup of result.animationGroups) attempt(() => animationGroup.dispose());
+    for (const particleSystem of result.particleSystems) attempt(() => particleSystem.dispose());
+    for (const skeleton of result.skeletons) attempt(() => skeleton.dispose());
+    for (const spriteManager of result.spriteManagers) attempt(() => spriteManager.dispose());
+    for (const light of result.lights) {
+      if (!light.isDisposed()) attempt(() => light.dispose());
+    }
+    for (const transformNode of result.transformNodes) {
+      if (!transformNode.isDisposed()) attempt(() => transformNode.dispose(false, true));
+    }
+    for (const mesh of result.meshes) {
+      if (!mesh.isDisposed()) attempt(() => mesh.dispose(false, true));
+    }
+    for (const geometry of result.geometries) {
+      if (!geometry.isDisposed()) attempt(() => geometry.dispose());
+    }
+    if (errors.length > 0) {
+      throw new AggregateError(errors, '[AssetLoader] imported mesh disposal failed');
+    }
+    this.pendingImportedMeshDisposals.delete(result);
   }
 
   /**

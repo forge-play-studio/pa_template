@@ -2,16 +2,17 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { gunzipSync } from 'node:zlib';
 
-const args = process.argv.slice(2);
-const disabled = args[0] === '--disabled';
-const artifactPath = args.find((arg) => arg !== '--disabled')
-  ?? (disabled ? 'dist/index.html' : 'dist/scene-walkthrough/index.html');
-const resolvedArtifactPath = resolve(artifactPath);
+const [mode, artifact = mode === '--disabled' ? 'dist/index.html' : 'dist/scene-walkthrough/index.html'] = process.argv.slice(2);
+if (mode !== '--enabled' && mode !== '--disabled') {
+  throw new Error('Usage: node check-scene-walkthrough-build.mjs <--enabled|--disabled> [artifact]');
+}
+
+const disabled = mode === '--disabled';
+const resolvedArtifactPath = resolve(artifact);
 const marker = 'data-scene-walkthrough-build';
 
 if (!existsSync(resolvedArtifactPath)) {
-  console.error(`[check-scene-walkthrough-build] Missing build artifact: ${resolvedArtifactPath}`);
-  process.exit(1);
+  throw new Error(`Missing build artifact: ${resolvedArtifactPath}`);
 }
 
 const content = readFileSync(resolvedArtifactPath, 'utf8');
@@ -19,13 +20,10 @@ const searchableContent = `${content}\n${readGzipInlinedModule(content) ?? ''}`;
 const containsWalkthrough = searchableContent.includes(marker);
 
 if (disabled && containsWalkthrough) {
-  console.error(`[check-scene-walkthrough-build] Test-only walkthrough leaked into regular artifact: ${resolvedArtifactPath}`);
-  process.exit(1);
+  throw new Error(`Test-only walkthrough leaked into regular artifact: ${resolvedArtifactPath}`);
 }
-
 if (!disabled && !containsWalkthrough) {
-  console.error(`[check-scene-walkthrough-build] Expected test-only walkthrough is missing: ${resolvedArtifactPath}`);
-  process.exit(1);
+  throw new Error(`Expected test-only walkthrough is missing: ${resolvedArtifactPath}`);
 }
 
 console.log(`[check-scene-walkthrough-build] ${disabled ? 'regular build is clean' : 'walkthrough build is enabled'}: ${resolvedArtifactPath}`);
@@ -33,10 +31,5 @@ console.log(`[check-scene-walkthrough-build] ${disabled ? 'regular build is clea
 function readGzipInlinedModule(html) {
   const encoded = html.match(/Uint8Array\.from\(atob\("([A-Za-z0-9+/=]+)"\)/)?.[1];
   if (!encoded) return null;
-  try {
-    return gunzipSync(Buffer.from(encoded, 'base64')).toString('utf8');
-  } catch (error) {
-    console.error('[check-scene-walkthrough-build] Failed to inspect gzip-inlined JavaScript.', error);
-    process.exit(1);
-  }
+  return gunzipSync(Buffer.from(encoded, 'base64')).toString('utf8');
 }

@@ -10,7 +10,8 @@
 import type {
   EditorShadowResolvedPlan,
   EditorShadowSettings,
-} from '@fps-games/editor/playable-sdk';
+  EditorSceneStaticShadowArtifact,
+} from '../runtime/integrations/fps-runtime/contracts';
 
 // ============================================================
 // 基础类型
@@ -102,39 +103,6 @@ export interface SceneHemisphericLightConfig {
 export type SceneLightConfig = SceneHemisphericLightConfig | SceneDirectionalLightConfig;
 
 // ============================================================
-// World Bounds
-// ============================================================
-
-export interface WorldBoundsConfig {
-  minX: number;
-  maxX: number;
-  minZ: number;
-  maxZ: number;
-}
-
-// ============================================================
-// Scene VFX (可选)
-// ============================================================
-
-export interface SceneVfxConfig {
-  /** effectId -> effect */
-  effects: Record<string, SceneVfxEffectConfig>;
-}
-
-export interface SceneVfxEffectConfig {
-  enabled?: boolean;
-  position: Position3D;
-  rotationDeg?: Position3D;
-  systems: Record<string, SceneVfxParticleSystemConfig>;
-}
-
-export interface SceneVfxParticleSystemConfig {
-  enabled?: boolean;
-  capacity?: number;
-  textureId?: string;
-}
-
-// ============================================================
 // Scene JSON
 // ============================================================
 
@@ -153,10 +121,21 @@ export interface AssetExternalRef {
   [key: string]: unknown;
 }
 
+export interface SceneAssetMaterialSlotConfig {
+  slotId: string;
+  ownerNodePath: string;
+  label?: string;
+  meshIndex?: number;
+  primitiveIndex?: number;
+  sourceMaterialIndices?: number[];
+  sourceMeshName?: string;
+}
+
 export interface SceneAssetConfig {
   id: string;
   guid?: string;
   type: 'glb';
+  url?: string;
   external?: AssetExternalRef;
   displayName?: string;
   category?: string;
@@ -164,6 +143,8 @@ export interface SceneAssetConfig {
   singleton?: boolean;
   materialMode?: SceneAssetMaterialMode;
   defaults?: SceneAssetDefaults;
+  materialSlots?: SceneAssetMaterialSlotConfig[];
+  /** @deprecated Runtime schema v2 compatibility only. */
   metadata?: Record<string, unknown>;
 }
 
@@ -188,8 +169,6 @@ export interface SceneRuntimeSourceBinding extends SceneAuthoringSourceRef {
   propertyPath?: string;
 }
 
-export type SceneNodeShadowMode = 'default' | 'none' | 'blob' | 'static' | 'planar' | 'dynamic';
-
 export interface SceneNodeRenderingConfig {
   renderingGroupId?: number;
   alphaIndex?: number;
@@ -201,7 +180,6 @@ export interface SceneNodeBase {
   kind: 'group' | 'instance' | 'transform' | 'primitive';
   parentId?: string;
   enabled?: boolean;
-  shadowMode?: SceneNodeShadowMode;
   shadow?: EditorShadowSettings;
   shadowPlan?: EditorShadowResolvedPlan;
   rendering?: SceneNodeRenderingConfig;
@@ -382,9 +360,7 @@ export interface OutlineOverrideConfig {
 export interface SceneNodeVisualOverrides {
   materialBinding?: SceneNodeMaterialBindingConfig;
   materialSlotBindings?: Record<string, SceneNodeMaterialBindingConfig>;
-  childMaterialBindings?: Record<string, SceneNodeMaterialBindingConfig>;
   material?: MaterialOverrideConfig;
-  childMaterials?: Record<string, MaterialOverrideConfig>;
   childTransforms?: Record<string, TransformConfig>;
   outline?: OutlineOverrideConfig;
   childOutlines?: Record<string, OutlineOverrideConfig>;
@@ -651,12 +627,9 @@ export interface SceneZoneConfig {
 }
 
 export interface SceneGameplayConfig {
-  worldBounds?: WorldBoundsConfig;
   gameplayBindings?: GameplayBindingConfig[];
   zones?: SceneZoneConfig[];
-  tuning?: {
-    sceneVfx?: SceneVfxConfig;
-  };
+  tuning?: Record<string, unknown>;
   layoutPlaceholderSurfaces?: LayoutPlaceholderSurfaceConfig[];
   groundOverlayPlanes?: GroundOverlayPlaneConfig[];
   [key: string]: unknown;
@@ -680,7 +653,7 @@ export interface SceneConfig {
   gameplay?: SceneGameplayConfig;
   scene?: SceneDocumentScene;
   render?: SceneRenderConfig;
-  staticShadows?: unknown;
+  staticShadows?: EditorSceneStaticShadowArtifact;
 }
 
 export interface GameConfig {

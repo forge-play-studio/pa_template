@@ -44,5 +44,5 @@ export type { AdNetwork, AnalyticsPluginOptions } from './analytics';
 
 export { molocoCtaPlugin } from './molocoCta';
 
-export { tapeServerPlugin } from './tapeServer';
-export type { TapeServerPluginOptions } from './tapeServer';
+export { projectDebugApiPlugins } from './projectDebugApis';
+export type { ProjectDebugApiPluginOptions } from './projectDebugApis';

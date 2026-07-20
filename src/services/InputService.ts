@@ -1,5 +1,7 @@
 export interface MovementInputState {
+  /** 屏幕横向输入：负值表示屏幕左，正值表示屏幕右；不是世界坐标 X。 */
   x: number;
+  /** 屏幕纵向输入：负值表示屏幕后，正值表示屏幕前；不是世界坐标 Z。 */
   y: number;
   magnitude: number;
   isActive: boolean;

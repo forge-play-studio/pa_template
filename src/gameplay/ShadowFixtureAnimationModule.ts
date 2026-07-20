@@ -45,9 +45,14 @@ export class ShadowFixtureAnimationModule implements GameplayModule {
   private playerIdleRemaining = 0;
   private playerAnimations: AnimationGroup[] = [];
   private workerAnimations: AnimationGroup[] = [];
+  private playerIdleClipName: string | null = null;
+  private playerMoveClipName: string | null = null;
+  private workerLoopClipName: string | null = null;
+  private currentPlayerAnimationName: string | null = null;
+  private currentWorkerAnimationName: string | null = null;
 
   constructor(
-    private readonly context: Pick<GameplayRuntimeContext, 'sceneBuilder' | 'animationService'> & Partial<Pick<GameplayRuntimeContext, 'determinism'>>,
+    private readonly context: Pick<GameplayRuntimeContext, 'sceneBuilder' | 'modelAnimationService'>,
     options: ShadowFixtureAnimationModuleOptions = {},
   ) {
     this.playerNodeId = options.playerNodeId ?? DEFAULT_PLAYER_NODE_ID;
@@ -56,21 +61,25 @@ export class ShadowFixtureAnimationModule implements GameplayModule {
     this.moveSpeed = Math.max(0.1, options.playerMoveSpeed ?? DEFAULT_MOVE_SPEED);
     this.idleMinSec = Math.max(0, options.playerIdleMinSec ?? DEFAULT_IDLE_MIN_SEC);
     this.idleMaxSec = Math.max(this.idleMinSec, options.playerIdleMaxSec ?? DEFAULT_IDLE_MAX_SEC);
-    this.random = options.random ?? context.determinism?.random ?? Math.random;
+    this.random = options.random ?? Math.random;
   }
 
   init(): void {
     this.playerNode = this.context.sceneBuilder.getSceneNodeRuntime(this.playerNodeId) ?? null;
     this.playerAnimations = this.context.sceneBuilder.getSceneNodeAnimationGroups(this.playerNodeId);
+    this.playerIdleClipName = resolveFirstClipName(this.playerAnimations, PLAYER_IDLE_ANIMATION_CANDIDATES);
+    this.playerMoveClipName = resolveFirstClipName(this.playerAnimations, PLAYER_MOVE_ANIMATION_CANDIDATES);
     if (this.playerNode) {
       this.playerHome.copyFrom(this.playerNode.position);
       this.beginNextPlayerMove();
     }
 
     this.workerAnimations = this.context.sceneBuilder.getSceneNodeAnimationGroups(this.workerNodeId);
+    this.workerLoopClipName = resolveFirstClipName(this.workerAnimations, WORKER_LOOP_ANIMATION_CANDIDATES);
     this.playWorkerLoop();
   }
 
+  /** Advances only the fixture root transform; Babylon advances model clips. */
   update(deltaTime: number): void {
     if (!this.playerNode || !Number.isFinite(deltaTime) || deltaTime <= 0) return;
     if (this.playerState === 'moving') {
@@ -86,11 +95,13 @@ export class ShadowFixtureAnimationModule implements GameplayModule {
 
   dispose(): void {
     if (this.playerAnimations.length > 0) {
-      this.context.animationService.stop(this.playerAnimations);
+      this.context.modelAnimationService.stop(this.playerAnimations);
     }
     if (this.workerAnimations.length > 0) {
-      this.context.animationService.stop(this.workerAnimations);
+      this.context.modelAnimationService.stop(this.workerAnimations);
     }
+    this.currentPlayerAnimationName = null;
+    this.currentWorkerAnimationName = null;
     if (this.playerNode) {
       this.playerNode.position.copyFrom(this.playerHome);
     }
@@ -111,13 +122,14 @@ export class ShadowFixtureAnimationModule implements GameplayModule {
       workerNodeId: this.workerNodeId,
       playerAnimationCount: this.playerAnimations.length,
       workerAnimationCount: this.workerAnimations.length,
-      currentPlayerAnimationName: this.context.animationService.getCurrentAnimationName(this.playerAnimations),
-      currentWorkerAnimationName: this.context.animationService.getCurrentAnimationName(this.workerAnimations),
+      currentPlayerAnimationName: this.currentPlayerAnimationName,
+      currentWorkerAnimationName: this.currentWorkerAnimationName,
     };
   }
 
   private playWorkerLoop(): void {
-    this.playFirstAvailable(this.workerAnimations, WORKER_LOOP_ANIMATION_CANDIDATES, 1);
+    const animation = this.playClip(this.workerAnimations, this.workerLoopClipName, 1);
+    this.currentWorkerAnimationName = animation?.name ?? null;
   }
 
   private beginNextPlayerMove(): void {
@@ -129,7 +141,8 @@ export class ShadowFixtureAnimationModule implements GameplayModule {
     const distance = Vector3.Distance(this.playerMoveStart, this.playerMoveTarget);
     this.playerMoveDuration = Math.max(0.35, distance / this.moveSpeed);
     this.facePlayerMoveTarget();
-    this.playFirstAvailable(this.playerAnimations, PLAYER_MOVE_ANIMATION_CANDIDATES, 1);
+    const animation = this.playClip(this.playerAnimations, this.playerMoveClipName, 1);
+    this.currentPlayerAnimationName = animation?.name ?? null;
   }
 
   private updatePlayerMove(deltaTime: number): void {
@@ -147,27 +160,20 @@ export class ShadowFixtureAnimationModule implements GameplayModule {
     if (progress >= 1) {
       this.playerState = 'idle';
       this.playerIdleRemaining = this.idleMinSec + (this.idleMaxSec - this.idleMinSec) * this.randomUnit();
-      this.playFirstAvailable(this.playerAnimations, PLAYER_IDLE_ANIMATION_CANDIDATES, 1);
+      const animation = this.playClip(this.playerAnimations, this.playerIdleClipName, 1);
+      this.currentPlayerAnimationName = animation?.name ?? null;
     }
   }
 
-  private playFirstAvailable(animations: AnimationGroup[], names: readonly string[], speed: number): AnimationGroup | null {
-    if (animations.length === 0) return null;
-    for (const name of names) {
-      const animation = this.context.animationService.findAnimation(animations, name);
-      if (!animation) continue;
-      return this.context.animationService.play(animations, animation.name, {
-        loop: true,
-        speed,
-        restart: false,
-      });
-    }
-    const fallback = animations[0] ?? null;
-    if (!fallback) return null;
-    return this.context.animationService.play(animations, fallback.name, {
+  private playClip(
+    animations: readonly AnimationGroup[],
+    clipName: string | null,
+    speedRatio: number,
+  ): AnimationGroup | null {
+    if (!clipName) return null;
+    return this.context.modelAnimationService.play(animations, clipName, {
       loop: true,
-      speed,
-      restart: false,
+      speedRatio,
     });
   }
 
@@ -201,4 +207,21 @@ export class ShadowFixtureAnimationModule implements GameplayModule {
 
 function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
+}
+
+function resolveFirstClipName(
+  animations: readonly AnimationGroup[],
+  candidates: readonly string[],
+): string | null {
+  for (const candidate of candidates) {
+    const normalizedCandidate = candidate.toLowerCase();
+    const exact = animations.find(animation => animation.name.toLowerCase() === normalizedCandidate);
+    if (exact) return exact.name;
+  }
+  for (const candidate of candidates) {
+    const normalizedCandidate = candidate.toLowerCase();
+    const partial = animations.find(animation => animation.name.toLowerCase().includes(normalizedCandidate));
+    if (partial) return partial.name;
+  }
+  return animations[0]?.name ?? null;
 }

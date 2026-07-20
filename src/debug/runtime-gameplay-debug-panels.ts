@@ -1,4 +1,4 @@
-import type { Game } from '../core/Game';
+import type { GameWorld } from '../runtime/GameWorld';
 import type { ProjectGameplayRuntime } from '../gameplay';
 import type { Disposable } from './framework/disposables';
 import type { RuntimeDebugActionRegistry } from './framework/debug-action-registry';
@@ -10,7 +10,7 @@ import { runtimeGameplayDebugPanelDescriptors } from './panel-manifest';
 
 export interface RuntimeGameplayDebugPanelsOptions {
   root?: HTMLElement;
-  getGame: () => Game | null;
+  getGame: () => GameWorld | null;
   getGameplayRuntime: () => ProjectGameplayRuntime | null;
   actions: RuntimeDebugActionRegistry;
 }

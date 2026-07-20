@@ -13,7 +13,7 @@ import {
   createPlayableBabylonWorldRendering,
   type EditorSceneRenderingTextureAsset,
   type PlayableBabylonRuntimeRenderingControllers,
-} from '@fps-games/editor/playable-sdk';
+} from '../runtime/integrations/fps-runtime/rendering';
 
 // 导入配置
 import renderingConfig from '../config/rendering.json';
@@ -28,15 +28,12 @@ interface GlobalVolumeConfig {
     contrast: number;
   };
   environment: {
-    intensity: number;
     iblIntensity: number;
     useCocosIBL: boolean;
     texture?: {
       textureAssetId?: string | null;
       url?: string | null;
     } | null;
-    textureAssetId?: string | null;
-    textureUrl?: string | null;
     rotationY?: number;
   };
   lights: {

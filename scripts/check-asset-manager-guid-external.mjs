@@ -3,51 +3,55 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import {
+  createPlayableEditorAssetId,
+  planPlayableEditorAssetRegistrationCore,
+} from '@fps-games/editor/playable-sdk';
 
 const root = process.cwd();
 
-const files = {
-  core: path.join(root, 'src/services/assets/core/AssetManagerCore.ts'),
-  facade: path.join(root, 'src/services/AssetManager.ts'),
-  adapter: path.join(root, 'src/fps-game-editor-adapter/asset-adapter.ts'),
-  placement: path.join(root, 'src/services/SceneAssetPlacement.ts'),
-  usage: path.join(root, 'src/services/SceneAssetUsage.ts'),
-  localBridge: path.join(root, 'src/debug/local-editor-mode-switcher.ts'),
-};
+const productHostSource = await fs.readFile(path.join(root, 'src/services/fps-game-editor/local-editor.ts'), 'utf8');
 
-const entries = await Promise.all(
-  Object.entries(files).map(async ([key, filePath]) => [key, await fs.readFile(filePath, 'utf8')]),
-);
-const source = Object.fromEntries(entries);
-
-for (const key of ['core', 'facade', 'adapter', 'placement', 'usage']) {
-  assert.doesNotMatch(source[key], /\bsourceId\b/, `${key} must not expose asset sourceId identity`);
+for (const retiredPath of [
+  'src/fps-game-editor-adapter/assets',
+  'src/services/AssetManager.ts',
+  'src/services/SceneAssetPlacement.ts',
+  'src/services/SceneAssetUsage.ts',
+  'src/services/assets/core/AssetManagerCore.ts',
+  'src/services/assets/adapters/BabylonRuntimeAssetAdapter.ts',
+]) {
+  await assert.rejects(fs.access(path.join(root, retiredPath)), `${retiredPath} must stay deleted`);
 }
 
-assert.match(source.core, /\bprojectAssetId:\s*assetArgs\.assetId\b/, 'registration payload must use projectAssetId');
-assert.match(source.core, /\bconst assetId = createAssetId\(kind, guid\);/, 'asset manager identity must derive assetId from guid');
-assert.match(source.core, /createPlayableEditorAssetId/, 'asset manager identity must delegate assetId derivation to the SDK');
-assert.match(source.core, /normalizePlayableEditorAssetKind/, 'asset manager kind normalization must delegate to the SDK');
-assert.doesNotMatch(source.core, /function createFallbackGuid|Math\.random/, 'asset manager must not own GUID fallback generation');
-assert.match(source.core, /Project asset id "[^"]+" does not match guid/, 'asset manager must reject non-canonical requested project assetId');
-assert.match(source.core, /Requested guid "[^"]+" does not match existing asset guid/, 'asset manager must reject requested guid conflicts with reusable assets');
-assert.doesNotMatch(source.core, /existing\?\.id\s*\?\?\s*requestedAssetId|requestedAssetId\s*\?\?\s*createAssetId/, 'requested assetId must not override guid-derived assetId');
-assert.doesNotMatch(source.core, /\bsourceId\b/, 'asset manager core must not write sourceId');
-assert.match(source.core, /\bplatformAssetId:\s*assetArgs\.external\.platformAssetId\b/, 'registration payload must carry external.platformAssetId');
-assert.match(source.core, /\bguid:\s*assetArgs\.guid\b/, 'registration payload must carry guid');
+const sdkRegistrationPlan = planPlayableEditorAssetRegistrationCore(
+  { assets: [] },
+  {
+    guid: '11111111-1111-4111-8111-111111111111',
+    kind: 'model',
+    assetName: 'demo-tree.glb',
+    assetPath: 'assets/models/demo-tree.glb',
+    platformAssetId: 'platform-tree-1',
+    createPayloadPath: () => '/tmp/check-asset-manager-guid-external.json',
+  },
+  {
+    metadata: { key: 'managedBy', value: 'check' },
+    errorCodes: {
+      assetIdConflict: 'asset_id_conflict',
+      assetStillReferenced: 'asset_still_referenced',
+      missingAssetId: 'missing_asset_id',
+      nodeNotFound: 'node_not_found',
+    },
+  },
+);
+const sdkRegistrationPayload = sdkRegistrationPlan.transportPlan.writes[0]?.content;
+assert.equal(sdkRegistrationPlan.assetId, createPlayableEditorAssetId('model', sdkRegistrationPlan.guid), 'SDK registration plan must derive canonical assetId from guid');
+assert.ok(sdkRegistrationPayload && typeof sdkRegistrationPayload === 'object', 'SDK registration plan must write a JSON payload');
+assert.equal(sdkRegistrationPayload.projectAssetId, sdkRegistrationPlan.assetId, 'registration payload must use projectAssetId');
+assert.equal(sdkRegistrationPayload.guid, sdkRegistrationPlan.guid, 'registration payload must carry guid');
+assert.equal(sdkRegistrationPayload.platformAssetId, 'platform-tree-1', 'registration payload must carry external.platformAssetId');
 
-assert.match(source.adapter, /platformAssetId:\s*optionalString\(params\.platformAssetId\)\s*\?\?\s*optionalString\(params\.assetId\)/, 'platform payload assetId must be interpreted as raw platform id');
-assert.match(source.adapter, /projectAssetId\)\s*\?\?\s*optionalString\(params\.assetId\)/, 'unregistration must accept canonical projectAssetId first');
-assert.match(source.adapter, /const registered = inferredAssetPath[\s\S]*await executeTransportPlan\(registrationPlan\.transportPlan\)/, 'asset import must register before placement to receive canonical assetId');
-assert.match(source.adapter, /assetId:\s*canonical\.assetId/, 'asset import must place canonical project assetId');
-assert.doesNotMatch(source.adapter, /void executeTransportPlan/, 'asset import must not fire-and-forget registry registration');
-
-assert.match(source.localBridge, /\breadPlayablePlatformRawAssetId\(payload\)/, 'local bridge must use SDK platform asset id reader');
-assert.match(source.localBridge, /\bregisterPlayablePlatformAssetWithSdk\b/, 'local bridge must use SDK asset registration workflow');
-assert.match(source.localBridge, /readOptionalString\(payload\.projectAssetId\)/, 'local bridge must distinguish optional projectAssetId');
-assert.doesNotMatch(source.localBridge, /readPlatformAssetSourceId|findRegistered(Model|Texture)(SourceId|AssetId)ForPlatformAsset|sanitizePlatformAssetId/, 'local bridge must not use filename/sourceId platform helpers');
-
-assert.match(source.usage, /\bfindSceneAssetUsageByAssetId\b/, 'scene usage guard must be assetId-driven');
-assert.doesNotMatch(source.usage, /\bfindSceneAssetUsageBySourceId\b/, 'scene usage guard must not be sourceId-driven');
+assert.match(productHostSource, /\bcreateFpsGameEditorProductProjectHostServices\b/, 'project host must delegate platform asset commands to the SDK product service');
+assert.match(productHostSource, /\breadFpsGameEditorPlatformAssetLookup\b/, 'project host must use the package-visible platform asset lookup');
+assert.doesNotMatch(productHostSource, /readPlatformAssetSourceId|findRegistered(Model|Texture)(SourceId|AssetId)ForPlatformAsset|sanitizePlatformAssetId/, 'project host must not restore filename/sourceId platform helpers');
 
 console.log('asset manager guid/external check passed');

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "project-vfx-budget/1.0",
+  "title": "Project VFX Budget",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "status", "globalActiveLimit", "expectedGlobalPeak"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": { "const": "project-vfx-budget/1.0" },
+    "status": { "enum": ["unconfirmed", "confirmed"] },
+    "globalActiveLimit": { "type": "integer", "minimum": 0 },
+    "expectedGlobalPeak": { "type": "integer", "minimum": 0 },
+    "notes": { "type": "string" }
+  }
+}
