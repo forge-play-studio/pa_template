@@ -7,6 +7,7 @@ const restartProjectGame = (context?: Parameters<DevHost['restart']>[0]): Promis
   host.restart(context)
 );
 const disposeEditorEntryButton = mountEditorEntryButton(host);
+let startPromise: Promise<void> | null = null;
 
 window.__restartProjectGame = restartProjectGame;
 
@@ -15,8 +16,11 @@ function hasRenderCanvas(): boolean {
 }
 
 function startWhenReady(): void {
-  if (!hasRenderCanvas()) return;
-  void host.start().catch(error => console.error('[DevHost] start failed', error));
+  if (!hasRenderCanvas() || startPromise) return;
+  startPromise = host.start().then(async () => {
+    const mode = new URLSearchParams(window.location.search).get('mode');
+    if (mode === 'edit') await host.enterEditor();
+  }).catch(error => console.error('[DevHost] start failed', error));
 }
 
 if (document.readyState === 'loading') {
