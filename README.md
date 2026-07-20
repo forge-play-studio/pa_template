@@ -137,7 +137,7 @@ LoadingScreen 显示
 
 ### Analytics / CTA Contract
 
-模板默认提供与已落地 PA 项目一致的埋点和 CTA 行为。具体项目只需要在真实玩法节点里调用对应接口；不同项目的商店链接通过 `scene.json.meta.playableAdInfo.ctaUrl` 配置。
+模板默认提供与已落地 PA 项目一致的埋点和 CTA 行为。具体项目只需要在真实玩法节点里调用对应接口。智能跳转链接继续通过 `scene.json.meta.playableAdInfo.ctaUrl`（或 `cta.smartUrl`）配置；交付收尾确认 Android/iOS 两个不同直链时，改用 `cta.mode = "platform-build"` 和 `cta.androidUrl` / `cta.iosUrl`。
 
 模板已接入的通用生命周期：
 
@@ -153,11 +153,11 @@ LoadingScreen 显示
 3. `context.cta.handleCtaClick(source)`：`source === 'fail'` 时先 `onRetry()`，随后 `onInstall('Global')` 并打开 CTA。
 4. `context.cta.openCtaUrlInNewPage()`：结束页展示后的自动跳转；`CHANNEL=unity` 时不自动跳转。
 
-CTA 链接默认读取 `scene.json.meta.playableAdInfo.ctaUrl`。打开顺序统一为 `super_html.download` -> `mraid.open` -> `window.open('_blank')` -> `location.href`。按钮点击不拦 `unity`，只有结束页自动跳转路径拦 `unity`。
+CTA 链接默认读取 `scene.json.meta.playableAdInfo.ctaUrl`。在 `platform-build` 中，构建期 `TARGET_PLATFORM=android|ios` 选择对应直链，绝不根据 UA 猜测设备；未匹配时使用 `cta.fallbackUrl`，再回退到旧 `ctaUrl`。打开顺序统一为 `super_html.download` -> `mraid.open` -> `window.open('_blank')` -> `location.href`。按钮点击不拦 `unity`，只有结束页自动跳转路径拦 `unity`。
 
 ### Build Matrix Contract
 
-模板默认提供与已落地 PA 项目一致的多渠道打包入口。`package.json` 的 `appConfig` 控制语言版本、tracked / untracked 渠道列表、analytics 初始化字段和产物命名字段。
+模板默认提供与已落地 PA 项目一致的多渠道打包入口。`package.json` 的 `appConfig` 控制语言版本、tracked / untracked 渠道列表、analytics 初始化字段、产物命名字段和可选 `delivery.platforms`。其中 `naming.vendor` 是模板锁定的 `ForgePlay`：构建会拒绝其他值；项目只可修改 `projectCode`、`materialId`、`creator` 和 `materialName`。
 
 默认命令：
 
@@ -166,7 +166,7 @@ CTA 链接默认读取 `scene.json.meta.playableAdInfo.ctaUrl`。打开顺序统
 3. `npm run build:single`：只做普通单产物构建，输出到 `dist/index.html`。
 4. `npm run build:scene-walkthrough`：只用于场景地编巡查，输出到 `dist/scene-walkthrough/index.html`。只有 production、`BUILD_MATRIX=false` 且 `SCENE_WALKTHROUGH_BUILD=true` 同时满足时才会加载 WASD 模块；`dev`、普通单包和语言/渠道构建矩阵均显式关闭并检查该能力没有进入产物。
 
-矩阵构建输出到 `dist/<LOCALE>/tracked` 和 `dist/<LOCALE>/untracked`。`TRACKING=false` 时不会注入 analytics SDK；Moloco 渠道会额外注入与落地项目一致的 CTA shim。
+默认 universal 构建输出到 `dist/<LOCALE>/tracked` 和 `dist/<LOCALE>/untracked`。当 `delivery.platforms` 包含 `android` 或 `ios` 时，定向包输出到对应平台子目录，并在文件名中加入平台后缀。`TRACKING=false` 时不会注入 analytics SDK；Moloco 渠道会额外注入与落地项目一致的 CTA shim。
 
 ## `src/` 目录说明
 

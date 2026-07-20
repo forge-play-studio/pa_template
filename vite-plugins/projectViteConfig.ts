@@ -37,6 +37,8 @@ type TemplateLocaleConfig = {
   region?: string;
 };
 
+type DeliveryPlatform = 'universal' | 'android' | 'ios';
+
 type TemplateAppConfig = {
   analytics: {
     adNetwork?: AdNetwork;
@@ -63,6 +65,9 @@ type TemplateAppConfig = {
     vendor: string;
     materialName: string;
   };
+  delivery?: {
+    platforms?: DeliveryPlatform[];
+  };
 };
 
 const appConfig = (pkg as typeof pkg & { appConfig: TemplateAppConfig }).appConfig;
@@ -77,6 +82,7 @@ const sceneWalkthroughRequested = process.env.SCENE_WALKTHROUGH_BUILD === 'true'
 const defaultBuildLocale = (i18nConfig.buildVersions[0] || 'EN').toUpperCase();
 const locale = (process.env.LOCALE || defaultBuildLocale).toUpperCase();
 const channel = (process.env.CHANNEL || analyticsConfig.adNetwork || 'applovin') as AdNetwork;
+const targetPlatform = readTargetPlatform(process.env.TARGET_PLATFORM);
 const tracking = process.env.TRACKING !== 'false';
 const dedicatedBuildLocales = new Set(i18nConfig.buildVersions.slice(1).map(value => value.toUpperCase()));
 const isMultiLocale = locale === defaultBuildLocale;
@@ -110,6 +116,7 @@ return defineConfig(({ command }) => {
     __SCENE_WALKTHROUGH_BUILD__: JSON.stringify(sceneWalkthroughBuild),
     __LOCALE__: JSON.stringify(locale),
     __CHANNEL__: JSON.stringify(channel),
+    __TARGET_PLATFORM__: JSON.stringify(targetPlatform),
     __RTL__: JSON.stringify(localeMeta.isRTL),
     __MULTI_LOCALE__: JSON.stringify(isMultiLocale),
     __BUNDLED_LOCALES__: JSON.stringify(bundledLocales),
@@ -314,4 +321,12 @@ return defineConfig(({ command }) => {
   },
   };
 });
+}
+
+function readTargetPlatform(value: string | undefined): DeliveryPlatform {
+  const normalized = (value || 'universal').toLowerCase();
+  if (normalized === 'universal' || normalized === 'android' || normalized === 'ios') {
+    return normalized;
+  }
+  throw new Error(`TARGET_PLATFORM must be universal, android, or ios; received "${value}"`);
 }
