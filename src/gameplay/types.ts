@@ -12,13 +12,14 @@ import type {
   PlayableCtaService,
   RenderingService,
   SceneBuilder,
-  ShadowService,
   VfxService,
 } from '../services';
 import type { ZoneSystem } from '../systems';
 
 export interface GameplayModule {
   init?(): void | Promise<void>;
+  pause?(): void;
+  resume?(): void;
   update?(deltaTime: number): void;
   dispose?(): void;
 }
@@ -35,7 +36,6 @@ export interface GameplayRuntimeContext {
   renderingService: RenderingService;
   sceneBuilder: SceneBuilder;
   vfxService: VfxService;
-  shadowService: ShadowService;
   analytics: PlayableAnalyticsService;
   cta: PlayableCtaService;
   player: SimplePlayer;

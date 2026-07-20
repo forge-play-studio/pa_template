@@ -5,7 +5,7 @@
     "authoringSource": {
       "sourceId": "scene.main",
       "sourceType": "scene",
-      "revision": 75
+      "revision": 76
     }
   },
   "assets": [
@@ -331,6 +331,9 @@
           "receive": "none",
           "cast": "none",
           "mode": "none"
+        },
+        "shadowMapExperiment": {
+          "behaviorProfile": "receiver-static"
         }
       },
       {
@@ -579,6 +582,9 @@
             "opacity": 0.62,
             "softness": 0.25
           }
+        },
+        "shadowMapExperiment": {
+          "behaviorProfile": "skinned-dynamic"
         }
       },
       {
@@ -684,6 +690,9 @@
           "mode": "projected",
           "quality": "high",
           "receive": "none"
+        },
+        "shadowMapExperiment": {
+          "behaviorProfile": "static-caster"
         }
       },
       {

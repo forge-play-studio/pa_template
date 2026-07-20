@@ -34,8 +34,6 @@ const scene = createFpsGameEditorProjectSceneAuthoringServices(editorConfig, {
     sceneCompiler: '/src/services/fps-game-editor/scene-feature.ts',
     renderingProfile: '/src/services/fps-game-editor/rendering-profile.ts',
   },
-  assertRuntimeSceneConfigModulePath: 'scripts/platform-sim/lib/scene-json-v2-schema.mjs',
-  assertRuntimeSceneConfigExportName: 'assertSceneJsonV2',
   summarizeRenderingProfile: rendering.summarize,
   createRenderingInvalidationFiles: rendering.createInvalidationFiles,
   invalidateFiles: invalidateFpsGameEditorViteFileModules,
@@ -43,6 +41,7 @@ const scene = createFpsGameEditorProjectSceneAuthoringServices(editorConfig, {
 const integration = createFpsGameEditorViteAdapter(editorConfig, {
   projectRoot: __dirname,
   localEditorRepo: null,
+  editorEntry: { url: '/src/services/fps-game-editor/local-editor.ts', cache: 'revalidate' },
   logger: console,
   extendAgentBridgeSessionMetadata: metadata => ({ ...metadata, paTemplateRoot: metadata.projectRoot }),
   createProjectAuthoringApiPlugin: () => createFpsGameEditorProjectAuthoringApiPlugin({

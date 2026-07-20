@@ -55,17 +55,18 @@ for (const forbidden of ['../debug/', '../dev/', 'services/fps-game-editor', '__
   if (application.includes(forbidden)) failures.push(`src/entry/GameApplication.ts contains dev/editor concern: ${forbidden}`);
 }
 
-const devHost = read('src/dev/DevHost.ts');
+const localWorldEntryBackend = read('src/dev/LocalWorldEntryBackend.ts');
 assertOrder(
-  devHost.slice(devHost.indexOf('async restart(')),
-  'if (this.startPromise) await this.startPromise',
+  localWorldEntryBackend.slice(localWorldEntryBackend.indexOf('async restart(')),
+  'await this.startPromise',
   'await this.disposeApplication()',
   'in-flight start before restart disposal',
 );
+const devHost = read('src/dev/DevHost.ts');
 assertOrder(
-  devHost.slice(devHost.indexOf('private async disposeApplication(')),
-  'await autoplayIntegration?.dispose()',
-  'await application?.destroy()',
+  devHost.slice(devHost.indexOf('destroyApplication: async')),
+  'await this.disposeAutoplayIntegration()',
+  'await application.destroy()',
   'autoplay integration before GameWorld disposal',
 );
 

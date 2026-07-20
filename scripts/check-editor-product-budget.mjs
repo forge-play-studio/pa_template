@@ -60,13 +60,18 @@ const runtimeAuthoredConfigConsumerPaths = new Set([
   // the editor host, document authoring, or adapter implementation.
   'src/project-runtime-entry.ts',
   'src/debug/runtime-debug-bootstrap.ts',
+  // Development-only editor entry composition is an explicit host seam, not
+  // project editor semantics. The controller remains SDK-owned while these
+  // exact files adapt local GameWorld lifetime and render its state.
+  'src/dev/DevHost.ts',
+  'src/dev/dev-entry.ts',
+  'src/dev/LocalWorldEntryBackend.ts',
+  'src/dev/editor-entry-view.ts',
   'src/config/ConfigService.ts',
-  'src/config/SceneJsonV2Validator.ts',
   'src/config/types.ts',
   'src/rendering/rendering-profile.ts',
   'src/services/RenderingService.ts',
   'src/services/SceneBuilder.ts',
-  'src/services/ShadowService.ts',
   'src/debug/camera-debug-panel.ts',
   'src/debug/runtime-lighting-debug-panel.ts',
 ]);

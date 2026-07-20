@@ -141,9 +141,6 @@ const config = {
     register: 'npm run asset:register',
     unregister: 'npm run asset:unregister',
   },
-  async loadRules() {
-    return { errorCodes: {} };
-  },
   relativeImportedPath(kind, fileName) {
     return kind === 'model' ? `../imported/${fileName}` : `../imported/textures/${fileName}`;
   },

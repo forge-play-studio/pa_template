@@ -3,8 +3,9 @@ import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import ts from 'typescript';
+import { createServer } from 'vite';
 import { isExactPortableSemver } from './lib/exact-portable-semver.mjs';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
@@ -51,6 +52,7 @@ const editorVite = await import('@fps-games/editor/vite');
 await assertPackedPluginManifestModule(editorRoot, editorVite);
 await assertRetiredSubpathIsUnavailable('@fps-games/editor/playable-sdk/legacy-compat');
 const requiredFunctions = [
+  'assertPlayableEditorRuntimeSceneConfig',
   'normalizeEditorSceneMarkerGraph',
   'reduceEditorSceneMarkerGraph',
   'getEditorSceneMarkerTypeCatalogFromGraph',
@@ -70,6 +72,7 @@ const requiredFunctions = [
   'replaceEditorScenePrefabAsset',
   'normalizeEditorScenePrefabAssetFieldValue',
   'validateEditorScenePrefabAssetFieldValue',
+  'validatePlayableEditorRuntimeSceneConfig',
   'cleanupEditorScenePrefabDefaultShadow',
   'syncEditorScenePrefabRootNodeFields',
   'addEditorSceneMaterialAssetAndBindPrefabOverride',
@@ -147,6 +150,22 @@ for (const exportName of requiredFunctions) {
   }
 }
 
+const packedRuntimeSceneValidation = playableSdk.validatePlayableEditorRuntimeSceneConfig({
+  schemaVersion: 3,
+  gameplay: { opaqueProjectExtension: true },
+  scene: {
+    rootId: 'root',
+    assets: [],
+    nodes: [],
+    materialAssets: [],
+    materials: [],
+    textures: [],
+  },
+});
+if (!packedRuntimeSceneValidation.ok || packedRuntimeSceneValidation.errors.length !== 0) {
+  throw new Error('Expected packed canonical runtime SceneArtifact validator to accept a minimal v3 artifact.');
+}
+
 const forbiddenRootFunctions = [
   'createPlayableLegacySceneNodeDuplicateFacade',
   'createPlayableLegacyRuntimeNodeFacade',
@@ -196,15 +215,43 @@ for (const exportName of requiredViteFunctions) {
 console.log(`editor packed package check passed: ${path.relative(projectRoot, tarballPath)}`);
 
 async function assertPackedPluginManifestModule(editor, vite) {
-  const references = [
-    editor.scenePlugin(),
-    editor.assetsPlugin(),
-    editor.materialsPlugin(),
-    editor.renderingPlugin(),
-    editor.shadowsPlugin(),
-    editor.markersPlugin(),
-    editor.babylonRendererPlugin(),
+  if (typeof editor.hierarchyPlugin !== 'function') {
+    throw new Error('Packed editor must export hierarchyPlugin().');
+  }
+  const configServer = await createServer({
+    configFile: false,
+    root: projectRoot,
+    server: { middlewareMode: true },
+    appType: 'custom',
+    logLevel: 'silent',
+  });
+  let references;
+  try {
+    const projectConfigModule = await configServer.ssrLoadModule('/fps.config.ts');
+    references = projectConfigModule.fpsConfig?.plugins;
+  } finally {
+    await configServer.close();
+  }
+  if (!Array.isArray(references)) {
+    throw new Error('pa_template fps.config.ts must export fpsConfig.plugins.');
+  }
+  const expectedPluginIds = [
+    'fps.plugin.hierarchy',
+    'fps.plugin.scene',
+    'fps.plugin.assets',
+    'fps.plugin.materials',
+    'fps.plugin.rendering',
+    'fps.plugin.shadows',
+    'fps.shadow-map-experiment',
+    'fps.plugin.markers',
+    'fps.renderer.babylon',
   ];
+  const configuredPluginIds = references.map(reference => reference.pluginId);
+  if (JSON.stringify(configuredPluginIds) !== JSON.stringify(expectedPluginIds)) {
+    throw new Error(
+      `pa_template fps.config.ts Plugin order mismatch: expected ${expectedPluginIds.join(', ')}, got ${configuredPluginIds.join(', ') || 'none'}.`,
+    );
+  }
   const plugin = vite.createFpsConfiguredPluginManifestVitePlugin({
     apiVersion: 1,
     projectRoot,
@@ -218,14 +265,48 @@ async function assertPackedPluginManifestModule(editor, vite) {
   if (generated.manifests.length !== references.length) {
     throw new Error(`Packed editor Plugin manifest count mismatch: expected ${references.length}, got ${generated.manifests.length}.`);
   }
-  if (generated.entries.length !== 0) {
-    throw new Error(`Packed editor Plugin entry filtering mismatch: expected 0 editor entries, got ${generated.entries.length}.`);
+  if (generated.entries.length !== 1 || generated.entries[0]?.pluginId !== 'fps.plugin.hierarchy') {
+    throw new Error(
+      `Packed editor Plugin entry filtering mismatch: expected one fps.plugin.hierarchy editor entry, got ${generated.entries.map(entry => entry.pluginId).join(', ') || 'none'}.`,
+    );
   }
   if (Object.keys(generated.pluginConfigs).length !== references.length) {
     throw new Error('Packed editor Plugin configs did not preserve every configured Plugin.');
   }
   if (!Object.isFrozen(generated.manifests) || !Object.isFrozen(generated.pluginConfigs)) {
     throw new Error('Packed editor Plugin virtual module must expose frozen inspection data.');
+  }
+
+  const hierarchyEntryPath = path.join(
+    editorPackageRoot,
+    'node_modules/@fps-games/plugin-hierarchy/dist/editor.js',
+  );
+  if (!fs.existsSync(hierarchyEntryPath)) {
+    throw new Error('Packed editor tarball did not bundle the Hierarchy Editor entry.');
+  }
+  const hierarchyEntryModule = await import(pathToFileURL(hierarchyEntryPath).href);
+  const environmentModule = {
+    environment: generated.environment,
+    manifests: generated.manifests,
+    entries: generated.entries.map(entry => ({
+      ...entry,
+      load: async () => hierarchyEntryModule.pluginEntry,
+    })),
+    pluginConfigs: generated.pluginConfigs,
+  };
+  const host = editor.createFpsEditorPluginHostFromEnvironmentModule({ module: environmentModule });
+  try {
+    await host.start();
+    const startedPlugins = host.inspect().plugins.filter(plugin => plugin.lifecycle === 'started');
+    if (host.state !== 'started'
+      || startedPlugins.length !== 1
+      || startedPlugins[0]?.manifest.id !== 'fps.plugin.hierarchy') {
+      throw new Error(
+        `Packed editor Plugin Host activation mismatch: expected one active Hierarchy entry, got ${startedPlugins.map(plugin => plugin.manifest.id).join(', ') || 'none'}.`,
+      );
+    }
+  } finally {
+    await host.dispose();
   }
 }
 

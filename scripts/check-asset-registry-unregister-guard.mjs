@@ -7,9 +7,6 @@ import {
   unregisterPlayableEditorAsset as unregisterAsset,
 } from '@fps-games/editor/playable-sdk/vite';
 
-const errorCodes = {
-  assetStillReferenced: 'asset_still_referenced',
-};
 const guid = '11111111-2222-4333-8444-555555555555';
 const assetId = 'asset_11111111222243338444555555555555';
 
@@ -23,7 +20,7 @@ try {
     nodes: [],
   });
 
-  const removed = await unregisterAsset(config, { assetId }, errorCodes);
+  const removed = await unregisterAsset(config, { assetId });
   assert.equal(removed.ok, true);
   assert.equal(removed.guid, guid);
   assert.equal(removed.assetId, assetId);
@@ -36,10 +33,10 @@ try {
   });
 
   await assert.rejects(
-    unregisterAsset(config, { guid }, errorCodes),
+    unregisterAsset(config, { guid }),
     (error) => {
       assert.ok(error instanceof AssetRegistryError);
-      assert.equal(error.message, errorCodes.assetStillReferenced);
+      assert.equal(error.message, 'asset_still_referenced');
       assert.deepEqual(error.details.nodeIds, ['foo_1']);
       return true;
     },
@@ -69,7 +66,6 @@ async function createConfig(baseDir) {
       register: 'npm run asset:register',
       unregister: 'npm run asset:unregister',
     },
-    loadRules: async () => ({ errorCodes }),
     relativeImportedPath: (_kind, fileName) => `../imported/${fileName}`,
     publicUrlForImportedAsset: (_kind, fileName) => `/src/assets/imported/${fileName}`,
   };

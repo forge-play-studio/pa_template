@@ -1,7 +1,7 @@
 /**
  * ModelAnimationService - GLB / glTF model clip playback entry.
  *
- * The project only triggers play/stop. Babylon advances AnimationGroup state
+ * The project triggers play/pause/resume/stop. Babylon advances AnimationGroup state
  * during Scene.render(); runtime transform motion belongs to gameplay systems.
  */
 
@@ -24,6 +24,8 @@ export interface ModelAnimationPlayer {
     clipName: string,
     options?: ModelAnimationPlayOptions,
   ): AnimationGroup | null;
+  pause(animations: readonly AnimationGroup[]): number;
+  resume(animations: readonly AnimationGroup[]): number;
   stop(animations: readonly AnimationGroup[], clipName?: string): void;
 }
 
@@ -79,7 +81,7 @@ function resetClip(animation: AnimationGroup): void {
 
 /**
  * Stateless project-facing adapter for independently instantiated model clips.
- * Its public surface intentionally contains only play and stop.
+ * It owns clip playback state but does not join the project update loop.
  */
 export class ModelAnimationService implements ModelAnimationPlayer {
   play(
@@ -116,6 +118,26 @@ export class ModelAnimationService implements ModelAnimationPlayer {
 
     animation.start(loop, speedRatio, from, to);
     return animation;
+  }
+
+  pause(animations: readonly AnimationGroup[]): number {
+    let paused = 0;
+    for (const animation of animations) {
+      if (!animation.isStarted || !animation.isPlaying) continue;
+      animation.pause();
+      paused += 1;
+    }
+    return paused;
+  }
+
+  resume(animations: readonly AnimationGroup[]): number {
+    let playing = 0;
+    for (const animation of animations) {
+      if (!animation.isStarted) continue;
+      if (!animation.isPlaying) animation.play(animation.loopAnimation);
+      if (animation.isPlaying) playing += 1;
+    }
+    return playing;
   }
 
   stop(animations: readonly AnimationGroup[], clipName?: string): void {

@@ -33,7 +33,6 @@ import {
   playableCtaService,
   RenderingService,
   SceneBuilder,
-  ShadowService,
   VfxService,
 } from '../services';
 import type { PlayableAnalyticsService, PlayableCtaService } from '../services';
@@ -45,6 +44,8 @@ import {
   RenderCoordinator,
 } from './frame';
 import {
+  attachProjectRenderer,
+  detachProjectRenderer,
   disposeProjectRuntimePlugins,
   startProjectRuntimePlugins,
 } from './integrations/fps-runtime/runtime-plugin-host';
@@ -95,7 +96,6 @@ export class GameWorld {
   private sceneBuilder: SceneBuilder | null = null;
   private renderingService: RenderingService | null = null;
   private materialConfigService: MaterialConfigService | null = null;
-  private shadowService: ShadowService | null = null;
   private vfxService: VfxService | null = null;
   private zoneSystem: ZoneSystem | null = null;
   private player: SimplePlayer | null = null;
@@ -177,6 +177,11 @@ export class GameWorld {
       });
 
       await this.initRuntimeServices(scene);
+      await attachProjectRenderer({
+        scene,
+        cameras: this.camera ? [this.camera] : [],
+      });
+      this.resources.defer(() => detachProjectRenderer());
       this.stateValue = 'ready';
     } catch (initializationError) {
       this.stateValue = 'failed';
@@ -250,9 +255,7 @@ export class GameWorld {
     const environment = sceneBuilder.buildSceneEnvironment();
     this.camera = environment.camera;
     this.renderingService = environment.renderingService;
-    this.shadowService = environment.shadowService;
     this.resources.defer(() => environment.renderingService.dispose());
-    this.resources.defer(() => environment.shadowService.dispose());
 
     this.modelAnimationService = new ModelAnimationService();
 
@@ -272,7 +275,6 @@ export class GameWorld {
     modelPool.setMaterialConfigService(materialConfigService);
 
     this.warmupModelsFromConfig();
-    environment.shadowService.refreshShadowMeshes();
 
     const inputService = new InputService();
     this.inputService = inputService;
@@ -345,7 +347,6 @@ export class GameWorld {
       !this.renderingService ||
       !this.sceneBuilder ||
       !this.vfxService ||
-      !this.shadowService ||
       !this.player ||
       !this.zoneSystem
     ) {
@@ -364,7 +365,6 @@ export class GameWorld {
       renderingService: this.renderingService,
       sceneBuilder: this.sceneBuilder,
       vfxService: this.vfxService,
-      shadowService: this.shadowService,
       analytics: this.analyticsService,
       cta: this.ctaService,
       player: this.player,
@@ -419,7 +419,6 @@ export class GameWorld {
     this.sceneBuilder = null;
     this.renderingService = null;
     this.materialConfigService = null;
-    this.shadowService = null;
     this.vfxService = null;
     this.zoneSystem = null;
     this.player = null;
@@ -441,7 +440,6 @@ export class GameWorld {
   getCamera(): ArcRotateCamera | null { return this.camera; }
   getPlayer(): SimplePlayer | null { return this.player; }
   getSceneBuilder(): SceneBuilder | null { return this.sceneBuilder; }
-  getShadowService(): ShadowService | null { return this.shadowService; }
   getInputService(): InputService | null { return this.inputService; }
   getAudioService(): AudioService | null { return this.audioService; }
   getZoneSystem(): ZoneSystem | null { return this.zoneSystem; }
