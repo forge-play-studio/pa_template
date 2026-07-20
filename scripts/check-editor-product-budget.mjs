@@ -20,6 +20,8 @@ const finalCaps = {
   customLines: readPositiveIntegerEnv('EDITOR_PRODUCT_CUSTOM_MAX_LINES', 800),
   sdkFailureLines: readPositiveIntegerEnv('EDITOR_PRODUCT_FAILURE_THRESHOLD_LINES', 1500),
 };
+const devEditorBootstrapTarget = { minLines: 80, maxLines: 120 };
+const devEditorBootstrapPath = 'src/services/fps-game-editor/local-editor.ts';
 const standardFixtureRoot = path.join(projectRoot, 'scripts/fixtures/editor-standard-product');
 
 const legacyImplementationRoots = [
@@ -56,17 +58,13 @@ const finalProductSurfacePaths = [
 // this is for game/runtime code that consumes editor-authored config, not a
 // general exemption for editor host, save, document authoring, or adapter glue.
 const runtimeAuthoredConfigConsumerPaths = new Set([
-  // Runtime lifecycle owners expose editor restart/debug hooks without owning
-  // the editor host, document authoring, or adapter implementation.
+  // Runtime lifecycle owners expose mode-transition ports without owning the
+  // Editor Entry controller, Editor Host, document authoring, or adapters.
   'src/project-runtime-entry.ts',
   'src/debug/runtime-debug-bootstrap.ts',
-  // Development-only editor entry composition is an explicit host seam, not
-  // project editor semantics. The controller remains SDK-owned while these
-  // exact files adapt local GameWorld lifetime and render its state.
   'src/dev/DevHost.ts',
+  // Development-only entry invokes the project-owned runtime host.
   'src/dev/dev-entry.ts',
-  'src/dev/LocalWorldEntryBackend.ts',
-  'src/dev/editor-entry-view.ts',
   'src/config/ConfigService.ts',
   'src/config/types.ts',
   'src/rendering/rendering-profile.ts',
@@ -124,6 +122,10 @@ const runtimeConsumerSignalSummary = measureRuntimeConsumerSignalSurface();
 const productEditorSignalLineSummary = measureEditorSignalLines(productSurfaceSummary.files);
 const standardFixtureSummary = measureStandardFixture();
 const combinedLegacyLines = legacySummaries.reduce((sum, summary) => sum + summary.totalLines, 0);
+const devEditorBootstrapLines = countLines(fs.readFileSync(
+  path.join(projectRoot, devEditorBootstrapPath),
+  'utf8',
+));
 
 if (!enforceFinal) {
   for (const summary of legacySummaries) {
@@ -184,6 +186,16 @@ if (!enforceFinal) {
       fix: 'Keep the standard integration expressible through main.ts, vite.config.ts, and fps.config.ts only.',
     });
   }
+  if (
+    devEditorBootstrapLines < devEditorBootstrapTarget.minLines
+    || devEditorBootstrapLines > devEditorBootstrapTarget.maxLines
+  ) {
+    violations.push({
+      path: devEditorBootstrapPath,
+      detail: `${devEditorBootstrapLines} non-empty lines is outside the ${devEditorBootstrapTarget.minLines}-${devEditorBootstrapTarget.maxLines} target`,
+      fix: 'Keep project-specific ports and features here; move lifecycle, Plugin Host, diagnostics, loading copy and Babylon projection into @fps-games/editor.',
+    });
+  }
 }
 
 if (violations.length > 0) {
@@ -216,6 +228,7 @@ if (productEditorSignalLineSummary.files.length > 0) {
   console.log(`  product editor signal files: ${formatSignalLineFiles(productEditorSignalLineSummary.files)}`);
 }
 console.log(`- standard product fixture: ${standardFixtureSummary.files.length} files / ${standardFixtureSummary.totalLines} non-empty TypeScript/module lines`);
+console.log(`- dev editor bootstrap: ${devEditorBootstrapLines} non-empty lines (target ${devEditorBootstrapTarget.minLines}-${devEditorBootstrapTarget.maxLines})`);
 console.log(`- editor signal surface: ${editorSignalSummary.files.length} files / ${editorSignalSummary.totalLines} TypeScript/module lines`);
 if (editorSignalSummary.files.length > 0) {
   console.log(`  largest signal files: ${formatTopFiles(editorSignalSummary.files)}`);

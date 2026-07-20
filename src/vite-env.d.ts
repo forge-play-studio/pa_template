@@ -109,3 +109,10 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+interface Window {
+  gameInstance: import('./runtime/GameWorld').GameWorld | null;
+  game: import('./runtime/GameWorld').GameWorld | null;
+  __bridgeProjectRuntime?: unknown;
+  __pendingEditorRuntime?: unknown;
+}
