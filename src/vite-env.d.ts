@@ -89,6 +89,7 @@ declare const __PROD_BUILD__: boolean;
 declare const __SCENE_WALKTHROUGH_BUILD__: boolean;
 declare const __LOCALE__: string;
 declare const __CHANNEL__: string;
+declare const __TARGET_PLATFORM__: 'universal' | 'android' | 'ios';
 declare const __RTL__: boolean;
 declare const __MULTI_LOCALE__: boolean;
 declare const __BUNDLED_LOCALES__: string[];

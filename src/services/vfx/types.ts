@@ -89,10 +89,11 @@ export interface VfxEffectRuntimeConfig {
 export interface VfxDebugParameterDefinition {
   key: string;
   label?: string;
-  kind?: 'number' | 'boolean' | 'color' | 'text' | 'json';
+  kind?: 'number' | 'boolean' | 'color' | 'text' | 'json' | 'select';
   min?: number;
   max?: number;
   step?: number;
+  options?: readonly { value: string; label?: string }[];
 }
 
 export interface VfxEffectRegistration {

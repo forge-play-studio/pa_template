@@ -3,7 +3,14 @@
   "meta": {
     "playableAdInfo": {
       "ctaUrl": "",
-      "notes": "Scaffold scene json: 填写你的 CTA 链接或 endcard 信息"
+      "cta": {
+        "mode": "smart-link",
+        "smartUrl": "",
+        "androidUrl": "",
+        "iosUrl": "",
+        "fallbackUrl": ""
+      },
+      "notes": "Scaffold scene json: 填写智能 CTA 链接，或在 platform-build 模式填写 Android/iOS 直链"
     },
     "generatedFrom": {
       "sourceId": "scene.main",

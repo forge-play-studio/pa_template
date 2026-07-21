@@ -142,6 +142,12 @@ export class ProjectVfxDirector implements GameplayModule {
     return cloneOffset(this.previewOffsets.get(usageId) ?? this.savedOffsets.get(usageId));
   }
 
+  /** Debug-only read used by the shared VFX panel's XYZ reference. */
+  getVfxUsageRoot(usageId: string): TransformNode | null {
+    const usage = findUsage(usageId);
+    return usage ? this.resolvePositionSourceNode(usage.positionSource, usage.id, 'mount') : null;
+  }
+
   playVfxUsage(usageId: string): boolean {
     const usage = findUsage(usageId);
     return usage ? this.playUsage(usage) : false;

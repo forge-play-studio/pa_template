@@ -40,6 +40,7 @@
     "test:editor-runtime-scene-contract-types": "tsc --noEmit --strict --skipLibCheck --module ESNext --moduleResolution Bundler --target ES2022 scripts/check-editor-runtime-scene-contract-types.ts",
     "test:asset-registry-unregister": "node scripts/check-asset-registry-unregister-guard.mjs",
     "test:scene-walkthrough": "node scripts/check-scene-walkthrough-contract.mjs",
+    "test:delivery-platform-contract": "node scripts/check-delivery-platform-contract.mjs",
     "build": "./scripts/build-all.sh en applovin",
     "build:all": "./scripts/build-all.sh",
     "build:single": "cross-env BUILD_MATRIX=false SCENE_WALKTHROUGH_BUILD=false npm run typecheck && npm run test:gameworld-architecture && npm run test:gameworld-lifecycle && cross-env BUILD_MATRIX=false SCENE_WALKTHROUGH_BUILD=false vite build && npm run check:scene-walkthrough-disabled && npm run check:prod-debug",
@@ -73,7 +74,7 @@
     "@babylonjs/core": "8.52.1",
     "@babylonjs/loaders": "8.52.1",
     "@fps-games/editor": "0.2.0-beta.4",
-    "@fps-games/vfx": "0.3.22",
+    "@fps-games/vfx": "0.3.23",
     "brotli-dec-wasm": "^2.3.2"
   },
   "appConfig": {
@@ -161,8 +162,13 @@
       "projectCode": "TMP",
       "materialId": "00000P00",
       "creator": "CREATOR",
-      "vendor": "DLCX",
+      "vendor": "ForgePlay",
       "materialName": "PA_Template"
+    },
+    "delivery": {
+      "platforms": [
+        "universal"
+      ]
     }
   }
 }
