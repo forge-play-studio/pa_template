@@ -15,10 +15,12 @@ assert.match(sources['fps.config.ts'], /defineFpsGameEditorProject/);
 assert.match(sources['fps.config.ts'], /plugins:\s*Object\.freeze/);
 assert.match(sources['vite.config.ts'], /createFpsConfiguredPluginManifestVitePlugin/);
 assert.match(sources['vite.config.ts'], /createFpsGameEditorViteAdapter/);
-assert.match(sources['main.ts'], /createFpsGameEditorAdapter/);
-assert.match(sources['main.ts'], /mountFpsGameEditorStandardProject/);
-assert.match(sources['main.ts'], /runtimePluginLifecycle\.start\(\)/);
-assert.match(sources['main.ts'], /runtimePluginLifecycle\.dispose\(\)/);
+assert.match(sources['main.ts'], /mountFpsGameEditorStandardLocalEditorFromEnvironmentModule/);
+assert.match(sources['main.ts'], /from 'virtual:fps-plugins\/editor'/);
+assert.match(sources['main.ts'], /projectMode:/);
+assert.doesNotMatch(sources['main.ts'], /createFpsGameEditorAdapter/);
+assert.doesNotMatch(sources['main.ts'], /mountFpsGameEditorStandardProject/);
+assert.doesNotMatch(sources['main.ts'], /virtual:fps-plugins\/runtime/);
 
 execFileSync(process.execPath, [
   path.join(root, 'node_modules/typescript/bin/tsc'),
@@ -29,7 +31,7 @@ execFileSync(process.execPath, [
 ], { cwd: root, stdio: 'inherit' });
 
 const sdk = await import('@fps-games/editor/playable-sdk');
-for (const name of ['createFpsGameEditorAdapter', 'createFpsGameEditorStandardProjectRuntime', 'mountFpsGameEditorStandardProject', 'createFpsGameEditorPlayableProjectHostAssembly']) {
+for (const name of ['mountFpsGameEditorStandardLocalEditorFromEnvironmentModule', 'createFpsGameEditorStandardProjectRuntime', 'mountFpsGameEditorStandardProject', 'createFpsGameEditorPlayableProjectHostAssembly']) {
   assert.equal(typeof sdk[name], 'function', `packed product export missing: ${name}`);
 }
 console.log('editor standard product fixture check passed');

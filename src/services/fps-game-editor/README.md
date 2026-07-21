@@ -7,8 +7,8 @@ adapter 与其他项目服务统一放在 `services` 下，但不会因此把游
 ## 职责
 
 - `editor-entry.ts`：只装配 SDK Editor Entry，提供 `enterEditorMode / enterPlayMode` 模式实现与 editor module；GameApplication、world 和 runtime debug 由 `src/dev/DevHost.ts` 拥有。
-- `local-editor.ts`：声明项目 scene/asset/feature 装配，并通过 environment-module helper 挂载产品化 local editor；Editor Plugin Host 生命周期和标准 Prefab Stage adapters 由 SDK 拥有。
-- `runtime-plugin-host.ts`：持有项目级 runtime plugin graph 生命周期并注入最终配置。
+- `local-editor.ts`：只声明项目 scene/asset/feature 差异并通过 environment-module helper 挂载产品化 local editor；标准 document callbacks、projection loader、diagnostic reporter、Editor Plugin Host 生命周期和 Prefab Stage adapters 由 SDK 拥有。
+- `src/runtime/integrations/fps-runtime/runtime-plugin-host.ts`：由 `GameWorld` 消费的项目 runtime plugin graph owner，不属于本目录的 Editor 装配。
 - `scene-feature.ts`：连接 authored scene 读写、编译、资产和项目 feature contribution。
 - `scene-types.ts`：将 SDK editor document 类型特化为 `pa_template` 项目类型。
 - `ground-decal-*.ts`：声明项目拥有的 GroundDecal authoring policy。
@@ -18,6 +18,7 @@ adapter 与其他项目服务统一放在 `services` 下，但不会因此把游
 
 不要在项目侧恢复 Editor Entry controller/backend、入口按钮、诊断全局、Plugin Host、
 默认 loading 文案、Babylon viewport picking 或标准 Prefab Stage adapter 转发；这些都属于 SDK 产品装配。
+空白标准项目只向 `mountFpsGameEditorStandardLocalEditorFromEnvironmentModule` 提供 `projectMode` 和 Editor environment module；旧 runtime-hook standard API 仅为兼容保留并已 deprecated。
 
 ## 边界
 

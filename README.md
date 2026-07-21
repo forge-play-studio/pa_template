@@ -25,7 +25,7 @@
 4. Gameplay Binding contract 类型、默认入口、查询服务和基础校验
 5. Project gameplay composition hook：`src/gameplay/createProjectGameplay.ts`
 6. 产品化 `fps.config.ts` 与项目 Plugin / feature 配置
-7. dev-only `src/services/fps-game-editor/local-editor.ts` runtime hooks
+7. dev-only `src/services/fps-game-editor/local-editor.ts` 项目 Editor feature / asset policy 装配
 8. GUID asset catalog 与 `src/assets/imported` 资产落地目录
 9. SDK-owned document/history/export/commit 主链
 10. 标准 Scene Assembly 与项目 feature contribution
