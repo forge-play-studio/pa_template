@@ -10,7 +10,6 @@ import type {
   ModelPool,
   PlayableAnalyticsService,
   PlayableCtaService,
-  RenderingService,
   SceneBuilder,
   VfxService,
 } from '../services';
@@ -33,7 +32,6 @@ export interface GameplayRuntimeContext {
   inputService: InputService;
   materialConfigService: MaterialConfigService;
   modelPool: ModelPool;
-  renderingService: RenderingService;
   sceneBuilder: SceneBuilder;
   vfxService: VfxService;
   analytics: PlayableAnalyticsService;

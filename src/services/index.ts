@@ -27,7 +27,6 @@ export type { MovementInputSource, MovementInputState } from './InputService';
 export { SceneBuilder } from './SceneBuilder';
 export type { SceneEnvironment } from './SceneBuilder';
 
-export { RenderingService } from './RenderingService';
 export { MaterialConfigService } from './MaterialConfigService';
 export * from './vfx';
 export { PlayableAnalyticsService, playableAnalyticsService } from './PlayableAnalyticsService';

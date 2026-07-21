@@ -67,7 +67,6 @@ const runtimeAuthoredConfigConsumerPaths = new Set([
   'src/config/ConfigService.ts',
   'src/config/types.ts',
   'src/rendering/rendering-profile.ts',
-  'src/services/RenderingService.ts',
   'src/services/SceneBuilder.ts',
   'src/debug/camera-debug-panel.ts',
   'src/debug/runtime-lighting-debug-panel.ts',
