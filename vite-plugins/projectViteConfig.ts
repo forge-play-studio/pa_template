@@ -96,7 +96,13 @@ const localeMeta = i18nConfig.locales[locale] || i18nConfig.locales[defaultBuild
 
 export function createPaTemplateViteConfig(integration: ProjectViteIntegration) {
 const projectRoot = resolve(__dirname, '..');
-const allowedThirdPartyPackages = ['@babylonjs/core', '@babylonjs/loaders', '@fps-games/vfx', ...integration.editorPackageIds];
+const allowedThirdPartyPackages = [
+  '@babylonjs/core',
+  '@babylonjs/loaders',
+  '@forge-play/babylon-replay',
+  '@fps-games/vfx',
+  ...integration.editorPackageIds,
+];
 return defineConfig(({ command }) => {
   const devServer = command === 'serve';
   if (sceneWalkthroughRequested && (command !== 'build' || !isProduction || buildMatrix)) {

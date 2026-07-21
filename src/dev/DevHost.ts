@@ -17,6 +17,7 @@ import {
   type LocalEditorEntryApplication,
   type ProjectGameRestartContext,
 } from './LocalWorldEntryBackend';
+import type { GeneratedAutoplayIntegrationHandle } from './autoplay-integration';
 
 export type { ProjectGameRestartContext } from './LocalWorldEntryBackend';
 
@@ -45,6 +46,7 @@ export class DevHost {
   private readonly entryViewListeners = new Set<(state: DevHostEditorEntryViewState) => void>();
   private readonly unsubscribeEntryController: () => void;
   private readonly entryPerformance = createPlayableEditorEntryPerformanceTracker();
+  private autoplayIntegration: GeneratedAutoplayIntegrationHandle | null = null;
   private editorEnterMark: PlayableEditorEntryPerformanceMark | null = null;
   private entryDiagnostics: DevHostEditorEntryDiagnostics = freezeEntryDiagnostics();
   private disposed = false;
@@ -62,13 +64,23 @@ export class DevHost {
           configValidator.validate();
         },
         createApplication: () => new GameApplication(),
-        async destroyApplication(application: LocalEditorEntryApplication<GameWorld>) {
+        destroyApplication: async (application: LocalEditorEntryApplication<GameWorld>) => {
           const placement = captureRenderCanvasPlacement();
+          const errors: unknown[] = [];
+          try {
+            await this.disposeAutoplayIntegration();
+          } catch (error) {
+            errors.push(error);
+          }
           try {
             await application.destroy();
+          } catch (error) {
+            errors.push(error);
           } finally {
             restoreRenderCanvasPlacement(placement);
           }
+          if (errors.length === 1) throw errors[0];
+          if (errors.length > 1) throw new AggregateError(errors, 'GameApplication cleanup failed.');
         },
         publishGame(world) {
           window.gameInstance = world;
@@ -78,14 +90,29 @@ export class DevHost {
           window.__bridgeProjectRuntime = null;
           window.__pendingEditorRuntime = null;
         },
-        async mountRuntimeDebug(input) {
+        mountRuntimeDebug: async input => {
+          await this.disposeAutoplayIntegration();
+          const game = input.getGame();
+          if (game) {
+            const { mountGeneratedAutoplayIntegration } = await import('./autoplay-integration');
+            this.autoplayIntegration = await mountGeneratedAutoplayIntegration(game);
+          }
           const { mountRuntimeDebug } = await import('../debug/runtime-debug-bootstrap');
-          return mountRuntimeDebug({
-            root: document.body,
-            getGame: input.getGame,
-            getGameplayRuntime: () => input.getGame()?.getProjectGameplayRuntime() ?? null,
-            disposeGameWorld: input.disposeGameWorld,
-          });
+          try {
+            return mountRuntimeDebug({
+              root: document.body,
+              getGame: input.getGame,
+              getGameplayRuntime: () => input.getGame()?.getProjectGameplayRuntime() ?? null,
+              disposeGameWorld: input.disposeGameWorld,
+            });
+          } catch (error) {
+            try {
+              await this.disposeAutoplayIntegration();
+            } catch (cleanupError) {
+              throw new AggregateError([error, cleanupError], 'Development integrations failed to mount.');
+            }
+            throw error;
+          }
         },
         mountEditorSwitcher: async (options, signal) => {
           const mark = this.entryPerformance.mark();
@@ -233,6 +260,12 @@ export class DevHost {
 
   private publishEditorEntryDiagnostics(): void {
     window.__FPS_EDITOR_ENTRY_DIAGNOSTICS__ = this.entryDiagnostics;
+  }
+
+  private async disposeAutoplayIntegration(): Promise<void> {
+    const current = this.autoplayIntegration;
+    this.autoplayIntegration = null;
+    await current?.dispose();
   }
 }
 

@@ -297,6 +297,18 @@ debug 面板职责边界：
 5. 面板必须由 `src/dev/dev-entry.ts` / `src/dev/DevHost.ts` 的 dev-only dynamic import 链路加载，不要在 production-owned 文件里静态 import debug module 的值。
 6. production / package build 不得 mount runtime debug panel、注册 `window.__paDebugActions`、暴露 debug HUD / tuning UI，正式 gameplay 逻辑也不得依赖 debug-only API。
 
+### Autoplay 录制与回放
+
+模板只提供 dev-only 的生成插件入口，不在项目源码中实现第二套 recorder、tape schema、固定航迹回放或游戏业务适配器。使用 `autoplay` Skill 时，代码分析产物会写入 `.game-replay/generated/`，运行时通过统一的 `installGeneratedGameReplay(game)` 接口安装，并在游戏重启或销毁前释放。
+
+支持的入口参数：
+
+1. `?rrRecord=1&rrLabel=<run-id>`：录制真人演示。
+2. `?rrReplay=1&rrTapeUrl=<url>`：按录制输入进行确定性诊断回放。
+3. `?rrAuto=1&rrExperienceUrl=<url>`：根据实时能力和演示经验进行自治完成。
+
+`.game-replay/` 是 Skill 生成的本地产物，不提交到游戏仓库。项目代码不应手写关卡步骤、目标顺序或 waypoint；语义能力由 Skill 从游戏源码和 runtime snapshot 自动生成。普通 dev 页面不加载该插件，production build 也不会包含录制回放 runtime。
+
 ### `entities/`
 
 放单体对象行为封装。

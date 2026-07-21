@@ -28,6 +28,10 @@ const forbiddenTokens = [
   '__restartProjectGame',
   'mountRuntimeDebug',
   'mountLocalEditorModeSwitcher',
+  '__babylonRecorder',
+  '__babylonReplay',
+  '__babylonAutonomy',
+  '.game-replay/generated/integration',
   'createFpsGameEditorPlayableProjectHostAssembly',
   'EditorSceneDocument',
 ];

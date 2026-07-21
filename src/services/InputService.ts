@@ -38,6 +38,10 @@ export class InputService implements MovementInputSource {
     this.enabled = enabled;
   }
 
+  isEnabled(): boolean {
+    return this.enabled;
+  }
+
   getInput(): Readonly<MovementInputState> {
     if (!this.enabled) return IDLE_MOVEMENT_INPUT;
     return this.movementSource?.getInput() ?? IDLE_MOVEMENT_INPUT;

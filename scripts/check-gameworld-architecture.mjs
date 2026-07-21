@@ -55,6 +55,21 @@ for (const forbidden of ['../debug/', '../dev/', 'services/fps-game-editor', '__
   if (application.includes(forbidden)) failures.push(`src/entry/GameApplication.ts contains dev/editor concern: ${forbidden}`);
 }
 
+const localWorldEntryBackend = read('src/dev/LocalWorldEntryBackend.ts');
+assertOrder(
+  localWorldEntryBackend.slice(localWorldEntryBackend.indexOf('async restart(')),
+  'await this.startPromise',
+  'await this.disposeApplication()',
+  'in-flight start before restart disposal',
+);
+const devHost = read('src/dev/DevHost.ts');
+assertOrder(
+  devHost.slice(devHost.indexOf('destroyApplication: async')),
+  'await this.disposeAutoplayIntegration()',
+  'await application.destroy()',
+  'autoplay integration before GameWorld disposal',
+);
+
 const main = read('src/main.ts');
 if (!main.includes("import 'virtual:pa-app-entry'")) {
   failures.push('src/main.ts must delegate entry selection to virtual:pa-app-entry');

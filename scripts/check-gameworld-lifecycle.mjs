@@ -1,6 +1,10 @@
 #!/usr/bin/env node
 
 import assert from 'node:assert/strict';
+import {
+  hasAutoplayMode,
+  mountGeneratedAutoplayIntegration,
+} from '../src/dev/autoplay-integration.ts';
 import { FrameClock } from '../src/runtime/frame/FrameClock.ts';
 import { FrameDirector } from '../src/runtime/frame/FrameDirector.ts';
 import { FramePump } from '../src/runtime/frame/FramePump.ts';
@@ -10,6 +14,7 @@ import { ResourceScope } from '../src/runtime/lifecycle/ResourceScope.ts';
 testFrameClock();
 testFrameDirector();
 testFramePump();
+await testAutoplayIntegrationAdmission();
 await testRenderCoordinator();
 await testResourceScope();
 
@@ -77,6 +82,29 @@ function testFramePump() {
   assert.equal(stoppedLoop, renderLoop, 'FramePump must stop the exact callback it started');
   renderLoop();
   assert.deepEqual(deltas, [0, 0.016], 'stopped pump must not tick');
+}
+
+async function testAutoplayIntegrationAdmission() {
+  assert.equal(hasAutoplayMode(''), false);
+  assert.equal(hasAutoplayMode('?rrRecord=1'), true);
+  assert.equal(hasAutoplayMode('?rrReplay=1'), true);
+  assert.equal(hasAutoplayMode('?rrAuto=1'), true);
+  assert.equal(hasAutoplayMode('?rrRecord=true'), false);
+
+  const previousWindow = globalThis.window;
+  try {
+    globalThis.window = { location: { search: '' } };
+    assert.equal(await mountGeneratedAutoplayIntegration({}), null);
+
+    globalThis.window = { location: { search: '?rrRecord=1' } };
+    await assert.rejects(
+      mountGeneratedAutoplayIntegration({}),
+      /requires \.game-replay\/generated\/integration\.ts/,
+    );
+  } finally {
+    if (previousWindow === undefined) delete globalThis.window;
+    else globalThis.window = previousWindow;
+  }
 }
 
 async function testRenderCoordinator() {
