@@ -20,8 +20,6 @@ const rendering = createFpsGameEditorRenderingAuthoringServices(editorConfig, {
   projectRoot: __dirname,
   additionalInvalidationFiles: [
     'src/rendering/rendering-profile.ts',
-    'src/services/RenderingService.ts',
-    'src/services/ShadowService.ts',
     'src/services/SceneBuilder.ts',
   ],
 });

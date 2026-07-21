@@ -23,9 +23,23 @@ for (const ownerFactory of [
     `Runtime rendering owner factory ${ownerFactory} must be owned by the generated Renderer entry`,
   );
 }
+assertNoOwner(
+  /\bglobalVolume\?\.(?:camera|lights)\b/g,
+  'Runtime camera and lights must come from compiled scene system objects',
+);
 
-if (existsSync(resolve(projectRoot, 'src/services/RenderingService.ts'))) {
-  failures.push('legacy src/services/RenderingService.ts must not be restored');
+for (const legacyService of ['RenderingService.ts', 'ShadowService.ts']) {
+  const legacyPath = `src/services/${legacyService}`;
+  if (existsSync(resolve(projectRoot, legacyPath))) {
+    failures.push(`legacy ${legacyPath} must not be restored`);
+  }
+}
+
+const renderingConfig = JSON.parse(read('src/config/rendering.json'));
+for (const legacyField of ['camera', 'lights']) {
+  if (Object.prototype.hasOwnProperty.call(renderingConfig.globalVolume ?? {}, legacyField)) {
+    failures.push(`src/config/rendering.json must not own globalVolume.${legacyField}`);
+  }
 }
 
 for (const file of sourceFiles) {

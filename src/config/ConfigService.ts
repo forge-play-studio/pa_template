@@ -40,8 +40,9 @@ import type {
 } from './types';
 import sceneConfigJson from './scene.json';
 import gameConfigJson from './game.json';
-import renderingConfigJson from './rendering.json';
 import { assertPlayableEditorRuntimeSceneConfig } from '../runtime/integrations/fps-runtime/validation';
+
+const DEFAULT_CAMERA_FOV = 0.85;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value);
@@ -128,11 +129,6 @@ function normalizeCameraProjection(value: unknown): SceneCameraProjection {
   return value === 'perspective' ? 'perspective' : 'orthographic';
 }
 
-function readRenderingCameraFovDefault(): number {
-  const camera = (renderingConfigJson as Record<string, any>).globalVolume?.camera;
-  return isPositiveFiniteNumber(camera?.fov) ? camera.fov : 0.85;
-}
-
 function normalizeCameraScreenOffset(value: unknown): SceneCameraRigConfig['targetScreenOffset'] | undefined {
   if (!isRecord(value)) return undefined;
   const x = isFiniteNumber(value.x) ? value.x : undefined;
@@ -154,7 +150,7 @@ function normalizeSceneCameraRigConfig(value: unknown): SceneCameraRigConfig | u
     beta: value.beta,
     radius: value.radius,
     orthoSize: value.orthoSize,
-    fov: isPositiveFiniteNumber(value.fov) ? value.fov : readRenderingCameraFovDefault(),
+    fov: isPositiveFiniteNumber(value.fov) ? value.fov : DEFAULT_CAMERA_FOV,
   };
 
   const targetOffset = normalizePosition3D(value.targetOffset);
