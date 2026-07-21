@@ -31,7 +31,6 @@ import { ModelPool } from './ModelPool';
 import { createGroundDecalUiDynamicTexture, isGroundDecalUiConfig } from './GroundDecalUiService';
 import { applyMaterialDebugAdjustments } from '../utils/materialDebugAdjust';
 
-import renderingConfig from '../config/rendering.json';
 import {
   configService,
   resolveSceneAssetRuntimeUrl,
@@ -78,6 +77,15 @@ const BABYLON_MATERIAL_RUNTIME = { Color3, MaterialPluginBase, Texture };
 
 const DEFAULT_CAMERA_FOV = 0.85;
 
+function createSceneEnvironmentSystemObjectsMissingError(missingKinds: readonly string[]): Error {
+  const error = new Error(`scene.environment.systemObjectsMissing: ${missingKinds.join(', ')}`);
+  Object.assign(error, {
+    code: 'scene.environment.systemObjectsMissing',
+    missingKinds: [...missingKinds],
+  });
+  return error;
+}
+
 /** 场景环境构建结果 */
 export interface SceneEnvironment {
   camera: ArcRotateCamera;
@@ -90,6 +98,12 @@ export interface SceneRuntimeLightState<TLightConfig extends SceneHemisphericLig
   enabled: boolean;
   source?: SceneRuntimeSourceBinding;
 }
+
+type SceneEnvironmentSource = {
+  cameraNode: SceneTransformNode;
+  hemisphericLightNode: SceneTransformNode;
+  directionalLightNode: SceneTransformNode;
+};
 
 type SceneBuilderMaterialSlotSourceDescriptor = {
   slotId?: string;
@@ -177,12 +191,14 @@ export class SceneBuilder {
   // ============================================================
 
   buildSceneEnvironment(): SceneEnvironment {
+    const source = this.resolveSceneEnvironmentSource();
+
     // 1) Camera
-    const camera = this.createCamera();
+    const camera = this.createCamera(source.cameraNode);
     this.enforceMainCamera(camera);
 
     // 2) Lights
-    const { hemisphericLight, directionalLight } = this.createLights();
+    const { hemisphericLight, directionalLight } = this.createLights(source);
 
     // 3) 默认地面（让脚手架“开箱即有东西可见”）
     this.buildDefaultGround();
@@ -191,9 +207,8 @@ export class SceneBuilder {
     return { camera, hemisphericLight, directionalLight };
   }
 
-  private createCamera(): ArcRotateCamera {
-    const cameraNode = configService.getSceneCameraNode();
-    const cameraRig = cloneCameraRig(cameraNode?.camera ?? this.resolveFallbackCameraRig());
+  private createCamera(cameraNode: SceneTransformNode): ArcRotateCamera {
+    const cameraRig = cloneCameraRig(cameraNode.camera!);
     this.selectedCameraRig = cloneCameraRig(cameraRig);
     const target = this.getCameraRigTarget(cameraRig);
 
@@ -206,7 +221,7 @@ export class SceneBuilder {
       this.scene
     );
 
-    this.attachMainCameraMetadata(camera, cameraNode?.source);
+    this.attachMainCameraMetadata(camera, cameraNode.source);
     this.applyCameraRuntimeProperties(camera, cameraRig, target);
 
     return camera;
@@ -267,19 +282,23 @@ export class SceneBuilder {
   }
 
   getSelectedHemisphericLightState(): SceneRuntimeLightState<SceneHemisphericLightConfig> {
-    const fallback = this.resolveHemisphericLightSource();
+    const node = configService.getSceneHemisphericLightNode();
+    if (!node) throw createSceneEnvironmentSystemObjectsMissingError(['environment-light']);
+    const source = this.resolveHemisphericLightSource(node);
     return {
-      light: cloneSceneHemisphericLight(this.selectedHemisphericLight ?? fallback.light),
-      enabled: this.selectedHemisphericLight == null ? fallback.enabled : this.selectedHemisphericLightEnabled,
+      light: cloneSceneHemisphericLight(this.selectedHemisphericLight ?? source.light),
+      enabled: this.selectedHemisphericLight == null ? source.enabled : this.selectedHemisphericLightEnabled,
       ...(this.hemisphericLightSource ? { source: structuredClone(this.hemisphericLightSource) } : {}),
     };
   }
 
   getSelectedDirectionalLightState(): SceneRuntimeLightState<SceneDirectionalLightConfig> {
-    const fallback = this.resolveDirectionalLightSource();
+    const node = configService.getSceneDirectionalLightNode();
+    if (!node) throw createSceneEnvironmentSystemObjectsMissingError(['directional-light']);
+    const source = this.resolveDirectionalLightSource(node);
     return {
-      light: cloneSceneDirectionalLight(this.selectedDirectionalLight ?? fallback.light),
-      enabled: this.selectedDirectionalLight == null ? fallback.enabled : this.selectedDirectionalLightEnabled,
+      light: cloneSceneDirectionalLight(this.selectedDirectionalLight ?? source.light),
+      enabled: this.selectedDirectionalLight == null ? source.enabled : this.selectedDirectionalLightEnabled,
       ...(this.directionalLightSource ? { source: structuredClone(this.directionalLightSource) } : {}),
     };
   }
@@ -320,7 +339,7 @@ export class SceneBuilder {
     const targetOffset = getCameraTargetOffset(cameraRig);
     if (targetOffset) return new Vector3(targetOffset.x, targetOffset.y, targetOffset.z);
     if (fallback) return fallback.clone();
-    return this.resolveFallbackCameraTarget();
+    return new Vector3(0, 0, 0);
   }
 
   private applyCameraRuntimeProperties(camera: ArcRotateCamera, cameraRig: SceneCameraRigConfig, target: Vector3): void {
@@ -360,8 +379,8 @@ export class SceneBuilder {
     this.scene.activeCameras.push(camera);
   }
 
-  private createLights(): { hemisphericLight: HemisphericLight; directionalLight: DirectionalLight } {
-    const hemispheric = this.resolveHemisphericLightSource();
+  private createLights(source: SceneEnvironmentSource): { hemisphericLight: HemisphericLight; directionalLight: DirectionalLight } {
+    const hemispheric = this.resolveHemisphericLightSource(source.hemisphericLightNode);
     this.selectedHemisphericLight = cloneSceneHemisphericLight(hemispheric.light);
     this.selectedHemisphericLightEnabled = hemispheric.enabled;
     this.hemisphericLightSource = hemispheric.source ? structuredClone(hemispheric.source) : undefined;
@@ -371,7 +390,7 @@ export class SceneBuilder {
     this.attachRuntimeLightMetadata(hemi, 'hemispheric', hemispheric.source);
     this.applyHemisphericLight(hemispheric.light, { enabled: hemispheric.enabled });
 
-    const sun = this.resolveDirectionalLightSource();
+    const sun = this.resolveDirectionalLightSource(source.directionalLightNode);
     this.selectedDirectionalLight = cloneSceneDirectionalLight(sun.light);
     this.selectedDirectionalLightEnabled = sun.enabled;
     this.directionalLightSource = sun.source ? structuredClone(sun.source) : undefined;
@@ -389,7 +408,9 @@ export class SceneBuilder {
   }
 
   private resolveCameraRig(): SceneCameraRigConfig {
-    return cloneCameraRig(configService.getSceneCameraRig() ?? this.resolveFallbackCameraRig());
+    const cameraNode = configService.getSceneCameraNode();
+    if (!cameraNode?.camera) throw createSceneEnvironmentSystemObjectsMissingError(['camera']);
+    return cloneCameraRig(cameraNode.camera);
   }
 
   private attachMainCameraMetadata(camera: ArcRotateCamera, source?: SceneRuntimeSourceBinding): void {
@@ -425,37 +446,7 @@ export class SceneBuilder {
     };
   }
 
-  private resolveFallbackCameraRig(): SceneCameraRigConfig {
-    const camCfg = (renderingConfig as any).globalVolume?.camera ?? {};
-    const target = readPosition3D(camCfg.target);
-    return {
-      projection: readCameraProjection(camCfg.projection),
-      alpha: readFiniteNumber(camCfg.alpha, Math.PI / 4),
-      beta: readFiniteNumber(camCfg.beta, Math.PI / 4),
-      radius: readPositiveFiniteNumber(camCfg.radius, 14),
-      orthoSize: readPositiveFiniteNumber(camCfg.orthoSizeDesktop, 10),
-      fov: readOptionalPositiveFiniteNumber(camCfg.fov) ?? DEFAULT_CAMERA_FOV,
-      ...(target ? { targetOffset: target } : {}),
-      minZ: readOptionalPositiveFiniteNumber(camCfg.minZ) ?? 1,
-      maxZ: readOptionalPositiveFiniteNumber(camCfg.maxZ) ?? 10000,
-      lowerBetaLimit: readFiniteNumber(camCfg.lowerBetaLimit, readFiniteNumber(camCfg.beta, Math.PI / 4)),
-      upperBetaLimit: readFiniteNumber(camCfg.upperBetaLimit, readFiniteNumber(camCfg.beta, Math.PI / 4)),
-      lowerRadiusLimit: readOptionalPositiveFiniteNumber(camCfg.lowerRadiusLimit) ?? readPositiveFiniteNumber(camCfg.radius, 14),
-      upperRadiusLimit: readOptionalPositiveFiniteNumber(camCfg.upperRadiusLimit) ?? readPositiveFiniteNumber(camCfg.radius, 14),
-      inertia: readOptionalUnitNumber(camCfg.inertia) ?? 0.9,
-      targetScreenOffset: readPosition2D(camCfg.targetScreenOffset) ?? { x: 0, y: 0 },
-    };
-  }
-
-  private resolveFallbackCameraTarget(): Vector3 {
-    const camCfg = (renderingConfig as any).globalVolume?.camera ?? {};
-    const target = readPosition3D(camCfg.target);
-    if (!target) return new Vector3(0, 0, 0);
-    return new Vector3(target.x, target.y, target.z);
-  }
-
-  private resolveDirectionalLightSource(): SceneRuntimeLightState<SceneDirectionalLightConfig> {
-    const node = configService.getSceneDirectionalLightNode();
+  private resolveDirectionalLightSource(node: SceneTransformNode): SceneRuntimeLightState<SceneDirectionalLightConfig> {
     if (node?.light?.type === 'directional') {
       return {
         light: node.light,
@@ -463,14 +454,10 @@ export class SceneBuilder {
         ...(node.source ? { source: node.source } : {}),
       };
     }
-    return {
-      light: this.resolveFallbackDirectionalLight(),
-      enabled: true,
-    };
+    throw createSceneEnvironmentSystemObjectsMissingError(['directional-light']);
   }
 
-  private resolveHemisphericLightSource(): SceneRuntimeLightState<SceneHemisphericLightConfig> {
-    const node = configService.getSceneHemisphericLightNode();
+  private resolveHemisphericLightSource(node: SceneTransformNode): SceneRuntimeLightState<SceneHemisphericLightConfig> {
     if (node?.light?.type === 'hemispheric') {
       return {
         light: node.light,
@@ -478,39 +465,22 @@ export class SceneBuilder {
         ...(node.source ? { source: node.source } : {}),
       };
     }
-    return {
-      light: this.resolveFallbackHemisphericLight(),
-      enabled: true,
-    };
+    throw createSceneEnvironmentSystemObjectsMissingError(['environment-light']);
   }
 
-  private resolveFallbackHemisphericLight(): SceneHemisphericLightConfig {
-    const lightsCfg = (renderingConfig as any).globalVolume?.lights ?? {};
-    const hemispheric = lightsCfg.hemispheric ?? {};
-    const diffuseColor = readColorRGB(hemispheric.diffuseColor ?? hemispheric.skyLightColor);
-    const groundColor = readColorRGB(hemispheric.groundColor);
+  private resolveSceneEnvironmentSource(): SceneEnvironmentSource {
+    const cameraNode = configService.getSceneCameraNode();
+    const hemisphericLightNode = configService.getSceneHemisphericLightNode();
+    const directionalLightNode = configService.getSceneDirectionalLightNode();
+    const missingKinds: string[] = [];
+    if (!cameraNode?.camera) missingKinds.push('camera');
+    if (hemisphericLightNode?.light?.type !== 'hemispheric') missingKinds.push('environment-light');
+    if (directionalLightNode?.light?.type !== 'directional') missingKinds.push('directional-light');
+    if (missingKinds.length > 0) throw createSceneEnvironmentSystemObjectsMissingError(missingKinds);
     return {
-      type: 'hemispheric',
-      intensity: readNonNegativeFiniteNumber(hemispheric.intensity, 0.8),
-      ...(diffuseColor ? { diffuseColor } : {}),
-      ...(groundColor ? { groundColor } : {}),
-    };
-  }
-
-  private resolveFallbackDirectionalLight(): SceneDirectionalLightConfig {
-    const lightsCfg = (renderingConfig as any).globalVolume?.lights ?? {};
-    const directional = lightsCfg.directional ?? {};
-    const direction = directional.direction ?? {};
-    const diffuseColor = readColorRGB(directional.diffuseColor);
-    return {
-      type: 'directional',
-      intensity: readNonNegativeFiniteNumber(directional.intensity, 1.2),
-      direction: {
-        x: readFiniteNumber(direction.x, -0.3),
-        y: readFiniteNumber(direction.y, -1),
-        z: readFiniteNumber(direction.z, -0.2),
-      },
-      ...(diffuseColor ? { diffuseColor } : {}),
+      cameraNode: cameraNode!,
+      hemisphericLightNode: hemisphericLightNode!,
+      directionalLightNode: directionalLightNode!,
     };
   }
 
@@ -1894,10 +1864,6 @@ function safelyDisposeSceneBuilderMaterial(material: any): void {
   }
 }
 
-function readFiniteNumber(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
 function readSceneBuilderMaterialSlotSourceDescriptor(
   record: Record<string, unknown>,
   slotId: string,
@@ -2044,28 +2010,12 @@ function readOptionalSceneBuilderMaterialSlotSourceDescriptor(
   return readSceneBuilderMaterialSlotSourceDescriptor(rawSlot, slotId, ownerNodePath);
 }
 
-function readPositiveFiniteNumber(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : fallback;
-}
-
-function readOptionalPositiveFiniteNumber(value: unknown): number | undefined {
-  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : undefined;
-}
-
-function readCameraProjection(value: unknown): SceneCameraProjection {
-  return value === 'perspective' ? 'perspective' : 'orthographic';
-}
-
 function resolveCameraProjection(value: unknown): SceneCameraProjection {
   return value === 'perspective' ? 'perspective' : 'orthographic';
 }
 
 function resolveCameraFov(value: unknown): number {
   return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : DEFAULT_CAMERA_FOV;
-}
-
-function readOptionalUnitNumber(value: unknown): number | undefined {
-  return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1 ? value : undefined;
 }
 
 function readPosition3D(value: unknown): { x: number; y: number; z: number } | undefined {
@@ -2075,14 +2025,6 @@ function readPosition3D(value: unknown): { x: number; y: number; z: number } | u
   if (typeof record.y !== 'number' || !Number.isFinite(record.y)) return undefined;
   if (typeof record.z !== 'number' || !Number.isFinite(record.z)) return undefined;
   return { x: record.x, y: record.y, z: record.z };
-}
-
-function readPosition2D(value: unknown): { x: number; y: number } | undefined {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
-  const record = value as Record<string, unknown>;
-  if (typeof record.x !== 'number' || !Number.isFinite(record.x)) return undefined;
-  if (typeof record.y !== 'number' || !Number.isFinite(record.y)) return undefined;
-  return { x: record.x, y: record.y };
 }
 
 function getCameraTargetOffset(cameraRig: SceneCameraRigConfig): { x: number; y: number; z: number } | undefined {
@@ -2115,24 +2057,4 @@ function cloneSceneHemisphericLight(light: SceneHemisphericLightConfig): SceneHe
 
 function toColor3(color: ColorRGB): Color3 {
   return new Color3(color.r, color.g, color.b);
-}
-
-function readNonNegativeFiniteNumber(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : fallback;
-}
-
-function readColorRGB(value: unknown): ColorRGB | undefined {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
-  const record = value as Record<string, unknown>;
-  if (
-    typeof record.r !== 'number'
-    || !Number.isFinite(record.r)
-    || typeof record.g !== 'number'
-    || !Number.isFinite(record.g)
-    || typeof record.b !== 'number'
-    || !Number.isFinite(record.b)
-  ) {
-    return undefined;
-  }
-  return { r: record.r, g: record.g, b: record.b };
 }
