@@ -28,7 +28,6 @@ import { DirectionalLight } from '@babylonjs/core/Lights/directionalLight';
 
 import { AssetLoader } from './AssetLoader';
 import { ModelPool } from './ModelPool';
-import { RenderingService } from './RenderingService';
 import { createGroundDecalUiDynamicTexture, isGroundDecalUiConfig } from './GroundDecalUiService';
 import { applyMaterialDebugAdjustments } from '../utils/materialDebugAdjust';
 
@@ -84,7 +83,6 @@ export interface SceneEnvironment {
   camera: ArcRotateCamera;
   hemisphericLight: HemisphericLight;
   directionalLight: DirectionalLight;
-  renderingService: RenderingService;
 }
 
 export interface SceneRuntimeLightState<TLightConfig extends SceneHemisphericLightConfig | SceneDirectionalLightConfig> {
@@ -186,15 +184,11 @@ export class SceneBuilder {
     // 2) Lights
     const { hemisphericLight, directionalLight } = this.createLights();
 
-    // 3) Rendering pipeline
-    const renderingService = new RenderingService(this.scene);
-    renderingService.initialize([camera]);
-
-    // 4) 默认地面（让脚手架“开箱即有东西可见”）
+    // 3) 默认地面（让脚手架“开箱即有东西可见”）
     this.buildDefaultGround();
     this.buildLayoutPlaceholderSurfaces();
 
-    return { camera, hemisphericLight, directionalLight, renderingService };
+    return { camera, hemisphericLight, directionalLight };
   }
 
   private createCamera(): ArcRotateCamera {

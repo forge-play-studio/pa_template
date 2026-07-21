@@ -12,6 +12,21 @@ const sourceFiles = [...walkFiles(srcRoot)]
 
 assertSingleOwner(/\brunRenderLoop\s*\(/g, 'runtime/frame/FramePump.ts', 'Engine.runRenderLoop');
 assertSingleOwner(/\bscene\.render\s*\(/g, 'runtime/frame/RenderCoordinator.ts', 'Scene.render');
+assertSingleOwner(/\bawait\s+attachProjectRenderer\s*\(/g, 'runtime/GameWorld.ts', 'Renderer attach');
+for (const ownerFactory of [
+  'createPlayableBabylonRuntimeRenderingControllers',
+  'createBabylonDefaultPostProcessPipelineController',
+  'createBabylonEnvironmentTextureController',
+]) {
+  assertNoOwner(
+    new RegExp(`\\b${ownerFactory}\\b`, 'g'),
+    `Runtime rendering owner factory ${ownerFactory} must be owned by the generated Renderer entry`,
+  );
+}
+
+if (existsSync(resolve(projectRoot, 'src/services/RenderingService.ts'))) {
+  failures.push('legacy src/services/RenderingService.ts must not be restored');
+}
 
 for (const file of sourceFiles) {
   const sourcePath = normalize(relative(srcRoot, file));
@@ -90,6 +105,16 @@ function assertSingleOwner(pattern, expectedOwner, label) {
   if (matches.length !== 1 || matches[0].file !== expectedOwner || matches[0].count !== 1) {
     failures.push(`${label} must have exactly one callsite in src/${expectedOwner}; found ${JSON.stringify(matches)}`);
   }
+}
+
+function assertNoOwner(pattern, label) {
+  const matches = [];
+  for (const file of sourceFiles) {
+    const content = readFileSync(file, 'utf8');
+    const count = [...content.matchAll(pattern)].length;
+    if (count > 0) matches.push({ file: normalize(relative(srcRoot, file)), count });
+  }
+  if (matches.length > 0) failures.push(`${label}; found ${JSON.stringify(matches)}`);
 }
 
 function assertOrder(content, first, second, label) {

@@ -31,7 +31,6 @@ import {
   ModelPool,
   playableAnalyticsService,
   playableCtaService,
-  RenderingService,
   SceneBuilder,
   VfxService,
 } from '../services';
@@ -94,7 +93,6 @@ export class GameWorld {
   private audioService: AudioService | null = null;
   private inputService: InputService | null = null;
   private sceneBuilder: SceneBuilder | null = null;
-  private renderingService: RenderingService | null = null;
   private materialConfigService: MaterialConfigService | null = null;
   private vfxService: VfxService | null = null;
   private zoneSystem: ZoneSystem | null = null;
@@ -254,8 +252,6 @@ export class GameWorld {
     this.resources.defer(() => sceneBuilder.dispose());
     const environment = sceneBuilder.buildSceneEnvironment();
     this.camera = environment.camera;
-    this.renderingService = environment.renderingService;
-    this.resources.defer(() => environment.renderingService.dispose());
 
     this.modelAnimationService = new ModelAnimationService();
 
@@ -344,7 +340,6 @@ export class GameWorld {
       !this.inputService ||
       !this.materialConfigService ||
       !this.modelPool ||
-      !this.renderingService ||
       !this.sceneBuilder ||
       !this.vfxService ||
       !this.player ||
@@ -362,7 +357,6 @@ export class GameWorld {
       inputService: this.inputService,
       materialConfigService: this.materialConfigService,
       modelPool: this.modelPool,
-      renderingService: this.renderingService,
       sceneBuilder: this.sceneBuilder,
       vfxService: this.vfxService,
       analytics: this.analyticsService,
@@ -417,7 +411,6 @@ export class GameWorld {
     this.audioService = null;
     this.inputService = null;
     this.sceneBuilder = null;
-    this.renderingService = null;
     this.materialConfigService = null;
     this.vfxService = null;
     this.zoneSystem = null;
