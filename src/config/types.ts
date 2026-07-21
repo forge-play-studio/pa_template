@@ -63,7 +63,7 @@ import type {
   PlayableEditorRuntimeTransformType,
   PlayableEditorSceneCompiledArtifactProvenance,
   PlayableEditorSceneRuntimeSourceBinding,
-} from '@fps-games/editor/playable-sdk';
+} from '../runtime/integrations/fps-runtime/contracts';
 
 // ============================================================
 // 基础类型
