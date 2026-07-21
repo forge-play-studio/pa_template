@@ -3,9 +3,8 @@
  * Last updated: 2026-07-05.
  *
  * This file stays in `src/debug` because it owns panel mount/dispose lifecycle
- * for runtime debug UI. The local editor host implementation itself lives in
- * `src/services/fps-game-editor/local-editor.ts`; this file
- * only imports and mounts that host together with debug panels.
+ * for runtime debug UI. Project `src/dev/DevHost.ts` mounts it for each Play
+ * mode lifetime; Editor Entry only requests mode transitions.
  */
 import type { GameWorld } from '../runtime/GameWorld';
 import type { ProjectGameplayRuntime } from '../gameplay';
@@ -21,11 +20,9 @@ export interface RuntimeDebugBootstrapOptions {
   root?: HTMLElement;
   getGame: () => GameWorld | null;
   getGameplayRuntime: () => ProjectGameplayRuntime | null;
-  disposeGameWorld: () => void | Promise<void>;
 }
 
 export interface RuntimeDebugBootstrap {
-  detachForEditor(): void;
   dispose(): Promise<void>;
 }
 
@@ -61,13 +58,7 @@ export function mountRuntimeDebug(options: RuntimeDebugBootstrapOptions): Runtim
 
   let disposed = false;
   let disposal: Promise<void> | null = null;
-  let runtimePanelsDetached = false;
-  const detachRuntimePanelsForEditor = () => {
-    if (runtimePanelsDetached) return;
-    runtimePanelsDetached = true;
-    runtimePanels.dispose();
-  };
-  async function disposeMountedEditor(): Promise<void> {
+  async function disposeRuntimeDebug(): Promise<void> {
     if (disposed) return;
     if (disposal) return disposal;
     const pending = (async () => {
@@ -83,7 +74,6 @@ export function mountRuntimeDebug(options: RuntimeDebugBootstrapOptions): Runtim
   }
 
   return {
-    detachForEditor: detachRuntimePanelsForEditor,
-    dispose: disposeMountedEditor,
+    dispose: disposeRuntimeDebug,
   };
 }
