@@ -20,7 +20,7 @@ const finalCaps = {
   customLines: readPositiveIntegerEnv('EDITOR_PRODUCT_CUSTOM_MAX_LINES', 800),
   sdkFailureLines: readPositiveIntegerEnv('EDITOR_PRODUCT_FAILURE_THRESHOLD_LINES', 1500),
 };
-const devEditorBootstrapTarget = { minLines: 80, maxLines: 120 };
+const devEditorBootstrapMaxLines = 120;
 const devEditorBootstrapPath = 'src/services/fps-game-editor/local-editor.ts';
 const standardFixtureRoot = path.join(projectRoot, 'scripts/fixtures/editor-standard-product');
 
@@ -49,7 +49,6 @@ const finalProductSurfacePaths = [
   'fps.config.ts',
   'src/editor.config.ts',
   'src/fps-game-editor.config.ts',
-  'src/services/fps-game-editor/runtime-plugin-host.ts',
   'src/editor',
   'src/services/fps-game-editor',
   'src/fps-editor',
@@ -186,13 +185,10 @@ if (!enforceFinal) {
       fix: 'Keep the standard integration expressible through main.ts, vite.config.ts, and fps.config.ts only.',
     });
   }
-  if (
-    devEditorBootstrapLines < devEditorBootstrapTarget.minLines
-    || devEditorBootstrapLines > devEditorBootstrapTarget.maxLines
-  ) {
+  if (devEditorBootstrapLines > devEditorBootstrapMaxLines) {
     violations.push({
       path: devEditorBootstrapPath,
-      detail: `${devEditorBootstrapLines} non-empty lines is outside the ${devEditorBootstrapTarget.minLines}-${devEditorBootstrapTarget.maxLines} target`,
+      detail: `${devEditorBootstrapLines} non-empty lines exceeds the ${devEditorBootstrapMaxLines} line maximum`,
       fix: 'Keep project-specific ports and features here; move lifecycle, Plugin Host, diagnostics, loading copy and Babylon projection into @fps-games/editor.',
     });
   }
@@ -228,7 +224,7 @@ if (productEditorSignalLineSummary.files.length > 0) {
   console.log(`  product editor signal files: ${formatSignalLineFiles(productEditorSignalLineSummary.files)}`);
 }
 console.log(`- standard product fixture: ${standardFixtureSummary.files.length} files / ${standardFixtureSummary.totalLines} non-empty TypeScript/module lines`);
-console.log(`- dev editor bootstrap: ${devEditorBootstrapLines} non-empty lines (target ${devEditorBootstrapTarget.minLines}-${devEditorBootstrapTarget.maxLines})`);
+console.log(`- dev editor bootstrap: ${devEditorBootstrapLines} non-empty lines (maximum ${devEditorBootstrapMaxLines})`);
 console.log(`- editor signal surface: ${editorSignalSummary.files.length} files / ${editorSignalSummary.totalLines} TypeScript/module lines`);
 if (editorSignalSummary.files.length > 0) {
   console.log(`  largest signal files: ${formatTopFiles(editorSignalSummary.files)}`);

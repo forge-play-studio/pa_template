@@ -28,11 +28,8 @@ const rendering = createFpsGameEditorRenderingAuthoringServices(editorConfig, {
 const scene = createFpsGameEditorProjectSceneAuthoringServices(editorConfig, {
   projectRoot: __dirname,
   moduleIds: {
-    authoringSource: '/src/services/fps-game-editor/scene-feature.ts',
-    assetLibrary: '/src/services/fps-game-editor/scene-feature.ts',
-    sceneSession: '/src/services/fps-game-editor/scene-feature.ts',
-    sceneCompiler: '/src/services/fps-game-editor/scene-feature.ts',
-    renderingProfile: '/src/services/fps-game-editor/rendering-profile.ts',
+    sceneModule: '/src/services/fps-game-editor/scene-feature.ts',
+    renderingProfile: '/src/rendering/rendering-profile.ts',
   },
   summarizeRenderingProfile: rendering.summarize,
   createRenderingInvalidationFiles: rendering.createInvalidationFiles,

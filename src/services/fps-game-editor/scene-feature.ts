@@ -5,9 +5,6 @@
  */
 import {
   compileEditorSceneDocumentToSceneConfig as compileSdkEditorSceneDocumentToSceneConfig,
-  createEditorSceneAssetLibrary as createPlayableEditorSceneAssetLibrary,
-  enrichEditorSceneDocumentAssets as enrichPlayableEditorSceneDocumentAssets,
-  mergeEditorSceneAssetWithLibraryItem as mergePlayableEditorSceneAssetWithLibraryItem,
   PLAYABLE_EDITOR_SCENE_COMPILER_ID,
   PLAYABLE_EDITOR_SCENE_COMPILER_VERSION,
   createFpsGameEditorProductRenderingRuntime,
@@ -18,14 +15,13 @@ import {
   syncEditorSceneMarkerGraph,
   type SpatialMarkerTypeDefinition,
   type SpatialRelationTypeDefinition,
-  type EditorSceneAssetCatalogEntry as PlayableEditorSceneAssetCatalogEntry,
   type ShadowMapExperimentConfig,
 } from '@fps-games/editor/playable-sdk';
 import { editorConfig } from '../../../fps.config';
 import baseSceneConfig from '../../config/scene.json';
 import renderingConfig from '../../config/rendering.json';
 import { configService } from '../../config/ConfigService';
-import type { AssetExternalRef, GroundDecalUiKind, SceneConfig } from '../../config';
+import type { GroundDecalUiKind, SceneConfig } from '../../config';
 import {
   addGroundDecalUiDeliveryPair,
   createDefaultGroundDecalUiConfig,
@@ -147,7 +143,6 @@ export const setEditorRenderingTextures = (textures: any[]) => { currentRenderin
 
 export { sceneAssembly, migrateEditorSceneMarkerGraphMarkersToGameObjects, syncEditorSceneMarkerGraph };
 export const createEditorSceneAssetActionPatch = (input: any) => createFpsGameEditorStandardAssetActionPatch(input, createGroundDecalAssetActionPatch);
-export const normalizeEditorSceneHierarchyDocument = sceneAssembly.normalizeHierarchyDocument;
 export const createEditorSceneGroundDecalUiPatch = (
   document: EditorSceneDocument,
   uiKind: GroundDecalUiKind,
@@ -177,31 +172,9 @@ export {
   bumpEditorSceneAuthoringSourceRevision,
   createEditorSceneAuthoringSourceDescriptor,
   detectEditorSceneRuntimeInputDrift,
+  enrichEditorSceneDocumentAssets,
   ensureEditorSceneAuthoringSource,
 } from '@fps-games/editor/playable-sdk';
-
-export interface ProjectEditorAssetCatalogEntry extends PlayableEditorSceneAssetCatalogEntry<AssetExternalRef> {
-  guid: string;
-  assetId: string;
-  kind: 'model' | 'prefab' | 'texture' | 'image' | 'sound';
-  displayName: string;
-  relativePath: string;
-  external?: AssetExternalRef;
-}
-
-export const createProjectEditorAssetLibrary = (catalogEntries: ProjectEditorAssetCatalogEntry[]): EditorSceneAssetLibraryItem[] => (
-  createPlayableEditorSceneAssetLibrary(catalogEntries) as EditorSceneAssetLibraryItem[]
-);
-
-export const enrichEditorSceneDocumentAssets = (
-  document: EditorSceneDocument,
-  assets: EditorSceneAssetLibraryItem[],
-): EditorSceneDocument => enrichPlayableEditorSceneDocumentAssets(document, assets) as EditorSceneDocument;
-
-export const mergeEditorSceneAssetWithLibraryItem = (
-  asset: EditorSceneAsset,
-  libraryItem: EditorSceneAssetLibraryItem,
-): EditorSceneAsset => mergePlayableEditorSceneAssetWithLibraryItem(asset, libraryItem) as EditorSceneAsset;
 
 export function compileEditorSceneDocumentToSceneConfig(document: EditorSceneDocument, baseSceneConfig: SceneConfig, options?: { shadowMapExperimentConfig?: ShadowMapExperimentConfig | null }) {
   return compileSdkEditorSceneDocumentToSceneConfig(syncEditorSceneMarkerGraphDocument(document), baseSceneConfig, {
