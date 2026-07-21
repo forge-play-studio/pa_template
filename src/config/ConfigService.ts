@@ -41,7 +41,7 @@ import type {
 import sceneConfigJson from './scene.json';
 import gameConfigJson from './game.json';
 import renderingConfigJson from './rendering.json';
-import { assertPlayableEditorRuntimeSceneConfig } from '@fps-games/editor/playable-sdk';
+import { assertPlayableEditorRuntimeSceneConfig } from '../runtime/integrations/fps-runtime/validation';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value);
