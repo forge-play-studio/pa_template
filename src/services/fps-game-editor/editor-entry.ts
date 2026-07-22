@@ -3,6 +3,10 @@ import {
   type FpsGameEditorLocalEditorEntry,
   type FpsGameEditorProjectModeTransitions,
 } from '@fps-games/editor/playable-sdk';
+import {
+  readPaTemplateEditorBootMode,
+  type PaTemplateEditorBootMode,
+} from './editor-host-environment';
 
 type LocalEditorModule = typeof import('./local-editor');
 
@@ -11,11 +15,12 @@ export type PaTemplateEditorEntryProjectMode = FpsGameEditorProjectModeTransitio
 /** Editor-only entry assembly. Project runtime lifetime stays in src/dev/DevHost. */
 export function mountPaTemplateEditorEntry(
   projectMode: PaTemplateEditorEntryProjectMode,
+  bootMode: PaTemplateEditorBootMode = readPaTemplateEditorBootMode(),
 ): FpsGameEditorLocalEditorEntry {
   return mountFpsGameEditorLocalEditorEntry<LocalEditorModule>({
     browser: {
       // Hosted sandboxes own mode switching; keep the manual entry affordance local-only.
-      showEntryButton: window.__BOOT_MODE === undefined,
+      showEntryButton: bootMode === null,
     },
     projectMode,
     editorModule: {
@@ -28,10 +33,9 @@ export function mountPaTemplateEditorEntry(
           root: document.body,
           ...options,
         });
-        // Forge Play 的 srcdoc 编辑帧没有 URL 可携带 mode(about:srcdoc),host 在
-        // 写入 srcdoc 前注入 window.__BOOT_MODE = 'edit'。装配完成后直接进入编辑
-        // 态,免去 host 侧 postMessage 轮询等待。未注入时行为不变(boot 进 play)。
-        if (window.__BOOT_MODE === 'edit') {
+        // Resolve the hosted editor mode before async assembly. Explicit host
+        // injection wins; about:srcdoc remains a compatibility fallback.
+        if (bootMode === 'edit') {
           void switcher.enterEditor().catch(error => console.error('[PaTemplateEditorEntry] boot enterEditor failed', error));
         }
         return switcher;

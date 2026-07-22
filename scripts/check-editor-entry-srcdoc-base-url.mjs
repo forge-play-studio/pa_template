@@ -2,6 +2,7 @@
 
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { readPaTemplateEditorBootMode } from '../src/services/fps-game-editor/editor-host-environment.ts';
 
 const editorEntrySource = readFileSync(
   new URL('../src/services/fps-game-editor/editor-entry.ts', import.meta.url),
@@ -20,9 +21,15 @@ assert.doesNotMatch(
 );
 assert.match(
   editorEntrySource,
-  /\bshowEntryButton:\s*window\.__BOOT_MODE\s*===\s*undefined\b/,
-  'The manual editor entry button must be hidden when the sandbox host injects a boot mode.',
+  /\bshowEntryButton:\s*bootMode\s*===\s*null\b/,
+  'The manual editor entry button must be hidden in hosted modes.',
 );
+
+assert.equal(readPaTemplateEditorBootMode({ location: { href: 'https://local.example/' } }), null);
+assert.equal(readPaTemplateEditorBootMode({ location: { href: 'https://local.example/' }, __BOOT_MODE: 'play' }), 'play');
+assert.equal(readPaTemplateEditorBootMode({ location: { href: 'about:srcdoc' }, __BOOT_MODE: 'play' }), 'play');
+assert.equal(readPaTemplateEditorBootMode({ location: { href: 'about:srcdoc' } }), 'edit');
+assert.equal(readPaTemplateEditorBootMode({ location: { href: 'about:srcdoc#editor' } }), 'edit');
 
 const manifestPath = '/__fps_editor/entry-manifest.json';
 assert.throws(() => new URL(manifestPath, 'about:srcdoc'), TypeError);
