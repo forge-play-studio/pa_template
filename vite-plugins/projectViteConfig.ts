@@ -97,7 +97,7 @@ const localeMeta = i18nConfig.locales[locale] || i18nConfig.locales[defaultBuild
 export function createPaTemplateViteConfig(integration: ProjectViteIntegration) {
 const projectRoot = resolve(__dirname, '..');
 const allowedThirdPartyPackages = ['@babylonjs/core', '@babylonjs/loaders', '@fps-games/vfx', ...integration.editorPackageIds];
-return defineConfig(({ command }) => {
+return defineConfig(async ({ command }) => {
   const devServer = command === 'serve';
   if (sceneWalkthroughRequested && (command !== 'build' || !isProduction || buildMatrix)) {
     throw new Error('SCENE_WALKTHROUGH_BUILD is only valid for the dedicated non-matrix production build command');
@@ -132,6 +132,10 @@ return defineConfig(({ command }) => {
     })] : []),
     // Production builds do not inject Babylon Inspector UI.
     ...(devServer ? [inspectorPlugin()] : []),
+    // 沙盒平台的 HMR 门控（transaction/auto-sync 批量更新）：supervisor 通过
+    // HMR_GATE env 递入插件路径，模板不 vendor 任何代码；本地开发无此 env，
+    // 完全不挂载。见 fps-agent#642 / 本仓库 #198。
+    ...(devServer && process.env.HMR_GATE ? [(await import(process.env.HMR_GATE)).default()] : []),
     integration.playableEditorVitePlugin(),
     integration.pluginManifestVitePlugin(),
     ...(devServer ? projectDebugApiPlugins({ projectRoot }) : []),
@@ -178,7 +182,8 @@ return defineConfig(({ command }) => {
         development: process.env.NODE_ENV !== 'production',
       }),
     ] : []),
-    viteSingleFile(),
+    // 纯打包插件，serve 模式不该在场（其 config hook 会在 dev 下重置 base）。
+    ...(devServer ? [] : [viteSingleFile()]),
     // 构建后图片压缩：PNG → WebP (cwebp) 或 optipng 无损重压，取最小值
     // 需要: brew install webp optipng
     optimizePngPlugin({ enabled: isProduction, optipngLevel: 2, webpQuality: 80 }),
@@ -305,10 +310,14 @@ return defineConfig(({ command }) => {
     },
   },
   server: {
-    port: 3011,
+    // 沙盒平台契约（fps-agent#642）：supervisor 是端口分配的唯一权威，经
+    // PORT env 传入，dev server 必须严格绑定它；本地开发无 env 时回落 3011。
+    port: Number(process.env.PORT) || 3011,
     strictPort: true,
     cors: true,
     allowedHosts: ['.e2b.app'],
+    // agent 的项目内状态目录（.opencode，含高频写入的 opencode.db），不进 watch。
+    watch: { ignored: ['**/.opencode/**'] },
     fs: integration.localFpsGameEditorRepo
       ? {
           allow: [projectRoot, integration.localFpsGameEditorRepo],
