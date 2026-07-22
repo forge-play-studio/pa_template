@@ -15,10 +15,10 @@
     "generatedFrom": {
       "sourceId": "scene.main",
       "sourceType": "scene",
-      "revision": 79,
+      "revision": 76,
       "compilerId": "@fps-games/editor.playable-sdk.scene-compiler",
       "compilerVersion": "2",
-      "compiledAt": "2026-07-22T09:49:47.005Z"
+      "compiledAt": "2026-07-19T06:11:18.960Z"
     }
   },
   "gameplay": {
@@ -28,7 +28,493 @@
   },
   "scene": {
     "rootId": "root",
-    "assets": [],
+    "assets": [
+      {
+        "id": "asset_699aee4da2b84a3eb07f4496872ad249",
+        "type": "glb",
+        "guid": "699aee4d-a2b8-4a3e-b07f-4496872ad249",
+        "materialMode": "shared",
+        "materialSlots": [
+          {
+            "slotId": "slot_427a5347",
+            "ownerNodePath": "maozinan_DZY_Skin",
+            "label": "maozinan_DZY_Skin / Primitive 0",
+            "meshIndex": 0,
+            "primitiveIndex": 0,
+            "sourceMaterialIndices": [
+              0
+            ],
+            "sourceMeshName": "maozinan_DZY_Skin"
+          },
+          {
+            "slotId": "slot_417a51b4",
+            "ownerNodePath": "maozinan_DZY_Skin",
+            "label": "maozinan_DZY_Skin / Primitive 1",
+            "meshIndex": 0,
+            "primitiveIndex": 1,
+            "sourceMaterialIndices": [
+              1
+            ],
+            "sourceMeshName": "maozinan_DZY_Skin"
+          },
+          {
+            "slotId": "slot_53300b02",
+            "ownerNodePath": "root/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 Spine1/Bip001 Neck/Bip001 R Clavicle/Bip001 R UpperArm/Bip001 R Forearm/Bip001 R Hand/wuqiguadiandummy/wuqiguadianbox",
+            "label": "wuqiguadianbox",
+            "meshIndex": 1,
+            "primitiveIndex": 0,
+            "sourceMaterialIndices": [
+              2
+            ],
+            "sourceMeshName": "wuqiguadianbox"
+          }
+        ]
+      },
+      {
+        "id": "asset_ade25007e0964563b197b21c2759c027",
+        "type": "glb",
+        "guid": "ade25007-e096-4563-b197-b21c2759c027",
+        "materialMode": "shared",
+        "materialSlots": [
+          {
+            "slotId": "slot_74e9cbf9",
+            "ownerNodePath": "gongren_Rig:Geometry/gongren_Rig:fbx_city_npc_worker_male03",
+            "label": "gongren_Rig:fbx_city_npc_worker_male03",
+            "meshIndex": 0,
+            "primitiveIndex": 0,
+            "sourceMaterialIndices": [
+              0
+            ],
+            "sourceMeshName": "gongren_Rig:fbx_city_npc_worker_male03"
+          }
+        ]
+      },
+      {
+        "id": "asset_4b2358ee5d9441cd8cae8b389bb98c46",
+        "type": "glb",
+        "guid": "4b2358ee-5d94-41cd-8cae-8b389bb98c46",
+        "materialMode": "shared",
+        "materialSlots": [
+          {
+            "slotId": "slot_91c449a4",
+            "ownerNodePath": "ST_kache_Rig:Geometry/ST_kache_Rig:polySurface102",
+            "label": "ST_kache_Rig:polySurface102",
+            "meshIndex": 4,
+            "primitiveIndex": 0,
+            "sourceMaterialIndices": [
+              0
+            ],
+            "sourceMeshName": "ST_kache_Rig:polySurface102"
+          },
+          {
+            "slotId": "slot_47f2cfb8",
+            "ownerNodePath": "ST_kache_Rig:Geometry/ST_kache_Rig:polySurface108",
+            "label": "ST_kache_Rig:polySurface108",
+            "meshIndex": 1,
+            "primitiveIndex": 0,
+            "sourceMaterialIndices": [
+              0
+            ],
+            "sourceMeshName": "ST_kache_Rig:polySurface108"
+          },
+          {
+            "slotId": "slot_5278c34c",
+            "ownerNodePath": "ST_kache_Rig:Geometry/ST_kache_Rig:polySurface119",
+            "label": "ST_kache_Rig:polySurface119",
+            "meshIndex": 0,
+            "primitiveIndex": 0,
+            "sourceMaterialIndices": [
+              0
+            ],
+            "sourceMeshName": "ST_kache_Rig:polySurface119"
+          },
+          {
+            "slotId": "slot_a58a01f0",
+            "ownerNodePath": "ST_kache_Rig:Geometry/ST_kache_Rig:polySurface96",
+            "label": "ST_kache_Rig:polySurface96",
+            "meshIndex": 2,
+            "primitiveIndex": 0,
+            "sourceMaterialIndices": [
+              0
+            ],
+            "sourceMeshName": "ST_kache_Rig:polySurface96"
+          },
+          {
+            "slotId": "slot_ab17af44",
+            "ownerNodePath": "ST_kache_Rig:Geometry/ST_kache_Rig:polySurface99",
+            "label": "ST_kache_Rig:polySurface99",
+            "meshIndex": 3,
+            "primitiveIndex": 0,
+            "sourceMaterialIndices": [
+              0
+            ],
+            "sourceMeshName": "ST_kache_Rig:polySurface99"
+          }
+        ]
+      },
+      {
+        "id": "asset_edc2f992438c4450afc1c6354ec21500",
+        "type": "glb",
+        "guid": "edc2f992-438c-4450-afc1-c6354ec21500",
+        "materialMode": "shared",
+        "materialSlots": [
+          {
+            "slotId": "slot_1463c7d6",
+            "ownerNodePath": "树",
+            "label": "树",
+            "meshIndex": 0,
+            "primitiveIndex": 0,
+            "sourceMaterialIndices": [
+              0
+            ],
+            "sourceMeshName": "Mesh"
+          }
+        ]
+      },
+      {
+        "id": "asset_af82a4f117d84ff58bedb41aa11bad5c",
+        "type": "glb",
+        "guid": "af82a4f1-17d8-4ff5-8bed-b41aa11bad5c",
+        "materialMode": "shared",
+        "materialSlots": [
+          {
+            "slotId": "slot_a3b38496",
+            "ownerNodePath": "SM_SSD_S_M_huacaoo49",
+            "label": "SM_SSD_S_M_huacaoo49",
+            "meshIndex": 0,
+            "primitiveIndex": 0,
+            "sourceMaterialIndices": [
+              0
+            ],
+            "sourceMeshName": "SM_SSD_S_M_huacaoo49"
+          }
+        ]
+      },
+      {
+        "id": "asset_2286fa2ec19e45df8b1b188717c7c4e9",
+        "type": "glb",
+        "guid": "2286fa2e-c19e-45df-8b1b-188717c7c4e9",
+        "materialMode": "shared",
+        "materialSlots": [
+          {
+            "slotId": "slot_0a33f1e4",
+            "ownerNodePath": "yanshi_02",
+            "label": "yanshi_02",
+            "meshIndex": 0,
+            "primitiveIndex": 0,
+            "sourceMaterialIndices": [
+              0
+            ],
+            "sourceMeshName": "Mesh"
+          }
+        ]
+      },
+      {
+        "id": "asset_e726be04042849088cf73e4f2f92c00f",
+        "type": "glb",
+        "guid": "e726be04-0428-4908-8cf7-3e4f2f92c00f",
+        "materialMode": "shared",
+        "materialSlots": [
+          {
+            "slotId": "slot_134be123",
+            "ownerNodePath": "ZHALAN__5_",
+            "label": "ZHALAN__5_",
+            "meshIndex": 0,
+            "primitiveIndex": 0,
+            "sourceMaterialIndices": [
+              0
+            ],
+            "sourceMeshName": "ZHALAN__5_"
+          }
+        ]
+      },
+      {
+        "id": "asset_52549a6dc9a34a5da036b7e771a907b3",
+        "type": "glb",
+        "guid": "52549a6d-c9a3-4a5d-a036-b7e771a907b3",
+        "materialMode": "shared",
+        "materialSlots": [
+          {
+            "slotId": "slot_786aa22c",
+            "ownerNodePath": "node_0",
+            "label": "asset_20fda03a2e3c410da8df4741b_eae9a5__1781600584273_upload__1_ / Primitive 0",
+            "meshIndex": 0,
+            "primitiveIndex": 0,
+            "sourceMaterialIndices": [
+              0
+            ],
+            "sourceMeshName": "asset_20fda03a2e3c410da8df4741b_eae9a5__1781600584273_upload__1_"
+          },
+          {
+            "slotId": "slot_796aa3bf",
+            "ownerNodePath": "node_0",
+            "label": "asset_20fda03a2e3c410da8df4741b_eae9a5__1781600584273_upload__1_ / Primitive 1",
+            "meshIndex": 0,
+            "primitiveIndex": 1,
+            "sourceMaterialIndices": [
+              1
+            ],
+            "sourceMeshName": "asset_20fda03a2e3c410da8df4741b_eae9a5__1781600584273_upload__1_"
+          }
+        ]
+      },
+      {
+        "id": "asset_759b595e81934517ba0251b16bd31061",
+        "type": "glb",
+        "guid": "759b595e-8193-4517-ba02-51b16bd31061",
+        "materialMode": "shared",
+        "materialSlots": [
+          {
+            "slotId": "slot_8656a283",
+            "ownerNodePath": "xiangzi",
+            "label": "xiangzi",
+            "meshIndex": 0,
+            "primitiveIndex": 0,
+            "sourceMaterialIndices": [
+              0
+            ],
+            "sourceMeshName": "xiangzi"
+          }
+        ]
+      },
+      {
+        "id": "asset_7612f54e381044e4b035ea6a988bfb89",
+        "type": "glb",
+        "guid": "7612f54e-3810-44e4-b035-ea6a988bfb89",
+        "materialMode": "shared",
+        "materialSlots": [
+          {
+            "slotId": "slot_f3f14d2b",
+            "ownerNodePath": "SM_mutong",
+            "label": "SM_mutong",
+            "meshIndex": 0,
+            "primitiveIndex": 0,
+            "sourceMaterialIndices": [
+              0
+            ],
+            "sourceMeshName": "SM_mutong"
+          }
+        ]
+      },
+      {
+        "id": "asset_97121f40170c40d1aaf63b8c2cf0bf24",
+        "type": "glb",
+        "guid": "97121f40-170c-40d1-aaf6-3b8c2cf0bf24",
+        "materialMode": "shared",
+        "materialSlots": [
+          {
+            "slotId": "slot_db1ccc4e",
+            "ownerNodePath": "Geometry/ji2",
+            "label": "ji2",
+            "meshIndex": 0,
+            "primitiveIndex": 0,
+            "sourceMaterialIndices": [
+              0
+            ],
+            "sourceMeshName": "ji2"
+          }
+        ]
+      },
+      {
+        "id": "asset_26e79030d245465885b6e4349c9d81d9",
+        "type": "glb",
+        "guid": "26e79030-d245-4658-85b6-e4349c9d81d9",
+        "materialMode": "shared",
+        "materialSlots": [
+          {
+            "slotId": "slot_c6401e21",
+            "ownerNodePath": "SM_maiduo",
+            "label": "SM_maiduo",
+            "meshIndex": 0,
+            "primitiveIndex": 0,
+            "sourceMaterialIndices": [
+              0
+            ],
+            "sourceMeshName": "SM_maiduo"
+          }
+        ]
+      },
+      {
+        "id": "asset_094bc5a89357455bb002b6b6a67e9295",
+        "type": "glb",
+        "guid": "094bc5a8-9357-455b-b002-b6b6a67e9295",
+        "materialMode": "shared",
+        "materialSlots": [
+          {
+            "slotId": "slot_5cd8df33",
+            "ownerNodePath": "收银桌子",
+            "label": "收银桌子",
+            "meshIndex": 0,
+            "primitiveIndex": 0,
+            "sourceMaterialIndices": [
+              0
+            ],
+            "sourceMeshName": "收银桌子"
+          }
+        ]
+      },
+      {
+        "id": "asset_07e860eb2bf04e6f9a81e0832cddc014",
+        "type": "glb",
+        "guid": "07e860eb-2bf0-4e6f-9a81-e0832cddc014",
+        "materialMode": "shared",
+        "materialSlots": [
+          {
+            "slotId": "slot_2e82b283",
+            "ownerNodePath": "SM_diban",
+            "label": "SM_diban",
+            "meshIndex": 0,
+            "primitiveIndex": 0,
+            "sourceMaterialIndices": [
+              0
+            ],
+            "sourceMeshName": "SM_diban"
+          }
+        ]
+      },
+      {
+        "id": "asset_96ed807ee58f4928bcfcc44004a44ef3",
+        "type": "glb",
+        "guid": "96ed807e-e58f-4928-bcfc-c44004a44ef3",
+        "materialMode": "shared",
+        "materialSlots": [
+          {
+            "slotId": "slot_924b32f0",
+            "ownerNodePath": "ZHUOZI",
+            "label": "ZHUOZI",
+            "meshIndex": 0,
+            "primitiveIndex": 0,
+            "sourceMaterialIndices": [
+              0
+            ],
+            "sourceMeshName": "Mesh"
+          }
+        ]
+      },
+      {
+        "id": "asset_c52042a3dd6544d59408c015320ebc75",
+        "type": "glb",
+        "guid": "c52042a3-dd65-44d5-9408-c015320ebc75",
+        "materialMode": "shared",
+        "materialSlots": [
+          {
+            "slotId": "slot_7cdede92",
+            "ownerNodePath": "pPlane1",
+            "label": "pPlane1",
+            "meshIndex": 0,
+            "primitiveIndex": 0,
+            "sourceMaterialIndices": [
+              0
+            ],
+            "sourceMeshName": "Mesh"
+          }
+        ]
+      },
+      {
+        "id": "asset_6d7f108f88ba476cae5c2b10288aaa60",
+        "type": "glb",
+        "guid": "6d7f108f-88ba-476c-ae5c-2b10288aaa60",
+        "materialMode": "shared",
+        "materialSlots": [
+          {
+            "slotId": "slot_175932bc",
+            "ownerNodePath": "node_0",
+            "label": "Boolean_1A8A1B4F / Primitive 0",
+            "meshIndex": 0,
+            "primitiveIndex": 0,
+            "sourceMaterialIndices": [
+              0
+            ],
+            "sourceMeshName": "Boolean_1A8A1B4F"
+          },
+          {
+            "slotId": "slot_1859344f",
+            "ownerNodePath": "node_0",
+            "label": "Boolean_1A8A1B4F / Primitive 1",
+            "meshIndex": 0,
+            "primitiveIndex": 1,
+            "sourceMaterialIndices": [
+              1
+            ],
+            "sourceMeshName": "Boolean_1A8A1B4F"
+          },
+          {
+            "slotId": "slot_195935e2",
+            "ownerNodePath": "node_0",
+            "label": "Boolean_1A8A1B4F / Primitive 2",
+            "meshIndex": 0,
+            "primitiveIndex": 2,
+            "sourceMaterialIndices": [
+              2
+            ],
+            "sourceMeshName": "Boolean_1A8A1B4F"
+          }
+        ]
+      },
+      {
+        "id": "asset_872358ed71a247bba9bdf2c947ea0c71",
+        "type": "glb",
+        "guid": "872358ed-71a2-47bb-a9bd-f2c947ea0c71",
+        "materialMode": "shared",
+        "materialSlots": [
+          {
+            "slotId": "slot_f46c799b",
+            "ownerNodePath": "node_0",
+            "label": "PA_chr_NanZhu_yhf_mod_V001 / Primitive 0",
+            "meshIndex": 0,
+            "primitiveIndex": 0,
+            "sourceMaterialIndices": [
+              0
+            ],
+            "sourceMeshName": "PA_chr_NanZhu_yhf_mod_V001"
+          },
+          {
+            "slotId": "slot_f36c7808",
+            "ownerNodePath": "node_0",
+            "label": "PA_chr_NanZhu_yhf_mod_V001 / Primitive 1",
+            "meshIndex": 0,
+            "primitiveIndex": 1,
+            "sourceMaterialIndices": [
+              1
+            ],
+            "sourceMeshName": "PA_chr_NanZhu_yhf_mod_V001"
+          },
+          {
+            "slotId": "slot_f66c7cc1",
+            "ownerNodePath": "node_0",
+            "label": "PA_chr_NanZhu_yhf_mod_V001 / Primitive 2",
+            "meshIndex": 0,
+            "primitiveIndex": 2,
+            "sourceMaterialIndices": [
+              2
+            ],
+            "sourceMeshName": "PA_chr_NanZhu_yhf_mod_V001"
+          },
+          {
+            "slotId": "slot_f56c7b2e",
+            "ownerNodePath": "node_0",
+            "label": "PA_chr_NanZhu_yhf_mod_V001 / Primitive 3",
+            "meshIndex": 0,
+            "primitiveIndex": 3,
+            "sourceMaterialIndices": [
+              2
+            ],
+            "sourceMeshName": "PA_chr_NanZhu_yhf_mod_V001"
+          },
+          {
+            "slotId": "slot_f86c7fe7",
+            "ownerNodePath": "node_0",
+            "label": "PA_chr_NanZhu_yhf_mod_V001 / Primitive 4",
+            "meshIndex": 0,
+            "primitiveIndex": 4,
+            "sourceMaterialIndices": [
+              3
+            ],
+            "sourceMeshName": "PA_chr_NanZhu_yhf_mod_V001"
+          }
+        ]
+      }
+    ],
     "nodes": [
       {
         "id": "main_camera",
@@ -37,7 +523,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 79,
+          "revision": 76,
           "objectGuid": "go_2406b122-d63b-4971-bf66-7d78a8776543",
           "objectId": "main_camera",
           "component": "Transform"
@@ -93,7 +579,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 79,
+          "revision": 76,
           "objectGuid": "go_environment_light_default",
           "objectId": "environment_light",
           "component": "Transform"
@@ -139,7 +625,7 @@
         "source": {
           "sourceId": "scene.main",
           "sourceType": "scene",
-          "revision": 79,
+          "revision": 76,
           "objectGuid": "go_7017d029-9d69-4381-91ac-75093053caa9",
           "objectId": "sun_light",
           "component": "Transform"
@@ -176,6 +662,1779 @@
             "g": 0.949,
             "b": 0.8471
           }
+        }
+      },
+      {
+        "id": "plane",
+        "name": "Shadow Receiver Plane",
+        "parentId": "root",
+        "shadow": {
+          "receive": "none",
+          "cast": "none",
+          "mode": "none"
+        },
+        "shadowPlan": {
+          "casterId": "plane",
+          "receiverIds": [],
+          "backend": "none",
+          "mode": "none",
+          "quality": "medium",
+          "params": {
+            "opacity": 0.42,
+            "softness": 0.4,
+            "bias": 0.001,
+            "normalBias": 0.01,
+            "maxDistance": 48,
+            "resolution": 1024,
+            "cascadeCount": 2,
+            "bakeSamples": 24,
+            "blurKernel": 4
+          },
+          "diagnostics": []
+        },
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 76,
+          "objectGuid": "go_20efbb4a-c323-4ea3-911c-23c72827d7b9",
+          "objectId": "plane",
+          "component": "PrimitiveRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 24,
+            "y": 24,
+            "z": 24
+          }
+        },
+        "kind": "primitive",
+        "primitive": {
+          "shape": "plane"
+        }
+      },
+      {
+        "id": "cube",
+        "name": "Cube",
+        "parentId": "root",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "receive": "none",
+          "params": {
+            "opacity": 0.65,
+            "softness": 0.28
+          }
+        },
+        "shadowPlan": {
+          "casterId": "cube",
+          "receiverIds": [
+            "asset_3"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.65,
+            "softness": 0.28,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 76,
+          "objectGuid": "go_ac4a2824-3625-468c-aeee-d7c75dedc814",
+          "objectId": "cube",
+          "component": "PrimitiveRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 4.5,
+            "y": 1.45,
+            "z": -3.2
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "primitive",
+        "primitive": {
+          "shape": "cube"
+        }
+      },
+      {
+        "id": "sphere",
+        "name": "Sphere",
+        "parentId": "root",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25
+          }
+        },
+        "shadowPlan": {
+          "casterId": "sphere",
+          "receiverIds": [
+            "asset_3"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 76,
+          "objectGuid": "go_cc80f1b1-57b9-4373-baba-eed140d90c8f",
+          "objectId": "sphere",
+          "component": "PrimitiveRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 2.4597,
+            "y": 0.4744,
+            "z": 2.6745
+          },
+          "rotation": {
+            "z": 0,
+            "x": 0,
+            "y": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "primitive",
+        "primitive": {
+          "shape": "sphere"
+        }
+      },
+      {
+        "id": "capsule",
+        "name": "Capsule",
+        "parentId": "root",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25
+          }
+        },
+        "shadowPlan": {
+          "casterId": "capsule",
+          "receiverIds": [
+            "asset_3"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 76,
+          "objectGuid": "go_68778bee-9b2d-44bb-9a37-cfa42efa2846",
+          "objectId": "capsule",
+          "component": "PrimitiveRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 3.2071,
+            "y": 0.9894,
+            "z": 4.6153
+          },
+          "rotation": {
+            "z": 0,
+            "x": 0,
+            "y": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "primitive",
+        "primitive": {
+          "shape": "capsule"
+        }
+      },
+      {
+        "id": "shadow_fixture_group",
+        "name": "Shadow Fixture Models",
+        "parentId": "root",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 76,
+          "objectGuid": "go_shadow_fixture_group",
+          "objectId": "shadow_fixture_group",
+          "component": "GameObject"
+        },
+        "transform": {
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "group"
+      },
+      {
+        "id": "shadow_fixture_player",
+        "name": "阴影测试-主角",
+        "parentId": "shadow_fixture_group",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "receive": "none"
+        },
+        "shadowPlan": {
+          "casterId": "shadow_fixture_player",
+          "receiverIds": [
+            "asset_3"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.5,
+            "softness": 0.58,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 76,
+          "objectGuid": "go_shadow_fixture_player",
+          "objectId": "shadow_fixture_player",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": -8,
+            "y": 0.01,
+            "z": -6
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0.35,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.7,
+            "y": 0.7,
+            "z": 0.7
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_699aee4da2b84a3eb07f4496872ad249"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_53300b02": {
+              "materialAssetId": "mat_6fc78e976ec74d04a1c791bd70c7902a"
+            },
+            "slot_427a5347": {
+              "materialAssetId": "mat_cd94c2cdcc94413aab94bfa7ca94be14"
+            },
+            "slot_417a51b4": {
+              "materialAssetId": "mat_ceae7442cfae45d5acae711ccdae72af"
+            }
+          }
+        }
+      },
+      {
+        "id": "shadow_fixture_worker",
+        "name": "阴影测试-工人",
+        "parentId": "shadow_fixture_group",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25
+          }
+        },
+        "shadowPlan": {
+          "casterId": "shadow_fixture_worker",
+          "receiverIds": [
+            "asset_3"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 76,
+          "objectGuid": "go_shadow_fixture_worker",
+          "objectId": "shadow_fixture_worker",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": -4,
+            "y": 0,
+            "z": -6
+          },
+          "rotation": {
+            "x": 0,
+            "y": -0.35,
+            "z": 0
+          },
+          "scale": {
+            "x": 1.1,
+            "y": 1.1,
+            "z": 1.1
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_ade25007e0964563b197b21c2759c027"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_74e9cbf9": {
+              "materialAssetId": "mat_e6871821e587468ea48714fbe3871368"
+            }
+          }
+        }
+      },
+      {
+        "id": "shadow_fixture_truck",
+        "name": "阴影测试-小蓝卡车",
+        "parentId": "shadow_fixture_group",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25
+          }
+        },
+        "shadowPlan": {
+          "casterId": "shadow_fixture_truck",
+          "receiverIds": [
+            "asset_3"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 76,
+          "objectGuid": "go_shadow_fixture_truck",
+          "objectId": "shadow_fixture_truck",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 0.3,
+            "y": 0,
+            "z": -6
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0.55,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.75,
+            "y": 0.75,
+            "z": 0.75
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_4b2358ee5d9441cd8cae8b389bb98c46"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_91c449a4": {
+              "materialAssetId": "mat_fee306e8ffe3487ba0e30a0e01e30ba1"
+            },
+            "slot_47f2cfb8": {
+              "materialAssetId": "mat_fee306e8ffe3487ba0e30a0e01e30ba1"
+            },
+            "slot_5278c34c": {
+              "materialAssetId": "mat_fee306e8ffe3487ba0e30a0e01e30ba1"
+            },
+            "slot_a58a01f0": {
+              "materialAssetId": "mat_fee306e8ffe3487ba0e30a0e01e30ba1"
+            },
+            "slot_ab17af44": {
+              "materialAssetId": "mat_fee306e8ffe3487ba0e30a0e01e30ba1"
+            }
+          }
+        }
+      },
+      {
+        "id": "shadow_fixture_pine_tree",
+        "name": "阴影测试-松树",
+        "parentId": "shadow_fixture_group",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "receive": "none"
+        },
+        "shadowPlan": {
+          "casterId": "shadow_fixture_pine_tree",
+          "receiverIds": [
+            "asset_3"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.5,
+            "softness": 0.58,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 76,
+          "objectGuid": "go_shadow_fixture_pine_tree",
+          "objectId": "shadow_fixture_pine_tree",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 5.4,
+            "y": 0,
+            "z": -6
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 2,
+            "y": 2,
+            "z": 2
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_edc2f992438c4450afc1c6354ec21500"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_1463c7d6": {
+              "materialAssetId": "mat_0cd17a040dd14b97aed17d2a0fd17ebd"
+            }
+          }
+        }
+      },
+      {
+        "id": "shadow_fixture_bush",
+        "name": "阴影测试-阔叶灌木",
+        "parentId": "shadow_fixture_group",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25
+          }
+        },
+        "shadowPlan": {
+          "casterId": "shadow_fixture_bush",
+          "receiverIds": [
+            "asset_3"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 76,
+          "objectGuid": "go_shadow_fixture_bush",
+          "objectId": "shadow_fixture_bush",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": -8,
+            "y": 0,
+            "z": -1.5
+          },
+          "rotation": {
+            "x": 0,
+            "y": -0.25,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.8,
+            "y": 0.8,
+            "z": 0.8
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_af82a4f117d84ff58bedb41aa11bad5c"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_a3b38496": {
+              "materialAssetId": "mat_43f0690444f04a97a5f06c2a46f06dbd"
+            }
+          }
+        }
+      },
+      {
+        "id": "shadow_fixture_rocks",
+        "name": "阴影测试-岩石组",
+        "parentId": "shadow_fixture_group",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25
+          }
+        },
+        "shadowPlan": {
+          "casterId": "shadow_fixture_rocks",
+          "receiverIds": [
+            "asset_3"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 76,
+          "objectGuid": "go_shadow_fixture_rocks",
+          "objectId": "shadow_fixture_rocks",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": -4,
+            "y": 0.09,
+            "z": -1.5
+          },
+          "rotation": {
+            "x": 0,
+            "y": -0.6,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_2286fa2ec19e45df8b1b188717c7c4e9"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_0a33f1e4": {
+              "materialAssetId": "mat_7ac6a4c67bc64659a8c6a1a079c6a333"
+            }
+          }
+        }
+      },
+      {
+        "id": "shadow_fixture_fence",
+        "name": "阴影测试-栅栏",
+        "parentId": "shadow_fixture_group",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25
+          }
+        },
+        "shadowPlan": {
+          "casterId": "shadow_fixture_fence",
+          "receiverIds": [
+            "asset_3"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 76,
+          "objectGuid": "go_shadow_fixture_fence",
+          "objectId": "shadow_fixture_fence",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 0.5,
+            "y": 0.06,
+            "z": -1.6
+          },
+          "rotation": {
+            "x": 0,
+            "y": 1.5708,
+            "z": 0
+          },
+          "scale": {
+            "x": 1.2,
+            "y": 1.2,
+            "z": 1.2
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_e726be04042849088cf73e4f2f92c00f"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_134be123": {
+              "materialAssetId": "mat_9cf2c5419bf243aeaaf2c21b99f2c088"
+            }
+          }
+        }
+      },
+      {
+        "id": "shadow_fixture_log_bundle",
+        "name": "阴影测试-成捆木材",
+        "parentId": "shadow_fixture_group",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25
+          }
+        },
+        "shadowPlan": {
+          "casterId": "shadow_fixture_log_bundle",
+          "receiverIds": [
+            "asset_3"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 76,
+          "objectGuid": "go_shadow_fixture_log_bundle",
+          "objectId": "shadow_fixture_log_bundle",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 4.8,
+            "y": 0.36,
+            "z": -1.5
+          },
+          "rotation": {
+            "x": 0,
+            "y": 1.5708,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.7,
+            "y": 0.7,
+            "z": 0.7
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_52549a6dc9a34a5da036b7e771a907b3"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_786aa22c": {
+              "materialAssetId": "mat_e42b5114e52b42a7a62b543ae72b55cd"
+            },
+            "slot_796aa3bf": {
+              "materialAssetId": "mat_431236bf4212452ca51239e544123852"
+            }
+          }
+        }
+      },
+      {
+        "id": "shadow_fixture_crate",
+        "name": "阴影测试-箱子",
+        "parentId": "shadow_fixture_group",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25
+          }
+        },
+        "shadowPlan": {
+          "casterId": "shadow_fixture_crate",
+          "receiverIds": [
+            "asset_3"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 76,
+          "objectGuid": "go_shadow_fixture_crate",
+          "objectId": "shadow_fixture_crate",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": -8,
+            "y": 0.75,
+            "z": 3
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0.2,
+            "z": 0
+          },
+          "scale": {
+            "x": 3,
+            "y": 3,
+            "z": 3
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_759b595e81934517ba0251b16bd31061"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_8656a283": {
+              "materialAssetId": "mat_af644f91ae644dfead644c6bac644ad8"
+            }
+          }
+        }
+      },
+      {
+        "id": "shadow_fixture_barrel",
+        "name": "阴影测试-木桶",
+        "parentId": "shadow_fixture_group",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25
+          }
+        },
+        "shadowPlan": {
+          "casterId": "shadow_fixture_barrel",
+          "receiverIds": [
+            "asset_3"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 76,
+          "objectGuid": "go_shadow_fixture_barrel",
+          "objectId": "shadow_fixture_barrel",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": -4.4,
+            "y": 0,
+            "z": 3.2
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 2.2,
+            "y": 2.2,
+            "z": 2.2
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_7612f54e381044e4b035ea6a988bfb89"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_f3f14d2b": {
+              "materialAssetId": "mat_5af6dde959f64c56a8f6dac357f6d930"
+            }
+          }
+        }
+      },
+      {
+        "id": "shadow_fixture_chicken",
+        "name": "阴影测试-鸡",
+        "parentId": "shadow_fixture_group",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25
+          }
+        },
+        "shadowPlan": {
+          "casterId": "shadow_fixture_chicken",
+          "receiverIds": [
+            "asset_3"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 76,
+          "objectGuid": "go_shadow_fixture_chicken",
+          "objectId": "shadow_fixture_chicken",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": -0.8,
+            "y": 0.44,
+            "z": 3
+          },
+          "rotation": {
+            "x": 0,
+            "y": -0.8,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.45,
+            "y": 0.45,
+            "z": 0.45
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_97121f40170c40d1aaf63b8c2cf0bf24"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_db1ccc4e": {
+              "materialAssetId": "mat_0f3404b210344645ad34018c0e34031f"
+            }
+          }
+        }
+      },
+      {
+        "id": "shadow_fixture_hay_bale",
+        "name": "阴影测试-干草卷",
+        "parentId": "shadow_fixture_group",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25
+          }
+        },
+        "shadowPlan": {
+          "casterId": "shadow_fixture_hay_bale",
+          "receiverIds": [
+            "asset_3"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 76,
+          "objectGuid": "go_shadow_fixture_hay_bale",
+          "objectId": "shadow_fixture_hay_bale",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 2.4,
+            "y": 0,
+            "z": 3
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0.4,
+            "z": 0
+          },
+          "scale": {
+            "x": 1.4,
+            "y": 1.4,
+            "z": 1.4
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_26e79030d245465885b6e4349c9d81d9"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_c6401e21": {
+              "materialAssetId": "mat_d133a063d0334ed0a333a389d233a1f6"
+            }
+          }
+        }
+      },
+      {
+        "id": "shadow_fixture_counter",
+        "name": "阴影测试-收银台",
+        "parentId": "shadow_fixture_group",
+        "shadow": {
+          "cast": "enabled",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25
+          }
+        },
+        "shadowPlan": {
+          "casterId": "shadow_fixture_counter",
+          "receiverIds": [
+            "asset_3"
+          ],
+          "lightId": "sun_light",
+          "backend": "projected",
+          "mode": "projected",
+          "quality": "high",
+          "params": {
+            "opacity": 0.62,
+            "softness": 0.25,
+            "bias": 0.0008,
+            "normalBias": 0.006,
+            "maxDistance": 80,
+            "resolution": 2048,
+            "cascadeCount": 4,
+            "bakeSamples": 64,
+            "blurKernel": 8
+          },
+          "diagnostics": []
+        },
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 76,
+          "objectGuid": "go_shadow_fixture_counter",
+          "objectId": "shadow_fixture_counter",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 6.2,
+            "y": 0,
+            "z": 3.2
+          },
+          "rotation": {
+            "x": 0,
+            "y": -0.45,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.48,
+            "y": 0.48,
+            "z": 0.48
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_094bc5a89357455bb002b6b6a67e9295"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_5cd8df33": {
+              "materialAssetId": "mat_8f0c05718e0c43dead0c024b8c0c00b8"
+            }
+          }
+        }
+      },
+      {
+        "id": "asset",
+        "name": "接收测试-地板块",
+        "parentId": "root",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 76,
+          "objectGuid": "go_8c25b316-6074-41ae-a1f2-49f3709453ec",
+          "objectId": "asset",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": -3.8,
+            "y": 0.04,
+            "z": -3.2
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 2.5,
+            "y": 1,
+            "z": 2.5
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_07e860eb2bf04e6f9a81e0832cddc014"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_2e82b283": {
+              "materialAssetId": "mat_18ad2d3117ad4b9ea6ad2a0b15ad2878"
+            }
+          }
+        }
+      },
+      {
+        "id": "asset_2",
+        "name": "接收测试-真实地面",
+        "parentId": "root",
+        "shadow": {
+          "cast": "none",
+          "receive": "none",
+          "mode": "none"
+        },
+        "shadowPlan": {
+          "casterId": "asset_2",
+          "receiverIds": [],
+          "backend": "none",
+          "mode": "none",
+          "quality": "medium",
+          "params": {
+            "opacity": 0.42,
+            "softness": 0.4,
+            "bias": 0.001,
+            "normalBias": 0.01,
+            "maxDistance": 48,
+            "resolution": 1024,
+            "cascadeCount": 2,
+            "bakeSamples": 24,
+            "blurKernel": 4
+          },
+          "diagnostics": []
+        },
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 76,
+          "objectGuid": "go_1ecaee91-9738-4914-8fc2-5f2b69cc018a",
+          "objectId": "asset_2",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 1.5,
+            "y": 0.08,
+            "z": -3.2
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1.5,
+            "y": 1,
+            "z": 1.5
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_c52042a3dd6544d59408c015320ebc75"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_7cdede92": {
+              "materialAssetId": "mat_c556d410c65645a3a756d736c856d8c9"
+            }
+          }
+        }
+      },
+      {
+        "id": "asset_3",
+        "name": "接收测试-抬高木台",
+        "parentId": "root",
+        "shadow": {
+          "cast": "none",
+          "receive": "enabled",
+          "mode": "none"
+        },
+        "shadowPlan": {
+          "casterId": "asset_3",
+          "receiverIds": [],
+          "backend": "none",
+          "mode": "none",
+          "quality": "medium",
+          "params": {
+            "opacity": 0.42,
+            "softness": 0.4,
+            "bias": 0.001,
+            "normalBias": 0.01,
+            "maxDistance": 48,
+            "resolution": 1024,
+            "cascadeCount": 2,
+            "bakeSamples": 24,
+            "blurKernel": 4
+          },
+          "diagnostics": []
+        },
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 76,
+          "objectGuid": "go_cd724b70-f492-4014-ac1d-e51ef61cfc0d",
+          "objectId": "asset_3",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 4.5,
+            "y": 0.42,
+            "z": -3.2
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0.25,
+            "z": 0
+          },
+          "scale": {
+            "x": 1.2,
+            "y": 1.2,
+            "z": 1.2
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_96ed807ee58f4928bcfcc44004a44ef3"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_924b32f0": {
+              "materialAssetId": "mat_1756d8e218564a75a556d5bc1656d74f"
+            }
+          }
+        }
+      },
+      {
+        "id": "issue_444__04",
+        "name": "Issue_444_外墙04",
+        "parentId": "root",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 76,
+          "objectGuid": "go_cc0008ef-62dc-4a23-ba98-bced26f56a80",
+          "objectId": "issue_444__04",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": -2.8,
+            "y": 3.138,
+            "z": 4.2
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_6d7f108f88ba476cae5c2b10288aaa60"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_175932bc": {
+              "materialAssetId": "mat_0bef38240cef49b7adef3b4a0eef3cdd"
+            },
+            "slot_1859344f": {
+              "materialAssetId": "mat_6ad61dcf69d64c3cacd620f56bd61f62"
+            },
+            "slot_195935e2": {
+              "materialAssetId": "mat_e9bd35daeabd476da7bd32b4e8bd3447"
+            }
+          }
+        }
+      },
+      {
+        "id": "issue_444",
+        "name": "Issue_444_测试模型",
+        "parentId": "root",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 76,
+          "objectGuid": "go_22987ad9-9e4b-46ce-9978-1e72c24fbc53",
+          "objectId": "issue_444",
+          "component": "ModelRenderer"
+        },
+        "transform": {
+          "position": {
+            "x": 0.5069,
+            "y": 0,
+            "z": 6.3799
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "instance",
+        "instance": {
+          "assetId": "asset_872358ed71a247bba9bdf2c947ea0c71"
+        },
+        "overrides": {
+          "materialSlotBindings": {
+            "slot_f46c799b": {
+              "materialAssetId": "mat_7814dfeb77144e58aa14e3117914e17e"
+            },
+            "slot_f36c7808": {
+              "materialAssetId": "mat_792e91607a2e42f3ab2e94867c2e9619"
+            },
+            "slot_f66c7cc1": {
+              "materialAssetId": "mat_55e2dda154e24c0ea3e2da7b52e2d8e8"
+            },
+            "slot_f56c7b2e": {
+              "materialAssetId": "mat_55e2dda154e24c0ea3e2da7b52e2d8e8"
+            },
+            "slot_f86c7fe7": {
+              "materialAssetId": "mat_d6fbc596d7fb4729a4fbc270d5fbc403"
+            }
+          }
+        }
+      },
+      {
+        "id": "issue464_ground_decal_operation",
+        "name": "Issue 464 Operation Ground Decal Fixture",
+        "parentId": "root",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 76,
+          "objectGuid": "go_issue464_ground_decal_operation",
+          "objectId": "issue464_ground_decal_operation",
+          "component": "Transform"
+        },
+        "transform": {
+          "position": {
+            "x": -3.2,
+            "y": 0.02,
+            "z": 2.8
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "transform",
+        "transformType": "groundDecal",
+        "groundDecal": {
+          "uiKind": "operation",
+          "size": {
+            "width": 1.8,
+            "depth": 1.8
+          },
+          "aspectSourceLayerId": "border",
+          "lockAspectToBorder": true,
+          "mask": {
+            "enabled": true,
+            "source": "roundedRect",
+            "cornerRadius": 0.18,
+            "padding": 0.02
+          },
+          "rendering": {
+            "textureWidth": 512,
+            "textureHeight": 512,
+            "alphaIndex": 100,
+            "diffuseTextureLevel": 1,
+            "emissiveTextureLevel": 0
+          },
+          "layers": [
+            {
+              "id": "base",
+              "role": "base",
+              "kind": "color",
+              "color": {
+                "r": 0.08,
+                "g": 0.08,
+                "b": 0.08,
+                "a": 0.56
+              },
+              "zOrder": 0,
+              "rect": {
+                "x": 0,
+                "z": 0,
+                "width": 1,
+                "depth": 1
+              }
+            },
+            {
+              "id": "mainLogo",
+              "role": "mainLogo",
+              "kind": "texture",
+              "textureId": "texture_331e16209e8c47cc94217508d719cbbb",
+              "zOrder": 20,
+              "rect": {
+                "x": 0,
+                "z": 0,
+                "width": 1,
+                "depth": 1
+              }
+            },
+            {
+              "id": "border",
+              "role": "border",
+              "kind": "texture",
+              "textureId": "texture_969907ee4a1d453ea7b0ee3247cb6bb1",
+              "zOrder": 100,
+              "rect": {
+                "x": 0,
+                "z": 0,
+                "width": 1,
+                "depth": 1
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "issue464_ground_decal_delivery",
+        "name": "Issue 464 Delivery Ground Decal Fixture",
+        "parentId": "root",
+        "source": {
+          "sourceId": "scene.main",
+          "sourceType": "scene",
+          "revision": 76,
+          "objectGuid": "go_issue464_ground_decal_delivery",
+          "objectId": "issue464_ground_decal_delivery",
+          "component": "Transform"
+        },
+        "transform": {
+          "position": {
+            "x": -1.2,
+            "y": 0.02,
+            "z": 2.8
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        },
+        "kind": "transform",
+        "transformType": "groundDecal",
+        "groundDecal": {
+          "uiKind": "delivery",
+          "size": {
+            "width": 1.8,
+            "depth": 1.8
+          },
+          "aspectSourceLayerId": "border",
+          "lockAspectToBorder": true,
+          "mask": {
+            "enabled": true,
+            "source": "roundedRect",
+            "cornerRadius": 0.18,
+            "padding": 0.02
+          },
+          "rendering": {
+            "textureWidth": 512,
+            "textureHeight": 512,
+            "alphaIndex": 100,
+            "diffuseTextureLevel": 1,
+            "emissiveTextureLevel": 0
+          },
+          "layers": [
+            {
+              "id": "base",
+              "role": "base",
+              "kind": "color",
+              "color": {
+                "r": 0.08,
+                "g": 0.08,
+                "b": 0.08,
+                "a": 0.56
+              },
+              "zOrder": 0,
+              "rect": {
+                "x": 0,
+                "z": 0,
+                "width": 1,
+                "depth": 1
+              }
+            },
+            {
+              "id": "progressFill",
+              "role": "progressFill",
+              "kind": "progress",
+              "value": 0,
+              "direction": "bottomToTop",
+              "color": {
+                "r": 0.16,
+                "g": 0.56,
+                "b": 1,
+                "a": 0.88
+              },
+              "zOrder": 10,
+              "rect": {
+                "x": 0,
+                "z": 0,
+                "width": 1,
+                "depth": 1
+              }
+            },
+            {
+              "id": "mainLogo",
+              "role": "mainLogo",
+              "kind": "texture",
+              "textureId": "texture_ee97d50a7eb442b5905add9aaae74f2c",
+              "zOrder": 20,
+              "rect": {
+                "x": 0,
+                "z": 0,
+                "width": 1,
+                "depth": 1
+              }
+            },
+            {
+              "id": "subLogo",
+              "role": "subLogo",
+              "kind": "texture",
+              "textureId": "texture_331e16209e8c47cc94217508d719cbbb",
+              "zOrder": 25,
+              "rect": {
+                "x": -0.25,
+                "z": -0.25,
+                "width": 0.5,
+                "depth": 0.5
+              }
+            },
+            {
+              "id": "amount",
+              "role": "amount",
+              "kind": "text",
+              "text": {
+                "value": "30",
+                "fontFamily": "system-ui, Arial, sans-serif",
+                "fontSize": 96,
+                "fontWeight": "800",
+                "color": {
+                  "r": 1,
+                  "g": 1,
+                  "b": 1,
+                  "a": 1
+                },
+                "strokeColor": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 0.45
+                },
+                "strokeWidth": 8,
+                "align": "center",
+                "baseline": "middle"
+              },
+              "zOrder": 30,
+              "rect": {
+                "x": 0.2,
+                "z": -0.25,
+                "width": 0.28,
+                "depth": 0.22
+              }
+            },
+            {
+              "id": "border",
+              "role": "border",
+              "kind": "texture",
+              "textureId": "texture_969907ee4a1d453ea7b0ee3247cb6bb1",
+              "zOrder": 100,
+              "rect": {
+                "x": 0,
+                "z": 0,
+                "width": 1,
+                "depth": 1
+              }
+            }
+          ]
         }
       }
     ],
@@ -251,21 +2510,1020 @@
             "intensity": 0
           }
         }
+      },
+      {
+        "id": "mat_e6871821e587468ea48714fbe3871368",
+        "guid": "e6871821-e587-468e-a487-14fbe3871368",
+        "name": "lambert2",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "ade25007-e096-4563-b197-b21c2759c027",
+          "sourceAssetId": "asset_ade25007e0964563b197b21c2759c027",
+          "sourceSlotId": "slot_74e9cbf9",
+          "sourceMaterialIndex": 0,
+          "sourceMaterialName": "lambert2"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 0.4501,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          },
+          "alpha": {
+            "mode": "opaque"
+          }
+        }
+      },
+      {
+        "id": "mat_fee306e8ffe3487ba0e30a0e01e30ba1",
+        "guid": "fee306e8-ffe3-487b-a0e3-0a0e01e30ba1",
+        "name": "ST_kache_Rig:lambert21",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "4b2358ee-5d94-41cd-8cae-8b389bb98c46",
+          "sourceAssetId": "asset_4b2358ee5d9441cd8cae8b389bb98c46",
+          "sourceSlotId": "slot_91c449a4",
+          "sourceMaterialIndex": 0,
+          "sourceMaterialName": "ST_kache_Rig:lambert21"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 0,
+              "b": 0
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 0.1658,
+          "emission": {
+            "color": {
+              "r": 0.8,
+              "g": 0.8,
+              "b": 0.8
+            },
+            "intensity": 1
+          }
+        }
+      },
+      {
+        "id": "mat_0cd17a040dd14b97aed17d2a0fd17ebd",
+        "guid": "0cd17a04-0dd1-4b97-aed1-7d2a0fd17ebd",
+        "name": "Material #104",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "edc2f992-438c-4450-afc1-c6354ec21500",
+          "sourceAssetId": "asset_edc2f992438c4450afc1c6354ec21500",
+          "sourceSlotId": "slot_1463c7d6",
+          "sourceMaterialIndex": 0,
+          "sourceMaterialName": "Material #104"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 0.5528,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_43f0690444f04a97a5f06c2a46f06dbd",
+        "guid": "43f06904-44f0-4a97-a5f0-6c2a46f06dbd",
+        "name": "SSD_S_M_Cao_C3_Mat",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "af82a4f1-17d8-4ff5-8bed-b41aa11bad5c",
+          "sourceAssetId": "asset_af82a4f117d84ff58bedb41aa11bad5c",
+          "sourceSlotId": "slot_a3b38496",
+          "sourceMaterialIndex": 0,
+          "sourceMaterialName": "SSD_S_M_Cao_C3_Mat"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 1,
+          "roughness": 0.5528,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_7ac6a4c67bc64659a8c6a1a079c6a333",
+        "guid": "7ac6a4c6-7bc6-4659-a8c6-a1a079c6a333",
+        "name": "standardSurface2",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "2286fa2e-c19e-45df-8b1b-188717c7c4e9",
+          "sourceAssetId": "asset_2286fa2ec19e45df8b1b188717c7c4e9",
+          "sourceSlotId": "slot_0a33f1e4",
+          "sourceMaterialIndex": 0,
+          "sourceMaterialName": "standardSurface2"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 0.5528,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_9cf2c5419bf243aeaaf2c21b99f2c088",
+        "guid": "9cf2c541-9bf2-43ae-aaf2-c21b99f2c088",
+        "name": "ZHALAN_Mat",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "e726be04-0428-4908-8cf7-3e4f2f92c00f",
+          "sourceAssetId": "asset_e726be04042849088cf73e4f2f92c00f",
+          "sourceSlotId": "slot_134be123",
+          "sourceMaterialIndex": 0,
+          "sourceMaterialName": "ZHALAN_Mat"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 1,
+          "roughness": 0.5528,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_e42b5114e52b42a7a62b543ae72b55cd",
+        "guid": "e42b5114-e52b-42a7-a62b-543ae72b55cd",
+        "name": "MI_Pipe_Stacks_01a_asset_20fda0_4_741b2eae9a5__1780739654514_upload_asset_20fda03a2e3c410da8df4741b_eae9a5__1781600584273_upload__1_",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "52549a6d-c9a3-4a5d-a036-b7e771a907b3",
+          "sourceAssetId": "asset_52549a6dc9a34a5da036b7e771a907b3",
+          "sourceSlotId": "slot_fa0049a6",
+          "sourceMaterialIndex": 0,
+          "sourceMaterialName": "MI_Pipe_Stacks_01a_asset_20fda0_4_741b2eae9a5__1780739654514_upload_asset_20fda03a2e3c410da8df4741b_eae9a5__1781600584273_upload__1_"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 0.498,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_431236bf4212452ca51239e544123852",
+        "guid": "431236bf-4212-452c-a512-39e544123852",
+        "name": "lambert2_SM_木材-单根_单根木材_asset_20_4_741b2eae9a5__1780739654514_upload_asset_20fda03a2e3c410da8df4741b_eae9a5__1781600584273_upload__1_",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "52549a6d-c9a3-4a5d-a036-b7e771a907b3",
+          "sourceAssetId": "asset_52549a6dc9a34a5da036b7e771a907b3",
+          "sourceSlotId": "slot_fa0049a6",
+          "sourceMaterialIndex": 1,
+          "sourceMaterialName": "lambert2_SM_木材-单根_单根木材_asset_20_4_741b2eae9a5__1780739654514_upload_asset_20fda03a2e3c410da8df4741b_eae9a5__1781600584273_upload__1_"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 0.7969,
+              "g": 0.7969,
+              "b": 0.7969
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 1,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_af644f91ae644dfead644c6bac644ad8",
+        "guid": "af644f91-ae64-4dfe-ad64-4c6bac644ad8",
+        "name": "xiangzi01_Mat_卡通风格手绘木质板箱组_xiangzi01-_xiangzi",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "759b595e-8193-4517-ba02-51b16bd31061",
+          "sourceAssetId": "asset_759b595e81934517ba0251b16bd31061",
+          "sourceSlotId": "slot_8656a283",
+          "sourceMaterialIndex": 0,
+          "sourceMaterialName": "xiangzi01_Mat_卡通风格手绘木质板箱组_xiangzi01-_xiangzi"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 0.845
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 1,
+          "roughness": 1,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_5af6dde959f64c56a8f6dac357f6d930",
+        "guid": "5af6dde9-59f6-4c56-a8f6-dac357f6d930",
+        "name": "T_Mat",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "7612f54e-3810-44e4-b035-ea6a988bfb89",
+          "sourceAssetId": "asset_7612f54e381044e4b035ea6a988bfb89",
+          "sourceSlotId": "slot_f3f14d2b",
+          "sourceMaterialIndex": 0,
+          "sourceMaterialName": "T_Mat"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 1,
+          "roughness": 0.5528,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_0f3404b210344645ad34018c0e34031f",
+        "guid": "0f3404b2-1034-4645-ad34-018c0e34031f",
+        "name": "Mat_ji",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "97121f40-170c-40d1-aaf6-3b8c2cf0bf24",
+          "sourceAssetId": "asset_97121f40170c40d1aaf63b8c2cf0bf24",
+          "sourceSlotId": "slot_db1ccc4e",
+          "sourceMaterialIndex": 0,
+          "sourceMaterialName": "Mat_ji"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 0.6471,
+              "g": 0.6471,
+              "b": 0.6471
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 1,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_d133a063d0334ed0a333a389d233a1f6",
+        "guid": "d133a063-d033-4ed0-a333-a389d233a1f6",
+        "name": "麦垛-_Mat",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "26e79030-d245-4658-85b6-e4349c9d81d9",
+          "sourceAssetId": "asset_26e79030d245465885b6e4349c9d81d9",
+          "sourceSlotId": "slot_c6401e21",
+          "sourceMaterialIndex": 0,
+          "sourceMaterialName": "麦垛-_Mat"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 1,
+          "roughness": 0.5528,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_8f0c05718e0c43dead0c024b8c0c00b8",
+        "guid": "8f0c0571-8e0c-43de-ad0c-024b8c0c00b8",
+        "name": "收银桌子aa_Mat",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "094bc5a8-9357-455b-b002-b6b6a67e9295",
+          "sourceAssetId": "asset_094bc5a89357455bb002b6b6a67e9295",
+          "sourceSlotId": "slot_5cd8df33",
+          "sourceMaterialIndex": 0,
+          "sourceMaterialName": "收银桌子aa_Mat"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 0.5,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_cd94c2cdcc94413aab94bfa7ca94be14",
+        "guid": "cd94c2cd-cc94-413a-ab94-bfa7ca94be14",
+        "name": "ren_C_Mat",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "699aee4d-a2b8-4a3e-b07f-4496872ad249",
+          "sourceAssetId": "asset_699aee4da2b84a3eb07f4496872ad249",
+          "sourceSlotId": "slot_7bdc2eef",
+          "sourceMaterialIndex": 0,
+          "sourceMaterialName": "ren_C_Mat"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "brightness": 10,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 0.5,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_ceae7442cfae45d5acae711ccdae72af",
+        "guid": "ceae7442-cfae-45d5-acae-711ccdae72af",
+        "name": "maozi_C_Mat",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "699aee4d-a2b8-4a3e-b07f-4496872ad249",
+          "sourceAssetId": "asset_699aee4da2b84a3eb07f4496872ad249",
+          "sourceSlotId": "slot_7bdc2eef",
+          "sourceMaterialIndex": 1,
+          "sourceMaterialName": "maozi_C_Mat"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 0.5,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_6fc78e976ec74d04a1c791bd70c7902a",
+        "guid": "6fc78e97-6ec7-4d04-a1c7-91bd70c7902a",
+        "name": "Default-Material",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "699aee4d-a2b8-4a3e-b07f-4496872ad249",
+          "sourceAssetId": "asset_699aee4da2b84a3eb07f4496872ad249",
+          "sourceSlotId": "slot_53300b02",
+          "sourceMaterialIndex": 2,
+          "sourceMaterialName": "Default-Material"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 0.5,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_18ad2d3117ad4b9ea6ad2a0b15ad2878",
+        "guid": "18ad2d31-17ad-4b9e-a6ad-2a0b15ad2878",
+        "name": "diban_Mat",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "07e860eb-2bf0-4e6f-9a81-e0832cddc014",
+          "sourceAssetId": "asset_07e860eb2bf04e6f9a81e0832cddc014",
+          "sourceSlotId": "slot_2e82b283",
+          "sourceMaterialIndex": 0,
+          "sourceMaterialName": "diban_Mat"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 1,
+          "roughness": 0.5528,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_c556d410c65645a3a756d736c856d8c9",
+        "guid": "c556d410-c656-45a3-a756-d736c856d8c9",
+        "name": "standardSurface2",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "c52042a3-dd65-44d5-9408-c015320ebc75",
+          "sourceAssetId": "asset_c52042a3dd6544d59408c015320ebc75",
+          "sourceSlotId": "slot_7cdede92",
+          "sourceMaterialIndex": 0,
+          "sourceMaterialName": "standardSurface2"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 0.5528,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_1756d8e218564a75a556d5bc1656d74f",
+        "guid": "1756d8e2-1856-4a75-a556-d5bc1656d74f",
+        "name": "lambert2",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "96ed807e-e58f-4928-bcfc-c44004a44ef3",
+          "sourceAssetId": "asset_96ed807ee58f4928bcfcc44004a44ef3",
+          "sourceSlotId": "slot_924b32f0",
+          "sourceMaterialIndex": 0,
+          "sourceMaterialName": "lambert2"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 0.5528,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_0bef38240cef49b7adef3b4a0eef3cdd",
+        "guid": "0bef3824-0cef-49b7-adef-3b4a0eef3cdd",
+        "name": "MAT_PolygonSciFiSpace_01_A",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "6d7f108f-88ba-476c-ae5c-2b10288aaa60",
+          "sourceAssetId": "asset_6d7f108f88ba476cae5c2b10288aaa60",
+          "sourceSlotId": "slot_175932bc",
+          "sourceMaterialIndex": 0,
+          "sourceMaterialName": "MAT_PolygonSciFiSpace_01_A"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 0.8,
+          "emission": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "intensity": 1
+          }
+        }
+      },
+      {
+        "id": "mat_6ad61dcf69d64c3cacd620f56bd61f62",
+        "guid": "6ad61dcf-69d6-4c3c-acd6-20f56bd61f62",
+        "name": "NewMaterial_Inst",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "6d7f108f-88ba-476c-ae5c-2b10288aaa60",
+          "sourceAssetId": "asset_6d7f108f88ba476cae5c2b10288aaa60",
+          "sourceSlotId": "slot_1859344f",
+          "sourceMaterialIndex": 1,
+          "sourceMaterialName": "NewMaterial_Inst"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 0.9059,
+              "g": 0.051,
+              "b": 0.051
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 0.5,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_e9bd35daeabd476da7bd32b4e8bd3447",
+        "guid": "e9bd35da-eabd-476d-a7bd-32b4e8bd3447",
+        "name": "BasicShapeMaterial",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "6d7f108f-88ba-476c-ae5c-2b10288aaa60",
+          "sourceAssetId": "asset_6d7f108f88ba476cae5c2b10288aaa60",
+          "sourceSlotId": "slot_195935e2",
+          "sourceMaterialIndex": 2,
+          "sourceMaterialName": "BasicShapeMaterial"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 0.7961,
+              "g": 0.2275,
+              "b": 0.2275
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 0.6407,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_7814dfeb77144e58aa14e3117914e17e",
+        "guid": "7814dfeb-7714-4e58-aa14-e3117914e17e",
+        "name": "透明_Inst",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "872358ed-71a2-47bb-a9bd-f2c947ea0c71",
+          "sourceAssetId": "asset_872358ed71a247bba9bdf2c947ea0c71",
+          "sourceSlotId": "slot_f46c799b",
+          "sourceMaterialIndex": 0,
+          "sourceMaterialName": "透明_Inst"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 0.5,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          },
+          "alpha": {
+            "mode": "blend",
+            "opacity": 0.376
+          }
+        }
+      },
+      {
+        "id": "mat_792e91607a2e42f3ab2e94867c2e9619",
+        "guid": "792e9160-7a2e-42f3-ab2e-94867c2e9619",
+        "name": "透明_Inst1",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "872358ed-71a2-47bb-a9bd-f2c947ea0c71",
+          "sourceAssetId": "asset_872358ed71a247bba9bdf2c947ea0c71",
+          "sourceSlotId": "slot_f36c7808",
+          "sourceMaterialIndex": 1,
+          "sourceMaterialName": "透明_Inst1"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 0.5,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          },
+          "alpha": {
+            "mode": "blend",
+            "opacity": 0
+          }
+        }
+      },
+      {
+        "id": "mat_55e2dda154e24c0ea3e2da7b52e2d8e8",
+        "guid": "55e2dda1-54e2-4c0e-a3e2-da7b52e2d8e8",
+        "name": "1_Inst",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "872358ed-71a2-47bb-a9bd-f2c947ea0c71",
+          "sourceAssetId": "asset_872358ed71a247bba9bdf2c947ea0c71",
+          "sourceSlotId": "slot_f66c7cc1",
+          "sourceMaterialIndex": 2,
+          "sourceMaterialName": "1_Inst"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 1,
+          "roughness": 1,
+          "emission": {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1
+            },
+            "intensity": 1
+          }
+        }
+      },
+      {
+        "id": "mat_d6fbc596d7fb4729a4fbc270d5fbc403",
+        "guid": "d6fbc596-d7fb-4729-a4fb-c270d5fbc403",
+        "name": "BaiJInshu",
+        "materialKind": "pbr",
+        "origin": {
+          "type": "imported",
+          "sourceAssetGuid": "872358ed-71a2-47bb-a9bd-f2c947ea0c71",
+          "sourceAssetId": "asset_872358ed71a247bba9bdf2c947ea0c71",
+          "sourceSlotId": "slot_f86c7fe7",
+          "sourceMaterialIndex": 3,
+          "sourceMaterialName": "BaiJInshu"
+        },
+        "profile": {
+          "lightingModel": "lit",
+          "baseColor": {
+            "color": {
+              "r": 0.9294,
+              "g": 0.8706,
+              "b": 0.8706
+            },
+            "brightness": 1,
+            "saturation": 1,
+            "contrast": 1,
+            "hue": 0
+          },
+          "metallic": 0,
+          "roughness": 0.498,
+          "emission": {
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "intensity": 0
+          }
+        }
       }
     ],
     "materials": [],
     "textures": []
   },
   "render": {},
-  "version": 72,
-  "updatedAt": "2026-07-22T09:49:47.006Z",
+  "version": 70,
+  "updatedAt": "2026-07-15T03:29:19.508Z",
   "plugins": [
     {
       "pluginId": "fps.shadow-map-experiment",
       "schemaVersion": 3,
       "data": {
         "schemaVersion": 3,
-        "revision": 79,
+        "revision": 76,
         "enabled": true,
         "scopeId": "root",
         "light": {
@@ -279,9 +3537,9 @@
         "qualityProfileId": "balanced",
         "generator": {
           "maps": {
-            "staticResolution": 1024,
-            "dynamicResolution": 1024,
-            "compositeResolution": 1024
+            "staticResolution": 512,
+            "dynamicResolution": 512,
+            "compositeResolution": 512
           },
           "filter": "low-pcf",
           "bias": 0.0008,
@@ -327,11 +3585,6 @@
             "receive": true,
             "updateClass": "dynamic"
           },
-          "receiver-auto": {
-            "cast": false,
-            "receive": true,
-            "updateClass": "auto"
-          },
           "receiver-static": {
             "cast": false,
             "receive": true,
@@ -348,7 +3601,228 @@
             "updateClass": "static"
           }
         },
-        "objects": [],
+        "objects": [
+          {
+            "entityId": "asset",
+            "renderableIds": [
+              "asset"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
+          {
+            "entityId": "asset_2",
+            "renderableIds": [
+              "asset_2"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
+          {
+            "entityId": "asset_3",
+            "renderableIds": [
+              "asset_3"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
+          {
+            "entityId": "capsule",
+            "renderableIds": [
+              "capsule"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
+          {
+            "entityId": "cube",
+            "renderableIds": [
+              "cube"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
+          {
+            "entityId": "issue_444",
+            "renderableIds": [
+              "issue_444"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
+          {
+            "entityId": "issue_444__04",
+            "renderableIds": [
+              "issue_444__04"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
+          {
+            "entityId": "plane",
+            "renderableIds": [
+              "plane"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
+          {
+            "entityId": "shadow_fixture_barrel",
+            "renderableIds": [
+              "shadow_fixture_barrel"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
+          {
+            "entityId": "shadow_fixture_bush",
+            "renderableIds": [
+              "shadow_fixture_bush"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
+          {
+            "entityId": "shadow_fixture_chicken",
+            "renderableIds": [
+              "shadow_fixture_chicken"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
+          {
+            "entityId": "shadow_fixture_counter",
+            "renderableIds": [
+              "shadow_fixture_counter"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
+          {
+            "entityId": "shadow_fixture_crate",
+            "renderableIds": [
+              "shadow_fixture_crate"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
+          {
+            "entityId": "shadow_fixture_fence",
+            "renderableIds": [
+              "shadow_fixture_fence"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
+          {
+            "entityId": "shadow_fixture_hay_bale",
+            "renderableIds": [
+              "shadow_fixture_hay_bale"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
+          {
+            "entityId": "shadow_fixture_log_bundle",
+            "renderableIds": [
+              "shadow_fixture_log_bundle"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
+          {
+            "entityId": "shadow_fixture_pine_tree",
+            "renderableIds": [
+              "shadow_fixture_pine_tree"
+            ],
+            "cast": true,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "static-caster"
+          },
+          {
+            "entityId": "shadow_fixture_player",
+            "renderableIds": [
+              "shadow_fixture_player"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
+          {
+            "entityId": "shadow_fixture_rocks",
+            "renderableIds": [
+              "shadow_fixture_rocks"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
+          {
+            "entityId": "shadow_fixture_truck",
+            "renderableIds": [
+              "shadow_fixture_truck"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          },
+          {
+            "entityId": "shadow_fixture_worker",
+            "renderableIds": [
+              "shadow_fixture_worker"
+            ],
+            "cast": true,
+            "receive": true,
+            "updateClass": "skinned",
+            "behaviorProfileId": "skinned-dynamic"
+          },
+          {
+            "entityId": "sphere",
+            "renderableIds": [
+              "sphere"
+            ],
+            "cast": false,
+            "receive": true,
+            "updateClass": "static",
+            "behaviorProfileId": "receiver-static"
+          }
+        ],
         "diagnostics": []
       }
     }
