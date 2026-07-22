@@ -10,10 +10,27 @@ const sceneConfig = await readJson('src/config/scene.json');
 
 const EDITOR_SYSTEM_OBJECT_IDS = ['root', 'main_camera', 'environment_light', 'sun_light'];
 const RUNTIME_SYSTEM_NODE_IDS = ['main_camera', 'environment_light', 'sun_light'];
+const SYSTEM_MATERIAL_PRESETS = [
+  {
+    id: 'mat_default_pbr',
+    guid: '00000000-0000-4000-8000-000000000001',
+    materialKind: 'pbr',
+    preset: 'default-pbr',
+  },
+  {
+    id: 'mat_default_standard',
+    guid: '00000000-0000-4000-8000-000000000002',
+    materialKind: 'standard',
+    preset: 'default-standard',
+  },
+];
 
 assert.equal(editorScene.schemaVersion, 1, 'editor-scene.json must remain authoring schema v1');
 assert.deepEqual(editorScene.assets ?? [], [], 'empty editor baseline must not register scene assets');
-assert.deepEqual(editorScene.scene?.materialAssets ?? [], [], 'empty editor baseline must not include authored material assets');
+assertOnlySystemMaterialPresets(
+  editorScene.scene?.materialAssets,
+  'empty editor baseline',
+);
 
 const editorObjects = editorScene.scene?.gameObjects ?? [];
 assert.deepEqual(editorObjects.map(object => object.id), EDITOR_SYSTEM_OBJECT_IDS, 'empty editor baseline must only contain system objects');
@@ -34,7 +51,10 @@ for (const object of editorObjects) {
 assert.equal(sceneConfig.schemaVersion, 3, 'scene.json must use runtime schema v3');
 assert.equal(sceneConfig.scene?.rootId, 'root', 'runtime scene rootId');
 assert.deepEqual(sceneConfig.scene?.assets ?? [], [], 'empty runtime baseline must not include scene assets');
-assert.deepEqual(sceneConfig.scene?.materialAssets ?? [], [], 'empty runtime baseline must not include material assets');
+assertOnlySystemMaterialPresets(
+  sceneConfig.scene?.materialAssets,
+  'empty runtime baseline',
+);
 assert.deepEqual(sceneConfig.scene?.materials ?? [], [], 'empty runtime baseline must not include compiled materials');
 assert.deepEqual(sceneConfig.scene?.textures ?? [], [], 'empty runtime baseline must not include compiled textures');
 
@@ -58,6 +78,28 @@ assert.equal(
 );
 
 console.log('[check-editor-empty-scene-baseline] empty scene baseline verified');
+
+function assertOnlySystemMaterialPresets(materialAssets, label) {
+  const actual = (materialAssets ?? []).map(materialAsset => ({
+    id: materialAsset.id,
+    guid: materialAsset.guid,
+    materialKind: materialAsset.materialKind,
+    preset: materialAsset.system?.preset,
+    readonly: materialAsset.system?.readonly,
+    originType: materialAsset.origin?.type,
+  }));
+  const expected = SYSTEM_MATERIAL_PRESETS.map(materialAsset => ({
+    ...materialAsset,
+    readonly: true,
+    originType: 'preset',
+  }));
+
+  assert.deepEqual(
+    actual,
+    expected,
+    `${label} must only include the required readonly system material presets`,
+  );
+}
 
 function assertSystemTransform(object, expected) {
   assert(object, `${expected.id} must exist`);

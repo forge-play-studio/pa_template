@@ -60,16 +60,29 @@ const pluginManifests = createFpsConfiguredPluginManifestVitePlugin({
   plugins: fpsConfig.plugins,
 });
 
+let stopRuntimeSceneModuleInvalidationWatch: (() => void) | null = null;
 const runtimeSceneModuleInvalidation = {
   name: 'pa-template-runtime-scene-module-invalidation',
   apply: 'serve' as const,
   configureServer(server: Parameters<typeof invalidateFpsGameEditorViteFileModules>[0]) {
+    stopRuntimeSceneModuleInvalidationWatch?.();
     const runtimeScenePath = scene.paths.scenePath;
-    watchFile(runtimeScenePath, { interval: 250 }, (current, previous) => {
+    const handleRuntimeSceneChange = (current: { mtimeMs: number }, previous: { mtimeMs: number }) => {
       if (current.mtimeMs === previous.mtimeMs) return;
       invalidateFpsGameEditorViteFileModules(server, [runtimeScenePath]);
-    });
-    server.httpServer?.once('close', () => unwatchFile(runtimeScenePath));
+    };
+    watchFile(runtimeScenePath, { interval: 250 }, handleRuntimeSceneChange);
+    const stopWatch = () => {
+      unwatchFile(runtimeScenePath, handleRuntimeSceneChange);
+      if (stopRuntimeSceneModuleInvalidationWatch === stopWatch) {
+        stopRuntimeSceneModuleInvalidationWatch = null;
+      }
+    };
+    stopRuntimeSceneModuleInvalidationWatch = stopWatch;
+    server.httpServer?.once('close', stopWatch);
+  },
+  closeBundle() {
+    stopRuntimeSceneModuleInvalidationWatch?.();
   },
 };
 
