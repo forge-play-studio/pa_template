@@ -15,7 +15,9 @@ export function mountPaTemplateEditorEntry(
   return mountFpsGameEditorLocalEditorEntry<LocalEditorModule>({
     projectMode,
     editorModule: {
-      baseUrl: window.location.href,
+      // The Forge Play sandbox runs this module inside an about:srcdoc frame.
+      // Keep editor routes anchored to the Vite-served module origin instead.
+      baseUrl: import.meta.url,
       importModule: url => import(/* @vite-ignore */ url) as Promise<LocalEditorModule>,
       mount: async (module, options) => {
         const switcher = await module.mountLocalEditorModeSwitcher({
