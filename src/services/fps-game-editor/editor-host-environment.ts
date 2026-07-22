@@ -5,6 +5,8 @@ export interface PaTemplateEditorHostEnvironment {
 
 interface PaTemplateEditorHostWindow {
   readonly location: Pick<Location, 'href'>;
+  readonly parent?: unknown;
+  readonly __FPS_EDITOR_HOSTED_SANDBOX__?: boolean;
   readonly __BOOT_MODE?: 'edit' | 'play';
 }
 
@@ -17,7 +19,11 @@ export function readPaTemplateEditorHostEnvironment(
     : null;
   return Object.freeze({
     bootMode,
-    // srcdoc identifies a hosted sandbox, not its initial play/edit mode.
-    hostedSandbox: bootMode !== null || /^about:srcdoc(?:#|$)/.test(windowValue.location.href),
+    // Prefer the explicit host contract. The remaining signals preserve
+    // compatibility with srcdoc and directly-navigated iframe sandboxes.
+    hostedSandbox: windowValue.__FPS_EDITOR_HOSTED_SANDBOX__ === true
+      || bootMode !== null
+      || /^about:srcdoc(?:#|$)/.test(windowValue.location.href)
+      || (windowValue.parent !== undefined && windowValue.parent !== windowValue),
   });
 }

@@ -115,6 +115,8 @@ interface Window {
   game: import('./runtime/GameWorld').GameWorld | null;
   __bridgeProjectRuntime?: unknown;
   __pendingEditorRuntime?: unknown;
+  /** Forge Play host 显式标记当前页面运行于托管沙盒。 */
+  __FPS_EDITOR_HOSTED_SANDBOX__?: boolean;
   /** Forge Play host 注入的 boot 模式(srcdoc 编辑帧无 URL 可携带 mode)。 */
   __BOOT_MODE?: 'edit' | 'play';
 }
