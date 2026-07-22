@@ -15,8 +15,8 @@ importers:
         specifier: 8.52.1
         version: 8.52.1(@babylonjs/core@8.52.1)(babylonjs-gltf2interface@8.56.2)
       '@fps-games/editor':
-        specifier: 0.2.0-beta.4
-        version: 0.2.0-beta.4(vite@5.4.21(@types/node@22.20.1)(terser@5.48.0))
+        specifier: 0.2.1-beta.1
+        version: 0.2.1-beta.1(vite@5.4.21(@types/node@22.20.1)(terser@5.48.0))
       '@fps-games/vfx':
         specifier: 0.3.23
         version: 0.3.23(@babylonjs/core@8.52.1)(@babylonjs/loaders@8.52.1(@babylonjs/core@8.52.1)(babylonjs-gltf2interface@8.56.2))
@@ -794,8 +794,8 @@ packages:
   '@fluentui/tokens@1.0.0-alpha.23':
     resolution: {integrity: sha512-uxrzF9Z+J10naP0pGS7zPmzSkspSS+3OJDmYIK3o1nkntQrgBXq3dBob4xSlTDm5aOQ0kw6EvB9wQgtlyy4eKQ==}
 
-  '@fps-games/editor@0.2.0-beta.4':
-    resolution: {integrity: sha512-wXQshE7UoA5WIKUpS6UCEm493A8Uc4qZJDW4Y53ijGrqCKFNt0WFHQDsg2sZqK2EJHl0uLn1uG2itjFx+VhaSg==}
+  '@fps-games/editor@0.2.1-beta.1':
+    resolution: {integrity: sha512-rhmmu2bW6k95yHEK+JldCYPy9ZvsYtdWNcSKw4ihfZRR0s4ScQRYzQAg/PhEzfoazTXTF6LwlOC1g6lJDbUw4g==}
     peerDependencies:
       vite: ^5.4.21
     peerDependenciesMeta:
@@ -803,6 +803,8 @@ packages:
         optional: true
     bundledDependencies:
       - '@babel/parser'
+      - '@babylonjs/loaders'
+      - babylonjs-gltf2interface
       - '@fps-games/babylon-renderer'
       - '@fps-games/editor-babylon'
       - '@fps-games/editor-browser'
@@ -810,14 +812,18 @@ packages:
       - '@fps-games/editor-forge-play'
       - '@fps-games/editor-playable-sdk'
       - '@fps-games/editor-tooling'
+      - '@fps-games/playable-contracts'
       - '@fps-games/playable-runtime'
       - '@fps-games/editor-protocol'
+      - '@playcanvas/pcui'
       - '@fps-games/playable-rendering'
       - '@fps-games/plugin-api'
       - '@fps-games/plugin-assets'
       - '@fps-games/plugin-materials'
       - '@fps-games/plugin-markers'
+      - '@fps-games/plugin-hierarchy'
       - '@fps-games/plugin-rendering'
+      - '@fps-games/plugin-shadow-map-experiment'
       - '@fps-games/plugin-shadows'
       - '@fps-games/plugin-host'
       - '@fps-games/plugin-scene'
@@ -2653,7 +2659,7 @@ snapshots:
     dependencies:
       '@swc/helpers': 0.5.23
 
-  '@fps-games/editor@0.2.0-beta.4(vite@5.4.21(@types/node@22.20.1)(terser@5.48.0))':
+  '@fps-games/editor@0.2.1-beta.1(vite@5.4.21(@types/node@22.20.1)(terser@5.48.0))':
     optionalDependencies:
       vite: 5.4.21(@types/node@22.20.1)(terser@5.48.0)
 
