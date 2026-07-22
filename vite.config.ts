@@ -7,6 +7,7 @@ import {
   invalidateFpsGameEditorViteFileModules,
 } from '@fps-games/editor/playable-sdk/vite';
 import { createFpsConfiguredPluginManifestVitePlugin } from '@fps-games/editor/vite';
+import { unwatchFile, watchFile } from 'node:fs';
 import fpsConfig, { editorConfig } from './fps.config';
 import { createPaTemplateViteConfig } from './vite-plugins/projectViteConfig';
 
@@ -59,7 +60,20 @@ const pluginManifests = createFpsConfiguredPluginManifestVitePlugin({
   plugins: fpsConfig.plugins,
 });
 
+const runtimeSceneModuleInvalidation = {
+  name: 'pa-template-runtime-scene-module-invalidation',
+  apply: 'serve' as const,
+  configureServer(server: Parameters<typeof invalidateFpsGameEditorViteFileModules>[0]) {
+    const runtimeScenePath = scene.paths.scenePath;
+    watchFile(runtimeScenePath, { interval: 250 }, (current, previous) => {
+      if (current.mtimeMs === previous.mtimeMs) return;
+      invalidateFpsGameEditorViteFileModules(server, [runtimeScenePath]);
+    });
+    server.httpServer?.once('close', () => unwatchFile(runtimeScenePath));
+  },
+};
+
 export default createPaTemplateViteConfig({
   ...integration,
-  pluginManifestVitePlugin: () => pluginManifests,
+  pluginManifestVitePlugin: () => [pluginManifests, runtimeSceneModuleInvalidation],
 });
