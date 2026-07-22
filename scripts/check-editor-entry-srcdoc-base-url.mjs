@@ -29,9 +29,29 @@ assert.deepEqual(
   readPaTemplateEditorHostEnvironment({ location: { href: 'https://local.example/' } }),
   { bootMode: null, hostedSandbox: false },
 );
+const localTopLevel = { location: { href: 'https://local.example/' } };
+localTopLevel.parent = localTopLevel;
+assert.deepEqual(
+  readPaTemplateEditorHostEnvironment(localTopLevel),
+  { bootMode: null, hostedSandbox: false },
+);
+assert.deepEqual(
+  readPaTemplateEditorHostEnvironment({
+    location: { href: 'https://local.example/' },
+    __FPS_EDITOR_HOSTED_SANDBOX__: true,
+  }),
+  { bootMode: null, hostedSandbox: true },
+);
 assert.deepEqual(
   readPaTemplateEditorHostEnvironment({ location: { href: 'https://local.example/' }, __BOOT_MODE: 'play' }),
   { bootMode: 'play', hostedSandbox: true },
+);
+assert.deepEqual(
+  readPaTemplateEditorHostEnvironment({
+    location: { href: 'https://project-vite.example/' },
+    parent: {},
+  }),
+  { bootMode: null, hostedSandbox: true },
 );
 assert.deepEqual(
   readPaTemplateEditorHostEnvironment({ location: { href: 'about:srcdoc' } }),
