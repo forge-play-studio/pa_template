@@ -18,6 +18,11 @@ assert.doesNotMatch(
   /\bbaseUrl:\s*window\.location\.href\b/,
   'about:srcdoc cannot be used as the editor entry route base.',
 );
+assert.match(
+  editorEntrySource,
+  /\bshowEntryButton:\s*window\.__BOOT_MODE\s*===\s*undefined\b/,
+  'The manual editor entry button must be hidden when the sandbox host injects a boot mode.',
+);
 
 const manifestPath = '/__fps_editor/entry-manifest.json';
 assert.throws(() => new URL(manifestPath, 'about:srcdoc'), TypeError);

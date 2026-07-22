@@ -13,6 +13,10 @@ export function mountPaTemplateEditorEntry(
   projectMode: PaTemplateEditorEntryProjectMode,
 ): FpsGameEditorLocalEditorEntry {
   return mountFpsGameEditorLocalEditorEntry<LocalEditorModule>({
+    browser: {
+      // Hosted sandboxes own mode switching; keep the manual entry affordance local-only.
+      showEntryButton: window.__BOOT_MODE === undefined,
+    },
     projectMode,
     editorModule: {
       // The Forge Play sandbox runs this module inside an about:srcdoc frame.
