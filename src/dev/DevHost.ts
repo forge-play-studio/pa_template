@@ -3,7 +3,7 @@ import { GameApplication } from '../entry/GameApplication';
 import type { GameWorld } from '../runtime/GameWorld';
 import { configValidator } from '../services/ConfigValidator';
 import { mountPaTemplateEditorEntry } from '../services/fps-game-editor/editor-entry';
-import { readPaTemplateEditorBootMode } from '../services/fps-game-editor/editor-host-environment';
+import { readPaTemplateEditorHostEnvironment } from '../services/fps-game-editor/editor-host-environment';
 
 export interface PaTemplateDevHost {
   dispose(): Promise<void>;
@@ -30,12 +30,12 @@ class PaTemplateDevHostImpl implements PaTemplateDevHost {
   private disposed = false;
 
   start(): void {
-    const bootMode = readPaTemplateEditorBootMode();
+    const hostEnvironment = readPaTemplateEditorHostEnvironment();
     this.editorEntry = mountPaTemplateEditorEntry({
       enterEditorMode: context => this.enterEditorMode(context),
       enterPlayMode: context => this.enterPlayMode(context),
-    }, bootMode);
-    if (bootMode !== 'edit') {
+    }, hostEnvironment);
+    if (hostEnvironment.bootMode !== 'edit') {
       void this.startPlayMode().catch(error => console.error('[PaTemplateDevHost] startup failed', error));
     }
   }

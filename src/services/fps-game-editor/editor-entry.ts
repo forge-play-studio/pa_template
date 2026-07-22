@@ -4,8 +4,8 @@ import {
   type FpsGameEditorProjectModeTransitions,
 } from '@fps-games/editor/playable-sdk';
 import {
-  readPaTemplateEditorBootMode,
-  type PaTemplateEditorBootMode,
+  readPaTemplateEditorHostEnvironment,
+  type PaTemplateEditorHostEnvironment,
 } from './editor-host-environment';
 
 type LocalEditorModule = typeof import('./local-editor');
@@ -15,12 +15,12 @@ export type PaTemplateEditorEntryProjectMode = FpsGameEditorProjectModeTransitio
 /** Editor-only entry assembly. Project runtime lifetime stays in src/dev/DevHost. */
 export function mountPaTemplateEditorEntry(
   projectMode: PaTemplateEditorEntryProjectMode,
-  bootMode: PaTemplateEditorBootMode = readPaTemplateEditorBootMode(),
+  hostEnvironment: PaTemplateEditorHostEnvironment = readPaTemplateEditorHostEnvironment(),
 ): FpsGameEditorLocalEditorEntry {
   return mountFpsGameEditorLocalEditorEntry<LocalEditorModule>({
     browser: {
       // Hosted sandboxes own mode switching; keep the manual entry affordance local-only.
-      showEntryButton: bootMode === null,
+      showEntryButton: !hostEnvironment.hostedSandbox,
     },
     projectMode,
     editorModule: {
@@ -33,9 +33,7 @@ export function mountPaTemplateEditorEntry(
           root: document.body,
           ...options,
         });
-        // Resolve the hosted editor mode before async assembly. Explicit host
-        // injection wins; about:srcdoc remains a compatibility fallback.
-        if (bootMode === 'edit') {
+        if (hostEnvironment.bootMode === 'edit') {
           void switcher.enterEditor().catch(error => console.error('[PaTemplateEditorEntry] boot enterEditor failed', error));
         }
         return switcher;

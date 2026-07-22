@@ -2,7 +2,7 @@
 
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { readPaTemplateEditorBootMode } from '../src/services/fps-game-editor/editor-host-environment.ts';
+import { readPaTemplateEditorHostEnvironment } from '../src/services/fps-game-editor/editor-host-environment.ts';
 
 const editorEntrySource = readFileSync(
   new URL('../src/services/fps-game-editor/editor-entry.ts', import.meta.url),
@@ -21,15 +21,26 @@ assert.doesNotMatch(
 );
 assert.match(
   editorEntrySource,
-  /\bshowEntryButton:\s*bootMode\s*===\s*null\b/,
+  /\bshowEntryButton:\s*!hostEnvironment\.hostedSandbox\b/,
   'The manual editor entry button must be hidden in hosted modes.',
 );
 
-assert.equal(readPaTemplateEditorBootMode({ location: { href: 'https://local.example/' } }), null);
-assert.equal(readPaTemplateEditorBootMode({ location: { href: 'https://local.example/' }, __BOOT_MODE: 'play' }), 'play');
-assert.equal(readPaTemplateEditorBootMode({ location: { href: 'about:srcdoc' }, __BOOT_MODE: 'play' }), 'play');
-assert.equal(readPaTemplateEditorBootMode({ location: { href: 'about:srcdoc' } }), 'edit');
-assert.equal(readPaTemplateEditorBootMode({ location: { href: 'about:srcdoc#editor' } }), 'edit');
+assert.deepEqual(
+  readPaTemplateEditorHostEnvironment({ location: { href: 'https://local.example/' } }),
+  { bootMode: null, hostedSandbox: false },
+);
+assert.deepEqual(
+  readPaTemplateEditorHostEnvironment({ location: { href: 'https://local.example/' }, __BOOT_MODE: 'play' }),
+  { bootMode: 'play', hostedSandbox: true },
+);
+assert.deepEqual(
+  readPaTemplateEditorHostEnvironment({ location: { href: 'about:srcdoc' } }),
+  { bootMode: null, hostedSandbox: true },
+);
+assert.deepEqual(
+  readPaTemplateEditorHostEnvironment({ location: { href: 'about:srcdoc#editor' }, __BOOT_MODE: 'edit' }),
+  { bootMode: 'edit', hostedSandbox: true },
+);
 
 const manifestPath = '/__fps_editor/entry-manifest.json';
 assert.throws(() => new URL(manifestPath, 'about:srcdoc'), TypeError);

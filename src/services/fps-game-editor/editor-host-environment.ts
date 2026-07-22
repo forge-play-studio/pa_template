@@ -1,18 +1,23 @@
-export type PaTemplateEditorBootMode = 'edit' | 'play' | null;
+export interface PaTemplateEditorHostEnvironment {
+  readonly bootMode: 'edit' | 'play' | null;
+  readonly hostedSandbox: boolean;
+}
 
 interface PaTemplateEditorHostWindow {
   readonly location: Pick<Location, 'href'>;
   readonly __BOOT_MODE?: 'edit' | 'play';
 }
 
-/** Resolve the host-owned initial mode before asynchronous editor setup starts. */
-export function readPaTemplateEditorBootMode(
+/** Resolve host signals before asynchronous editor setup starts. */
+export function readPaTemplateEditorHostEnvironment(
   windowValue: PaTemplateEditorHostWindow = window,
-): PaTemplateEditorBootMode {
-  if (windowValue.__BOOT_MODE === 'edit' || windowValue.__BOOT_MODE === 'play') {
-    return windowValue.__BOOT_MODE;
-  }
-  // Forge Play's persistent editor frame is an about:srcdoc document. Keep
-  // this compatibility fallback until every deployed host injects __BOOT_MODE.
-  return /^about:srcdoc(?:#|$)/.test(windowValue.location.href) ? 'edit' : null;
+): PaTemplateEditorHostEnvironment {
+  const bootMode = windowValue.__BOOT_MODE === 'edit' || windowValue.__BOOT_MODE === 'play'
+    ? windowValue.__BOOT_MODE
+    : null;
+  return Object.freeze({
+    bootMode,
+    // srcdoc identifies a hosted sandbox, not its initial play/edit mode.
+    hostedSandbox: bootMode !== null || /^about:srcdoc(?:#|$)/.test(windowValue.location.href),
+  });
 }
