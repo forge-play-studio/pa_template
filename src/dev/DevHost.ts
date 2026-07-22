@@ -3,6 +3,7 @@ import { GameApplication } from '../entry/GameApplication';
 import type { GameWorld } from '../runtime/GameWorld';
 import { configValidator } from '../services/ConfigValidator';
 import { mountPaTemplateEditorEntry } from '../services/fps-game-editor/editor-entry';
+import { readPaTemplateEditorHostEnvironment } from '../services/fps-game-editor/editor-host-environment';
 
 export interface PaTemplateDevHost {
   dispose(): Promise<void>;
@@ -29,13 +30,14 @@ class PaTemplateDevHostImpl implements PaTemplateDevHost {
   private disposed = false;
 
   start(): void {
-    void this.startPlayMode().then(() => {
-      if (this.disposed) return;
-      this.editorEntry = mountPaTemplateEditorEntry({
-        enterEditorMode: context => this.enterEditorMode(context),
-        enterPlayMode: context => this.enterPlayMode(context),
-      });
-    }).catch(error => console.error('[PaTemplateDevHost] startup failed', error));
+    const hostEnvironment = readPaTemplateEditorHostEnvironment();
+    this.editorEntry = mountPaTemplateEditorEntry({
+      enterEditorMode: context => this.enterEditorMode(context),
+      enterPlayMode: context => this.enterPlayMode(context),
+    }, hostEnvironment);
+    if (hostEnvironment.bootMode !== 'edit') {
+      void this.startPlayMode().catch(error => console.error('[PaTemplateDevHost] startup failed', error));
+    }
   }
 
   dispose(): Promise<void> {
@@ -103,6 +105,9 @@ class PaTemplateDevHostImpl implements PaTemplateDevHost {
   }
 
   private async stopPlayMode(): Promise<void> {
+    const pendingStart = this.playModeStart;
+    if (pendingStart) await Promise.allSettled([pendingStart]);
+
     const errors: unknown[] = [];
     const runtimeDebug = this.runtimeDebug;
     this.runtimeDebug = null;

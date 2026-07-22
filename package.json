@@ -21,6 +21,7 @@
     "test:asset-manager-guid-external": "node scripts/check-asset-manager-guid-external.mjs",
     "test:editor-canonical-assets": "node scripts/check-editor-canonical-assets.mjs",
     "test:editor-authored-data-hard-cut": "node scripts/check-editor-authored-data-hard-cut.mjs",
+    "test:editor-entry-srcdoc-base-url": "node scripts/check-editor-entry-srcdoc-base-url.mjs",
     "test:scene-json-artifact-budget": "node scripts/check-scene-json-artifact-budget.mjs",
     "test:editor-ground-decal-authoring": "node scripts/check-editor-ground-decal-authoring.mjs",
     "test:editor-empty-scene-baseline": "node scripts/check-editor-empty-scene-baseline.mjs",
