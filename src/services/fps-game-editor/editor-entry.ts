@@ -18,6 +18,8 @@ export function mountPaTemplateEditorEntry(
   hostEnvironment: PaTemplateEditorHostEnvironment = readPaTemplateEditorHostEnvironment(),
 ): FpsGameEditorLocalEditorEntry {
   return mountFpsGameEditorLocalEditorEntry<LocalEditorModule>({
+    initialMode: hostEnvironment.bootMode === 'edit' ? 'edit' : 'play',
+    initialModeIntent: hostEnvironment.initialModeIntent,
     browser: {
       // Hosted sandboxes own mode switching; keep the manual entry affordance local-only.
       showEntryButton: !hostEnvironment.hostedSandbox,
@@ -28,16 +30,10 @@ export function mountPaTemplateEditorEntry(
       // Keep editor routes anchored to the Vite-served module origin instead.
       baseUrl: import.meta.url,
       importModule: url => import(/* @vite-ignore */ url) as Promise<LocalEditorModule>,
-      mount: async (module, options) => {
-        const switcher = await module.mountLocalEditorModeSwitcher({
+      mount: (module, options) => module.mountLocalEditorModeSwitcher({
           root: document.body,
           ...options,
-        });
-        if (hostEnvironment.bootMode === 'edit') {
-          void switcher.enterEditor().catch(error => console.error('[PaTemplateEditorEntry] boot enterEditor failed', error));
-        }
-        return switcher;
-      },
+        }),
     },
     reportError(scope, error) {
       console.error(`[PaTemplateEditorEntry] ${scope}`, error);
