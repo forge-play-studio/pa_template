@@ -38,10 +38,6 @@ export const TEXTURE_ASSET_URL_MAP: Record<string, string> = GENERATED_TEXTURE_A
 export const IMAGE_ASSET_URL_MAP: Record<string, string> = GENERATED_IMAGE_ASSET_URL_MAP;
 export const SOUND_ASSET_URL_MAP: Record<string, string> = GENERATED_SOUND_ASSET_URL_MAP;
 
-export function resolveAssetUrl(assetId: string): string | undefined {
-  return ASSET_URL_MAP[assetId];
-}
-
 export function resolveModelAssetUrl(assetId: string): string | undefined {
   return MODEL_ASSET_URL_MAP[assetId];
 }
