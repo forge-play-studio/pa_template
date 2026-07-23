@@ -6,6 +6,7 @@ import {
 } from '@fps-games/editor/playable-runtime/babylon';
 import * as rendererPluginModule from 'virtual:fps-plugins/renderer';
 import * as runtimePluginModule from 'virtual:fps-plugins/runtime';
+import { ASSET_CATALOG } from '../../../assets';
 import sceneConfig from '../../../config/scene.json';
 import renderingConfig from '../../../config/rendering.json';
 
@@ -13,6 +14,7 @@ const gameWorldPlugins = createFpsBabylonGameWorldPluginLifecycle({
   runtimeModule: runtimePluginModule,
   rendererModule: rendererPluginModule,
   runtimeData: createFpsRuntimeDataFromCompiledScene(sceneConfig, renderingConfig),
+  assetCatalog: ASSET_CATALOG,
   apiVersion: 1,
 });
 
