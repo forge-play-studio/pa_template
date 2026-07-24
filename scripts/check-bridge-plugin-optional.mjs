@@ -9,11 +9,15 @@ import ts from 'typescript';
 
 const root = process.cwd();
 const bridgeSourcePath = path.join(root, 'vite-plugins/bridge.ts');
-const viteConfig = await fs.readFile(path.join(root, 'vite.config.ts'), 'utf8');
+const projectViteConfig = await fs.readFile(
+  path.join(root, 'vite-plugins/projectViteConfig.ts'),
+  'utf8',
+);
 const bridgeSource = await fs.readFile(bridgeSourcePath, 'utf8');
 
-assert.match(viteConfig, /process\.env\.BRIDGE_ENABLED === 'true'/, 'legacy bridge injection must be opt-in for local editor lab runs');
-assert.doesNotMatch(viteConfig, /process\.env\.BRIDGE_ENABLED !== 'false'/, 'legacy bridge must not be enabled by default');
+assert.match(projectViteConfig, /process\.env\.BRIDGE_ENABLED === 'true'/, 'legacy bridge injection must be opt-in for local editor lab runs');
+assert.doesNotMatch(projectViteConfig, /process\.env\.BRIDGE_ENABLED !== 'false'/, 'legacy bridge must not be enabled by default');
+assert.match(projectViteConfig, /\benabled:\s*bridgeEnabled\b/, 'project Vite config must pass the opt-in flag to bridgePlugin');
 assert.match(bridgeSource, /const enabled = opts\.enabled \?\? false/, 'bridgePlugin default enabled value must be false');
 
 const module = await importTranspiledBridgePlugin(bridgeSource);

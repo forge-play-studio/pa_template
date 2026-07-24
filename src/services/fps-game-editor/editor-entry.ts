@@ -18,8 +18,6 @@ export function mountPaTemplateEditorEntry(
   hostEnvironment: PaTemplateEditorHostEnvironment = readPaTemplateEditorHostEnvironment(),
 ): FpsGameEditorLocalEditorEntry {
   return mountFpsGameEditorLocalEditorEntry<LocalEditorModule>({
-    initialMode: hostEnvironment.bootMode === 'edit' ? 'edit' : 'play',
-    initialModeIntent: hostEnvironment.initialModeIntent,
     browser: {
       // Hosted sandboxes own mode switching; keep the manual entry affordance local-only.
       showEntryButton: !hostEnvironment.hostedSandbox,

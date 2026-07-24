@@ -9,6 +9,10 @@ const editorEntrySource = readFileSync(
   new URL('../src/services/fps-game-editor/editor-entry.ts', import.meta.url),
   'utf8',
 );
+const devHostSource = readFileSync(
+  new URL('../src/dev/DevHost.ts', import.meta.url),
+  'utf8',
+);
 
 assert.match(
   editorEntrySource,
@@ -26,14 +30,14 @@ assert.match(
   'The manual editor entry button must be hidden in hosted modes.',
 );
 assert.match(
-  editorEntrySource,
-  /\binitialMode:\s*hostEnvironment\.bootMode\s*===\s*['"]edit['"]\s*\?\s*['"]edit['"]\s*:\s*['"]play['"]/,
-  'Hosted edit boot must map to the public Editor Entry initialMode intent.',
+  devHostSource,
+  /\bhostEnvironment\.initialModeIntent\s*===\s*['"]fresh['"]\s*\?\s*this\.editorEntry\.enterEditor\(\)\s*:\s*this\.editorEntry\.start\(\)/,
+  'Fresh hosted edit boot must enter through the public Editor Entry host.',
 );
-assert.match(
+assert.doesNotMatch(
   editorEntrySource,
-  /\binitialModeIntent:\s*hostEnvironment\.initialModeIntent\b/,
-  'Hosted reload intent must be forwarded to the public Editor Entry gate.',
+  /\binitialMode(?:Intent)?:/,
+  'Removed Editor Entry bootstrap options must not be passed to the public SDK.',
 );
 assert.equal(
   hasMountOwnedEditorTransition(editorEntrySource),

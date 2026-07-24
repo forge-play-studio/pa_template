@@ -65,6 +65,7 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@babel/parser": "^7.29.7",
     "@babylonjs/inspector": "8.52.1",
     "@types/node": "^22.10.2",
     "cross-env": "^7.0.3",
@@ -77,7 +78,7 @@
   "dependencies": {
     "@babylonjs/core": "8.52.1",
     "@babylonjs/loaders": "8.52.1",
-    "@fps-games/editor": "0.2.1-beta.1",
+    "@fps-games/editor": "0.2.1-beta.3",
     "@fps-games/vfx": "0.3.23",
     "brotli-dec-wasm": "^2.3.2"
   },
