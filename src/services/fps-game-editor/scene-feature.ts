@@ -150,12 +150,16 @@ export const createEditorSceneGroundDecalUiPatch = (
 export function createEditorSceneGroundDecalHierarchyOperations() {
   return paTemplateGroundDecalFeatureConfig.uiKinds.map((uiKind: string) => ({
     id: `pa-template.ground-decal.create-${uiKind}`,
-    label: uiKind === 'delivery' ? '添加交付类地贴 UI' : '添加操作类地贴 UI',
+    label: uiKind === 'delivery'
+      ? '添加交付类地贴 UI'
+      : uiKind === 'customProgress'
+        ? '添加自定义进度地贴 UI'
+        : '添加操作类地贴 UI',
     placement: 'after-create' as const,
     menu: {
       path: [{ id: 'create', label: 'Create', order: 20 }],
       group: 'ground-decal',
-      order: uiKind === 'delivery' ? 20 : 10,
+      order: uiKind === 'delivery' ? 20 : uiKind === 'customProgress' ? 30 : 10,
     },
     effect: 'authoring' as const,
     targetPolicy: 'none' as const,

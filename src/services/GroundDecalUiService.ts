@@ -17,6 +17,9 @@ const TEXTURE_IDS = {
   borderWhite: readRequiredGroundDecalTextureId('ground_decal_border_reference'),
   conveyor: readRequiredGroundDecalTextureId('ground_decal_conveyor_reference'),
   moneyLarge: readRequiredGroundDecalTextureId('ground_decal_money_reference'),
+  customProgressNormal: readRequiredGroundDecalTextureId('ground_decal_custom_progress_normal'),
+  customProgressActive: readRequiredGroundDecalTextureId('ground_decal_custom_progress_active'),
+  customProgressFill: readRequiredGroundDecalTextureId('ground_decal_custom_progress_fill'),
 } as const;
 
 function readRequiredGroundDecalTextureId(codeKey: string): string {
@@ -48,11 +51,40 @@ export function isGroundDecalUiConfig(value: unknown): value is GroundDecalUiCon
   return !!value
     && typeof value === 'object'
     && !Array.isArray(value)
-    && ((value as { uiKind?: unknown }).uiKind === 'operation' || (value as { uiKind?: unknown }).uiKind === 'delivery')
+    && (
+      (value as { uiKind?: unknown }).uiKind === 'operation'
+      || (value as { uiKind?: unknown }).uiKind === 'delivery'
+      || (value as { uiKind?: unknown }).uiKind === 'customProgress'
+    )
     && Array.isArray((value as { layers?: unknown }).layers);
 }
 
 export function createDefaultGroundDecalUiConfig(uiKind: GroundDecalUiKind): GroundDecalUiConfig {
+  if (uiKind === 'customProgress') {
+    return {
+      uiKind,
+      size: { width: 1.8, depth: 1.8 },
+      aspectSourceLayerId: 'normalBackground',
+      lockAspectToBorder: true,
+      editorPreviewActive: false,
+      mask: { enabled: false },
+      rendering: {
+        textureWidth: 512,
+        textureHeight: 512,
+        alphaIndex: 100,
+        diffuseTextureLevel: 1,
+        emissiveTextureLevel: 0,
+      },
+      layers: [
+        { id: 'normalBackground', role: 'normalBackground', kind: 'texture', textureId: TEXTURE_IDS.customProgressNormal, tint: whiteTint(), zOrder: 0, rect: unitRect() },
+        { id: 'activeBackground', role: 'activeBackground', kind: 'texture', textureId: TEXTURE_IDS.customProgressActive, tint: whiteTint(), zOrder: 10, rect: unitRect() },
+        { id: 'progressImage', role: 'progressImage', kind: 'textureProgress', textureId: TEXTURE_IDS.customProgressFill, tint: whiteTint(), value: 0, editorPreviewPercent: 50, direction: 'bottomToTop', zOrder: 20, rect: unitRect() },
+        { id: 'mainLogo', role: 'mainLogo', kind: 'texture', textureId: TEXTURE_IDS.conveyor, zOrder: 30, rect: unitRect() },
+        { id: 'subLogo', role: 'subLogo', kind: 'texture', textureId: TEXTURE_IDS.moneyLarge, zOrder: 40, rect: { x: -0.25, z: -0.25, width: 0.5, depth: 0.5 } },
+        { id: 'amount', role: 'amount', kind: 'text', text: { value: '30', fontFamily: 'system-ui, Arial, sans-serif', fontSize: 96, fontWeight: '800', color: { r: 1, g: 1, b: 1, a: 1 }, strokeColor: { r: 0, g: 0, b: 0, a: 0.45 }, strokeWidth: 8, align: 'center', baseline: 'middle' }, zOrder: 50, rect: { x: 0.2, z: -0.25, width: 0.28, depth: 0.22 } },
+      ],
+    };
+  }
   const common: Pick<GroundDecalUiConfig, 'uiKind' | 'size' | 'aspectSourceLayerId' | 'lockAspectToBorder' | 'mask' | 'rendering'> = {
     uiKind,
     size: { width: 1.8, depth: 1.8 },
@@ -252,36 +284,99 @@ function createBorderLayer(): GroundDecalUiConfig['layers'][number] {
   };
 }
 
+const unitRect = (): GroundDecalUiRect => ({ x: 0, z: 0, width: 1, depth: 1 });
+const whiteTint = (): GroundDecalUiColor => ({ r: 1, g: 1, b: 1, a: 1 });
+
+export interface GroundDecalUiRenderState {
+  active: boolean;
+  progress: number;
+}
+
+export interface GroundDecalUiDynamicTextureOptions {
+  active?: boolean;
+  progress?: number;
+  useEditorPreview?: boolean;
+}
+
 export interface GroundDecalUiDynamicTextureResult {
   texture: DynamicTexture;
   ready: Promise<void>;
+  getState(): GroundDecalUiRenderState;
+  setActive(active: boolean): Promise<void>;
+  showActive(): Promise<void>;
+  hideActive(): Promise<void>;
+  setProgress(value: number): Promise<void>;
+  setProgressPercent(percent: number): Promise<void>;
+  dispose(): void;
 }
 
 export function createGroundDecalUiDynamicTexture(
   name: string,
   scene: Scene,
   decal: GroundDecalUiConfig,
+  options: GroundDecalUiDynamicTextureOptions = {},
 ): GroundDecalUiDynamicTextureResult {
   const size = resolveGroundDecalUiTextureSize(decal);
   const texture = new DynamicTexture(name, size, scene, false);
   texture.hasAlpha = true;
-  const ready = renderGroundDecalUiDynamicTexture(texture, decal);
-  return { texture, ready };
+  let state = resolveInitialGroundDecalUiRenderState(decal, options);
+  let disposed = false;
+  let renderQueue = Promise.resolve();
+  const enqueueRender = (): Promise<void> => {
+    const snapshot = { ...state };
+    renderQueue = renderQueue.then(async () => {
+      if (disposed) return;
+      await renderGroundDecalUiDynamicTexture(texture, decal, snapshot);
+    });
+    return renderQueue;
+  };
+  const ready = enqueueRender();
+  return {
+    texture,
+    ready,
+    getState: () => ({ ...state }),
+    setActive: (active) => {
+      state = { ...state, active };
+      return enqueueRender();
+    },
+    showActive: () => {
+      state = { ...state, active: true };
+      return enqueueRender();
+    },
+    hideActive: () => {
+      state = { ...state, active: false };
+      return enqueueRender();
+    },
+    setProgress: (value) => {
+      state = { ...state, progress: clampUnit(value) };
+      return enqueueRender();
+    },
+    setProgressPercent: (percent) => {
+      state = { ...state, progress: clampUnit(percent / 100) };
+      return enqueueRender();
+    },
+    dispose: () => {
+      disposed = true;
+      texture.dispose();
+    },
+  };
 }
 
 export async function renderGroundDecalUiDynamicTexture(
   texture: DynamicTexture,
   decal: GroundDecalUiConfig,
+  state: GroundDecalUiRenderState = resolveInitialGroundDecalUiRenderState(decal),
 ): Promise<void> {
   const ctx = texture.getContext() as unknown as CanvasRenderingContext2D;
   const size = texture.getSize();
-  await drawGroundDecalUi(ctx, decal, size.width, size.height);
+  await drawGroundDecalUi(ctx, decal, state, size.width, size.height);
   texture.update(false);
 }
 
 async function drawGroundDecalUi(
   ctx: CanvasRenderingContext2D,
   decal: GroundDecalUiConfig,
+  state: GroundDecalUiRenderState,
   width: number,
   height: number,
 ): Promise<void> {
@@ -290,9 +385,10 @@ async function drawGroundDecalUi(
   applyMask(ctx, decal, width, height);
   const layers = [...decal.layers]
     .filter(layer => layer.enabled !== false)
+    .filter(layer => layer.role !== 'activeBackground' || state.active)
     .sort((left, right) => left.zOrder - right.zOrder);
   for (const layer of layers) {
-    await drawLayer(ctx, layer, width, height);
+    await drawLayer(ctx, layer, state, width, height);
   }
   ctx.restore();
 }
@@ -313,6 +409,7 @@ function applyMask(
 async function drawLayer(
   ctx: CanvasRenderingContext2D,
   layer: GroundDecalUiLayer,
+  state: GroundDecalUiRenderState,
   textureWidth: number,
   textureHeight: number,
 ): Promise<void> {
@@ -323,7 +420,9 @@ async function drawLayer(
     ctx.fillStyle = colorToCss(layer.color);
     ctx.fillRect(rect.x, rect.y, rect.width, rect.height);
   } else if (layer.kind === 'progress') {
-    drawProgressLayer(ctx, layer, textureWidth, textureHeight);
+    drawProgressLayer(ctx, layer, state.progress, textureWidth, textureHeight);
+  } else if (layer.kind === 'textureProgress') {
+    await drawTextureProgressLayer(ctx, layer, state.progress, textureWidth, textureHeight);
   } else if (layer.kind === 'texture') {
     await drawTextureLayer(ctx, layer, textureWidth, textureHeight);
   } else if (layer.kind === 'text') {
@@ -335,11 +434,12 @@ async function drawLayer(
 function drawProgressLayer(
   ctx: CanvasRenderingContext2D,
   layer: Extract<GroundDecalUiLayer, { kind: 'progress' }>,
+  progress: number,
   textureWidth: number,
   textureHeight: number,
 ): void {
   const rect = resolveLayerPixelRect(layer.rect, textureWidth, textureHeight);
-  const value = Math.max(0, Math.min(1, layer.value));
+  const value = clampUnit(progress);
   const direction = layer.direction ?? 'bottomToTop';
   ctx.fillStyle = colorToCss(layer.color);
   if (direction === 'leftToRight') {
@@ -355,9 +455,38 @@ function drawProgressLayer(
   }
 }
 
+async function drawTextureProgressLayer(
+  ctx: CanvasRenderingContext2D,
+  layer: Extract<GroundDecalUiLayer, { kind: 'textureProgress' }>,
+  progress: number,
+  textureWidth: number,
+  textureHeight: number,
+): Promise<void> {
+  const value = clampUnit(progress);
+  if (value <= 0) return;
+  const rect = resolveLayerPixelRect(layer.rect, textureWidth, textureHeight);
+  const direction = layer.direction ?? 'bottomToTop';
+  ctx.save();
+  ctx.beginPath();
+  if (direction === 'leftToRight') {
+    ctx.rect(rect.x, rect.y, rect.width * value, rect.height);
+  } else if (direction === 'rightToLeft') {
+    const width = rect.width * value;
+    ctx.rect(rect.x + rect.width - width, rect.y, width, rect.height);
+  } else if (direction === 'topToBottom') {
+    ctx.rect(rect.x, rect.y, rect.width, rect.height * value);
+  } else {
+    const height = rect.height * value;
+    ctx.rect(rect.x, rect.y + rect.height - height, rect.width, height);
+  }
+  ctx.clip();
+  await drawTextureLayer(ctx, layer, textureWidth, textureHeight);
+  ctx.restore();
+}
+
 async function drawTextureLayer(
   ctx: CanvasRenderingContext2D,
-  layer: Extract<GroundDecalUiLayer, { kind: 'texture' }>,
+  layer: Extract<GroundDecalUiLayer, { kind: 'texture' | 'textureProgress' }>,
   textureWidth: number,
   textureHeight: number,
 ): Promise<void> {
@@ -552,4 +681,25 @@ function readPositiveInteger(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) && value > 0
     ? Math.max(1, Math.round(value))
     : null;
+}
+
+function resolveInitialGroundDecalUiRenderState(
+  decal: GroundDecalUiConfig,
+  options: GroundDecalUiDynamicTextureOptions = {},
+): GroundDecalUiRenderState {
+  const progressLayer = decal.layers.find((layer): layer is Extract<GroundDecalUiLayer, { kind: 'progress' | 'textureProgress' }> => (
+    layer.kind === 'progress' || layer.kind === 'textureProgress'
+  ));
+  const authoredProgress = progressLayer?.value ?? 0;
+  const editorProgress = progressLayer && typeof progressLayer.editorPreviewPercent === 'number'
+    ? progressLayer.editorPreviewPercent / 100
+    : authoredProgress;
+  return {
+    active: options.active ?? (options.useEditorPreview ? decal.editorPreviewActive === true : false),
+    progress: clampUnit(options.progress ?? (options.useEditorPreview ? editorProgress : authoredProgress)),
+  };
+}
+
+function clampUnit(value: number): number {
+  return Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : 0;
 }

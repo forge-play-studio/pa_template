@@ -42006,5 +42006,113 @@
     },
     "createdAt": "2026-07-01T10:34:12.822Z",
     "updatedAt": "2026-07-01T10:34:12.822Z"
+  },
+  {
+    "guid": "9c7041de-c3d7-45ae-b20d-692ba518017d",
+    "assetId": "texture_9c7041dec3d745aeb20d692ba518017d",
+    "kind": "texture",
+    "displayName": "自定义进度地贴 - 常态底图",
+    "relativePath": "../imported/textures/texture_9c7041dec3d745aeb20d692ba518017d.png",
+    "originalFileName": "地贴_正常框.png",
+    "codeKey": "ground_decal_custom_progress_normal",
+    "placeable": true,
+    "contentHash": "sha256:6290a88960e4d0723d7f6b2c413f476f2c827c17d05d3e673cf395f91803fd8e",
+    "byteSize": 1699440,
+    "metadata": {
+      "category": "ground-decal/default",
+      "textureUsage": "material",
+      "assetAnalysis": {
+        "kind": "image",
+        "format": "png",
+        "summary": "2153x1883 image/png",
+        "complexity": "low",
+        "width": 2153,
+        "height": 1883,
+        "mime": "image/png",
+        "bitDepth": 8,
+        "hasAlpha": true,
+        "estimatedPixels": 4054099,
+        "diagnostics": []
+      },
+      "assetAnalysisStatus": "complete",
+      "capabilities": {
+        "materialTexture": true,
+        "environmentTexture": false
+      }
+    },
+    "createdAt": "2026-07-24T06:39:53.707Z",
+    "updatedAt": "2026-07-24T06:39:53.707Z"
+  },
+  {
+    "guid": "2f4cdfe9-4dff-4487-b2a4-f172b59f57fe",
+    "assetId": "texture_2f4cdfe94dff4487b2a4f172b59f57fe",
+    "kind": "texture",
+    "displayName": "自定义进度地贴 - 激活底图",
+    "relativePath": "../imported/textures/texture_2f4cdfe94dff4487b2a4f172b59f57fe.png",
+    "originalFileName": "地贴_激活框.png",
+    "codeKey": "ground_decal_custom_progress_active",
+    "placeable": true,
+    "contentHash": "sha256:c7648cb8692e8060877e2a1c291f67365bf1ab3173ef6f06af433fdd6bbe0790",
+    "byteSize": 574079,
+    "metadata": {
+      "category": "ground-decal/default",
+      "textureUsage": "material",
+      "assetAnalysis": {
+        "kind": "image",
+        "format": "png",
+        "summary": "2153x1883 image/png",
+        "complexity": "low",
+        "width": 2153,
+        "height": 1883,
+        "mime": "image/png",
+        "bitDepth": 8,
+        "hasAlpha": true,
+        "estimatedPixels": 4054099,
+        "diagnostics": []
+      },
+      "assetAnalysisStatus": "complete",
+      "capabilities": {
+        "materialTexture": true,
+        "environmentTexture": false
+      }
+    },
+    "createdAt": "2026-07-24T06:39:54.131Z",
+    "updatedAt": "2026-07-24T06:39:54.131Z"
+  },
+  {
+    "guid": "97b07a11-a0a0-4635-8540-6c360c8bd1ca",
+    "assetId": "texture_97b07a11a0a0463585406c360c8bd1ca",
+    "kind": "texture",
+    "displayName": "自定义进度地贴 - 进度图",
+    "relativePath": "../imported/textures/texture_97b07a11a0a0463585406c360c8bd1ca.png",
+    "originalFileName": "地贴_增长遮罩.png",
+    "codeKey": "ground_decal_custom_progress_fill",
+    "placeable": true,
+    "contentHash": "sha256:23223878d587b07ba408800a7abc84734f551c977f42bd16a1b938ee5c3b41ba",
+    "byteSize": 28583,
+    "metadata": {
+      "category": "ground-decal/default",
+      "textureUsage": "material",
+      "assetAnalysis": {
+        "kind": "image",
+        "format": "png",
+        "summary": "2153x1883 image/png",
+        "complexity": "low",
+        "width": 2153,
+        "height": 1883,
+        "mime": "image/png",
+        "bitDepth": 8,
+        "hasAlpha": true,
+        "estimatedPixels": 4054099,
+        "diagnostics": []
+      },
+      "assetAnalysisStatus": "complete",
+      "capabilities": {
+        "materialTexture": true,
+        "environmentTexture": false
+      }
+    },
+    "createdAt": "2026-07-24T06:39:54.558Z",
+    "updatedAt": "2026-07-24T06:39:54.558Z"
   }
 ]

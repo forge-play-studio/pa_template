@@ -37,6 +37,7 @@ export type {
   PlayableEditorRuntimeGroundDecalRenderingConfig,
   PlayableEditorRuntimeGroundDecalTextLayer,
   PlayableEditorRuntimeGroundDecalTextureLayer,
+  PlayableEditorRuntimeGroundDecalTextureProgressLayer,
   PlayableEditorRuntimeGroundDecalUiKind,
   PlayableEditorRuntimeInstanceNode,
   PlayableEditorRuntimeMaterialBindingConfig,

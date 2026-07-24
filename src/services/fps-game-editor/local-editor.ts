@@ -33,7 +33,13 @@ const projectionPreview = createFpsGameEditorProductProjectionPreview<EditorScen
   resolveModelPathAndFile: editorAssets.getModelPathAndFileAsync,
   groundDecal: {
     isGroundDecalConfig: isGroundDecalUiConfig,
-    createDynamicTexture: createGroundDecalUiDynamicTexture as never,
+    createDynamicTexture: ((
+      name: string,
+      scene: Parameters<typeof createGroundDecalUiDynamicTexture>[1],
+      decal: GroundDecalUiConfig,
+    ) => (
+      createGroundDecalUiDynamicTexture(name, scene, decal, { useEditorPreview: true })
+    )) as never,
     readSize: decal => decal.size,
     readRendering: decal => decal.rendering,
   },
