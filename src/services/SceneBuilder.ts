@@ -28,7 +28,11 @@ import { DirectionalLight } from '@babylonjs/core/Lights/directionalLight';
 
 import { AssetLoader } from './AssetLoader';
 import { ModelPool } from './ModelPool';
-import { createGroundDecalUiDynamicTexture, isGroundDecalUiConfig } from './GroundDecalUiService';
+import {
+  createGroundDecalUiDynamicTexture,
+  isGroundDecalUiConfig,
+  type GroundDecalUiDynamicTextureResult,
+} from './GroundDecalUiService';
 import { applyMaterialDebugAdjustments } from '../utils/materialDebugAdjust';
 
 import {
@@ -126,6 +130,11 @@ type SceneBuilderMaterialSlotTarget = {
 
 type SceneBuilderMaterialOwnerResolution = MaterialOwnerResolution<BabylonMaterialOwnerTarget>;
 
+type GroundDecalUiRuntimeEntry = {
+  controller: GroundDecalUiDynamicTextureResult;
+  material: StandardMaterial;
+};
+
 export class SceneBuilder {
   private scene: Scene;
   private assetLoader: AssetLoader;
@@ -136,6 +145,7 @@ export class SceneBuilder {
   private sceneNodeMaterialScopeRoots = new Map<string, TransformNode>();
   private sceneNodeCleanup = new Map<string, (() => void) | null>();
   private sceneNodeAnimationGroups = new Map<string, AnimationGroup[]>();
+  private groundDecalUiRuntimes = new Map<string, GroundDecalUiRuntimeEntry>();
   private sceneAssetConfigs = new Map<string, SceneAssetConfig>();
   private sceneAssetRuntimeUrlIds = new Set<string>();
   private readonly sceneAssetRuntimeUrlOwner = {};
@@ -555,6 +565,44 @@ export class SceneBuilder {
     return this.sceneNodeAnimationGroups.get(id) ?? [];
   }
 
+  getGroundDecalUiRuntime(id: string): GroundDecalUiDynamicTextureResult | undefined {
+    return this.groundDecalUiRuntimes.get(id)?.controller;
+  }
+
+  /** Set whether a custom-progress decal renders its active background. */
+  async setGroundDecalUiActive(id: string, active: boolean): Promise<boolean> {
+    const runtime = this.getGroundDecalUiRuntime(id);
+    if (!runtime) return false;
+    await runtime.setActive(active);
+    return true;
+  }
+
+  /** Show a custom-progress decal's active background, for example on player enter. */
+  async showGroundDecalUiActive(id: string): Promise<boolean> {
+    return this.setGroundDecalUiActive(id, true);
+  }
+
+  /** Hide a custom-progress decal's active background, for example on player exit. */
+  async hideGroundDecalUiActive(id: string): Promise<boolean> {
+    return this.setGroundDecalUiActive(id, false);
+  }
+
+  /** Set the revealed progress image fraction in the normalized 0..1 range. */
+  async setGroundDecalUiProgress(id: string, value: number): Promise<boolean> {
+    const runtime = this.getGroundDecalUiRuntime(id);
+    if (!runtime) return false;
+    await runtime.setProgress(value);
+    return true;
+  }
+
+  /** Set the revealed progress image amount in the 0..100 percentage range. */
+  async setGroundDecalUiProgressPercent(id: string, percent: number): Promise<boolean> {
+    const runtime = this.getGroundDecalUiRuntime(id);
+    if (!runtime) return false;
+    await runtime.setProgressPercent(percent);
+    return true;
+  }
+
   /**
    * 编辑器运行时可调用的最小增量接口。
    *
@@ -577,12 +625,16 @@ export class SceneBuilder {
     }
 
     const cleanup = this.sceneNodeCleanup.get(id) ?? null;
+    const groundDecalUiRuntime = this.groundDecalUiRuntimes.get(id);
     this.sceneNodeRuntimes.delete(id);
     this.sceneNodeMaterialScopeRoots.delete(id);
     this.sceneNodeCleanup.delete(id);
     this.sceneNodeAnimationGroups.delete(id);
+    this.groundDecalUiRuntimes.delete(id);
     node.parent = null;
     cleanup?.();
+    groundDecalUiRuntime?.controller.dispose();
+    groundDecalUiRuntime?.material.dispose(false, false);
     node.dispose();
     return true;
   }
@@ -1262,7 +1314,12 @@ export class SceneBuilder {
     };
 
     const mat = new StandardMaterial(`${nodeConfig.id}_ground_decal_ui_mat`, this.scene);
-    const { texture } = createGroundDecalUiDynamicTexture(`${nodeConfig.id}_ground_decal_ui_texture`, this.scene, decal);
+    const controller = createGroundDecalUiDynamicTexture(
+      `${nodeConfig.id}_ground_decal_ui_texture`,
+      this.scene,
+      decal,
+    );
+    const { texture } = controller;
     mat.diffuseTexture = texture;
     mat.useAlphaFromDiffuseTexture = true;
     mat.diffuseColor = new Color3(1, 1, 1);
@@ -1282,6 +1339,7 @@ export class SceneBuilder {
       mat.emissiveTexture.level = decal.rendering.emissiveTextureLevel;
     }
     mesh.material = mat;
+    this.groundDecalUiRuntimes.set(nodeConfig.id, { controller, material: mat });
   }
 
   private applySceneNodeRendering(
@@ -1397,6 +1455,7 @@ export class SceneBuilder {
     this.sceneNodeMaterialScopeRoots.clear();
     this.sceneNodeCleanup.clear();
     this.sceneNodeAnimationGroups.clear();
+    this.groundDecalUiRuntimes.clear();
     this.sceneAssetConfigs.clear();
     this.root.parent = null;
   }

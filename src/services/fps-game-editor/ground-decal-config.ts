@@ -22,7 +22,7 @@ export const PA_TEMPLATE_GROUND_DECAL_LAYER_PAIR_ACTIONS = {
 } as const;
 
 export function isPaTemplateGroundDecalUiKind(value: string): value is GroundDecalUiKind {
-  return value === 'operation' || value === 'delivery';
+  return value === 'operation' || value === 'delivery' || value === 'customProgress';
 }
 
 export function isPaTemplateProjectEditableGroundDecalLayer(layer: GroundDecalUiLayer): boolean {
@@ -35,8 +35,18 @@ export function isPaTemplateGroundDecalLayoutEditableLayer(layer: GroundDecalUiL
 
 export function isPaTemplateGroundDecalEditableTextureLayer(
   layer: GroundDecalUiLayer,
-): layer is Extract<GroundDecalUiLayer, { kind: 'texture' }> {
-  return layer.kind === 'texture' && (layer.role === 'mainLogo' || layer.role === 'subLogo' || layer.role === 'border');
+): layer is Extract<GroundDecalUiLayer, { kind: 'texture' | 'textureProgress' }> {
+  return (
+    (layer.kind === 'texture' || layer.kind === 'textureProgress')
+    && (
+      layer.role === 'mainLogo'
+      || layer.role === 'subLogo'
+      || layer.role === 'border'
+      || layer.role === 'normalBackground'
+      || layer.role === 'activeBackground'
+      || layer.role === 'progressImage'
+    )
+  );
 }
 
 export function isPaTemplateGroundDecalEditableColorLayer(
@@ -60,12 +70,16 @@ export function createPaTemplateGroundDecalLayerLabel(layer: GroundDecalUiLayer)
   if (layer.role === 'subLogo') return layer.id === 'subLogo2' ? 'Sub Logo 2' : 'Sub Logo';
   if (layer.role === 'amount') return layer.id === 'amount2' ? 'Amount 2' : 'Amount';
   if (layer.role === 'progressFill') return 'Progress Fill';
+  if (layer.role === 'normalBackground') return 'Normal Background';
+  if (layer.role === 'activeBackground') return 'Active Background';
+  if (layer.role === 'progressImage') return 'Progress Image';
   return layer.role.charAt(0).toUpperCase() + layer.role.slice(1);
 }
 
 export function createPaTemplateGroundDecalUiKindLabel(uiKind: string): string {
   if (uiKind === 'delivery') return 'Delivery';
   if (uiKind === 'operation') return 'Operation';
+  if (uiKind === 'customProgress') return 'Custom Progress';
   return uiKind;
 }
 
@@ -92,7 +106,7 @@ export const paTemplateGroundDecalDocumentPolicy = {
 
 export const paTemplateGroundDecalInspectorPolicy = {
   ...paTemplateGroundDecalDocumentPolicy,
-  isEditableTextureLayer: (layer): layer is Extract<PlayableGroundDecalUiLayer, { kind: 'texture' }> => (
+  isEditableTextureLayer: (layer): layer is Extract<PlayableGroundDecalUiLayer, { kind: 'texture' | 'textureProgress' }> => (
     isPaTemplateGroundDecalEditableTextureLayer(layer as GroundDecalUiLayer)
   ),
   isEditableColorLayer: (layer): layer is Extract<PlayableGroundDecalUiLayer, { kind: 'color' | 'progress' }> => (
@@ -104,6 +118,7 @@ export const paTemplateGroundDecalInspectorPolicy = {
   useUniformLayoutScaleMode: (layer) => shouldUsePaTemplateGroundDecalUniformLayoutScaleMode(layer as GroundDecalUiLayer),
   createLayerLabel: (layer) => createPaTemplateGroundDecalLayerLabel(layer as GroundDecalUiLayer),
   createUiKindLabel: createPaTemplateGroundDecalUiKindLabel,
+  canShowActivePreview: (decal) => (decal as GroundDecalUiConfig).uiKind === 'customProgress',
   getLayerPairs: (decal) => getGroundDecalUiDeliveryPairs(decal as unknown as GroundDecalUiConfig),
   canAddLayerPair: (decal) => canAddGroundDecalUiDeliveryPair(decal as unknown as GroundDecalUiConfig),
   canRemoveLayerPair: (decal) => canRemoveGroundDecalUiDeliveryPair(decal as unknown as GroundDecalUiConfig),
@@ -120,8 +135,10 @@ export const paTemplateGroundDecalInspectorPolicy = {
 } satisfies Partial<PlayableGroundDecalInspectorServices<unknown, unknown, unknown>>;
 
 export const paTemplateGroundDecalFeatureConfig = {
-  uiKinds: ['operation', 'delivery'],
+  uiKinds: ['operation', 'delivery', 'customProgress'],
   documentPolicy: paTemplateGroundDecalDocumentPolicy,
   inspectorPolicy: paTemplateGroundDecalInspectorPolicy,
-  createHierarchyLabel: (kind: string) => `${kind === 'delivery' ? 'Delivery' : 'Operation'} Ground Decal UI`,
+  createHierarchyLabel: (kind: string) => `${
+    kind === 'delivery' ? 'Delivery' : kind === 'customProgress' ? 'Custom Progress' : 'Operation'
+  } Ground Decal UI`,
 };

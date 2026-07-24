@@ -40,6 +40,7 @@ import type {
   PlayableEditorRuntimeGroundDecalRenderingConfig,
   PlayableEditorRuntimeGroundDecalTextLayer,
   PlayableEditorRuntimeGroundDecalTextureLayer,
+  PlayableEditorRuntimeGroundDecalTextureProgressLayer,
   PlayableEditorRuntimeGroundDecalUiKind,
   PlayableEditorRuntimeInstanceNode,
   PlayableEditorRuntimeMaterialBindingConfig,
@@ -322,6 +323,7 @@ export type GroundDecalUiRect = PlayableEditorRuntimeGroundDecalRect;
 export type GroundDecalUiColor = PlayableEditorRuntimeGroundDecalColor;
 export type GroundDecalUiLayerBase = PlayableEditorRuntimeGroundDecalLayerBase;
 export type GroundDecalUiTextureLayer = PlayableEditorRuntimeGroundDecalTextureLayer;
+export type GroundDecalUiTextureProgressLayer = PlayableEditorRuntimeGroundDecalTextureProgressLayer;
 export type GroundDecalUiColorLayer = PlayableEditorRuntimeGroundDecalColorLayer;
 export type GroundDecalUiTextLayer = PlayableEditorRuntimeGroundDecalTextLayer;
 export type GroundDecalUiProgressLayer = PlayableEditorRuntimeGroundDecalProgressLayer;
