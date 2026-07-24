@@ -35,9 +35,14 @@ class PaTemplateDevHostImpl implements PaTemplateDevHost {
       enterEditorMode: context => this.enterEditorMode(context),
       enterPlayMode: context => this.enterPlayMode(context),
     }, hostEnvironment);
-    if (hostEnvironment.bootMode !== 'edit') {
-      void this.startPlayMode().catch(error => console.error('[PaTemplateDevHost] startup failed', error));
+    if (hostEnvironment.bootMode === 'edit') {
+      const editorStartup = hostEnvironment.initialModeIntent === 'fresh'
+        ? this.editorEntry.enterEditor()
+        : this.editorEntry.start();
+      void editorStartup.catch(error => console.error('[PaTemplateDevHost] editor startup failed', error));
+      return;
     }
+    void this.startPlayMode().catch(error => console.error('[PaTemplateDevHost] startup failed', error));
   }
 
   dispose(): Promise<void> {

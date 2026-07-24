@@ -97,8 +97,8 @@ if (existsSync(resolve(projectRoot, 'src/project-runtime-entry.ts'))) {
 }
 
 const packageJson = JSON.parse(read('package.json'));
-if (packageJson.dependencies?.['@fps-games/editor'] !== '0.2.1-beta.1') {
-  failures.push('@fps-games/editor must stay pinned to 0.2.1-beta.1');
+if (packageJson.dependencies?.['@fps-games/editor'] !== '0.2.1-beta.3') {
+  failures.push('@fps-games/editor must stay pinned to 0.2.1-beta.3');
 }
 
 if (failures.length > 0) {

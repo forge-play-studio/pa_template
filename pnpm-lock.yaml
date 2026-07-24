@@ -15,8 +15,8 @@ importers:
         specifier: 8.52.1
         version: 8.52.1(@babylonjs/core@8.52.1)(babylonjs-gltf2interface@8.56.2)
       '@fps-games/editor':
-        specifier: 0.2.1-beta.1
-        version: 0.2.1-beta.1(vite@5.4.21(@types/node@22.20.1)(terser@5.48.0))
+        specifier: 0.2.1-beta.3
+        version: 0.2.1-beta.3(vite@5.4.21(@types/node@22.20.1)(terser@5.48.0))
       '@fps-games/vfx':
         specifier: 0.3.23
         version: 0.3.23(@babylonjs/core@8.52.1)(@babylonjs/loaders@8.52.1(@babylonjs/core@8.52.1)(babylonjs-gltf2interface@8.56.2))
@@ -24,6 +24,9 @@ importers:
         specifier: ^2.3.2
         version: 2.3.2
     devDependencies:
+      '@babel/parser':
+        specifier: ^7.29.7
+        version: 7.29.7
       '@babylonjs/inspector':
         specifier: 8.52.1
         version: 8.52.1(5381aa798bd188e9aaaa73bb98f053e5)
@@ -51,8 +54,25 @@ importers:
 
 packages:
 
+  '@babel/helper-string-parser@7.29.7':
+    resolution: {integrity: sha512-Pb5ijPrZ89GDH8223L4UP8i6QApWxs04RbPQJTeWDV0/keR2E36MeKnyr6LYmUUvqRRI+Iv87SuF1W6ErINzYw==}
+    engines: {node: '>=6.9.0'}
+
+  '@babel/helper-validator-identifier@7.29.7':
+    resolution: {integrity: sha512-qehxGkRj55h/ff8EMaJ+cYhyaKlHIxqYDn682wQD7RNp9UujOQsHog2uS0r2vzr4pW+sXf90NeeayjcNaX3fFg==}
+    engines: {node: '>=6.9.0'}
+
+  '@babel/parser@7.29.7':
+    resolution: {integrity: sha512-hnORnjP/1P/zFEndoeX+n+t1RwWRJiJpM/jO7FW32Kn9r5+sJB2JWOdYo4L6k78j15eCwY3Gm/7364B1EMwtNg==}
+    engines: {node: '>=6.0.0'}
+    hasBin: true
+
   '@babel/runtime@7.29.7':
     resolution: {integrity: sha512-Nq8OhGWiZIZGV6hLHoyAKLLcJihP/xFeBMGJoUrxTX2psI8dCifzLhZISFb+VWS3wFMRDmCGw5R+dOySCqPLhw==}
+    engines: {node: '>=6.9.0'}
+
+  '@babel/types@7.29.7':
+    resolution: {integrity: sha512-4zBIxpPzowiZpusoFkyGVwakdRJUyuH5PxQ/PrqghfdFWWasvnCdPfQXHrenDai+gyLARulZjZowCOj6fjT4pA==}
     engines: {node: '>=6.9.0'}
 
   '@babylonjs/addons@8.56.2':
@@ -794,8 +814,8 @@ packages:
   '@fluentui/tokens@1.0.0-alpha.23':
     resolution: {integrity: sha512-uxrzF9Z+J10naP0pGS7zPmzSkspSS+3OJDmYIK3o1nkntQrgBXq3dBob4xSlTDm5aOQ0kw6EvB9wQgtlyy4eKQ==}
 
-  '@fps-games/editor@0.2.1-beta.1':
-    resolution: {integrity: sha512-rhmmu2bW6k95yHEK+JldCYPy9ZvsYtdWNcSKw4ihfZRR0s4ScQRYzQAg/PhEzfoazTXTF6LwlOC1g6lJDbUw4g==}
+  '@fps-games/editor@0.2.1-beta.3':
+    resolution: {integrity: sha512-Pw23kK+xi+1DUJWL8+8xVVQMzMn0KxiD5dUaOGa+boawabfHD3ixY9ThtfcWbE21+8Hsfy9uFrocoY9o6/cHpA==}
     peerDependencies:
       vite: ^5.4.21
     peerDependenciesMeta:
@@ -813,6 +833,7 @@ packages:
       - '@fps-games/editor-playable-sdk'
       - '@fps-games/editor-tooling'
       - '@fps-games/playable-contracts'
+      - '@fps-games/playable-assets'
       - '@fps-games/playable-runtime'
       - '@fps-games/editor-protocol'
       - '@playcanvas/pcui'
@@ -1360,7 +1381,20 @@ packages:
 
 snapshots:
 
+  '@babel/helper-string-parser@7.29.7': {}
+
+  '@babel/helper-validator-identifier@7.29.7': {}
+
+  '@babel/parser@7.29.7':
+    dependencies:
+      '@babel/types': 7.29.7
+
   '@babel/runtime@7.29.7': {}
+
+  '@babel/types@7.29.7':
+    dependencies:
+      '@babel/helper-string-parser': 7.29.7
+      '@babel/helper-validator-identifier': 7.29.7
 
   '@babylonjs/addons@8.56.2(@babylonjs/core@8.52.1)':
     dependencies:
@@ -2659,7 +2693,7 @@ snapshots:
     dependencies:
       '@swc/helpers': 0.5.23
 
-  '@fps-games/editor@0.2.1-beta.1(vite@5.4.21(@types/node@22.20.1)(terser@5.48.0))':
+  '@fps-games/editor@0.2.1-beta.3(vite@5.4.21(@types/node@22.20.1)(terser@5.48.0))':
     optionalDependencies:
       vite: 5.4.21(@types/node@22.20.1)(terser@5.48.0)
 

@@ -1,5 +1,5 @@
 allowBuilds:
   esbuild: true
 minimumReleaseAgeExclude:
-  - '@fps-games/editor@0.2.1-beta.1'
+  - '@fps-games/editor@0.2.1-beta.3'
   - '@fps-games/vfx@0.3.23'
